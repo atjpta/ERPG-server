@@ -1,0 +1,11 @@
+node_modules
+build
+generated
+.git
+.vscode
+.claude
+docs
+test
+.env.development
+.env.keys
+README.md

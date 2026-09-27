@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "outDir": "build",
+        "target": "ESNext",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "strict": true,
+        "allowJs": true,
+        "strictNullChecks": false,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "types": ["node", "mocha"],
+        "paths": {
+            "@/*": ["./src/*"]
+        }
+    },
+    "include": ["src", "test", "scripts", "drizzle.config.ts"]
+}
