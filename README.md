@@ -16,6 +16,17 @@ yarn dev                           # http://localhost:2567 — playground ở "/
 yarn smoke                         # test end-to-end (server phải đang chạy)
 ```
 
+## Token cho hai user test local
+
+Khi server đang chạy và DB đã migrate/seed, chạy `yarn test:tokens`.
+Script tự tạo hoặc đăng nhập `test1@erpg.local` và `test2@erpg.local`, mật khẩu mặc định `123456`.
+Có thể đổi địa chỉ server bằng `SERVER_URL` và mật khẩu bằng `TEST_USER_PASSWORD`.
+
+Token được in ra terminal và lưu tại `generated/local-test-tokens.json` (đã được Git bỏ qua).
+Dùng `playerToken` để join room `world` với `mapCode` trong thông tin player, hoặc gọi `/players/me`;
+dùng `token` cho các API `/auth`. Chạy lại script để lấy token mới; nếu bật chế độ một session/user,
+phiên cũ của hai tài khoản test sẽ bị thu hồi.
+
 ## Luồng client (Unity)
 
 1. `GET /master-data/client-version?platform=android&version=x.y.z` → `forceUpdate` thì mở `downloadUrl`.

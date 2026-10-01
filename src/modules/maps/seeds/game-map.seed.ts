@@ -9,8 +9,8 @@ const MAPS: NewGameMap[] = [
         type: MapType.TOWN,
         width: 64,
         height: 64,
-        spawnX: 32,
-        spawnY: 32,
+        spawnX: 5,
+        spawnY: 5,
     },
     {
         code: "field_01",
@@ -18,8 +18,8 @@ const MAPS: NewGameMap[] = [
         type: MapType.FIELD,
         width: 128,
         height: 96,
-        spawnX: 4,
-        spawnY: 48,
+        spawnX: 5,
+        spawnY: 5,
     },
 ];
 

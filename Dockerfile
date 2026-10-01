@@ -15,6 +15,7 @@ COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --production --ignore-scripts && yarn cache clean
 COPY --from=build /app/build ./build
 COPY src/migrations ./src/migrations
+COPY scripts/local-test-tokens.mjs ./scripts/local-test-tokens.mjs
 COPY drizzle.config.ts ./
 COPY .env.production ./
 

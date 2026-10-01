@@ -16,6 +16,7 @@
         "clean": "rimraf build",
         "typecheck": "tsc --noEmit",
         "smoke": "tsx scripts/smoke-test.ts",
+        "test:tokens": "node scripts/local-test-tokens.mjs",
         "kick-test": "tsx scripts/kick-test.ts",
         "test": "mocha --import=tsx --file test/setup.ts \"test/**/*.test.ts\" --exit --timeout 15000",
         "format": "prettier --write \"src/**/*.ts\"",
@@ -26,6 +27,7 @@
         "db:generate": "dotenvx run -f .env.development -- drizzle-kit generate",
         "db:migrate": "dotenvx run -f .env.development -- drizzle-kit migrate",
         "db:push": "dotenvx run -f .env.development -- drizzle-kit push",
+        "schema:generate": "node scripts/generate-room-schemas.mjs ../ERPG/Assets/ERPG/Scripts/Schema",
         "env:dev:decrypt": "dotenvx decrypt -f .env.development",
         "env:dev:encrypt": "dotenvx encrypt -f .env.development",
         "env:prod:decrypt": "dotenvx decrypt -f .env.production",
@@ -47,6 +49,7 @@
     },
     "dependencies": {
         "@colyseus/better-call": "^1.3.3",
+        "@colyseus/command": "^0.3.2",
         "@colyseus/redis-driver": "^0.18.4",
         "@colyseus/schema": "^5.0.34",
         "@colyseus/tools": "^0.18.4",

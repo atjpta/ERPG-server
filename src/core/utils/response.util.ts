@@ -172,6 +172,7 @@ export const RouterContainer = async (ctx: Ctx, fn: () => Promise<Res>): Promise
                 code: err.code ?? null,
             });
         }
+        console.error("[API] Unhandled endpoint error:", err?.stack ?? err?.message ?? e);
         return Response.internalError(ctx, { error: err?.message ?? e });
     }
 };

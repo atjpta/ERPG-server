@@ -1,12 +1,12 @@
 import { createEndpoint } from "colyseus";
 import { Response, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
-import { adminPlayerService } from "@/modules/auth/admin/services/admin.player.service.js";
+import { adminPlayerService } from "@/modules/player/admin/services/admin.player.service.js";
 import {
     AdminBanPlayerSchema,
     AdminListPlayersQuerySchema,
     AdminUpdatePlayerSchema,
-} from "@/modules/auth/admin/validators/admin.player.validator.js";
+} from "@/modules/player/admin/validators/admin.player.validator.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
 
 const adminEndpoint = createEndpoint.create({ use: [adminAuthMiddleware] });
@@ -28,8 +28,7 @@ export const adminPlayerController = {
         { method: "GET", params: IdParamSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const player = await adminPlayerService.findById({ id: ctx.params.id });
-                if (!player) return Response.notFound(ctx);
+                const player = await adminPlayerService.findPlayerById(ctx.params.id);
                 return Response.ok({ data: player });
             })
     ),

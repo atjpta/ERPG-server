@@ -6,7 +6,7 @@ import {
     userKickTopic,
     type KickMessage,
 } from "@/modules/auth/user/services/player-kick.service.js";
-import { playerService } from "@/modules/auth/user/services/player.service.js";
+import { playerAuthService } from "@/modules/auth/user/services/player-auth.service.js";
 
 export type PlayerClient = Client<{ auth: AuthPlayer }>;
 
@@ -16,6 +16,7 @@ export const KICK_CLOSE_CODES: Record<KickReason, number> = {
     [KickReason.BANNED]: 4002,
     [KickReason.ACCOUNT_DELETED]: 4003,
     [KickReason.SESSION_REVOKED]: 4004,
+    [KickReason.PLAYER_UPDATED]: 4005,
 };
 
 /**
@@ -36,7 +37,7 @@ export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extend
     private readonly kickHandlers = new Map<string, (message: KickMessage) => void>();
 
     static async onAuth(token: string, _options: unknown, _context: AuthContext) {
-        return playerService.verifyToken(token);
+        return playerAuthService.verifyToken(token);
     }
 
     protected async registerOnlinePlayer(client: PlayerClient) {
@@ -80,7 +81,7 @@ export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extend
             return false;
         }
         try {
-            await playerService.assertStillPlayable(client.auth);
+            await playerAuthService.assertStillPlayable(client.auth);
             return true;
         } catch {
             client.leave(KICK_CLOSE_CODES[KickReason.SESSION_REVOKED]);

@@ -128,9 +128,19 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
       ở mọi room/process.
     - Thêm chỗ thu hồi quyền chơi mới (ban, khoá...) → gọi `playerKickService` sau khi ghi DB.
 - `world` room — 1 room = 1 kênh của 1 map (`filterBy(["mapCode"])`), reconnect 20s khi rớt mạng,
-  lưu vị trí khi rời.
+  checkpoint state mỗi 30 giây và lưu lần cuối khi rời. Save dùng optimistic check qua `player_states.revision`
+  để checkpoint cũ không ghi đè admin edit hoặc state mới hơn.
+- `auth.players` giữ identity, server, tên, trạng thái ban và lần chơi cuối; module `player` sở hữu
+  `player_states` (level/exp, HP/MP, map, tọa độ, hướng). Tạo hai bản ghi trong cùng transaction,
+  ghép lại trong `PlayerService` để giữ response hiện có; migration backfill dữ liệu cũ.
+- Các thao tác lifecycle trong world được dispatch qua `@colyseus/command`: `JoinPlayerWorldCommand`
+  nạp player và `LeavePlayerWorldCommand` lưu, dọn player. Input di chuyển được xử lý trực tiếp
+  trong fixed tick bởi `PlayerWorldService`.
+  Gọi `dispatcher.stop()` khi room dispose.
+- Admin edit player publish `PLAYER_UPDATED` sau commit để room đóng kết nối hiện tại; player reconnect
+  sẽ nạp lại hồ sơ/state mới.
 - Di chuyển dùng **Colyseus Netcode** (https://docs.colyseus.io/netcode), không dùng `messages`/`onMessage`:
-    - Input schema phẳng (`schema/move.input.ts`) khai báo bằng `inputs = this.defineInput(MoveInput, { sanitize })`.
+    - Input schema phẳng (`schema/move.world.input.ts`) khai báo bằng `inputs = this.defineInput(MoveInput, { sanitize })`.
     - `this.setFixedTimestep((ctx) => this.step(ctx), TICK_RATE)` — **không** dùng `setSimulationInterval`
       (đã deprecated, dt thay đổi nên client không predict được).
     - Shared world: mỗi step mỗi player lấy đúng 1 input (`this.inputs.get(sessionId).next()`) — framework

@@ -44,12 +44,8 @@ export const authController = {
         { method: "POST", body: GuestLoginSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                try {
-                    const result = await authService.loginAsGuest(ctx.body, ctx.context.clientIp);
-                    return Response.ok({ data: result });
-                } catch (error) {
-                    console.log(error);
-                }
+                const result = await authService.loginAsGuest(ctx.body, ctx.context.clientIp);
+                return Response.ok({ data: result });
             })
     ),
 

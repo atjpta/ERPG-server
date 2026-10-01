@@ -1,4 +1,4 @@
-import { Direction } from "@/modules/auth/enums/player.enum.js";
+import { Direction } from "@/modules/player/enums/player.enum.js";
 
 /**
  * Hàm step di chuyển — **hợp đồng dùng chung với client** (Colyseus Netcode `predict.reconciler`).
@@ -13,9 +13,15 @@ export interface MovableState {
     moving: boolean;
 }
 
+export interface WorldMovableState extends MovableState {
+    moveSpeed: number;
+}
+
 export interface MoveCommand {
     moveX: number;
     moveY: number;
+    attack?: boolean;
+    dash?: boolean;
 }
 
 export interface MoveBounds {
@@ -33,7 +39,14 @@ export function applyMove(
     speed: number,
     dt: number
 ): void {
-    const { moveX, moveY } = cmd;
+    const moveX = Number.isFinite(cmd.moveX) ? cmd.moveX : 0;
+    const moveY = Number.isFinite(cmd.moveY) ? cmd.moveY : 0;
+    if (!Number.isFinite(state.x)) state.x = bounds.width / 2;
+    if (!Number.isFinite(state.y)) state.y = bounds.height / 2;
+    if (!Number.isFinite(speed) || !Number.isFinite(dt)) {
+        state.moving = false;
+        return;
+    }
     state.moving = moveX !== 0 || moveY !== 0;
     if (!state.moving) return;
 
@@ -43,6 +56,21 @@ export function applyMove(
     state.x = clamp(state.x + moveX * step, 0, bounds.width);
     state.y = clamp(state.y + moveY * step, 0, bounds.height);
     state.direction = toDirection(moveX, moveY);
+}
+
+/** Chuẩn hóa tốc độ và fixed-step trước khi di chuyển mọi entity trong world. */
+export function applyWorldMove(
+    state: WorldMovableState,
+    cmd: MoveCommand,
+    bounds: MoveBounds,
+    dt: number,
+    speedMultiplier = 1,
+    fallbackSpeed = 0
+): void {
+    const stepSeconds = Number.isFinite(dt) && dt > 0 ? dt : 1 / 20;
+    const moveSpeed =
+        Number.isFinite(state.moveSpeed) && state.moveSpeed > 0 ? state.moveSpeed : fallbackSpeed;
+    applyMove(state, cmd, bounds, moveSpeed * speedMultiplier, stepSeconds);
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);

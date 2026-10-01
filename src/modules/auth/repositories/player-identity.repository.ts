@@ -1,9 +1,9 @@
-import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db, type Queryable } from "@/configs/postgres.config.js";
 import { BaseRepository } from "@/core/repositories/base.repository.js";
 import { Players } from "@/modules/auth/entities/player.entity.js";
 
-export class PlayerRepository extends BaseRepository<typeof Players> {
+export class PlayerIdentityRepository extends BaseRepository<typeof Players> {
     constructor() {
         super(Players);
     }
@@ -22,7 +22,11 @@ export class PlayerRepository extends BaseRepository<typeof Players> {
         return dbOrTx.delete(Players).where(eq(Players.userId, userId)).returning();
     }
 
-    /** Tên unique theo server, không phân biệt hoa thường — `excludeId` để bỏ qua chính player đang đổi tên. */
+    async findByIds(ids: string[], dbOrTx: Queryable = db) {
+        if (ids.length === 0) return [];
+        return dbOrTx.select().from(Players).where(inArray(Players.id, ids));
+    }
+
     async findByServerAndName(params: {
         serverId: string;
         name: string;
@@ -41,4 +45,4 @@ export class PlayerRepository extends BaseRepository<typeof Players> {
     }
 }
 
-export const PlayerRepo = new PlayerRepository();
+export const PlayerIdentityRepo = new PlayerIdentityRepository();

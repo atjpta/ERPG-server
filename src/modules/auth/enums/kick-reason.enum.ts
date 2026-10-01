@@ -8,4 +8,6 @@ export enum KickReason {
     ACCOUNT_DELETED = "account_deleted",
     /** Session bị thu hồi (logout, force logout, đăng nhập máy khác khi bật single session). */
     SESSION_REVOKED = "session_revoked",
+    /** Player data was edited by an administrator; reconnect to load the updated snapshot. */
+    PLAYER_UPDATED = "player_updated",
 }

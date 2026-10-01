@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PaginationSchema } from "@/core/validators/pagination.validator.js";
-import { Direction, PlayerStatus } from "@/modules/auth/enums/player.enum.js";
+import { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
+import { Direction } from "@/modules/player/enums/player.enum.js";
 
 export const AdminListPlayersQuerySchema = PaginationSchema.extend({
     serverId: z.uuidv7().optional(),

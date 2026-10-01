@@ -5,6 +5,8 @@
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "strict": true,
+        "experimentalDecorators": true,
+        "useDefineForClassFields": false,
         "allowJs": true,
         "strictNullChecks": false,
         "esModuleInterop": true,

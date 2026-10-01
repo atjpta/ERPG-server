@@ -17,7 +17,8 @@ import { UserRepo } from "@/modules/auth/repositories/user.repository.js";
 import type { AuthUser } from "@/modules/auth/types/auth-user.type.js";
 import { googleOauthService } from "@/modules/auth/user/services/google-oauth.service.js";
 import { playGamesOauthService } from "@/modules/auth/user/services/play-games-oauth.service.js";
-import { playerService } from "@/modules/auth/user/services/player.service.js";
+import { playerAuthService } from "@/modules/auth/user/services/player-auth.service.js";
+import { playerService } from "@/modules/player/user/services/player.service.js";
 import type {
     ClientInfo,
     GoogleLoginBody,
@@ -273,10 +274,10 @@ export class AuthService {
         }
 
         const token = jwt.sign(payload, env.JWT_SECRET, { expiresIn: USER_TOKEN_EXPIRES_IN });
-        const playerToken = playerService.issueToken({
+        const playerToken = await playerAuthService.issueToken({
             userId: user.id,
             sessionId: session.id,
-            player,
+            playerId: player.id,
         });
         return { token, playerToken, userId: user.id, player };
     }

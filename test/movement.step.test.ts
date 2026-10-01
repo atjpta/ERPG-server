@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { Direction } from "@/modules/auth/enums/player.enum.js";
+import { Direction } from "@/modules/player/enums/player.enum.js";
 import {
     applyMove,
     DIAGONAL_FACTOR,

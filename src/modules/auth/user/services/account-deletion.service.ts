@@ -7,7 +7,7 @@ import {
 } from "@/modules/auth/enums/account-deletion.enum.js";
 import { UserStatus } from "@/modules/auth/enums/user.enum.js";
 import { AccountDeletionRequestRepo } from "@/modules/auth/repositories/account-deletion-request.repository.js";
-import { PlayerRepo } from "@/modules/auth/repositories/player.repository.js";
+import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { UserOauthAccountRepo } from "@/modules/auth/repositories/user-oauth-account.repository.js";
 import { UserSessionRepo } from "@/modules/auth/repositories/user-session.repository.js";
 import { UserRepo } from "@/modules/auth/repositories/user.repository.js";
@@ -69,7 +69,7 @@ export class AccountDeletionService {
 
         await UserSessionRepo.revokeAllByUserId({ userId, dbOrTx });
         await UserOauthAccountRepo.deleteByUserId({ userId, dbOrTx });
-        await PlayerRepo.deleteByUserId({ userId, dbOrTx });
+        await PlayerIdentityRepo.deleteByUserId({ userId, dbOrTx });
         return UserRepo.updateByIdOrFail({
             id: userId,
             data: {
