@@ -22,9 +22,9 @@ export class PlayerWorldService {
     private readonly chains = new WorldChain<PlayerChainContext>([
         new PlayerDeathChain(this.attackChain),
         new PlayerHitInterruptChain(this.attackChain),
-        new PlayerTargetChain(),
         new PlayerDashChain(),
         new PlayerMoveChain(),
+        new PlayerTargetChain(),
         this.attackChain,
     ]);
 
@@ -40,6 +40,7 @@ export class PlayerWorldService {
                     attack: false,
                     dash: false,
                     targetNext: false,
+                    targetUnlock: false,
                 };
                 if (input && (input.moveX !== 0 || input.moveY !== 0)) {
                     const now = Date.now();
@@ -59,6 +60,7 @@ export class PlayerWorldService {
                     attackRequested: input.attack === true,
                     dashRequested: input.dash === true,
                     targetSwitchRequested: input.targetNext === true,
+                    targetUnlockRequested: input.targetUnlock === true,
                     dt: ctx.dt,
                     scheduleRespawn: (player) => this.scheduleRespawn(room, player),
                 });

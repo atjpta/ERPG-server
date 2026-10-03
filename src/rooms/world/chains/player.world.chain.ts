@@ -17,6 +17,7 @@ export interface PlayerChainContext {
     attackRequested: boolean;
     dashRequested: boolean;
     targetSwitchRequested: boolean;
+    targetUnlockRequested: boolean;
     dt: number;
     scheduleRespawn: (player: PlayerWorldState) => void;
 }
@@ -60,35 +61,66 @@ export class PlayerDashChain implements WorldChainAction<PlayerChainContext> {
 
 export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
     private readonly previousSwitchInput = new WeakMap<PlayerWorldState, boolean>();
+    private readonly previousUnlockInput = new WeakMap<PlayerWorldState, boolean>();
 
     execute({
         room,
         state,
         targetSwitchRequested,
+        targetUnlockRequested,
         dashRequested,
+        attackRequested,
     }: PlayerChainContext): WorldChainResult {
-        const wasRequested = this.previousSwitchInput.get(state) ?? false;
+        const wasSwitchRequested = this.previousSwitchInput.get(state) ?? false;
+        const wasUnlockRequested = this.previousUnlockInput.get(state) ?? false;
         this.previousSwitchInput.set(state, targetSwitchRequested);
-        if (!targetSwitchRequested || wasRequested) return WorldChainResult.CONTINUE;
+        this.previousUnlockInput.set(state, targetUnlockRequested);
+        const switchPressed = targetSwitchRequested && !wasSwitchRequested;
+        const unlockPressed = targetUnlockRequested && !wasUnlockRequested;
 
-        const targets = findTargetsInRange(room, state, PLAYER_AUTO_TARGET_RANGE * 2);
-        if (targets.length === 0) {
+        if (unlockPressed) {
             state.targetId = "";
             state.targetLocked = false;
-            return WorldChainResult.CONTINUE;
         }
 
-        const currentIndex = targets.findIndex((target) => target.id === state.targetId);
-        const nextTarget = targets[(currentIndex + 1) % targets.length];
-        state.targetId = nextTarget.id;
-        state.targetLocked = true;
+        let target = state.targetLocked
+            ? findTargetById(room, state, state.targetId, PLAYER_AUTO_TARGET_RANGE * 2)
+            : undefined;
+        if (state.targetLocked && !target) {
+            state.targetId = "";
+            state.targetLocked = false;
+        }
+
+        if (switchPressed) {
+            const targets = findTargetsInRange(room, state, PLAYER_AUTO_TARGET_RANGE * 2);
+            if (targets.length > 0) {
+                const currentIndex = targets.findIndex(
+                    (candidate) => candidate.id === state.targetId
+                );
+                target = targets[(currentIndex + 1) % targets.length];
+                state.targetId = target.id;
+                state.targetLocked = true;
+            } else {
+                target = undefined;
+                state.targetId = "";
+                state.targetLocked = false;
+            }
+        } else if (!state.targetLocked) {
+            target = state.moving || attackRequested ? findAutoTarget(room, state) : undefined;
+            state.targetId = target?.id ?? "";
+        }
+
+        if (!target && state.targetLocked) {
+            target = findTargetById(room, state, state.targetId, PLAYER_AUTO_TARGET_RANGE * 2);
+        }
         if (
+            target &&
             !state.dashing &&
             !dashRequested &&
-            distanceSquared(state.x, state.y, nextTarget.x, nextTarget.y) <=
-                PLAYER_AUTO_FACE_RANGE ** 2
+            (state.moving || switchPressed) &&
+            distanceSquared(state.x, state.y, target.x, target.y) <= PLAYER_AUTO_FACE_RANGE ** 2
         ) {
-            faceTarget(state, nextTarget.x - state.x, nextTarget.y - state.y);
+            faceTarget(state, target.x - state.x, target.y - state.y);
         }
         return WorldChainResult.CONTINUE;
     }
@@ -98,23 +130,6 @@ export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
     execute({ room, state, move, dt }: PlayerChainContext): WorldChainResult {
         state.recoverPosition(room.map.spawnX, room.map.spawnY, room.map.width, room.map.height);
         applyWorldMove(state, move, room.map, dt, state.dashing ? 2 : 1, 4);
-        if (!state.dashing && state.moving) {
-            let target = state.targetLocked
-                ? findTargetById(room, state, state.targetId, PLAYER_AUTO_TARGET_RANGE * 2)
-                : undefined;
-            if (state.targetLocked && !target) {
-                state.targetId = "";
-                state.targetLocked = false;
-            }
-            target ??= findAutoTarget(room, state);
-            state.targetId = target?.id ?? "";
-            if (
-                target &&
-                distanceSquared(state.x, state.y, target.x, target.y) <= PLAYER_AUTO_FACE_RANGE ** 2
-            ) {
-                faceTarget(state, target.x - state.x, target.y - state.y);
-            }
-        }
         return WorldChainResult.CONTINUE;
     }
 }
@@ -163,18 +178,12 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
                 : 1;
         this.comboWindowTicks.set(state, PLAYER_COMBO_WINDOW_TICKS);
 
-        const target = [...room.state.monsters.values()]
+        const intersectingTargets = [...room.state.monsters.values()]
             .filter((monster) => monster.hp > 0)
             .filter((monster) =>
                 intersectsMeleeHitbox(state, monster.x, monster.y, monster.collider)
-            )
-            .sort(
-                (a, b) =>
-                    distanceSquared(state.x, state.y, a.x, a.y) -
-                    distanceSquared(state.x, state.y, b.x, b.y)
-            )[0];
-
-        if (target) {
+            );
+        for (const target of intersectingTargets) {
             target.setAggroTarget(state.id);
             target.takeDamage(
                 Math.max(1, state.attack - target.defense),

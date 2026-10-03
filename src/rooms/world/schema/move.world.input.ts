@@ -10,4 +10,5 @@ export class MoveWorldInput extends Schema {
     @type("boolean") attack: boolean;
     @type("boolean") dash: boolean;
     @type("boolean") targetNext: boolean;
+    @type("boolean") targetUnlock: boolean;
 }
