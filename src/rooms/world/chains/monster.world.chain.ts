@@ -5,7 +5,8 @@ import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.c
 import { distanceSquared } from "@/rooms/world/utils/world.util.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
-const MONSTER_AGGRO_RADIUS = 4;
+const MONSTER_DETECTION_RADIUS = 4;
+const MONSTER_LEASH_RADIUS = 8;
 const MONSTER_ROAM_RADIUS = 2;
 const MONSTER_ROAM_ARRIVAL_DISTANCE = 0.15;
 const MONSTER_IDLE_MIN_MS = 1_000;
@@ -45,18 +46,36 @@ export class MonsterDeathChain implements WorldChainAction<MonsterChainContext> 
 export class MonsterFindTargetChain implements WorldChainAction<MonsterChainContext> {
     execute(context: MonsterChainContext): WorldChainResult {
         const { room, monster } = context;
-        const target = [...room.state.players.values()]
-            .filter((player) => player.hp > 0)
-            .filter(
-                (player) =>
-                    distanceSquared(monster.x, monster.y, player.x, player.y) <=
-                    MONSTER_AGGRO_RADIUS ** 2
-            )
-            .sort(
-                (a, b) =>
-                    distanceSquared(monster.x, monster.y, a.x, a.y) -
-                    distanceSquared(monster.x, monster.y, b.x, b.y)
-            )[0];
+        const aggroTargetId = monster.getAggroTargetId();
+        let target = aggroTargetId
+            ? [...room.state.players.values()].find((player) => player.id === aggroTargetId)
+            : undefined;
+        if (
+            target &&
+            (target.hp <= 0 ||
+                distanceSquared(monster.spawnX, monster.spawnY, target.x, target.y) >
+                    MONSTER_LEASH_RADIUS ** 2)
+        ) {
+            monster.clearAggroTarget();
+            target = undefined;
+        }
+        if (!target) {
+            target = [...room.state.players.values()]
+                .filter((player) => player.hp > 0)
+                .filter(
+                    (player) =>
+                        distanceSquared(monster.x, monster.y, player.x, player.y) <=
+                            MONSTER_DETECTION_RADIUS ** 2 &&
+                        distanceSquared(monster.spawnX, monster.spawnY, player.x, player.y) <=
+                            MONSTER_LEASH_RADIUS ** 2
+                )
+                .sort(
+                    (a, b) =>
+                        distanceSquared(monster.x, monster.y, a.x, a.y) -
+                        distanceSquared(monster.x, monster.y, b.x, b.y)
+                )[0];
+            if (target) monster.setAggroTarget(target.id);
+        }
         if (!target) {
             context.target = undefined;
             context.dx = undefined;
@@ -81,6 +100,12 @@ export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
 
     execute(context: MonsterChainContext): WorldChainResult {
         const { room, monster, target, distance, dx, dy, dt } = context;
+        if (monster.hitInterrupted) {
+            monster.hitInterrupted = false;
+            monster.moving = false;
+            this.attackChain.cancelPendingAttack(monster);
+            return WorldChainResult.STOP;
+        }
         if (this.attackChain.hasPendingAttack(monster)) {
             monster.moving = false;
             return WorldChainResult.CONTINUE;
@@ -91,9 +116,18 @@ export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
             if (distance === undefined || dx === undefined || dy === undefined) {
                 return WorldChainResult.STOP;
             }
-            if (distance <= monster.attackRange) return WorldChainResult.CONTINUE;
+            monster.lookAt(dx, dy);
+            if (monster.attackCooldownTicks > 0) {
+                monster.moving = false;
+                return WorldChainResult.STOP;
+            }
+            if (distance <= monster.attackRange) {
+                monster.moving = false;
+                return WorldChainResult.CONTINUE;
+            }
 
             this.move(room, monster, dx, dy, dt);
+            monster.lookAt(dx, dy);
             return WorldChainResult.STOP;
         }
 

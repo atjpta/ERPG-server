@@ -3,6 +3,7 @@ import { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { Schema, type } from "@colyseus/schema";
 import { v7 as uuidv7 } from "uuid";
+import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 
 export class MonsterWorldState extends Schema {
     @type("string") id: string;
@@ -17,6 +18,7 @@ export class MonsterWorldState extends Schema {
     @type("string") status: MonsterStatus = MonsterStatus.ALIVE;
     @type("boolean") moving: boolean = false;
     @type("boolean") attacking: boolean = false;
+    @type("boolean") hitInterrupted: boolean = false;
     @type("uint32") hp: number;
     @type("uint32") maxHp: number;
     @type("uint32") attack: number;
@@ -25,6 +27,9 @@ export class MonsterWorldState extends Schema {
     @type("float32") attackRange: number;
     @type("uint32") attackCooldownMs: number;
     @type("uint16") attackCooldownTicks: number = 0;
+    @type(HitboxColliderState) hitbox: HitboxColliderState;
+    @type(HitboxColliderState) collider: HitboxColliderState;
+    @type("string") targetId = "";
 
     constructor(props: { monster: Monster; x: number; y: number }) {
         const { monster, x, y } = props;
@@ -45,28 +50,38 @@ export class MonsterWorldState extends Schema {
         this.attackRange = monster.attackRange;
         this.attackCooldownMs = monster.attackCooldownMs;
         this.attackCooldownTicks = 0;
+        this.hitbox = new HitboxColliderState(monster.hitbox);
+        this.collider = new HitboxColliderState(monster.collider);
     }
 
     setDead() {
         this.status = MonsterStatus.DEAD;
+        this.clearAggroTarget();
         this.moving = false;
         this.attacking = false;
+        this.hitInterrupted = false;
         this.hp = 0;
     }
 
     setSpawns() {
         this.status = MonsterStatus.ALIVE;
+        this.clearAggroTarget();
         this.x = this.spawnX;
         this.y = this.spawnY;
         this.direction = Direction.LEFT;
         this.moving = false;
         this.attacking = false;
+        this.hitInterrupted = false;
         this.hp = this.maxHp;
         this.attackCooldownTicks = 0;
     }
 
     faceTarget(dx: number, dy: number) {
         this.moving = false;
+        this.lookAt(dx, dy);
+    }
+
+    lookAt(dx: number, dy: number) {
         if (dx < 0) this.direction = Direction.LEFT;
         else if (dx > 0) this.direction = Direction.RIGHT;
         else this.direction = dy < 0 ? Direction.UP : Direction.DOWN;
@@ -82,7 +97,23 @@ export class MonsterWorldState extends Schema {
         this.attacking = true;
     }
 
-    takeDamage(damage: number) {
+    takeDamage(damage: number, attackRecoveryTicks: number) {
         this.hp = Math.max(0, this.hp - Math.max(0, damage));
+        this.hitInterrupted = true;
+        this.moving = false;
+        this.attacking = false;
+        this.attackCooldownTicks = attackRecoveryTicks;
+    }
+
+    setAggroTarget(playerId: string) {
+        this.targetId = playerId;
+    }
+
+    getAggroTargetId() {
+        return this.targetId || null;
+    }
+
+    clearAggroTarget() {
+        this.targetId = "";
     }
 }

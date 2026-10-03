@@ -5,8 +5,10 @@ import {
     PlayerChainContext,
     PlayerDeathChain,
     PlayerDashChain,
+    PlayerHitInterruptChain,
     PlayerMoveChain,
     PlayerAttackChain,
+    PlayerTargetChain,
 } from "@/rooms/world/chains/player.world.chain.js";
 import { WorldChain } from "@/rooms/world/chains/world.chain.js";
 import { MoveCommand } from "@/rooms/world/simulation/movement.step.js";
@@ -16,11 +18,14 @@ const PLAYER_RESPAWN_MS = 5_000;
 export class PlayerWorldService {
     private readonly lastMovementDiagnosticAt = new WeakMap<WorldRoom, number>();
     private readonly respawningPlayers = new WeakSet<PlayerWorldState>();
+    private readonly attackChain = new PlayerAttackChain();
     private readonly chains = new WorldChain<PlayerChainContext>([
-        new PlayerDeathChain(),
+        new PlayerDeathChain(this.attackChain),
+        new PlayerHitInterruptChain(this.attackChain),
+        new PlayerTargetChain(),
         new PlayerDashChain(),
         new PlayerMoveChain(),
-        new PlayerAttackChain(),
+        this.attackChain,
     ]);
 
     /** Mỗi player tiêu thụ đúng một input trong một fixed Chain. */
@@ -34,6 +39,7 @@ export class PlayerWorldService {
                     moveY: 0,
                     attack: false,
                     dash: false,
+                    targetNext: false,
                 };
                 if (input && (input.moveX !== 0 || input.moveY !== 0)) {
                     const now = Date.now();
@@ -52,6 +58,7 @@ export class PlayerWorldService {
                     move,
                     attackRequested: input.attack === true,
                     dashRequested: input.dash === true,
+                    targetSwitchRequested: input.targetNext === true,
                     dt: ctx.dt,
                     scheduleRespawn: (player) => this.scheduleRespawn(room, player),
                 });

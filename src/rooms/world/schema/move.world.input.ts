@@ -9,4 +9,5 @@ export class MoveWorldInput extends Schema {
     @type("int8") moveY: -1 | 0 | 1;
     @type("boolean") attack: boolean;
     @type("boolean") dash: boolean;
+    @type("boolean") targetNext: boolean;
 }

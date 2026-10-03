@@ -2,6 +2,7 @@ import { Schema, type } from "@colyseus/schema";
 
 import { PLAYER_BASE_STATS } from "@/modules/player/constants/player.constant.js";
 import type { PlayerSnapshot } from "@/modules/player/user/services/player.service.js";
+import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 
 /** Player hiển thị trên map — chỉ chứa dữ liệu mọi người chơi khác cần thấy. */
 export class PlayerWorldState extends Schema {
@@ -24,6 +25,12 @@ export class PlayerWorldState extends Schema {
     @type("uint8") dashTicks: number = 0;
     @type("uint8") dashCooldownTicks: number = 0;
     @type("boolean") attacking: boolean = false;
+    @type("uint8") attackCombo: number = 0;
+    @type("boolean") hitInterrupted: boolean = false;
+    @type(HitboxColliderState) hitbox: HitboxColliderState;
+    @type(HitboxColliderState) collider: HitboxColliderState;
+    @type("string") targetId = "";
+    @type("boolean") targetLocked = false;
 
     constructor(props: { player: PlayerSnapshot }) {
         const { player } = props;
@@ -41,6 +48,8 @@ export class PlayerWorldState extends Schema {
         this.attack = PLAYER_BASE_STATS.attack;
         this.defense = PLAYER_BASE_STATS.defense;
         this.stateRevision = player.stateRevision;
+        this.hitbox = new HitboxColliderState(player.hitbox);
+        this.collider = new HitboxColliderState(player.collider);
     }
 
     setSpawns() {
@@ -48,6 +57,10 @@ export class PlayerWorldState extends Schema {
         this.y = 0;
         this.moving = false;
         this.attacking = false;
+        this.attackCombo = 0;
+        this.hitInterrupted = false;
+        this.targetId = "";
+        this.targetLocked = false;
         this.dashing = false;
         this.hp = this.maxHp;
         this.attackCooldownTicks = 0;
@@ -59,6 +72,10 @@ export class PlayerWorldState extends Schema {
         this.hp = 0;
         this.moving = false;
         this.attacking = false;
+        this.attackCombo = 0;
+        this.hitInterrupted = false;
+        this.targetId = "";
+        this.targetLocked = false;
         this.dashing = false;
     }
 
@@ -84,7 +101,16 @@ export class PlayerWorldState extends Schema {
     }
 
     takeDamage(damage: number) {
+        if (this.dashing) return;
+
         this.hp = Math.max(0, this.hp - Math.max(0, damage));
+        this.hitInterrupted = true;
+        this.moving = false;
+        this.attacking = false;
+        this.attackCombo = 0;
+        this.attackCooldownTicks = 0;
+        this.dashing = false;
+        this.dashTicks = 0;
     }
 
     syncSnapshot(player: PlayerSnapshot) {
