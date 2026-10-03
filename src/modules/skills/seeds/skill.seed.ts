@@ -24,7 +24,7 @@ const damage = (scalingValue: number) => ({
 
 const hitEvent = (params: {
     eventIndex: number;
-    triggerMs: number;
+    triggerTicks: number;
     shape: HitShape;
     range: number;
     width?: number;
@@ -36,7 +36,7 @@ const hitEvent = (params: {
     damageScaling: number;
 }) => ({
     eventIndex: params.eventIndex,
-    triggerMs: params.triggerMs,
+    triggerTicks: params.triggerTicks,
     shape: params.shape,
     range: params.range,
     offsetX: params.offsetX ?? 0,
@@ -70,23 +70,23 @@ const SKILLS: NewSkill[] = [
         skillHitEvents: [
             hitEvent({
                 eventIndex: 0,
-                triggerMs: 350,
-                shape: HitShape.ARC,
-                range: 1,
-                width: 1.4,
-                radius: 1,
-                angle: 100,
+                triggerTicks: 3,
+                shape: HitShape.RECT,
+                range: 1.08,
+                width: 0.84,
+                offsetX: -0.33,
+                offsetY: 0.33,
                 damageScaling: 1.25,
             }),
         ],
     },
     {
-        code: "swordman_slash",
+        code: "swordman_slash_1",
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
-        castRange: 1.5,
-        castTimeMs: 200,
-        cooldownMs: 1000,
+        castRange: 1.4,
+        castTimeMs: 0,
+        cooldownMs: 0,
         manaCost: 0,
         staminaCost: 3,
         maxLevel: 5,
@@ -100,33 +100,133 @@ const SKILLS: NewSkill[] = [
         skillHitEvents: [
             hitEvent({
                 eventIndex: 0,
-                triggerMs: 80,
-                shape: HitShape.ARC,
-                range: 1.4,
-                width: 1.2,
-                radius: 1.4,
-                angle: 90,
-                damageScaling: 0.35,
+                triggerTicks: 3,
+                shape: HitShape.RECT,
+                range: 1.3,
+                width: 0.56,
+                offsetX: -0.33,
+                offsetY: 0.26,
+                damageScaling: 1,
+            }),
+        ],
+    },
+    {
+        code: "swordman_slash_2",
+        skillType: SkillType.MELEE,
+        targetType: TargetType.DIRECTION,
+        castRange: 1.5,
+        castTimeMs: 0,
+        cooldownMs: 0,
+        manaCost: 0,
+        staminaCost: 3,
+        maxLevel: 5,
+        levelConfig: [
+            level(1, 8, 0.3),
+            level(2, 10, 0.35),
+            level(3, 12, 0.4),
+            level(4, 14, 0.45),
+            level(5, 16, 0.5),
+        ],
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks: 3,
+                shape: HitShape.RECT,
+                range: 1.52,
+                width: 0.97,
+                offsetX: -0.33,
+                offsetY: 0.45,
+                damageScaling: 0.5,
             }),
             hitEvent({
                 eventIndex: 1,
-                triggerMs: 240,
-                shape: HitShape.ARC,
-                range: 1.5,
-                width: 1.25,
-                radius: 1.5,
-                angle: 95,
+                triggerTicks: 6,
+                shape: HitShape.RECT,
+                range: 1.58,
+                width: 0.63,
+                offsetX: -0.33,
+                offsetY: 0.22,
+                damageScaling: 0.5,
+            }),
+            hitEvent({
+                eventIndex: 2,
+                triggerTicks: 12,
+                shape: HitShape.RECT,
+                range: 1.77,
+                width: 0.94,
+                offsetX: -0.33,
+                offsetY: 0.38,
+                damageScaling: 0.5,
+            }),
+        ],
+    },
+    {
+        code: "swordman_slash_3",
+        skillType: SkillType.MELEE,
+        targetType: TargetType.DIRECTION,
+        castRange: 1.7,
+        castTimeMs: 0,
+        cooldownMs: 0,
+        manaCost: 0,
+        staminaCost: 3,
+        maxLevel: 5,
+        levelConfig: [
+            level(1, 8, 0.3),
+            level(2, 10, 0.35),
+            level(3, 12, 0.4),
+            level(4, 14, 0.45),
+            level(5, 16, 0.5),
+        ],
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks: 2,
+                shape: HitShape.RECT,
+                range: 1.27,
+                width: 0.41,
+                offsetX: -0.33,
+                offsetY: 0.33,
+                damageScaling: 0.4,
+            }),
+            hitEvent({
+                eventIndex: 1,
+                triggerTicks: 3,
+                shape: HitShape.RECT,
+                range: 1.49,
+                width: 0.5,
+                offsetX: -0.33,
+                offsetY: 0.28,
                 damageScaling: 0.4,
             }),
             hitEvent({
                 eventIndex: 2,
-                triggerMs: 460,
-                shape: HitShape.ARC,
-                range: 1.7,
-                width: 1.4,
-                radius: 1.7,
-                angle: 110,
-                damageScaling: 0.65,
+                triggerTicks: 4,
+                shape: HitShape.RECT,
+                range: 1.42,
+                width: 0.47,
+                offsetX: -0.33,
+                offsetY: 0.33,
+                damageScaling: 0.4,
+            }),
+            hitEvent({
+                eventIndex: 3,
+                triggerTicks: 5,
+                shape: HitShape.RECT,
+                range: 1.52,
+                width: 0.47,
+                offsetX: -0.33,
+                offsetY: 0.33,
+                damageScaling: 0.4,
+            }),
+            hitEvent({
+                eventIndex: 4,
+                triggerTicks: 5,
+                shape: HitShape.RECT,
+                range: 1.36,
+                width: 0.34,
+                offsetX: -0.33,
+                offsetY: 0.3,
+                damageScaling: 0.4,
             }),
         ],
     },
@@ -140,6 +240,11 @@ export const SkillSeed = async (force = false) => {
             matchValue: skill.code,
             updateData: force ? skill : undefined,
         });
+    }
+
+    const legacySlash = await SkillRepo.findByCode({ code: "swordman_slash" });
+    if (legacySlash?.enabled) {
+        await SkillRepo.updateById({ id: legacySlash.id, data: { enabled: false } });
     }
     console.info("✅ [SkillSeed] Done");
 };

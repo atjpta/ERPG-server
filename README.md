@@ -38,7 +38,7 @@ phiên cũ của hai tài khoản test sẽ bị thu hồi.
 3. Response có `token` (user) + `playerToken` + `player` (map, toạ độ...).
 4. Join realtime: Colyseus Unity SDK, `client.Auth.Token = playerToken`,
    `JoinOrCreate<WorldState>("world", { mapCode = player.mapCode })`.
-5. Di chuyển theo [Colyseus Netcode](https://docs.colyseus.io/netcode) (tick 20Hz):
+5. Di chuyển theo [Colyseus Netcode](https://docs.colyseus.io/netcode) (tick 40Hz):
     - Mỗi fixed step: `input = room.Input(...)`, gán `MoveX`/`MoveY` ∈ {-1, 0, 1} rồi `Send()` (1 input / step).
     - Player của mình: `predict.reconciler` với step = bản C# của
       [`movement.step.ts`](src/rooms/world/simulation/movement.step.ts) (port y hệt, cùng hằng số).

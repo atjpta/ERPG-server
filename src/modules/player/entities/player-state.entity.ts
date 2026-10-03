@@ -32,11 +32,14 @@ export const PlayerStates = pgTable("player_states", {
     direction: directionEnum("direction").notNull().default(Direction.DOWN),
     hp: integer("hp").notNull(),
     mp: integer("mp").notNull(),
-    hitbox: jsonb("hitbox").$type<CollisionBounds>().notNull().default({ width: 0.8, height: 0.8 }),
+    hitbox: jsonb("hitbox")
+        .$type<CollisionBounds>()
+        .notNull()
+        .default({ width: 0.44, height: 0.63, offsetX: 0, offsetY: -0.34 }),
     collider: jsonb("collider")
         .$type<CollisionBounds>()
         .notNull()
-        .default({ width: 0.8, height: 0.2 }),
+        .default({ width: 0.34, height: 0.12, offsetX: 0, offsetY: -0.08 }),
     revision: integer("revision").notNull().default(0),
     updatedAt: timestamp("updated_at", { withTimezone: true })
         .notNull()

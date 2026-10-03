@@ -18,12 +18,13 @@ const PLAYER_RESPAWN_MS = 5_000;
 export class PlayerWorldService {
     private readonly lastMovementDiagnosticAt = new WeakMap<WorldRoom, number>();
     private readonly respawningPlayers = new WeakSet<PlayerWorldState>();
+    private readonly previousAttackInput = new WeakMap<PlayerWorldState, boolean>();
     private readonly attackChain = new PlayerAttackChain();
     private readonly chains = new WorldChain<PlayerChainContext>([
         new PlayerDeathChain(this.attackChain),
         new PlayerHitInterruptChain(this.attackChain),
-        new PlayerDashChain(),
-        new PlayerMoveChain(),
+        new PlayerDashChain(this.attackChain),
+        new PlayerMoveChain(this.attackChain),
         new PlayerTargetChain(),
         this.attackChain,
     ]);
@@ -42,6 +43,10 @@ export class PlayerWorldService {
                     targetNext: false,
                     targetUnlock: false,
                 };
+                const attackRequested = input.attack === true;
+                const attackPressed =
+                    attackRequested && !(this.previousAttackInput.get(state) ?? false);
+                this.previousAttackInput.set(state, attackRequested);
                 if (input && (input.moveX !== 0 || input.moveY !== 0)) {
                     const now = Date.now();
                     const lastDiagnosticAt = this.lastMovementDiagnosticAt.get(room) ?? 0;
@@ -57,7 +62,8 @@ export class PlayerWorldService {
                     room,
                     state,
                     move,
-                    attackRequested: input.attack === true,
+                    attackRequested,
+                    attackPressed,
                     dashRequested: input.dash === true,
                     targetSwitchRequested: input.targetNext === true,
                     targetUnlockRequested: input.targetUnlock === true,

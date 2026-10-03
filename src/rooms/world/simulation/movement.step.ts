@@ -55,7 +55,8 @@ export function applyMove(
     const step = speed * dt * factor;
     state.x = clamp(state.x + moveX * step, 0, bounds.width);
     state.y = clamp(state.y + moveY * step, 0, bounds.height);
-    state.direction = toDirection(moveX, moveY);
+    if (moveX < 0) state.direction = Direction.LEFT;
+    else if (moveX > 0) state.direction = Direction.RIGHT;
 }
 
 /** Chuẩn hóa tốc độ và fixed-step trước khi di chuyển mọi entity trong world. */
@@ -75,9 +76,4 @@ export function applyWorldMove(
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-/** Ưu tiên hướng ngang khi đi chéo (sprite 4 hướng). Chỉ gọi khi đang di chuyển. */
-function toDirection(moveX: number, moveY: number): Direction {
-    if (moveX < 0) return Direction.LEFT;
-    if (moveX > 0) return Direction.RIGHT;
-    return moveY < 0 ? Direction.UP : Direction.DOWN;
-}
+/** Chỉ cập nhật hướng nhìn theo trục ngang; trục Y vẫn điều khiển di chuyển độc lập. */

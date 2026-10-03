@@ -13,11 +13,14 @@ export const Monsters = pgTable("monsters", {
     moveSpeed: real("move_speed").notNull(),
     attackRange: real("attack_range").notNull(),
     attackCooldownMs: integer("attack_cooldown_ms").notNull(),
-    hitbox: jsonb("hitbox").$type<CollisionBounds>().notNull().default({ width: 1, height: 1 }),
+    hitbox: jsonb("hitbox")
+        .$type<CollisionBounds>()
+        .notNull()
+        .default({ width: 0.47, height: 0.56, offsetX: 0, offsetY: -0.3 }),
     collider: jsonb("collider")
         .$type<CollisionBounds>()
         .notNull()
-        .default({ width: 0.8, height: 0.8 }),
+        .default({ width: 0.31, height: 0.12, offsetX: 0, offsetY: -0.08 }),
 });
 
 export type Monster = typeof Monsters.$inferSelect;

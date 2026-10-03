@@ -15,5 +15,7 @@ export class HitboxColliderState extends Schema {
         super();
         this.width = bounds.width;
         this.height = bounds.height;
+        this.offsetX = bounds.offsetX ?? 0;
+        this.offsetY = bounds.offsetY ?? 0;
     }
 }

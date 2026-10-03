@@ -1,9 +1,15 @@
 import { MonsterWorldState } from "@/rooms/world/schema/monster.world.state.js";
 import { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
+import { Direction } from "@/modules/player/enums/player.enum.js";
 import { applyWorldMove } from "@/rooms/world/simulation/movement.step.js";
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
 import { distanceSquared } from "@/rooms/world/utils/world.util.js";
+import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
+import { skillService } from "@/modules/skills/services/skill.service.js";
+import { DamageScalingType, SkillEffectType } from "@/modules/skills/enums/skill.enum.js";
+import type { SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
+import { millisecondsToTicks, skillEventTicks } from "@/rooms/world/utils/tick.world.util.js";
 
 const MONSTER_DETECTION_RADIUS = 4;
 const MONSTER_LEASH_RADIUS = 8;
@@ -12,7 +18,6 @@ const MONSTER_ROAM_ARRIVAL_DISTANCE = 0.15;
 const MONSTER_IDLE_MIN_MS = 1_000;
 const MONSTER_IDLE_MAX_MS = 3_000;
 const MONSTER_ATTACK_WINDUP_MS = 300;
-
 interface RoamTarget {
     x: number;
     y: number;
@@ -21,6 +26,16 @@ interface RoamTarget {
 interface PendingAttack {
     target: PlayerWorldState;
     ticks: number;
+    hitEvents: PendingMonsterHit[];
+    cooldownTicks: number;
+    skillAttack: boolean;
+}
+
+interface PendingMonsterHit {
+    event: SkillHitEvent;
+    ticksUntilHit: number;
+    rawDamage: number;
+    direction: Direction.LEFT | Direction.RIGHT;
 }
 
 export interface MonsterChainContext {
@@ -116,18 +131,18 @@ export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
             if (distance === undefined || dx === undefined || dy === undefined) {
                 return WorldChainResult.STOP;
             }
-            monster.lookAt(dx, dy);
+            monster.lookAt(dx);
             if (monster.attackCooldownTicks > 0) {
                 monster.moving = false;
                 return WorldChainResult.STOP;
             }
-            if (distance <= monster.attackRange) {
+            if (isMonsterSkillHitboxInRange(monster, target, distance)) {
                 monster.moving = false;
                 return WorldChainResult.CONTINUE;
             }
 
             this.move(room, monster, dx, dy, dt);
-            monster.lookAt(dx, dy);
+            monster.lookAt(dx);
             return WorldChainResult.STOP;
         }
 
@@ -195,28 +210,121 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
         const pending = this.pendingAttacks.get(monster);
         if (pending) {
             monster.startAttackWindup();
+            this.processHitEvents(room, monster, pending.hitEvents);
             pending.ticks--;
             if (pending.ticks > 0) return WorldChainResult.STOP;
 
             this.pendingAttacks.delete(monster);
-            this.resolveAttack(room, monster, pending.target);
+            if (!pending.skillAttack) {
+                this.resolveFallbackAttack(room, monster, pending.target);
+            }
+            monster.startAttack(pending.cooldownTicks);
             return WorldChainResult.STOP;
         }
 
         if (!target || dx === undefined || dy === undefined) return WorldChainResult.STOP;
 
-        monster.faceTarget(dx, dy);
+        monster.faceTarget(dx);
         if (monster.attackCooldownTicks > 0) return WorldChainResult.STOP;
 
+        const attackDirection: Direction.LEFT | Direction.RIGHT =
+            dx < 0
+                ? Direction.LEFT
+                : dx > 0
+                  ? Direction.RIGHT
+                  : monster.direction === Direction.LEFT
+                    ? Direction.LEFT
+                    : Direction.RIGHT;
+        monster.direction = attackDirection;
         monster.startAttackWindup();
+        const skill = getMonsterAttackSkill(monster);
+        if (skill) {
+            const sortedEvents = [...skill.skillHitEvents].sort(
+                (a, b) => a.triggerTicks - b.triggerTicks || a.eventIndex - b.eventIndex
+            );
+            let damageRemainder = 0;
+            const hitEvents = sortedEvents.map((event) => {
+                const exactDamage = calculateSkillDamage(monster.attack, event);
+                const accumulatedDamage = exactDamage + damageRemainder;
+                const rawDamage = exactDamage > 0 ? Math.floor(accumulatedDamage) : 0;
+                damageRemainder = exactDamage > 0 ? accumulatedDamage - rawDamage : damageRemainder;
+                return {
+                    event,
+                    ticksUntilHit: skillEventTicks(event.triggerTicks, room.tickRate),
+                    rawDamage,
+                    direction: attackDirection,
+                };
+            });
+            const cooldownTicks = millisecondsToTicks(
+                skill.cooldownMs > 0 ? skill.cooldownMs : monster.attackCooldownMs,
+                room.tickRate
+            );
+            const skillDurationTicks = Math.max(
+                1,
+                millisecondsToTicks(skill.castTimeMs, room.tickRate),
+                ...hitEvents.map(({ event }) => skillEventTicks(event.triggerTicks, room.tickRate))
+            );
+            this.pendingAttacks.set(monster, {
+                target,
+                ticks: skillDurationTicks,
+                hitEvents,
+                cooldownTicks,
+                skillAttack: true,
+            });
+            return WorldChainResult.STOP;
+        }
+
         this.pendingAttacks.set(monster, {
             target,
             ticks: millisecondsToTicks(MONSTER_ATTACK_WINDUP_MS, room.tickRate),
+            hitEvents: [],
+            cooldownTicks: millisecondsToTicks(monster.attackCooldownMs, room.tickRate),
+            skillAttack: false,
         });
         return WorldChainResult.STOP;
     }
 
-    private resolveAttack(
+    private processHitEvents(
+        room: WorldRoom,
+        monster: MonsterWorldState,
+        hitEvents: PendingMonsterHit[]
+    ): void {
+        for (let index = hitEvents.length - 1; index >= 0; index--) {
+            const hit = hitEvents[index];
+            hit.ticksUntilHit--;
+            if (hit.ticksUntilHit > 0) continue;
+
+            this.resolveSkillHit(room, monster, hit);
+            hitEvents.splice(index, 1);
+        }
+    }
+
+    private resolveSkillHit(
+        room: WorldRoom,
+        monster: MonsterWorldState,
+        hit: PendingMonsterHit
+    ): void {
+        if (hit.rawDamage <= 0) return;
+
+        for (const target of room.state.players.values()) {
+            if (
+                target.hp <= 0 ||
+                !intersectsSkillHitEvent(
+                    { x: monster.x, y: monster.y, direction: hit.direction },
+                    target.x,
+                    target.y,
+                    target.hitbox,
+                    hit.event
+                )
+            ) {
+                continue;
+            }
+
+            target.takeDamage(Math.max(1, hit.rawDamage - target.defense));
+        }
+    }
+
+    private resolveFallbackAttack(
         room: WorldRoom,
         monster: MonsterWorldState,
         target: PlayerWorldState
@@ -231,8 +339,47 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
         ) {
             target.takeDamage(Math.max(1, monster.attack - target.defense));
         }
-        monster.startAttack(Math.ceil(monster.attackCooldownMs / (1000 / room.tickRate)));
     }
+}
+
+function getMonsterAttackSkill(monster: MonsterWorldState) {
+    return skillService.getByCode(`${monster.code}_slash`);
+}
+
+function isMonsterSkillHitboxInRange(
+    monster: MonsterWorldState,
+    target: PlayerWorldState,
+    distance: number
+): boolean {
+    const skill = getMonsterAttackSkill(monster);
+    const hitEvents = skill?.skillHitEvents ?? [];
+    if (hitEvents.length === 0) return distance <= (skill?.castRange ?? monster.attackRange);
+
+    const direction =
+        target.x < monster.x
+            ? Direction.LEFT
+            : target.x > monster.x
+              ? Direction.RIGHT
+              : monster.direction;
+
+    return hitEvents.some((event) =>
+        intersectsSkillHitEvent(
+            { x: monster.x, y: monster.y, direction },
+            target.x,
+            target.y,
+            target.hitbox,
+            event
+        )
+    );
+}
+
+function calculateSkillDamage(attack: number, event: SkillHitEvent): number {
+    return event.effects
+        .filter((effect) => effect.effectType === SkillEffectType.DAMAGE)
+        .reduce((total, effect) => {
+            const scaledStat = effect.scalingType === DamageScalingType.ATTACK ? attack : 0;
+            return total + effect.baseValue + scaledStat * effect.scalingValue;
+        }, 0);
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -242,6 +389,3 @@ const randomIdleTicks = (tickRate: number) => {
         MONSTER_IDLE_MIN_MS + Math.random() * (MONSTER_IDLE_MAX_MS - MONSTER_IDLE_MIN_MS);
     return Math.max(1, Math.ceil(idleMs / (1000 / tickRate)));
 };
-
-const millisecondsToTicks = (milliseconds: number, tickRate: number) =>
-    Math.max(1, Math.ceil(milliseconds / (1000 / tickRate)));

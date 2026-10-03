@@ -36,6 +36,13 @@
       "when": 1791004884297,
       "tag": "0004_fixed_microbe",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791048733863,
+      "tag": "0005_fast_quicksilver",
+      "breakpoints": true
     }
   ]
 }

@@ -19,11 +19,11 @@ export class WorldRoom extends BasePlayerRoom<{
 }> {
     dispatcher = new Dispatcher(this);
     state = new WorldState();
-    readonly tickRate = 20;
+    readonly tickRate = 40;
 
     inputs = this.defineInput(MoveWorldInput, {
-        // Giữ tối đa 3.2 giây input ở 20Hz khi server hụt tick; không tin giá trị từ client.
-        bufferMaxSize: 64,
+        // Giữ tối đa 3.2 giây input ở 40Hz khi server hụt tick; không tin giá trị từ client.
+        bufferMaxSize: 128,
         // Sanitize sửa giá trị sai thành giá trị hợp lệ, không reject input.
         sanitize: { moveX: [-1, 1], moveY: [-1, 1] },
     });

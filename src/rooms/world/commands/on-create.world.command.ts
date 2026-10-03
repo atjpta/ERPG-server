@@ -20,6 +20,7 @@ export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
         this.room.state.mapCode = map.code;
         this.room.state.mapWidth = map.width;
         this.room.state.mapHeight = map.height;
+        this.room.patchRate = 25;
 
         const monsters = await monsterWorldService.createMonster(map);
 

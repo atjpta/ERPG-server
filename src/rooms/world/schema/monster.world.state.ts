@@ -76,15 +76,14 @@ export class MonsterWorldState extends Schema {
         this.attackCooldownTicks = 0;
     }
 
-    faceTarget(dx: number, dy: number) {
+    faceTarget(dx: number) {
         this.moving = false;
-        this.lookAt(dx, dy);
+        this.lookAt(dx);
     }
 
-    lookAt(dx: number, dy: number) {
+    lookAt(dx: number) {
         if (dx < 0) this.direction = Direction.LEFT;
         else if (dx > 0) this.direction = Direction.RIGHT;
-        else this.direction = dy < 0 ? Direction.UP : Direction.DOWN;
     }
 
     startAttack(cooldownTicks: number) {

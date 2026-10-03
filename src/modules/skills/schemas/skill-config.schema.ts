@@ -38,7 +38,7 @@ export const SkillEffectSchema = z.object({
 
 export const SkillHitEventSchema = z.object({
     eventIndex: z.number().int().nonnegative(),
-    triggerMs: z.number().int().nonnegative().default(0),
+    triggerTicks: z.number().int().nonnegative().default(0),
     shape: z.enum(HitShape),
     range: nonNegative.default(0),
     offsetX: z.number().default(0),
