@@ -1,4 +1,4 @@
-import { MonsterStatus } from "@/modules/monsters/entities/enums/monster-status.enum.js";
+import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { Schema, type } from "@colyseus/schema";

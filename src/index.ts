@@ -8,12 +8,13 @@ import { applyCorsPolicy } from "@/configs/cors.config.js";
 import { connectRedisCache, createRedisScaling } from "@/configs/redis.config.js";
 import { loadControllers } from "@/core/utils/load-controllers.util.js";
 import { createRooms } from "@/rooms/index.room.js";
+import { setCacheDataApp } from "@/cache-data/index.js";
 
 await connectPostgres();
 await connectRedisCache();
 applyCorsPolicy();
 const controllers = await loadControllers();
-
+await setCacheDataApp();
 await listen(
     defineServer({
         rooms: createRooms(),
