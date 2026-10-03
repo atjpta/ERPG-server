@@ -1,5 +1,6 @@
-import { integer, pgTable, real, text } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgTable, real, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
+import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 
 /** Base combat and movement stats shared by every instance of a monster type. */
 export const Monsters = pgTable("monsters", {
@@ -12,6 +13,11 @@ export const Monsters = pgTable("monsters", {
     moveSpeed: real("move_speed").notNull(),
     attackRange: real("attack_range").notNull(),
     attackCooldownMs: integer("attack_cooldown_ms").notNull(),
+    hitbox: jsonb("hitbox").$type<CollisionBounds>().notNull().default({ width: 1, height: 1 }),
+    collider: jsonb("collider")
+        .$type<CollisionBounds>()
+        .notNull()
+        .default({ width: 0.8, height: 0.8 }),
 });
 
 export type Monster = typeof Monsters.$inferSelect;

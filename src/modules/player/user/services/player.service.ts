@@ -54,6 +54,8 @@ export class PlayerService extends BaseService<typeof Players> {
                     x: startMap.spawnX,
                     y: startMap.spawnY,
                     direction: Direction.DOWN,
+                    hitbox: { width: 0.8, height: 0.8 },
+                    collider: { width: 0.6, height: 0.6 },
                 },
                 tx
             );

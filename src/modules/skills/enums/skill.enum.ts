@@ -11,6 +11,11 @@ export enum SkillType {
     PASSIVE = "PASSIVE",
 }
 
+export enum SkillOwnerType {
+    MONSTER = "MONSTER",
+    CLASS = "CLASS",
+}
+
 export enum TargetType {
     NONE = "NONE",
     SELF = "SELF",

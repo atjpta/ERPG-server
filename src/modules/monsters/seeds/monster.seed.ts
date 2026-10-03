@@ -12,6 +12,8 @@ const MONSTERS: NewMonster[] = [
         moveSpeed: 2.6,
         attackRange: 0.85,
         attackCooldownMs: 1000,
+        hitbox: { width: 1, height: 1 },
+        collider: { width: 0.8, height: 0.2 },
     },
 ];
 

@@ -1,8 +1,19 @@
-import { bigint, integer, pgEnum, pgTable, real, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+    bigint,
+    integer,
+    jsonb,
+    pgEnum,
+    pgTable,
+    real,
+    text,
+    timestamp,
+    uuid,
+} from "drizzle-orm/pg-core";
 import { DateTime } from "luxon";
 import { GameMaps } from "@/modules/maps/entities/game-map.entity.js";
 import { Players } from "@/modules/auth/entities/player.entity.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
+import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 
 export const directionEnum = pgEnum("direction", Direction);
 
@@ -21,6 +32,11 @@ export const PlayerStates = pgTable("player_states", {
     direction: directionEnum("direction").notNull().default(Direction.DOWN),
     hp: integer("hp").notNull(),
     mp: integer("mp").notNull(),
+    hitbox: jsonb("hitbox").$type<CollisionBounds>().notNull().default({ width: 0.8, height: 0.8 }),
+    collider: jsonb("collider")
+        .$type<CollisionBounds>()
+        .notNull()
+        .default({ width: 0.8, height: 0.2 }),
     revision: integer("revision").notNull().default(0),
     updatedAt: timestamp("updated_at", { withTimezone: true })
         .notNull()

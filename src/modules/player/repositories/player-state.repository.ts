@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { db, type Queryable } from "@/configs/postgres.config.js";
 import {
     PlayerStates,
