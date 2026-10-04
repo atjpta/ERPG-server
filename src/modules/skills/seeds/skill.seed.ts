@@ -85,7 +85,8 @@ const SKILLS: NewSkill[] = [
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
         castRange: 1.4,
-        castTimeMs: 0,
+        // Thời lượng cả đòn (khoá di chuyển) — khớp AttackDurationTicks bên client; anim Attack01 350 ms; hit frame 3.
+        castTimeMs: 400,
         cooldownMs: 0,
         manaCost: 0,
         staminaCost: 3,
@@ -115,7 +116,8 @@ const SKILLS: NewSkill[] = [
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
         castRange: 1.5,
-        castTimeMs: 0,
+        // Thời lượng cả đòn (khoá di chuyển) — khớp AttackDurationTicks bên client; anim Attack02 750 ms; hit frame 3/6/12.
+        castTimeMs: 750,
         cooldownMs: 0,
         manaCost: 0,
         staminaCost: 3,
@@ -165,7 +167,9 @@ const SKILLS: NewSkill[] = [
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
         castRange: 1.7,
-        castTimeMs: 0,
+        // Thời lượng cả đòn (khoá di chuyển) — khớp AttackDurationTicks bên client; anim Attack03
+        // (speed 2.4) 500 ms, 5 nhát đâm ở frame 5–9 (208/250/292/333/375 ms).
+        castTimeMs: 500,
         cooldownMs: 0,
         manaCost: 0,
         staminaCost: 3,
@@ -180,7 +184,7 @@ const SKILLS: NewSkill[] = [
         skillHitEvents: [
             hitEvent({
                 eventIndex: 0,
-                triggerTicks: 2,
+                triggerTicks: 4,
                 shape: HitShape.RECT,
                 range: 1.27,
                 width: 0.41,
@@ -190,7 +194,7 @@ const SKILLS: NewSkill[] = [
             }),
             hitEvent({
                 eventIndex: 1,
-                triggerTicks: 3,
+                triggerTicks: 5,
                 shape: HitShape.RECT,
                 range: 1.49,
                 width: 0.5,
@@ -200,7 +204,7 @@ const SKILLS: NewSkill[] = [
             }),
             hitEvent({
                 eventIndex: 2,
-                triggerTicks: 4,
+                triggerTicks: 6,
                 shape: HitShape.RECT,
                 range: 1.42,
                 width: 0.47,
@@ -210,7 +214,7 @@ const SKILLS: NewSkill[] = [
             }),
             hitEvent({
                 eventIndex: 3,
-                triggerTicks: 5,
+                triggerTicks: 7,
                 shape: HitShape.RECT,
                 range: 1.52,
                 width: 0.47,
@@ -220,7 +224,7 @@ const SKILLS: NewSkill[] = [
             }),
             hitEvent({
                 eventIndex: 4,
-                triggerTicks: 5,
+                triggerTicks: 7,
                 shape: HitShape.RECT,
                 range: 1.36,
                 width: 0.34,
@@ -232,13 +236,13 @@ const SKILLS: NewSkill[] = [
     },
 ];
 
-export const SkillSeed = async (force = false) => {
+export const SkillSeed = async () => {
     for (const skill of SKILLS) {
         await SkillRepo.upsert({
             data: skill,
             target: Skills.code,
             matchValue: skill.code,
-            updateData: force ? skill : undefined,
+            updateData: skill,
         });
     }
 

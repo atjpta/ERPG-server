@@ -25,6 +25,11 @@ export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
         const monsters = await monsterWorldService.createMonster(map);
 
         this.room.state.monsters.push(...monsters);
+        // Lag compensation: client vẽ monster trễ (lerp), nên hit của player được tính theo vị trí
+        // monster mà chính client đó đang thấy lúc gửi input ("thấy trúng là trúng").
+        this.room.rewind = this.room
+            .allowRewindState({ maxRewindMs: 500 })
+            .attachAll(this.room.state.monsters, { fields: ["x", "y"] });
 
         this.room.setFixedTimestep((ctx) => {
             playerWorldService.chain(this.room, ctx);

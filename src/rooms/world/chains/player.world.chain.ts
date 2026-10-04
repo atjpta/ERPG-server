@@ -5,30 +5,38 @@ import { MoveCommand, applyWorldMove } from "@/rooms/world/simulation/movement.s
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
 import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
-import { DamageScalingType, SkillEffectType } from "@/modules/skills/enums/skill.enum.js";
-import type { SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
-import { millisecondsToTicks, skillEventTicks } from "@/rooms/world/utils/tick.world.util.js";
+import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
+import {
+    PendingSkillHit,
+    buildPendingSkillHits,
+    getSkillDurationTicks,
+    tickPendingSkillHits,
+    toHorizontalDirection,
+} from "@/rooms/world/utils/skill-attack.world.util.js";
 
+/** Chỉ tự chọn target mới trong tầm này (khi đang không có target). */
 const PLAYER_AUTO_TARGET_RANGE = 4;
-const PLAYER_AUTO_FACE_RANGE = PLAYER_AUTO_TARGET_RANGE / 2;
-const PLAYER_ATTACK_DURATION_MS = [400, 750, 400];
-
-interface PendingSkillHit {
-    ticksUntilHit: number;
-    event: SkillHitEvent;
-    rawDamage: number;
-    direction: "left" | "right";
-}
+/** Target hiện tại (auto hay lock) bị mất khi ra xa quá tầm này. */
+const PLAYER_KEEP_TARGET_RANGE = PLAYER_AUTO_TARGET_RANGE * 2;
+/** Chỉ quay mặt về target khi nó ở gần. */
+const PLAYER_FACE_TARGET_RANGE = 2;
+/** Combo `swordman_slash_1..3`; thời lượng mỗi đòn = `castTimeMs` của skill (khớp anim client). */
+const PLAYER_MAX_COMBO = 3;
 
 export interface PlayerChainContext {
     room: WorldRoom;
+    sessionId: string;
     state: PlayerWorldState;
     move: MoveCommand;
+    /**
+     * Client muốn đánh ở tick này. Client giữ cờ này từ lúc bấm (kể cả bấm trong lúc đang đánh)
+     * đến khi đòn được bắt đầu, nên server chỉ cần đọc theo level — không giữ buffer ẩn,
+     * nhờ vậy `WorldMovementStep.cs` predict khớp từng tick.
+     */
     attackRequested: boolean;
-    attackPressed: boolean;
     dashRequested: boolean;
-    targetSwitchRequested: boolean;
-    targetUnlockRequested: boolean;
+    targetSwitchPressed: boolean;
+    targetUnlockPressed: boolean;
     dt: number;
     scheduleRespawn: (player: PlayerWorldState) => void;
 }
@@ -64,82 +72,56 @@ export class PlayerDashChain implements WorldChainAction<PlayerChainContext> {
         const canStartDash =
             dashRequested && state.dashCooldownTicks === 0 && state.dashTicks === 0;
         if (canStartDash) {
+            // Dash huỷ đòn đánh đang dở, kể cả các hit chưa nổ.
             state.attacking = false;
             state.attackCooldownTicks = 0;
-            this.attackChain.cancelForDash(state);
+            this.attackChain.interrupt(state);
         }
 
         state.chainDash(dashRequested, room.tickRate);
         if (state.dashing && move.moveX === 0 && move.moveY === 0) {
-            if (state.direction === "left") move.moveX = -1;
-            else if (state.direction === "right") move.moveX = 1;
-            else if (state.direction === "up") move.moveY = -1;
-            else move.moveY = 1;
+            move.moveX = state.direction === "left" ? -1 : 1;
         }
         return WorldChainResult.CONTINUE;
     }
 }
 
 export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
-    private readonly previousSwitchInput = new WeakMap<PlayerWorldState, boolean>();
-    private readonly previousUnlockInput = new WeakMap<PlayerWorldState, boolean>();
-
     execute({
         room,
         state,
-        targetSwitchRequested,
-        targetUnlockRequested,
+        targetSwitchPressed,
+        targetUnlockPressed,
         dashRequested,
         attackRequested,
     }: PlayerChainContext): WorldChainResult {
-        const wasSwitchRequested = this.previousSwitchInput.get(state) ?? false;
-        const wasUnlockRequested = this.previousUnlockInput.get(state) ?? false;
-        this.previousSwitchInput.set(state, targetSwitchRequested);
-        this.previousUnlockInput.set(state, targetUnlockRequested);
-        const switchPressed = targetSwitchRequested && !wasSwitchRequested;
-        const unlockPressed = targetUnlockRequested && !wasUnlockRequested;
+        if (targetUnlockPressed) clearTarget(state);
 
-        if (unlockPressed) {
-            state.targetId = "";
-            state.targetLocked = false;
-        }
-
-        let target = state.targetLocked
-            ? findTargetById(room, state, state.targetId, PLAYER_AUTO_TARGET_RANGE * 2)
+        let target = state.targetId
+            ? findTargetById(room, state, state.targetId, PLAYER_KEEP_TARGET_RANGE)
             : undefined;
-        if (state.targetLocked && !target) {
-            state.targetId = "";
-            state.targetLocked = false;
-        }
+        if (!target) clearTarget(state);
 
-        if (switchPressed) {
-            const targets = findTargetsInRange(room, state, PLAYER_AUTO_TARGET_RANGE * 2);
-            if (targets.length > 0) {
-                const currentIndex = targets.findIndex(
-                    (candidate) => candidate.id === state.targetId
-                );
-                target = targets[(currentIndex + 1) % targets.length];
+        if (targetSwitchPressed) {
+            target = findNextTarget(room, state);
+            if (target) {
                 state.targetId = target.id;
                 state.targetLocked = true;
             } else {
-                target = undefined;
-                state.targetId = "";
-                state.targetLocked = false;
+                clearTarget(state);
             }
-        } else if (!state.targetLocked) {
-            target = findAutoTarget(room, state);
+        } else if (!target) {
+            target = findTargetsInRange(room, state, PLAYER_AUTO_TARGET_RANGE)[0];
             state.targetId = target?.id ?? "";
         }
 
-        if (!target && state.targetLocked) {
-            target = findTargetById(room, state, state.targetId, PLAYER_AUTO_TARGET_RANGE * 2);
-        }
+        // Khớp WorldMovementStep.cs: quay mặt về target hiện tại khi nó trong tầm 2 ô.
         if (
             target &&
             !state.dashing &&
             !dashRequested &&
-            (state.moving || switchPressed || attackRequested) &&
-            distanceSquared(state.x, state.y, target.x, target.y) <= PLAYER_AUTO_FACE_RANGE ** 2
+            (state.moving || targetSwitchPressed || attackRequested) &&
+            distanceSquared(state.x, state.y, target.x, target.y) <= PLAYER_FACE_TARGET_RANGE ** 2
         ) {
             faceTarget(state, target.x - state.x);
         }
@@ -148,17 +130,10 @@ export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
 }
 
 export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
-    constructor(private readonly attackChain: PlayerAttackChain) {}
-
-    execute({ room, state, move, dt, attackPressed }: PlayerChainContext): WorldChainResult {
+    execute({ room, state, move, dt, attackRequested }: PlayerChainContext): WorldChainResult {
         state.recoverPosition(room.map.spawnX, room.map.spawnY, room.map.width, room.map.height);
-        if (
-            !state.dashing &&
-            (attackPressed ||
-                state.attacking ||
-                state.attackCooldownTicks > 0 ||
-                this.attackChain.hasBufferedAttack(state))
-        ) {
+        // Đứng yên khi đang đánh (cooldown còn) hoặc đang chờ ra đòn.
+        if (!state.dashing && (attackRequested || state.attackCooldownTicks > 0)) {
             state.moving = false;
             return WorldChainResult.CONTINUE;
         }
@@ -168,141 +143,92 @@ export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
 }
 
 export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
-    private readonly bufferedAttacks = new WeakSet<PlayerWorldState>();
     private readonly pendingHits = new WeakMap<PlayerWorldState, PendingSkillHit[]>();
-    private readonly lastHorizontalDirection = new WeakMap<PlayerWorldState, "left" | "right">();
 
     interrupt(state: PlayerWorldState): void {
-        this.bufferedAttacks.delete(state);
         this.pendingHits.delete(state);
         state.attackCombo = 0;
     }
 
-    cancelForDash(state: PlayerWorldState): void {
-        this.interrupt(state);
+    execute({ room, sessionId, state, attackRequested }: PlayerChainContext): WorldChainResult {
+        this.processPendingHits(room, sessionId, state);
+        if (state.dashing || state.attackCooldownTicks > 0) return WorldChainResult.CONTINUE;
+
+        // Hết đòn mà không có yêu cầu đánh tiếp ngay tick đầu tiên → mất combo.
+        if (!attackRequested) {
+            state.attackCombo = 0;
+            return WorldChainResult.CONTINUE;
+        }
+
+        this.startAttack(room, state);
+        return WorldChainResult.CONTINUE;
     }
 
-    execute({ room, state, attackPressed }: PlayerChainContext): WorldChainResult {
-        if (state.direction === "left" || state.direction === "right") {
-            this.lastHorizontalDirection.set(state, state.direction);
-        }
-
-        this.processPendingHits(room, state);
-
-        if (state.dashing) {
-            return WorldChainResult.CONTINUE;
-        }
-
-        if (state.attackCooldownTicks > 0) {
-            if (attackPressed) this.bufferedAttacks.add(state);
-            return WorldChainResult.CONTINUE;
-        }
-
-        const bufferedAttack = this.bufferedAttacks.has(state);
-        if (!bufferedAttack) state.attackCombo = 0;
-        if (!attackPressed && !bufferedAttack) return WorldChainResult.CONTINUE;
-        this.bufferedAttacks.delete(state);
-
+    private startAttack(room: WorldRoom, state: PlayerWorldState): void {
         state.attackCombo =
-            bufferedAttack && state.attackCombo > 0 && state.attackCombo < 3
+            state.attackCombo > 0 && state.attackCombo < PLAYER_MAX_COMBO
                 ? state.attackCombo + 1
                 : 1;
         const skill = skillService.getByCode(`swordman_slash_${state.attackCombo}`);
         if (!skill) {
             state.attackCombo = 0;
-            return WorldChainResult.CONTINUE;
+            return;
         }
 
-        const attackDirection = this.lastHorizontalDirection.get(state) ?? "right";
-        state.direction = attackDirection;
-
-        const events = [...skill.skillHitEvents].sort(
-            (a, b) => a.triggerTicks - b.triggerTicks || a.eventIndex - b.eventIndex
-        );
-        let damageRemainder = 0;
+        const direction = toHorizontalDirection(state.direction);
+        state.direction = direction;
         this.pendingHits.set(
             state,
-            events.map((event) => {
-                const exactDamage = getSkillHitDamage(state, event);
-                const accumulatedDamage = exactDamage + damageRemainder;
-                const rawDamage = exactDamage > 0 ? Math.floor(accumulatedDamage) : 0;
-                damageRemainder = exactDamage > 0 ? accumulatedDamage - rawDamage : damageRemainder;
-
-                return {
-                    ticksUntilHit: skillEventTicks(event.triggerTicks, room.tickRate),
-                    event,
-                    rawDamage,
-                    direction: attackDirection,
-                };
-            })
+            buildPendingSkillHits(skill, state.attack, direction, room.tickRate)
         );
-
-        const skillDurationTicks = Math.max(
-            Math.ceil((skill.castTimeMs * room.tickRate) / 1000),
-            ...events.map((event) => skillEventTicks(event.triggerTicks, room.tickRate)),
-            millisecondsToTicks(PLAYER_ATTACK_DURATION_MS[state.attackCombo - 1], room.tickRate)
-        );
-        state.startAttack(skillDurationTicks);
-        return WorldChainResult.CONTINUE;
+        state.startAttack(getSkillDurationTicks(skill, room.tickRate));
     }
 
-    hasBufferedAttack(state: PlayerWorldState): boolean {
-        return this.bufferedAttacks.has(state);
+    private processPendingHits(room: WorldRoom, sessionId: string, state: PlayerWorldState): void {
+        const hits = this.pendingHits.get(state);
+        if (!hits) return;
+
+        tickPendingSkillHits(hits, (hit) => this.applyHit(room, sessionId, state, hit));
+        if (hits.length === 0) this.pendingHits.delete(state);
     }
 
-    private processPendingHits(room: WorldRoom, state: PlayerWorldState): void {
-        const pendingHits = this.pendingHits.get(state);
-        if (!pendingHits) return;
-
-        for (let index = pendingHits.length - 1; index >= 0; index--) {
-            const pendingHit = pendingHits[index];
-            pendingHit.ticksUntilHit--;
-            if (pendingHit.ticksUntilHit > 0) continue;
-
-            this.applyHitEvent(room, state, pendingHit);
-            pendingHits.splice(index, 1);
-        }
-
-        if (pendingHits.length === 0) this.pendingHits.delete(state);
-    }
-
-    private applyHitEvent(room: WorldRoom, state: PlayerWorldState, hit: PendingSkillHit): void {
-        if (hit.rawDamage <= 0) return;
-
+    private applyHit(
+        room: WorldRoom,
+        sessionId: string,
+        state: PlayerWorldState,
+        hit: PendingSkillHit
+    ): void {
+        // Player tự predict nên vị trí của chính nó là live; monster thì đọc lại đúng chỗ client đang vẽ.
+        const seen = room.rewind.lastSeenBy(sessionId);
+        const origin = { x: state.x, y: state.y, direction: hit.direction };
         for (const target of room.state.monsters.values()) {
-            if (
-                target.hp <= 0 ||
-                !intersectsSkillHitEvent(
-                    { x: state.x, y: state.y, direction: hit.direction },
-                    target.x,
-                    target.y,
-                    target.hitbox,
-                    hit.event
-                )
-            ) {
+            if (target.hp <= 0) continue;
+            const targetX = seen.value(target, "x");
+            const targetY = seen.value(target, "y");
+            if (!intersectsSkillHitEvent(origin, targetX, targetY, target.hitbox, hit.event)) {
                 continue;
             }
 
             target.setAggroTarget(state.id);
             target.takeDamage(
                 Math.max(1, hit.rawDamage - target.defense),
-                Math.ceil(target.attackCooldownMs / (1000 / room.tickRate))
+                millisecondsToTicks(target.attackCooldownMs, room.tickRate)
             );
         }
     }
 }
 
-function getSkillHitDamage(state: PlayerWorldState, event: SkillHitEvent): number {
-    return event.effects
-        .filter((effect) => effect.effectType === SkillEffectType.DAMAGE)
-        .reduce((total, effect) => {
-            const scaledStat = effect.scalingType === DamageScalingType.ATTACK ? state.attack : 0;
-            return total + effect.baseValue + scaledStat * effect.scalingValue;
-        }, 0);
+function clearTarget(player: PlayerWorldState) {
+    player.targetId = "";
+    player.targetLocked = false;
 }
 
-function findAutoTarget(room: WorldRoom, player: PlayerWorldState) {
-    return findTargetsInRange(room, player, PLAYER_AUTO_TARGET_RANGE)[0];
+/** Xoay vòng sang target kế tiếp (theo khoảng cách) trong tầm lock. */
+function findNextTarget(room: WorldRoom, player: PlayerWorldState) {
+    const targets = findTargetsInRange(room, player, PLAYER_KEEP_TARGET_RANGE);
+    if (targets.length === 0) return undefined;
+    const currentIndex = targets.findIndex((candidate) => candidate.id === player.targetId);
+    return targets[(currentIndex + 1) % targets.length];
 }
 
 function findTargetById(
@@ -315,16 +241,16 @@ function findTargetById(
 }
 
 function findTargetsInRange(room: WorldRoom, player: PlayerWorldState, range: number) {
-    return [...room.state.monsters.values()]
-        .filter((monster) => monster.hp > 0)
-        .filter(
-            (monster) => distanceSquared(player.x, player.y, monster.x, monster.y) <= range ** 2
-        )
-        .sort(
-            (a, b) =>
-                distanceSquared(player.x, player.y, a.x, a.y) -
-                    distanceSquared(player.x, player.y, b.x, b.y) || a.id.localeCompare(b.id)
-        );
+    const distanceTo = (monster: { x: number; y: number }) =>
+        distanceSquared(player.x, player.y, monster.x, monster.y);
+    return (
+        [...room.state.monsters.values()]
+            .filter((monster) => monster.hp > 0 && distanceTo(monster) <= range ** 2)
+            // So id theo ordinal để khớp `string.CompareOrdinal` bên client.
+            .sort(
+                (a, b) => distanceTo(a) - distanceTo(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+            )
+    );
 }
 
 function faceTarget(player: PlayerWorldState, dx: number) {

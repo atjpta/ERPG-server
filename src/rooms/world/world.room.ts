@@ -1,4 +1,5 @@
 import { Dispatcher } from "@colyseus/command";
+import type { Rewind } from "colyseus";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { BasePlayerRoom, type PlayerClient } from "@/rooms/base/base-player.room.js";
 import {
@@ -29,6 +30,7 @@ export class WorldRoom extends BasePlayerRoom<{
     });
 
     map!: GameMap;
+    rewind!: Rewind;
     private readonly leavingSessions = new Set<string>();
 
     async onCreate(options: WorldRoomOptions) {

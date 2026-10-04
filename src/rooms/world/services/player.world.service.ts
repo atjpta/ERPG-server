@@ -15,16 +15,22 @@ import { MoveCommand } from "@/rooms/world/simulation/movement.step.js";
 import { StepContext } from "colyseus";
 const PLAYER_RESPAWN_MS = 5_000;
 
+interface ButtonInput {
+    targetNext: boolean;
+    targetUnlock: boolean;
+}
+
+const RELEASED_BUTTONS: ButtonInput = { targetNext: false, targetUnlock: false };
+
 export class PlayerWorldService {
-    private readonly lastMovementDiagnosticAt = new WeakMap<WorldRoom, number>();
     private readonly respawningPlayers = new WeakSet<PlayerWorldState>();
-    private readonly previousAttackInput = new WeakMap<PlayerWorldState, boolean>();
+    private readonly previousButtons = new WeakMap<PlayerWorldState, ButtonInput>();
     private readonly attackChain = new PlayerAttackChain();
     private readonly chains = new WorldChain<PlayerChainContext>([
         new PlayerDeathChain(this.attackChain),
         new PlayerHitInterruptChain(this.attackChain),
         new PlayerDashChain(this.attackChain),
-        new PlayerMoveChain(this.attackChain),
+        new PlayerMoveChain(),
         new PlayerTargetChain(),
         this.attackChain,
     ]);
@@ -35,38 +41,28 @@ export class PlayerWorldService {
             room.state.players,
             ([, state]) => state,
             ([sessionId], state) => {
-                const input = room.inputs.get(sessionId).next() ?? {
-                    moveX: 0,
-                    moveY: 0,
-                    attack: false,
-                    dash: false,
-                    targetNext: false,
-                    targetUnlock: false,
+                const input = room.inputs.get(sessionId).next();
+                const buttons: ButtonInput = {
+                    targetNext: input?.targetNext === true,
+                    targetUnlock: input?.targetUnlock === true,
                 };
-                const attackRequested = input.attack === true;
-                const attackPressed =
-                    attackRequested && !(this.previousAttackInput.get(state) ?? false);
-                this.previousAttackInput.set(state, attackRequested);
-                if (input && (input.moveX !== 0 || input.moveY !== 0)) {
-                    const now = Date.now();
-                    const lastDiagnosticAt = this.lastMovementDiagnosticAt.get(room) ?? 0;
-                    if (now - lastDiagnosticAt >= 1000) {
-                        this.lastMovementDiagnosticAt.set(room, now);
-                    }
-                }
+                const previous = this.previousButtons.get(state) ?? RELEASED_BUTTONS;
+                // Tick không có input (mất gói/jitter) thì giữ trạng thái nút cũ, tránh việc
+                // input kế tiếp bị tính là một lần bấm mới.
+                if (input) this.previousButtons.set(state, buttons);
                 const move: MoveCommand = {
-                    moveX: normalizeAxis(input.moveX),
-                    moveY: normalizeAxis(input.moveY),
+                    moveX: normalizeAxis(input?.moveX),
+                    moveY: normalizeAxis(input?.moveY),
                 };
                 this.chains.execute({
                     room,
+                    sessionId,
                     state,
                     move,
-                    attackRequested,
-                    attackPressed,
-                    dashRequested: input.dash === true,
-                    targetSwitchRequested: input.targetNext === true,
-                    targetUnlockRequested: input.targetUnlock === true,
+                    attackRequested: input?.attack === true,
+                    dashRequested: input?.dash === true,
+                    targetSwitchPressed: buttons.targetNext && !previous.targetNext,
+                    targetUnlockPressed: buttons.targetUnlock && !previous.targetUnlock,
                     dt: ctx.dt,
                     scheduleRespawn: (player) => this.scheduleRespawn(room, player),
                 });

@@ -13,7 +13,7 @@ await MasterDataSeed(force);
 await AdminSeed(force);
 await GameServerSeed(force);
 await GameMapSeed(force);
-await MonsterSeed(force);
-await SkillSeed(force);
+await MonsterSeed();
+await SkillSeed();
 
 process.exit(0);

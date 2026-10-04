@@ -17,13 +17,13 @@ const MONSTERS: NewMonster[] = [
     },
 ];
 
-export const MonsterSeed = async (force = false) => {
+export const MonsterSeed = async () => {
     for (const monster of MONSTERS) {
         await MonsterRepo.upsert({
             data: monster,
             target: Monsters.code,
             matchValue: monster.code,
-            updateData: force ? monster : undefined,
+            updateData: monster,
         });
     }
     console.info("✅ [MonsterSeed] Done");
