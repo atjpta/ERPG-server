@@ -14,9 +14,9 @@ import {
     toHorizontalDirection,
 } from "@/rooms/world/utils/skill-attack.world.util.js";
 
-/** Chỉ tự chọn target mới trong tầm này (khi đang không có target). */
+/** Không lock: mỗi step tự chọn monster gần nhất trong tầm này. */
 const PLAYER_AUTO_TARGET_RANGE = 4;
-/** Target hiện tại (auto hay lock) bị mất khi ra xa quá tầm này. */
+/** Target đã lock bị mất khi ra xa quá tầm này (khớp KeepTargetRangeSquared bên client). */
 const PLAYER_KEEP_TARGET_RANGE = 6;
 /** Chỉ quay mặt về target khi nó ở gần. */
 const PLAYER_FACE_TARGET_RANGE = 2;
@@ -97,10 +97,11 @@ export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
     }: PlayerChainContext): WorldChainResult {
         if (targetUnlockPressed) clearTarget(state);
 
-        let target = state.targetId
+        // Lock: giữ target tới khi ra khỏi tầm giữ. Không lock: mỗi step chọn lại con gần nhất.
+        let target = state.targetLocked
             ? findTargetById(room, state, state.targetId, PLAYER_KEEP_TARGET_RANGE)
             : undefined;
-        if (!target) clearTarget(state);
+        if (state.targetLocked && !target) clearTarget(state);
 
         if (targetSwitchPressed) {
             target = findNextTarget(room, state);
@@ -110,7 +111,7 @@ export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
             } else {
                 clearTarget(state);
             }
-        } else if (!target) {
+        } else if (!state.targetLocked) {
             target = findTargetsInRange(room, state, PLAYER_AUTO_TARGET_RANGE)[0];
             state.targetId = target?.id ?? "";
         }
