@@ -8,6 +8,8 @@ import {
 } from "@/rooms/world/commands/on-create.world.command.js";
 import { JoinPlayerWorldCommand } from "@/rooms/world/commands/on-join.world.command.js";
 import { LeavePlayerWorldCommand } from "@/rooms/world/commands/on-leave.world.command.js";
+import { AllocateAttributesWorldCommand } from "@/rooms/world/commands/allocate-attributes.world.command.js";
+import { WorldClientMessage } from "@/rooms/world/world.message.js";
 import { MoveWorldInput } from "@/rooms/world/schema/move.world.input.js";
 import { WorldState } from "@/rooms/world/schema/world.state.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
@@ -29,6 +31,15 @@ export class WorldRoom extends BasePlayerRoom<{
         // Sanitize sửa giá trị sai thành giá trị hợp lệ, không reject input.
         sanitize: { moveX: [-1, 1], moveY: [-1, 1] },
     });
+
+    messages = {
+        [WorldClientMessage.ALLOCATE_ATTRIBUTES]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new AllocateAttributesWorldCommand(), {
+                client,
+                payload,
+            });
+        },
+    };
 
     map!: GameMap;
     rewind!: Rewind;

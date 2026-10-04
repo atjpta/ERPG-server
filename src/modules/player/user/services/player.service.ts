@@ -135,7 +135,15 @@ export class PlayerService extends BaseService<typeof Players> {
         id: string,
         data: Pick<PlayerState, "mapCode" | "x" | "y" | "direction" | "hp" | "mp"> &
             Partial<
-                Pick<PlayerState, "level" | "exp" | "wallet" | "attributePoints" | "skillPoints">
+                Pick<
+                    PlayerState,
+                    | "level"
+                    | "exp"
+                    | "wallet"
+                    | "attributePoints"
+                    | "skillPoints"
+                    | "allocatedAttributes"
+                >
             >,
         expectedRevision?: number
     ) {

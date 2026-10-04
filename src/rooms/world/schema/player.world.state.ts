@@ -9,6 +9,10 @@ import type { PlayerSnapshot } from "@/modules/player/user/services/player.servi
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
 import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
+import type { Equipments } from "@/modules/player/schemas/inventory.schema.js";
+import type { AttributeKey, Attributes, Stats } from "@/modules/player/schemas/stat.schema.js";
+import { allocateAttributePoints } from "@/modules/player/utils/player-progress.util.js";
+import type { AttributeSummary } from "@/rooms/world/world.message.js";
 import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 import {
     OwnedSkillState,
@@ -42,15 +46,17 @@ export class PlayerWorldState extends Schema {
     @type(HitboxColliderState) collider: HitboxColliderState;
     @type("string") targetId = "";
     @type("boolean") targetLocked = false;
-    /** Thứ tự = thứ tự cột `skills`; các skill MELEE là combo đánh thường. */
     @type([OwnedSkillState]) skills = new ArraySchema<OwnedSkillState>();
-    /** Exp tích luỹ trong level hiện tại / exp cần để lên level kế (0 = level tối đa). */
     @type("uint32") exp = 0;
     @type("uint32") expToNextLevel = 0;
 
-    // Không đồng bộ xuống client (không có @type) — chỉ để lưu DB.
     wallet: Wallet;
     attributePoints: number;
+    classId: string;
+    allocatedAttributes: Attributes;
+    equipments: Equipments;
+    attributes: Attributes;
+    stats: Stats;
     skillPoints: number;
     maxMp: number;
 
@@ -63,15 +69,12 @@ export class PlayerWorldState extends Schema {
         this.x = player.x;
         this.y = player.y;
         this.direction = player.direction === "left" ? "left" : "right";
-        // Stat tính từ class + điểm đã cộng + trang bị đang mặc (không lưu DB).
-        const { stats } = playerStatService.compute(player);
-        this.maxHp = PlayerStatService.whole(stats, StatKey.MAX_HP);
-        this.maxMp = PlayerStatService.whole(stats, StatKey.MAX_MP);
+        this.classId = player.classId;
+        this.allocatedAttributes = { ...player.allocatedAttributes };
+        this.equipments = structuredClone(player.equipments);
+        this.refreshStats();
         this.hp = this.maxHp;
         this.mp = player.mp;
-        this.moveSpeed = stats[StatKey.MOVE_SPEED] ?? 0;
-        this.attack = PlayerStatService.whole(stats, StatKey.PHYSICAL_ATTACK);
-        this.defense = PlayerStatService.whole(stats, StatKey.PHYSICAL_DEFENSE);
         this.stateRevision = player.stateRevision;
         this.hitbox = new HitboxColliderState(player.hitbox);
         this.collider = new HitboxColliderState(player.collider);
@@ -85,12 +88,55 @@ export class PlayerWorldState extends Schema {
         this.wallet = structuredClone(player.wallet);
         this.attributePoints = player.attributePoints;
         this.skillPoints = player.skillPoints;
+        this.allocatedAttributes = { ...player.allocatedAttributes };
     }
 
     setLevelProgress(level: number, exp: number) {
         this.level = level;
         this.exp = exp;
         this.expToNextLevel = levelService.getExpToNext(level) ?? 0;
+    }
+
+    refreshStats() {
+        const { attributes, stats } = playerStatService.compute(this);
+        const previousMaxHp = this.maxHp ?? 0;
+        const previousMaxMp = this.maxMp ?? 0;
+        this.attributes = attributes;
+        this.stats = stats;
+        this.maxHp = PlayerStatService.whole(stats, StatKey.MAX_HP);
+        this.maxMp = PlayerStatService.whole(stats, StatKey.MAX_MP);
+        this.moveSpeed = stats[StatKey.MOVE_SPEED] ?? 0;
+        this.attack = PlayerStatService.whole(stats, StatKey.PHYSICAL_ATTACK);
+        this.defense = PlayerStatService.whole(stats, StatKey.PHYSICAL_DEFENSE);
+        if (this.hp !== undefined && this.hp > 0) {
+            this.hp = Math.min(this.maxHp, Math.max(1, this.hp + this.maxHp - previousMaxHp));
+        }
+        if (this.mp !== undefined) {
+            this.mp = Math.min(this.maxMp, Math.max(0, this.mp + this.maxMp - previousMaxMp));
+        }
+    }
+
+    /** Cộng điểm tiềm năng; trả lỗi (string) nếu không hợp lệ, `undefined` khi thành công. */
+    allocateAttributes(request: Partial<Record<AttributeKey, number>>): string | undefined {
+        const result = allocateAttributePoints(
+            this.allocatedAttributes,
+            this.attributePoints,
+            request
+        );
+        if (typeof result === "string") return result;
+        this.allocatedAttributes = result.allocatedAttributes;
+        this.attributePoints = result.attributePoints;
+        this.refreshStats();
+        return undefined;
+    }
+
+    getAttributeSummary(): AttributeSummary {
+        return {
+            attributePoints: this.attributePoints,
+            allocatedAttributes: { ...this.allocatedAttributes },
+            attributes: { ...this.attributes },
+            stats: { ...this.stats },
+        };
     }
 
     /** Hồi đầy HP/MP (lên level). */
@@ -115,6 +161,7 @@ export class PlayerWorldState extends Schema {
         | "wallet"
         | "attributePoints"
         | "skillPoints"
+        | "allocatedAttributes"
     > {
         return {
             mapCode,
@@ -128,6 +175,7 @@ export class PlayerWorldState extends Schema {
             wallet: structuredClone(this.wallet),
             attributePoints: this.attributePoints,
             skillPoints: this.skillPoints,
+            allocatedAttributes: { ...this.allocatedAttributes },
         };
     }
 
@@ -200,6 +248,7 @@ export class PlayerWorldState extends Schema {
         this.hp = player.hp;
         this.mp = player.mp;
         this.applyProgress(player);
+        this.refreshStats();
         this.stateRevision = player.stateRevision;
         this.moving = false;
     }
