@@ -11,6 +11,7 @@ import { LeavePlayerWorldCommand } from "@/rooms/world/commands/on-leave.world.c
 import { MoveWorldInput } from "@/rooms/world/schema/move.world.input.js";
 import { WorldState } from "@/rooms/world/schema/world.state.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
+import { WORLD_TICK_RATE } from "@/rooms/world/utils/tick.world.util.js";
 const RECONNECT_SECONDS = 20;
 
 export class WorldRoom extends BasePlayerRoom<{
@@ -20,7 +21,7 @@ export class WorldRoom extends BasePlayerRoom<{
 }> {
     dispatcher = new Dispatcher(this);
     state = new WorldState();
-    readonly tickRate = 40;
+    readonly tickRate = WORLD_TICK_RATE;
 
     inputs = this.defineInput(MoveWorldInput, {
         // Giữ tối đa 3.2 giây input ở 40Hz khi server hụt tick; không tin giá trị từ client.

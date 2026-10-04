@@ -19,9 +19,7 @@ export class SkillService {
         const skillsMap = new Map<string, Skill>();
         for (const skill of skills) {
             // Sort sẵn theo thời điểm nổ để room không phải sort lại mỗi lần đánh.
-            const skillHitEvents = [...skill.skillHitEvents].sort(
-                (a, b) => a.triggerTicks - b.triggerTicks || a.eventIndex - b.eventIndex
-            );
+            const skillHitEvents = sortSkillHitEvents(skill.skillHitEvents);
             skillsMap.set(skill.code, { ...skill, skillHitEvents });
             warnIfLastHitTooLate(skill.code, skill.castTimeMs, skillHitEvents);
         }
@@ -37,6 +35,10 @@ export class SkillService {
 }
 
 export const skillService = new SkillService();
+
+/** Thứ tự nổ của hit event — server và file config cho client dùng chung. */
+export const sortSkillHitEvents = (events: Skill["skillHitEvents"]) =>
+    [...events].sort((a, b) => a.triggerTicks - b.triggerTicks || a.eventIndex - b.eventIndex);
 
 function warnIfLastHitTooLate(code: string, castTimeMs: number, events: Skill["skillHitEvents"]) {
     if (castTimeMs <= 0) {
