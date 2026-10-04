@@ -1,7 +1,6 @@
 import { Schema, type } from "@colyseus/schema";
 
 import { PLAYER_BASE_STATS } from "@/modules/player/constants/player.constant.js";
-import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 import type { PlayerSnapshot } from "@/modules/player/user/services/player.service.js";
 import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 
@@ -49,8 +48,8 @@ export class PlayerWorldState extends Schema {
         this.attack = PLAYER_BASE_STATS.attack;
         this.defense = PLAYER_BASE_STATS.defense;
         this.stateRevision = player.stateRevision;
-        this.hitbox = new HitboxColliderState(normalizePlayerHitbox(player.hitbox));
-        this.collider = new HitboxColliderState(normalizePlayerCollider(player.collider));
+        this.hitbox = new HitboxColliderState(player.hitbox);
+        this.collider = new HitboxColliderState(player.collider);
     }
 
     setSpawns() {
@@ -127,31 +126,4 @@ export class PlayerWorldState extends Schema {
     setStateRevision(revision: number) {
         this.stateRevision = revision;
     }
-}
-
-const PLAYER_HITBOX: CollisionBounds = {
-    width: 0.44,
-    height: 0.63,
-    offsetX: 0,
-    offsetY: -0.34,
-};
-const PLAYER_COLLIDER: CollisionBounds = {
-    width: 0.34,
-    height: 0.12,
-    offsetX: 0,
-    offsetY: -0.08,
-};
-
-function normalizePlayerHitbox(bounds: CollisionBounds): CollisionBounds {
-    return bounds.offsetY === undefined && bounds.width === 0.8 && bounds.height === 0.8
-        ? PLAYER_HITBOX
-        : bounds;
-}
-
-function normalizePlayerCollider(bounds: CollisionBounds): CollisionBounds {
-    const legacy =
-        bounds.offsetY === undefined &&
-        ((bounds.width === 0.6 && bounds.height === 0.6) ||
-            (bounds.width === 0.8 && bounds.height === 0.2));
-    return legacy ? PLAYER_COLLIDER : bounds;
 }

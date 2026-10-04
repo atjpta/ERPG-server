@@ -23,7 +23,8 @@ export function intersectsSkillHitEvent(
     const lateralY = -1;
 
     const targetCenterX = targetX + targetCollider.offsetX;
-    const targetCenterY = targetY + targetCollider.offsetY;
+    // Collider offsets are authored like the client prefab (positive Y up); the world grows down.
+    const targetCenterY = targetY - targetCollider.offsetY;
     const targetDx = targetCenterX - origin.x;
     const targetDy = targetCenterY - origin.y;
     const targetForward = targetDx * forwardX + targetDy * forwardY - event.offsetX;

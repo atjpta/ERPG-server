@@ -17,7 +17,7 @@ import {
 /** Chỉ tự chọn target mới trong tầm này (khi đang không có target). */
 const PLAYER_AUTO_TARGET_RANGE = 4;
 /** Target hiện tại (auto hay lock) bị mất khi ra xa quá tầm này. */
-const PLAYER_KEEP_TARGET_RANGE = PLAYER_AUTO_TARGET_RANGE * 2;
+const PLAYER_KEEP_TARGET_RANGE = 6;
 /** Chỉ quay mặt về target khi nó ở gần. */
 const PLAYER_FACE_TARGET_RANGE = 2;
 /** Combo `swordman_slash_1..3`; thời lượng mỗi đòn = `castTimeMs` của skill (khớp anim client). */

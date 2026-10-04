@@ -54,8 +54,8 @@ export class PlayerService extends BaseService<typeof Players> {
                     x: startMap.spawnX,
                     y: startMap.spawnY,
                     direction: Direction.DOWN,
-                    hitbox: { width: 0.44, height: 0.63, offsetX: 0, offsetY: -0.34 },
-                    collider: { width: 0.34, height: 0.12, offsetX: 0, offsetY: -0.08 },
+                    hitbox: { width: 0.4, height: 0.6, offsetX: 0, offsetY: 0.35 },
+                    collider: { width: 0.3, height: 0.1, offsetX: 0, offsetY: 0.1 },
                 },
                 tx
             );
