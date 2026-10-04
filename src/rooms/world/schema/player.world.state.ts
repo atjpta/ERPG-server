@@ -1,8 +1,12 @@
-import { Schema, type } from "@colyseus/schema";
+import { ArraySchema, Schema, type } from "@colyseus/schema";
 
 import { PLAYER_BASE_STATS } from "@/modules/player/constants/player.constant.js";
 import type { PlayerSnapshot } from "@/modules/player/user/services/player.service.js";
 import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
+import {
+    OwnedSkillState,
+    toOwnedSkillStates,
+} from "@/rooms/world/schema/owned-skill.world.state.js";
 
 /** Player hiển thị trên map — chỉ chứa dữ liệu mọi người chơi khác cần thấy. */
 export class PlayerWorldState extends Schema {
@@ -31,6 +35,8 @@ export class PlayerWorldState extends Schema {
     @type(HitboxColliderState) collider: HitboxColliderState;
     @type("string") targetId = "";
     @type("boolean") targetLocked = false;
+    /** Thứ tự = thứ tự cột `skills`; các skill MELEE là combo đánh thường. */
+    @type([OwnedSkillState]) skills = new ArraySchema<OwnedSkillState>();
 
     constructor(props: { player: PlayerSnapshot }) {
         const { player } = props;
@@ -50,6 +56,7 @@ export class PlayerWorldState extends Schema {
         this.stateRevision = player.stateRevision;
         this.hitbox = new HitboxColliderState(player.hitbox);
         this.collider = new HitboxColliderState(player.collider);
+        this.skills.push(...toOwnedSkillStates(player.skills));
     }
 
     setSpawns() {

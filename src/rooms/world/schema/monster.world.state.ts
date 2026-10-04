@@ -1,9 +1,13 @@
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
-import { Schema, type } from "@colyseus/schema";
+import { ArraySchema, Schema, type } from "@colyseus/schema";
 import { v7 as uuidv7 } from "uuid";
 import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
+import {
+    OwnedSkillState,
+    toOwnedSkillStates,
+} from "@/rooms/world/schema/owned-skill.world.state.js";
 
 export class MonsterWorldState extends Schema {
     @type("string") id: string;
@@ -30,6 +34,8 @@ export class MonsterWorldState extends Schema {
     @type(HitboxColliderState) hitbox: HitboxColliderState;
     @type(HitboxColliderState) collider: HitboxColliderState;
     @type("string") targetId = "";
+    /** Skill MELEE đầu tiên là đòn đánh thường. */
+    @type([OwnedSkillState]) skills = new ArraySchema<OwnedSkillState>();
 
     constructor(props: { monster: Monster; x: number; y: number }) {
         const { monster, x, y } = props;
@@ -52,6 +58,7 @@ export class MonsterWorldState extends Schema {
         this.attackCooldownTicks = 0;
         this.hitbox = new HitboxColliderState(monster.hitbox);
         this.collider = new HitboxColliderState(monster.collider);
+        this.skills.push(...toOwnedSkillStates(monster.skills));
     }
 
     setDead() {

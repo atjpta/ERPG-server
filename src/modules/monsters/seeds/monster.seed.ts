@@ -1,7 +1,9 @@
 import { Monsters, type NewMonster } from "@/modules/monsters/entities/monster.entity.js";
 import { MonsterRepo } from "@/modules/monsters/repositories/monster.repository.js";
+import { toOwnedSkills } from "@/modules/skills/seeds/owned-skills.seed.util.js";
 
-const MONSTERS: NewMonster[] = [
+/** `skillCodes` theo thứ tự; skill MELEE đầu tiên là đòn đánh thường. Chạy sau SkillSeed. */
+const MONSTERS: (Omit<NewMonster, "skills"> & { skillCodes: string[] })[] = [
     {
         code: "orc",
         name: "Orc",
@@ -14,11 +16,13 @@ const MONSTERS: NewMonster[] = [
         attackCooldownMs: 2000,
         hitbox: { width: 0.4, height: 0.5, offsetX: 0, offsetY: 0 },
         collider: { width: 0.4, height: 0.1, offsetX: 0, offsetY: 0 },
+        skillCodes: ["orc_slash"],
     },
 ];
 
 export const MonsterSeed = async () => {
-    for (const monster of MONSTERS) {
+    for (const { skillCodes, ...rest } of MONSTERS) {
+        const monster: NewMonster = { ...rest, skills: await toOwnedSkills(skillCodes) };
         await MonsterRepo.upsert({
             data: monster,
             target: Monsters.code,

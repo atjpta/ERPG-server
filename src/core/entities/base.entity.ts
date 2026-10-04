@@ -1,4 +1,4 @@
-import { text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { DateTime } from "luxon";
 import { v7 as uuidv7 } from "uuid";
 
@@ -16,4 +16,5 @@ export const baseColumns = () => ({
 export const baseWithCodeColumns = () => ({
     ...baseColumns(),
     code: text("code").notNull().unique(),
+    enabled: boolean("enabled").notNull().default(true),
 });

@@ -1,48 +1,55 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1790768445444,
-      "tag": "0000_graceful_ikaris",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1790845683099,
-      "tag": "0001_worried_stature",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1790872962697,
-      "tag": "0002_cold_eternals",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1791003909300,
-      "tag": "0003_black_fixer",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1791004884297,
-      "tag": "0004_fixed_microbe",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1791048733863,
-      "tag": "0005_fast_quicksilver",
-      "breakpoints": true
-    }
-  ]
+    "version": "7",
+    "dialect": "postgresql",
+    "entries": [
+        {
+            "idx": 0,
+            "version": "7",
+            "when": 1790768445444,
+            "tag": "0000_graceful_ikaris",
+            "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1790845683099,
+            "tag": "0001_worried_stature",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1790872962697,
+            "tag": "0002_cold_eternals",
+            "breakpoints": true
+        },
+        {
+            "idx": 3,
+            "version": "7",
+            "when": 1791003909300,
+            "tag": "0003_black_fixer",
+            "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "7",
+            "when": 1791004884297,
+            "tag": "0004_fixed_microbe",
+            "breakpoints": true
+        },
+        {
+            "idx": 5,
+            "version": "7",
+            "when": 1791048733863,
+            "tag": "0005_fast_quicksilver",
+            "breakpoints": true
+        },
+        {
+            "idx": 6,
+            "version": "7",
+            "when": 1791103141559,
+            "tag": "0006_fancy_drax",
+            "breakpoints": true
+        }
+    ]
 }

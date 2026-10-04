@@ -38,7 +38,9 @@ export async function exportClientConfig(outputDir: string): Promise<void> {
 
 function toClientSkill(skill: Skill) {
     return {
+        id: skill.id,
         code: skill.code,
+        skillType: skill.skillType,
         castRange: skill.castRange,
         cooldownMs: skill.cooldownMs,
         /** Số tick mô phỏng của cả đòn (khoá di chuyển) — giống PlayerAttackChain. */

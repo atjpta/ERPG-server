@@ -1,4 +1,4 @@
-import { boolean, integer, jsonb, pgEnum, pgTable, real } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgEnum, pgTable, real } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import { SkillOwnerType, SkillType, TargetType } from "@/modules/skills/enums/skill.enum.js";
 import type {
@@ -23,7 +23,6 @@ export const Skills = pgTable("skills", {
     maxLevel: integer("max_level").notNull().default(10),
     levelConfig: jsonb("level_config").$type<SkillLevelConfig[]>().notNull().default([]),
     skillHitEvents: jsonb("skill_hit_events").$type<SkillHitEvent[]>().notNull().default([]),
-    enabled: boolean("enabled").notNull().default(true),
 });
 
 export type Skill = typeof Skills.$inferSelect;

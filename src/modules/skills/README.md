@@ -15,3 +15,7 @@ Sửa skill → `yarn seed --force` (hoặc sửa DB rồi `yarn config:export`)
 Hit cuối phải nằm cách lúc kết thúc đòn ít nhất 150 ms (`HIT_CONFIRM_BUDGET_MS`): client chạy anim ngay lúc bấm, sát thương về sau khoảng 1 RTT, nên khoảng này giúp sát thương hiện ra trước khi anim xong mà không cần cho hit nổ sớm hơn frame chém. `SkillService` cảnh báo khi skill vi phạm. Skill cũ `swordman_slash` được tắt khi seed chạy. Dùng `yarn seed --force` để cập nhật mốc hit trong database hiện có.
 
 Chạy `yarn db:migrate` rồi `yarn seed` để tạo schema và thêm skill. Dùng `yarn seed --force` để ghi đè các giá trị seed hiện có.
+
+## Skill của player / monster
+
+`player_states.skills` và `monsters.skills` là jsonb `[{ skillId, level }]` (`OwnedSkill`). Các skill loại `MELEE`, theo đúng thứ tự trong mảng, là combo đánh thường (`skillService.getBasicAttackCombo`): player có 3 skill MELEE → combo 3 đòn; monster dùng skill MELEE đầu tiên. Player mới nhận `PLAYER_DEFAULT_SKILL_CODES`; `PlayerSkillSeed` gán bộ đó cho player cũ đang rỗng. Danh sách này được gửi xuống client qua world state (`OwnedSkillState`), client tra `skills.json` theo `skillId`. `level` đã lưu nhưng chưa dùng để tính damage.

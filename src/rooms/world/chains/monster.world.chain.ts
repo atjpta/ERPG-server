@@ -301,8 +301,9 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
     }
 }
 
+/** Đòn đánh thường của monster = skill MELEE đầu tiên trong cột `skills` của nó. */
 function getMonsterAttackSkill(monster: MonsterWorldState) {
-    return skillService.getByCode(`${monster.code}_slash`);
+    return skillService.getBasicAttackCombo(monster.skills)[0];
 }
 
 function isMonsterSkillHitboxInRange(

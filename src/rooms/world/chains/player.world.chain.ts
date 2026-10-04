@@ -20,9 +20,6 @@ const PLAYER_AUTO_TARGET_RANGE = 4;
 const PLAYER_KEEP_TARGET_RANGE = 6;
 /** Chỉ quay mặt về target khi nó ở gần. */
 const PLAYER_FACE_TARGET_RANGE = 2;
-/** Combo `swordman_slash_1..3`; thời lượng mỗi đòn = `castTimeMs` của skill (khớp anim client). */
-const PLAYER_MAX_COMBO = 3;
-
 export interface PlayerChainContext {
     room: WorldRoom;
     sessionId: string;
@@ -166,11 +163,12 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
     }
 
     private startAttack(room: WorldRoom, state: PlayerWorldState): void {
+        // Combo = các skill MELEE player sở hữu, theo thứ tự cột `skills`; thời lượng mỗi đòn =
+        // `castTimeMs` của skill đó (khớp WorldMovementStep.cs qua skills.json).
+        const combo = skillService.getBasicAttackCombo(state.skills);
         state.attackCombo =
-            state.attackCombo > 0 && state.attackCombo < PLAYER_MAX_COMBO
-                ? state.attackCombo + 1
-                : 1;
-        const skill = skillService.getByCode(`swordman_slash_${state.attackCombo}`);
+            state.attackCombo > 0 && state.attackCombo < combo.length ? state.attackCombo + 1 : 1;
+        const skill = combo[state.attackCombo - 1];
         if (!skill) {
             state.attackCombo = 0;
             return;

@@ -9,13 +9,17 @@ import { Players, type PlayerIdentity } from "@/modules/auth/entities/player.ent
 import { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { gameServerService } from "@/modules/auth/user/services/game-server.service.js";
-import { PLAYER_BASE_STATS } from "@/modules/player/constants/player.constant.js";
+import {
+    PLAYER_BASE_STATS,
+    PLAYER_DEFAULT_SKILL_CODES,
+} from "@/modules/player/constants/player.constant.js";
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { PlayerStateRepo } from "@/modules/player/repositories/player-state.repository.js";
 import { mapService } from "@/modules/maps/user/services/map.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataService } from "@/modules/master-data/user/services/master-data.service.js";
+import { skillService } from "@/modules/skills/services/skill.service.js";
 
 export type PlayerWithState = PlayerIdentity &
     Omit<PlayerState, "playerId" | "updatedAt" | "revision">;
@@ -56,6 +60,7 @@ export class PlayerService extends BaseService<typeof Players> {
                     direction: Direction.DOWN,
                     hitbox: { width: 0.4, height: 0.6, offsetX: 0, offsetY: 0.35 },
                     collider: { width: 0.3, height: 0.1, offsetX: 0, offsetY: 0.1 },
+                    skills: skillService.toOwnedSkills(PLAYER_DEFAULT_SKILL_CODES),
                 },
                 tx
             );

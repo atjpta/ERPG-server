@@ -1,5 +1,7 @@
 import { cacheService } from "@/core/cache/cache.service.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
+import { SkillType } from "@/modules/skills/enums/skill.enum.js";
+import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
 
 /** `triggerTicks` của hit event được tác giả theo nhịp 20 tick/giây. */
@@ -13,6 +15,7 @@ const HIT_CONFIRM_BUDGET_MS = 150;
 
 export class SkillService {
     private readonly skillsByCode = new Map<string, Skill>();
+    private readonly skillsById = new Map<string, Skill>();
 
     public async setCacheData() {
         const skills = await SkillRepo.findEnabled();
@@ -24,13 +27,43 @@ export class SkillService {
             warnIfLastHitTooLate(skill.code, skill.castTimeMs, skillHitEvents);
         }
         this.skillsByCode.clear();
-        for (const [code, skill] of skillsMap) this.skillsByCode.set(code, skill);
+        this.skillsById.clear();
+        for (const [code, skill] of skillsMap) {
+            this.skillsByCode.set(code, skill);
+            this.skillsById.set(skill.id, skill);
+        }
         await cacheService.set("skills", skillsMap);
         console.log(`Cached ${skillsMap.size} skills`);
     }
 
     getByCode(code: string): Skill | undefined {
         return this.skillsByCode.get(code);
+    }
+
+    getById(id: string): Skill | undefined {
+        return this.skillsById.get(id);
+    }
+
+    /**
+     * Combo đánh thường của một player/monster: các skill MELEE nó sở hữu, đúng thứ tự trong cột
+     * `skills` (bước 1, 2, 3…). Skill đã tắt hoặc không tồn tại bị bỏ qua.
+     */
+    getBasicAttackCombo(owned: Iterable<Pick<OwnedSkill, "skillId">>): Skill[] {
+        const combo: Skill[] = [];
+        for (const { skillId } of owned) {
+            const skill = this.skillsById.get(skillId);
+            if (skill?.skillType === SkillType.MELEE) combo.push(skill);
+        }
+        return combo;
+    }
+
+    /** `[{ skillId, level: 1 }]` cho danh sách code; lỗi nếu có code không tồn tại/đã tắt. */
+    toOwnedSkills(codes: readonly string[]): OwnedSkill[] {
+        return codes.map((code) => {
+            const skill = this.skillsByCode.get(code);
+            if (!skill) throw new Error(`Skill "${code}" is missing or disabled`);
+            return { skillId: skill.id, level: 1 };
+        });
     }
 }
 

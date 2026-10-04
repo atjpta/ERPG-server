@@ -15,3 +15,10 @@ export const PLAYER_BASE_STATS: PlayerBaseStats = {
     defense: 6,
     moveSpeed: 4,
 };
+
+/** Skill (theo code) gán cho player mới, đúng thứ tự combo đánh thường. */
+export const PLAYER_DEFAULT_SKILL_CODES = [
+    "swordman_slash_1",
+    "swordman_slash_2",
+    "swordman_slash_3",
+] as const;

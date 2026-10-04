@@ -14,6 +14,7 @@ import { GameMaps } from "@/modules/maps/entities/game-map.entity.js";
 import { Players } from "@/modules/auth/entities/player.entity.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
+import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js";
 
 export const directionEnum = pgEnum("direction", Direction);
 
@@ -40,6 +41,8 @@ export const PlayerStates = pgTable("player_states", {
         .$type<CollisionBounds>()
         .notNull()
         .default({ width: 0.34, height: 0.12, offsetX: 0, offsetY: -0.08 }),
+    /** Skill của player theo thứ tự; các skill MELEE (theo thứ tự này) là combo đánh thường. */
+    skills: jsonb("skills").$type<OwnedSkill[]>().notNull().default([]),
     revision: integer("revision").notNull().default(0),
     updatedAt: timestamp("updated_at", { withTimezone: true })
         .notNull()

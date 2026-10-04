@@ -67,6 +67,13 @@ export const SkillConfigSchema = z.object({
     hitEvents: z.array(SkillHitEventSchema).default([]),
 });
 
+/** Một skill mà player/monster sở hữu (cột `skills` của `player_states` và `monsters`). */
+export const OwnedSkillSchema = z.object({
+    skillId: z.uuid(),
+    level: z.number().int().positive().default(1),
+});
+
+export type OwnedSkill = z.infer<typeof OwnedSkillSchema>;
 export type SkillLevelConfig = z.infer<typeof SkillLevelConfigSchema>;
 export type SkillEffect = z.infer<typeof SkillEffectSchema>;
 export type SkillHitEvent = z.infer<typeof SkillHitEventSchema>;

@@ -20,6 +20,15 @@ export class PlayerStateRepository {
         return dbOrTx.select().from(PlayerStates).where(inArray(PlayerStates.playerId, playerIds));
     }
 
+    /** Gán `skills` cho mọi player chưa có skill nào (không đổi revision — không đụng state online). */
+    async fillEmptySkills(skills: NewPlayerState["skills"], dbOrTx: Queryable = db) {
+        return dbOrTx
+            .update(PlayerStates)
+            .set({ skills })
+            .where(sql`${PlayerStates.skills} = '[]'::jsonb`)
+            .returning({ playerId: PlayerStates.playerId });
+    }
+
     async create(data: NewPlayerState, dbOrTx: Queryable = db) {
         const [state] = await dbOrTx.insert(PlayerStates).values(data).returning();
         return state;

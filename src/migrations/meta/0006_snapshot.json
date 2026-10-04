@@ -1,0 +1,1300 @@
+{
+    "id": "86ed9fcf-061c-444f-8918-ab3425d6e7c9",
+    "prevId": "b4f8f23b-f5c5-4a3d-9232-78e08e613efa",
+    "version": "7",
+    "dialect": "postgresql",
+    "tables": {
+        "public.account_deletion_requests": {
+            "name": "account_deletion_requests",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "contact_email": {
+                    "name": "contact_email",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "player_name": {
+                    "name": "player_name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "reason": {
+                    "name": "reason",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "source": {
+                    "name": "source",
+                    "type": "account_deletion_source",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "status": {
+                    "name": "status",
+                    "type": "account_deletion_status",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'pending'"
+                },
+                "processed_at": {
+                    "name": "processed_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "processed_by_admin_id": {
+                    "name": "processed_by_admin_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "admin_note": {
+                    "name": "admin_note",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                }
+            },
+            "indexes": {
+                "account_deletion_requests_status_idx": {
+                    "name": "account_deletion_requests_status_idx",
+                    "columns": [
+                        {
+                            "expression": "status",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "account_deletion_requests_user_id_users_id_fk": {
+                    "name": "account_deletion_requests_user_id_users_id_fk",
+                    "tableFrom": "account_deletion_requests",
+                    "tableTo": "users",
+                    "columnsFrom": ["user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "set null",
+                    "onUpdate": "no action"
+                },
+                "account_deletion_requests_processed_by_admin_id_admins_id_fk": {
+                    "name": "account_deletion_requests_processed_by_admin_id_admins_id_fk",
+                    "tableFrom": "account_deletion_requests",
+                    "tableTo": "admins",
+                    "columnsFrom": ["processed_by_admin_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.admins": {
+            "name": "admins",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "email": {
+                    "name": "email",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "password": {
+                    "name": "password",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "''"
+                },
+                "role": {
+                    "name": "role",
+                    "type": "admin_role",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'admin'"
+                },
+                "status": {
+                    "name": "status",
+                    "type": "admin_status",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'active'"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "admins_email_unique": {
+                    "name": "admins_email_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["email"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.game_servers": {
+            "name": "game_servers",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "status": {
+                    "name": "status",
+                    "type": "game_server_status",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'online'"
+                },
+                "max_players": {
+                    "name": "max_players",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 5000
+                },
+                "sort_order": {
+                    "name": "sort_order",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "game_servers_code_unique": {
+                    "name": "game_servers_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.players": {
+            "name": "players",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "server_id": {
+                    "name": "server_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "status": {
+                    "name": "status",
+                    "type": "player_status",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'active'"
+                },
+                "ban_reason": {
+                    "name": "ban_reason",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "last_played_at": {
+                    "name": "last_played_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": false
+                }
+            },
+            "indexes": {
+                "players_server_id_name_lower_unique": {
+                    "name": "players_server_id_name_lower_unique",
+                    "columns": [
+                        {
+                            "expression": "server_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "lower(\"name\")",
+                            "asc": true,
+                            "isExpression": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "players_user_id_idx": {
+                    "name": "players_user_id_idx",
+                    "columns": [
+                        {
+                            "expression": "user_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "players_user_id_users_id_fk": {
+                    "name": "players_user_id_users_id_fk",
+                    "tableFrom": "players",
+                    "tableTo": "users",
+                    "columnsFrom": ["user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                },
+                "players_server_id_game_servers_id_fk": {
+                    "name": "players_server_id_game_servers_id_fk",
+                    "tableFrom": "players",
+                    "tableTo": "game_servers",
+                    "columnsFrom": ["server_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.user_oauth_accounts": {
+            "name": "user_oauth_accounts",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "provider": {
+                    "name": "provider",
+                    "type": "oauth_provider",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "provider_user_id": {
+                    "name": "provider_user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "email": {
+                    "name": "email",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "user_oauth_accounts_user_id_users_id_fk": {
+                    "name": "user_oauth_accounts_user_id_users_id_fk",
+                    "tableFrom": "user_oauth_accounts",
+                    "tableTo": "users",
+                    "columnsFrom": ["user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "user_oauth_accounts_provider_provider_user_id_unique": {
+                    "name": "user_oauth_accounts_provider_provider_user_id_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["provider", "provider_user_id"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.user_sessions": {
+            "name": "user_sessions",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "platform": {
+                    "name": "platform",
+                    "type": "client_platform",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "client_version": {
+                    "name": "client_version",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "device": {
+                    "name": "device",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "''"
+                },
+                "revoked": {
+                    "name": "revoked",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": false
+                }
+            },
+            "indexes": {
+                "user_sessions_user_id_idx": {
+                    "name": "user_sessions_user_id_idx",
+                    "columns": [
+                        {
+                            "expression": "user_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "user_sessions_user_id_users_id_fk": {
+                    "name": "user_sessions_user_id_users_id_fk",
+                    "tableFrom": "user_sessions",
+                    "tableTo": "users",
+                    "columnsFrom": ["user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.users": {
+            "name": "users",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "email": {
+                    "name": "email",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "password": {
+                    "name": "password",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "status": {
+                    "name": "status",
+                    "type": "user_status",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'active'"
+                },
+                "ban_reason": {
+                    "name": "ban_reason",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "ban_expires_at": {
+                    "name": "ban_expires_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "last_login_at": {
+                    "name": "last_login_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "deleted_at": {
+                    "name": "deleted_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "users_email_unique": {
+                    "name": "users_email_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["email"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.game_maps": {
+            "name": "game_maps",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "type": {
+                    "name": "type",
+                    "type": "map_type",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'field'"
+                },
+                "status": {
+                    "name": "status",
+                    "type": "map_status",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'active'"
+                },
+                "width": {
+                    "name": "width",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "height": {
+                    "name": "height",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "tile_size": {
+                    "name": "tile_size",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 16
+                },
+                "spawn_x": {
+                    "name": "spawn_x",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "spawn_y": {
+                    "name": "spawn_y",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "max_players_per_channel": {
+                    "name": "max_players_per_channel",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 100
+                },
+                "pvp_enabled": {
+                    "name": "pvp_enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "game_maps_code_unique": {
+                    "name": "game_maps_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.master_data": {
+            "name": "master_data",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "key": {
+                    "name": "key",
+                    "type": "master_data_key",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "value": {
+                    "name": "value",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "note": {
+                    "name": "note",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "''"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "master_data_key_unique": {
+                    "name": "master_data_key_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["key"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.monsters": {
+            "name": "monsters",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "level": {
+                    "name": "level",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 1
+                },
+                "max_hp": {
+                    "name": "max_hp",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "attack": {
+                    "name": "attack",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "defense": {
+                    "name": "defense",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "move_speed": {
+                    "name": "move_speed",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "attack_range": {
+                    "name": "attack_range",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "attack_cooldown_ms": {
+                    "name": "attack_cooldown_ms",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "hitbox": {
+                    "name": "hitbox",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"width\":0.47,\"height\":0.56,\"offsetX\":0,\"offsetY\":-0.3}'::jsonb"
+                },
+                "collider": {
+                    "name": "collider",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"width\":0.31,\"height\":0.12,\"offsetX\":0,\"offsetY\":-0.08}'::jsonb"
+                },
+                "skills": {
+                    "name": "skills",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "monsters_code_unique": {
+                    "name": "monsters_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.player_states": {
+            "name": "player_states",
+            "schema": "",
+            "columns": {
+                "player_id": {
+                    "name": "player_id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "level": {
+                    "name": "level",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 1
+                },
+                "exp": {
+                    "name": "exp",
+                    "type": "bigint",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "map_code": {
+                    "name": "map_code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "x": {
+                    "name": "x",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "y": {
+                    "name": "y",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "direction": {
+                    "name": "direction",
+                    "type": "direction",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'down'"
+                },
+                "hp": {
+                    "name": "hp",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "mp": {
+                    "name": "mp",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "hitbox": {
+                    "name": "hitbox",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"width\":0.44,\"height\":0.63,\"offsetX\":0,\"offsetY\":-0.34}'::jsonb"
+                },
+                "collider": {
+                    "name": "collider",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"width\":0.34,\"height\":0.12,\"offsetX\":0,\"offsetY\":-0.08}'::jsonb"
+                },
+                "skills": {
+                    "name": "skills",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "revision": {
+                    "name": "revision",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "player_states_player_id_players_id_fk": {
+                    "name": "player_states_player_id_players_id_fk",
+                    "tableFrom": "player_states",
+                    "tableTo": "players",
+                    "columnsFrom": ["player_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "player_states_map_code_game_maps_code_fk": {
+                    "name": "player_states_map_code_game_maps_code_fk",
+                    "tableFrom": "player_states",
+                    "tableTo": "game_maps",
+                    "columnsFrom": ["map_code"],
+                    "columnsTo": ["code"],
+                    "onDelete": "restrict",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.skills": {
+            "name": "skills",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "skill_type": {
+                    "name": "skill_type",
+                    "type": "skill_type",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "target_type": {
+                    "name": "target_type",
+                    "type": "target_type",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'NONE'"
+                },
+                "cast_range": {
+                    "name": "cast_range",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "cast_time_ms": {
+                    "name": "cast_time_ms",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "cooldown_ms": {
+                    "name": "cooldown_ms",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "mana_cost": {
+                    "name": "mana_cost",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "stamina_cost": {
+                    "name": "stamina_cost",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "max_level": {
+                    "name": "max_level",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 10
+                },
+                "level_config": {
+                    "name": "level_config",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "skill_hit_events": {
+                    "name": "skill_hit_events",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "skills_code_unique": {
+                    "name": "skills_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        }
+    },
+    "enums": {
+        "public.account_deletion_source": {
+            "name": "account_deletion_source",
+            "schema": "public",
+            "values": ["app", "web"]
+        },
+        "public.account_deletion_status": {
+            "name": "account_deletion_status",
+            "schema": "public",
+            "values": ["pending", "completed", "rejected"]
+        },
+        "public.admin_role": {
+            "name": "admin_role",
+            "schema": "public",
+            "values": ["super_admin", "admin", "game_master"]
+        },
+        "public.admin_status": {
+            "name": "admin_status",
+            "schema": "public",
+            "values": ["active", "inactive"]
+        },
+        "public.game_server_status": {
+            "name": "game_server_status",
+            "schema": "public",
+            "values": ["online", "maintenance", "full", "offline", "hidden"]
+        },
+        "public.player_status": {
+            "name": "player_status",
+            "schema": "public",
+            "values": ["active", "banned"]
+        },
+        "public.oauth_provider": {
+            "name": "oauth_provider",
+            "schema": "public",
+            "values": ["google", "play_games", "guest"]
+        },
+        "public.client_platform": {
+            "name": "client_platform",
+            "schema": "public",
+            "values": ["android", "pc"]
+        },
+        "public.user_status": {
+            "name": "user_status",
+            "schema": "public",
+            "values": ["active", "inactive", "banned", "deleted"]
+        },
+        "public.map_status": {
+            "name": "map_status",
+            "schema": "public",
+            "values": ["active", "inactive"]
+        },
+        "public.map_type": {
+            "name": "map_type",
+            "schema": "public",
+            "values": ["town", "field", "dungeon"]
+        },
+        "public.master_data_key": {
+            "name": "master_data_key",
+            "schema": "public",
+            "values": ["auth_session_config", "player_config"]
+        },
+        "public.direction": {
+            "name": "direction",
+            "schema": "public",
+            "values": ["up", "down", "left", "right"]
+        },
+        "public.skill_owner_type": {
+            "name": "skill_owner_type",
+            "schema": "public",
+            "values": ["MONSTER", "CLASS"]
+        },
+        "public.skill_type": {
+            "name": "skill_type",
+            "schema": "public",
+            "values": [
+                "MELEE",
+                "PROJECTILE",
+                "GROUND",
+                "AOE",
+                "BUFF",
+                "DEBUFF",
+                "HEAL",
+                "SUMMON",
+                "DASH",
+                "PASSIVE"
+            ]
+        },
+        "public.target_type": {
+            "name": "target_type",
+            "schema": "public",
+            "values": ["NONE", "SELF", "TARGET", "POSITION", "DIRECTION", "ALLY", "ENEMY"]
+        }
+    },
+    "schemas": {},
+    "sequences": {},
+    "roles": {},
+    "policies": {},
+    "views": {},
+    "_meta": {
+        "columns": {},
+        "schemas": {},
+        "tables": {}
+    }
+}
