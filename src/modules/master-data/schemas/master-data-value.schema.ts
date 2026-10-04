@@ -11,14 +11,30 @@ export const PlayerConfigSchema = z.object({
     startMapCode: z.string().min(1),
 });
 
+/**
+ * Bảng exp lên level: `expToNextLevel[i]` = exp cần tích luỹ ở level `i + 1` để lên `i + 2`
+ * (player_states.exp tính trong level hiện tại). Level `maxLevel` không lên nữa.
+ */
+export const LevelConfigSchema = z
+    .object({
+        maxLevel: z.number().int().min(1),
+        expToNextLevel: z.array(z.number().int().positive()),
+    })
+    .refine((config) => config.expToNextLevel.length === config.maxLevel - 1, {
+        message: "expToNextLevel must have maxLevel - 1 entries",
+        path: ["expToNextLevel"],
+    });
+
 /** Nguồn sự thật duy nhất cho cấu trúc `value` theo từng key — admin update được validate qua đây. */
 export const MasterDataValueSchemas = {
     [MasterDataKey.AUTH_SESSION_CONFIG]: AuthSessionConfigSchema,
     [MasterDataKey.PLAYER_CONFIG]: PlayerConfigSchema,
+    [MasterDataKey.LEVEL_CONFIG]: LevelConfigSchema,
 } satisfies Record<MasterDataKey, z.ZodType>;
 
 export type AuthSessionConfigValue = z.infer<typeof AuthSessionConfigSchema>;
 export type PlayerConfigValue = z.infer<typeof PlayerConfigSchema>;
+export type LevelConfigValue = z.infer<typeof LevelConfigSchema>;
 
 export type MasterDataValueMap = {
     [K in MasterDataKey]: z.infer<(typeof MasterDataValueSchemas)[K]>;

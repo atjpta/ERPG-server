@@ -4,6 +4,7 @@ import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
 import { MasterDataValueSchemas } from "@/modules/master-data/schemas/master-data-value.schema.js";
 import type { AdminUpdateMasterDataBody } from "@/modules/master-data/admin/validators/admin.master-data.validator.js";
+import { levelService } from "@/modules/levels/services/level.service.js";
 
 export class AdminMasterDataService {
     async getAll() {
@@ -21,10 +22,13 @@ export class AdminMasterDataService {
         }
         // Sai cấu trúc → ZodError → RouterContainer trả 422.
         const value = MasterDataValueSchemas[key].parse(body.value);
-        return MasterDataRepo.updateById({
+        const updated = await MasterDataRepo.updateById({
             id: row.id,
             data: { value, ...(body.note !== undefined ? { note: body.note } : {}) },
         });
+        // Bảng exp được cache trong process — nạp lại ngay để room dùng giá trị mới.
+        if (key === MasterDataKey.LEVEL_CONFIG) await levelService.setCacheData();
+        return updated;
     }
 }
 

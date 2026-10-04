@@ -71,6 +71,13 @@
             "when": 1791110192008,
             "tag": "0009_nosy_bucky",
             "breakpoints": true
+        },
+        {
+            "idx": 10,
+            "version": "7",
+            "when": 1791128740953,
+            "tag": "0010_perfect_silver_surfer",
+            "breakpoints": true
         }
     ]
 }

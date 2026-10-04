@@ -1,21 +1,31 @@
-import { cacheService } from "@/core/cache/cache.service.js";
-import { LevelRepo } from "@/modules/levels/repositories/level.repository.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import type { LevelConfigValue } from "@/modules/master-data/schemas/master-data-value.schema.js";
+import { masterDataService } from "@/modules/master-data/user/services/master-data.service.js";
 
-/** Cache bảng exp lúc khởi động (giống SkillService). */
+/** Cache bảng exp (master data `level_config`) lúc khởi động và khi admin sửa. */
 export class LevelService {
-    private readonly expToNextByLevel = new Map<number, number>();
+    private config: LevelConfigValue = { maxLevel: 1, expToNextLevel: [] };
 
     public async setCacheData() {
-        const levels = await LevelRepo.findAll();
-        this.expToNextByLevel.clear();
-        for (const { level, exp } of levels) this.expToNextByLevel.set(level, exp);
-        await cacheService.set("levels", this.expToNextByLevel);
-        console.log(`Cached ${levels.length} levels`);
+        const config = await masterDataService.findValue(MasterDataKey.LEVEL_CONFIG);
+        if (!config) {
+            console.warn(
+                `[Level] Master data "${MasterDataKey.LEVEL_CONFIG}" missing — run yarn seed`
+            );
+            return;
+        }
+        this.config = config;
+        console.log(`Cached level config (max level ${config.maxLevel})`);
+    }
+
+    get maxLevel(): number {
+        return this.config.maxLevel;
     }
 
     /** Exp cần tích luỹ ở `level` để lên `level + 1`; `undefined` = level tối đa (không lên nữa). */
     getExpToNext(level: number): number | undefined {
-        return this.expToNextByLevel.get(level);
+        if (level < 1 || level >= this.config.maxLevel) return undefined;
+        return this.config.expToNextLevel[level - 1];
     }
 }
 
