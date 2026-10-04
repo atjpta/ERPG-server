@@ -22,6 +22,8 @@ const PLAYER_AUTO_TARGET_RANGE = 4;
 const PLAYER_KEEP_TARGET_RANGE = 6;
 /** Chỉ quay mặt về target khi nó ở gần. */
 const PLAYER_FACE_TARGET_RANGE = 2;
+/** Lệch tối thiểu (ô) theo mỗi trục để còn đi về phía target khi tự áp sát — giống monster. */
+const PLAYER_APPROACH_DEADZONE = 0.1;
 export interface PlayerChainContext {
     room: WorldRoom;
     sessionId: string;
@@ -38,6 +40,8 @@ export interface PlayerChainContext {
     targetUnlockPressed: boolean;
     dt: number;
     scheduleRespawn: (player: PlayerWorldState) => void;
+    /** PlayerMoveChain đặt khi step này đang tự đi lại gần target để đòn đánh chạm (chưa ra đòn). */
+    approachingAttack?: boolean;
 }
 
 export class PlayerDeathChain implements WorldChainAction<PlayerChainContext> {
@@ -130,10 +134,21 @@ export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
 }
 
 export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
-    execute({ room, state, move, dt, attackRequested }: PlayerChainContext): WorldChainResult {
+    execute(context: PlayerChainContext): WorldChainResult {
+        const { room, state, move, dt, attackRequested } = context;
         state.recoverPosition(room.map.spawnX, room.map.spawnY, room.map.width, room.map.height);
-        // Đứng yên khi đang đánh (cooldown còn) hoặc đang chờ ra đòn.
         if (!state.dashing && (attackRequested || state.attackCooldownTicks > 0)) {
+            // Bấm đánh mà target (trong 2 ô) chưa nằm trong hitbox → tự đi lại gần, chưa ra đòn.
+            const approach =
+                attackRequested && state.attackCooldownTicks === 0
+                    ? getAttackApproachMove(room, state)
+                    : undefined;
+            if (approach) {
+                applyWorldMove(state, approach, room.map, dt, 1, 4);
+                context.approachingAttack = true;
+                return WorldChainResult.CONTINUE;
+            }
+            // Đứng yên khi đang đánh (cooldown còn) hoặc đang chờ ra đòn.
             state.moving = false;
             return WorldChainResult.CONTINUE;
         }
@@ -150,7 +165,13 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         state.attackCombo = 0;
     }
 
-    execute({ room, sessionId, state, attackRequested }: PlayerChainContext): WorldChainResult {
+    execute({
+        room,
+        sessionId,
+        state,
+        attackRequested,
+        approachingAttack,
+    }: PlayerChainContext): WorldChainResult {
         this.processPendingHits(room, sessionId, state);
         if (state.dashing || state.attackCooldownTicks > 0) return WorldChainResult.CONTINUE;
 
@@ -159,6 +180,8 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
             state.attackCombo = 0;
             return WorldChainResult.CONTINUE;
         }
+        // Còn đang đi lại gần target → giữ yêu cầu, ra đòn khi đã vào tầm.
+        if (approachingAttack) return WorldChainResult.CONTINUE;
 
         this.startAttack(room, state);
         return WorldChainResult.CONTINUE;
@@ -222,6 +245,40 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
             }
         }
     }
+}
+
+/** Đòn kế tiếp trong combo đánh thường (cùng cách tăng combo như startAttack). */
+function getNextBasicAttack(state: PlayerWorldState) {
+    const combo = skillService.getBasicAttackCombo(state.skills);
+    const step =
+        state.attackCombo > 0 && state.attackCombo < combo.length ? state.attackCombo + 1 : 1;
+    return combo[step - 1];
+}
+
+/**
+ * Hướng đi khi tự áp sát: target hiện tại trong tầm quay mặt (2 ô) nhưng chưa hit event nào của đòn kế tiếp
+ * chạm hitbox của nó (quay mặt về target). `undefined` = đánh tại chỗ (không có target / đã trong tầm).
+ * Khớp WorldMovementStep.TryGetAttackApproach bên client.
+ */
+function getAttackApproachMove(room: WorldRoom, state: PlayerWorldState): MoveCommand | undefined {
+    const target = state.targetId
+        ? findTargetById(room, state, state.targetId, PLAYER_FACE_TARGET_RANGE)
+        : undefined;
+    const skill = getNextBasicAttack(state);
+    if (!target || !skill) return undefined;
+
+    const dx = target.x - state.x;
+    const dy = target.y - state.y;
+    const direction = dx < 0 ? "left" : dx > 0 ? "right" : state.direction;
+    const origin = { x: state.x, y: state.y, direction };
+    const inRange = skill.skillHitEvents.some((event) =>
+        intersectsSkillHitEvent(origin, target.x, target.y, target.hitbox, event)
+    );
+    if (inRange) return undefined;
+
+    const moveX = Math.abs(dx) > PLAYER_APPROACH_DEADZONE ? Math.sign(dx) : 0;
+    const moveY = Math.abs(dy) > PLAYER_APPROACH_DEADZONE ? Math.sign(dy) : 0;
+    return moveX || moveY ? { moveX, moveY } : undefined;
 }
 
 function clearTarget(player: PlayerWorldState) {

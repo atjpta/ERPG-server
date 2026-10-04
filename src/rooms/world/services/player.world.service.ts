@@ -28,9 +28,15 @@ const MAX_INPUT_STEPS_PER_TICK = 4;
  */
 const MAX_BANKED_INPUT_STEPS = 40;
 const MAX_INPUT_STEP_DEBT = 20;
-/** Còn tồn quá chừng này input sau 1 tick thì cảnh báo (tối đa 1 lần / 5 s / player). */
-const INPUT_BACKLOG_WARNING = MAX_INPUT_STEP_DEBT;
-const INPUT_BACKLOG_WARNING_INTERVAL_MS = 5_000;
+/**
+ * Input tồn quá mức này (client khựng lâu hơn phần để dành + nợ: app vào nền, đổi app, GC…, rồi gửi
+ * bù cả loạt) thì không đuổi theo nữa: bỏ input cũ nhất, chỉ giữ lại phần client chủ động đi trước
+ * (~RTT/2 + dư). Nếu không, phần thừa nằm lại vĩnh viễn và player trễ cố định (vd. 600 ms). Client bị
+ * reconcile kéo về vị trí server một lần; input bị bỏ không được xử lý nên không lợi được tốc độ.
+ */
+const MAX_INPUT_BACKLOG = MAX_INPUT_STEP_DEBT;
+const INPUT_BACKLOG_KEEP = 6;
+const INPUT_BACKLOG_LOG_INTERVAL_MS = 5_000;
 
 interface InputBudget {
     /** Số step còn được xử lý (âm = đang "nợ"). */
@@ -50,7 +56,7 @@ export class PlayerWorldService {
     private readonly respawningPlayers = new WeakSet<PlayerWorldState>();
     private readonly previousButtons = new WeakMap<PlayerWorldState, ButtonInput>();
     private readonly inputBudgets = new WeakMap<PlayerWorldState, InputBudget>();
-    private readonly lastBacklogWarningAt = new WeakMap<PlayerWorldState, number>();
+    private readonly lastBacklogLogAt = new WeakMap<PlayerWorldState, number>();
     private readonly attackChain = new PlayerAttackChain();
     private readonly chains = new WorldChain<PlayerChainContext>([
         new PlayerDeathChain(this.attackChain),
@@ -80,7 +86,7 @@ export class PlayerWorldService {
                 budget.credit--;
                 steps++;
             }
-            this.warnInputBacklog(room, state, inputs.size);
+            this.trimInputBacklog(room, state, inputs, budget);
 
             // Không có input nhưng đã hết máu (bị monster đánh) → vẫn phải xử lý chết/hồi sinh.
             if (steps === 0 && state.hp <= 0) this.step(room, sessionId, state, undefined, ctx.dt);
@@ -101,19 +107,25 @@ export class PlayerWorldService {
         return budget;
     }
 
-    private warnInputBacklog(room: WorldRoom, state: PlayerWorldState, backlog: number): void {
-        if (backlog <= INPUT_BACKLOG_WARNING) return;
+    private trimInputBacklog(
+        room: WorldRoom,
+        state: PlayerWorldState,
+        inputs: ReturnType<WorldRoom["inputs"]["get"]>,
+        budget: InputBudget
+    ): void {
+        if (inputs.size <= MAX_INPUT_BACKLOG) return;
+        let dropped = 0;
+        while (inputs.size > INPUT_BACKLOG_KEEP && inputs.next()) dropped++;
+        budget.credit = 0;
+
         const now = room.clock.elapsedTime;
-        if (
-            now - (this.lastBacklogWarningAt.get(state) ?? -Infinity) <
-            INPUT_BACKLOG_WARNING_INTERVAL_MS
-        ) {
+        if (now - (this.lastBacklogLogAt.get(state) ?? -Infinity) < INPUT_BACKLOG_LOG_INTERVAL_MS) {
             return;
         }
-        this.lastBacklogWarningAt.set(state, now);
-        console.warn(
-            `[WorldRoom] Player ${state.id} has ${backlog} inputs queued ` +
-                `(~${Math.round((backlog * 1000) / room.tickRate)} ms behind) — client is sending faster than real time`
+        this.lastBacklogLogAt.set(state, now);
+        console.info(
+            `[WorldRoom] Player ${state.id}: dropped ${dropped} late inputs ` +
+                `(~${Math.round((dropped * 1000) / room.tickRate)} ms) after a client stall`
         );
     }
 
