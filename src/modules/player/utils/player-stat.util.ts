@@ -1,3 +1,4 @@
+import { big, Big, bigToNumber, floorBig } from "@/core/utils/big-number.util.js";
 import { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
 import {
     ATTRIBUTE_KEYS,
@@ -46,20 +47,24 @@ export function computeAttributes(sources: PlayerStatSources): Attributes {
         attributes[key] = sources.classAttributes[key] + sources.allocatedAttributes[key];
     }
     const applied = applyBonuses(attributes, sources.bonuses, ATTRIBUTE_KEYS);
-    for (const key of ATTRIBUTE_KEYS) attributes[key] = Math.floor(applied[key] ?? 0);
+    for (const key of ATTRIBUTE_KEYS) attributes[key] = floorBig(big(applied[key] ?? 0));
     return attributes;
 }
 
 /** Stat cuối = nền + quy đổi từ attribute, rồi áp bonus nhắm vào stat (FLAT trước, PERCENT sau). */
 export function computeStats(sources: PlayerStatSources): { attributes: Attributes; stats: Stats } {
     const attributes = computeAttributes(sources);
-    const stats: Stats = { ...BASE_STATS };
+    const totals = new Map<StatKey, Big>();
+    const add = (stat: StatKey, value: Big) =>
+        totals.set(stat, (totals.get(stat) ?? big(0)).plus(value));
+    for (const [stat, value] of Object.entries(BASE_STATS)) add(stat as StatKey, big(value ?? 0));
     for (const key of ATTRIBUTE_KEYS) {
         for (const [stat, perPoint] of Object.entries(ATTRIBUTE_SCALING[key] ?? {})) {
-            const statKey = stat as StatKey;
-            stats[statKey] = (stats[statKey] ?? 0) + attributes[key] * perPoint;
+            add(stat as StatKey, big(attributes[key]).times(perPoint ?? 0));
         }
     }
+    const stats: Stats = {};
+    for (const [stat, value] of totals) stats[stat] = bigToNumber(value);
     const derivedKeys = Object.values(StatKey).filter(
         (key) => !(ATTRIBUTE_KEYS as readonly StatKey[]).includes(key)
     );
@@ -71,19 +76,19 @@ function applyBonuses<T extends Stats>(
     bonuses: StatBonus[],
     keys: readonly StatKey[]
 ): T {
-    const result = { ...values };
-    const percent: Stats = {};
+    const flat = new Map<StatKey, Big>();
+    const percent = new Map<StatKey, Big>();
     for (const bonus of bonuses) {
         if (!keys.includes(bonus.stat)) continue;
-        if (bonus.type === StatType.FLAT) {
-            result[bonus.stat] = (result[bonus.stat] ?? 0) + bonus.value;
-        } else {
-            percent[bonus.stat] = (percent[bonus.stat] ?? 0) + bonus.value;
-        }
+        const target = bonus.type === StatType.FLAT ? flat : percent;
+        target.set(bonus.stat, (target.get(bonus.stat) ?? big(0)).plus(bonus.value));
     }
-    for (const [stat, value] of Object.entries(percent)) {
-        const statKey = stat as StatKey;
-        result[statKey] = (result[statKey] ?? 0) * (1 + (value ?? 0));
+    const result = { ...values };
+    for (const key of new Set([...flat.keys(), ...percent.keys()])) {
+        const value = big(values[key] ?? 0)
+            .plus(flat.get(key) ?? 0)
+            .times(big(1).plus(percent.get(key) ?? 0));
+        result[key] = bigToNumber(value) as T[StatKey];
     }
     return result;
 }

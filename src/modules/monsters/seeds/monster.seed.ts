@@ -38,10 +38,14 @@ const MONSTERS: MonsterSeedData[] = [
         type: MonsterType.NORMAL,
         rarity: ItemRarity.COMMON,
         stats: {
+            [StatKey.MOVE_SPEED]: 2,
+            [StatKey.CRITICAL_DAMAGE]: 1.5,
+        },
+        statsPerLevel: {
             [StatKey.MAX_HP]: 50,
             [StatKey.PHYSICAL_ATTACK]: 5,
-            [StatKey.PHYSICAL_DEFENSE]: 0,
-            [StatKey.MOVE_SPEED]: 2,
+            [StatKey.ACCURACY]: 1,
+            [StatKey.EVASION]: 1,
         },
         drops: {
             currency: [{ code: CurrencyCode.GOLD, min: 1, max: 10 }],

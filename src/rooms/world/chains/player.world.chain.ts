@@ -3,6 +3,8 @@ import { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { MoveCommand, applyWorldMove } from "@/rooms/world/simulation/movement.step.js";
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
+import { calculateDamage } from "@/rooms/world/chains/damage.world.chain.js";
+import { combatSeed } from "@/rooms/world/utils/combat-roll.world.util.js";
 import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
 import { rollMonsterReward } from "@/modules/rewards/utils/reward-roll.util.js";
@@ -201,9 +203,10 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
 
         const direction = toHorizontalDirection(state.direction);
         state.direction = direction;
+        state.attackSerial++;
         this.pendingHits.set(
             state,
-            buildPendingSkillHits(skill, state.attack, direction, room.tickRate)
+            buildPendingSkillHits(skill, state.attackSerial, direction, room.tickRate)
         );
         state.startAttack(getSkillDurationTicks(skill, room.tickRate));
     }
@@ -234,13 +237,21 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
             }
 
             target.setAggroTarget(state.id);
-            const wasAlive = target.hp > 0;
+            const result = calculateDamage({
+                attacker: state.toDamageCombatant(),
+                defender: target.toDamageCombatant(),
+                event: hit.event,
+                seed: combatSeed(state.id, hit.attackSerial, hit.eventIndex, target.id),
+            });
+            if (!result.hit) continue;
+
             target.takeDamage(
-                Math.max(1, hit.rawDamage - target.defense),
+                result.damage,
                 millisecondsToTicks(target.attackCooldownMs, room.tickRate)
             );
+            state.heal(result.heal);
             // Đòn kết liễu → người đánh nhận thưởng (mỗi monster chỉ chết một lần).
-            if (wasAlive && target.hp <= 0) {
+            if (target.hp <= 0) {
                 rewardWorldService.grant(room, sessionId, state, rollMonsterReward(target.drops));
             }
         }

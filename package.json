@@ -57,6 +57,7 @@
         "@colyseus/uwebsockets-transport": "^0.18.4",
         "@dotenvx/dotenvx": "^2.30.0",
         "bcryptjs": "^3.0.3",
+        "bignumber.js": "^11.1.5",
         "colyseus": "^0.18.8",
         "drizzle-kit": "^0.31.11",
         "drizzle-orm": "^0.45.3",

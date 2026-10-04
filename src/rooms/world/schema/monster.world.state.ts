@@ -1,6 +1,10 @@
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { Monster } from "@/modules/monsters/entities/monster.entity.js";
+import type { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
+import type { Stats } from "@/modules/player/schemas/stat.schema.js";
+import { computeMonsterStats } from "@/modules/monsters/utils/monster-stat.util.js";
+import type { DamageCombatant } from "@/rooms/world/chains/damage.world.chain.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { ArraySchema, Schema, type } from "@colyseus/schema";
@@ -38,8 +42,14 @@ export class MonsterWorldState extends Schema {
     /** Skill MELEE đầu tiên là đòn đánh thường. */
     @type([OwnedSkillState]) skills = new ArraySchema<OwnedSkillState>();
 
-    /** Bảng rơi đồ của loại monster (không đồng bộ xuống client). */
+    // Không đồng bộ xuống client.
+    /** Bảng rơi đồ của loại monster. */
     drops: MonsterDrops;
+    /** Toàn bộ chỉ số ở level hiện tại (`computeMonsterStats`) — dùng cho chain tính damage. */
+    stats: Stats;
+    monsterType: MonsterType;
+    /** Tăng mỗi đòn đánh — một phần seed roll combat (`combatSeed`). */
+    attackSerial = 0;
 
     constructor(props: { monster: Monster; x: number; y: number }) {
         const { monster, x, y } = props;
@@ -52,18 +62,35 @@ export class MonsterWorldState extends Schema {
         this.y = y;
         this.spawnX = x;
         this.spawnY = y;
-        // Chỉ số cố định của monster nằm trong cột `stats`.
-        this.maxHp = Math.floor(monster.stats[StatKey.MAX_HP] ?? 0);
+        // Stat cuối = cố định + tăng theo level (cùng bộ StatKey với player).
+        this.stats = computeMonsterStats(monster, monster.level);
+        this.maxHp = Math.floor(this.stats[StatKey.MAX_HP] ?? 0);
         this.hp = this.maxHp;
-        this.attack = Math.floor(monster.stats[StatKey.PHYSICAL_ATTACK] ?? 0);
-        this.defense = Math.floor(monster.stats[StatKey.PHYSICAL_DEFENSE] ?? 0);
-        this.moveSpeed = monster.stats[StatKey.MOVE_SPEED] ?? 0;
+        this.attack = Math.floor(this.stats[StatKey.PHYSICAL_ATTACK] ?? 0);
+        this.defense = Math.floor(this.stats[StatKey.PHYSICAL_DEFENSE] ?? 0);
+        this.moveSpeed = this.stats[StatKey.MOVE_SPEED] ?? 0;
         this.attackCooldownMs = monster.attackCooldownMs;
         this.attackCooldownTicks = 0;
         this.hitbox = new HitboxColliderState(monster.hitbox);
         this.collider = new HitboxColliderState(monster.collider);
         this.skills.push(...toOwnedSkillStates(monster.skills));
         this.drops = monster.drops;
+        this.monsterType = monster.type;
+    }
+
+    toDamageCombatant(): DamageCombatant {
+        return {
+            id: this.id,
+            stats: this.stats,
+            hp: this.hp,
+            maxHp: this.maxHp,
+            monsterType: this.monsterType,
+        };
+    }
+
+    heal(amount: number) {
+        if (this.hp <= 0 || amount <= 0) return;
+        this.hp = Math.min(this.maxHp, this.hp + Math.floor(amount));
     }
 
     setDead() {

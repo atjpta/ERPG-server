@@ -60,7 +60,7 @@ function toClientSkill(skill: Skill) {
                 angle: event.angle,
                 offsetX: event.offsetX,
                 offsetY: event.offsetY,
-                /** damage = damageBase + attack × damageAttackScaling (như getSkillHitDamage). */
+                /** Damage gốc để client predict: damageBase + attack × damageAttackScaling (server tính đủ qua `calculateDamage`). */
                 damageBase: damageEffects.reduce((total, effect) => total + effect.baseValue, 0),
                 damageAttackScaling: damageEffects
                     .filter((effect) => effect.scalingType === DamageScalingType.ATTACK)

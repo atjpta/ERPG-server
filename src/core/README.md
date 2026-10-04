@@ -66,6 +66,7 @@ init project mới thì làm theo đúng thứ tự này.
 | `utils/service-error.ts`               | `serviceError(message, status, ResponseCode)` — throw trong service                                                                               |
 | `utils/version.util.ts`                | `compareVersion("1.2.3", "1.10.0")`                                                                                                               |
 | `utils/rate-limit.util.ts`             | `assertRateLimit(rule, identity)` — fixed window qua `cacheService.incr`, vượt → 429. `getClientIp()` chỉ tin header proxy khi `TRUST_PROXY=true` |
+| `utils/big-number.util.ts`             | `Big`/`big()` (bignumber.js, 20 chữ số thập phân), `clampBig`, `floorBig` — mọi phép tính stat/damage, tránh sai số float                         |
 | `middlewares/rate-limit.middleware.ts` | `createRateLimitMiddleware(rule)` — giới hạn theo IP, gắn vào `use: [...]` của endpoint                                                           |
 | `enums/response-code.enum.ts`          | Mã lỗi trả về client (client map sang text đa ngôn ngữ)                                                                                           |
 | `enums/client-platform.enum.ts`        | `android` (Google Play), `pc`                                                                                                                     |

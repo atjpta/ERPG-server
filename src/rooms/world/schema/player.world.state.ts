@@ -13,6 +13,7 @@ import type { Equipments } from "@/modules/player/schemas/inventory.schema.js";
 import type { AttributeKey, Attributes, Stats } from "@/modules/player/schemas/stat.schema.js";
 import { allocateAttributePoints } from "@/modules/player/utils/player-progress.util.js";
 import type { AttributeSummary } from "@/rooms/world/world.message.js";
+import type { DamageCombatant } from "@/rooms/world/chains/damage.world.chain.js";
 import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 import {
     OwnedSkillState,
@@ -57,6 +58,8 @@ export class PlayerWorldState extends Schema {
     equipments: Equipments;
     attributes: Attributes;
     stats: Stats;
+    /** Tăng mỗi đòn đánh — một phần seed roll combat (`combatSeed`). */
+    attackSerial = 0;
     skillPoints: number;
     maxMp: number;
 
@@ -226,6 +229,15 @@ export class PlayerWorldState extends Schema {
         this.dashing = this.dashTicks > 0;
         if (this.dashTicks > 0) this.dashTicks--;
         if (this.dashCooldownTicks > 0) this.dashCooldownTicks--;
+    }
+
+    toDamageCombatant(): DamageCombatant {
+        return { id: this.id, stats: this.stats, hp: this.hp, maxHp: this.maxHp };
+    }
+
+    heal(amount: number) {
+        if (this.hp <= 0 || amount <= 0) return;
+        this.hp = Math.min(this.maxHp, this.hp + Math.floor(amount));
     }
 
     takeDamage(damage: number) {

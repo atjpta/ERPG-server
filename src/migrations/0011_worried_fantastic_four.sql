@@ -1,0 +1,1 @@
+ALTER TABLE "monsters" ADD COLUMN "stats_per_level" jsonb DEFAULT '{}'::jsonb NOT NULL;

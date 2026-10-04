@@ -1,3 +1,4 @@
+import { big, floorBig } from "@/core/utils/big-number.util.js";
 import { classService } from "@/modules/classes/services/class.service.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
 import type { EquipmentMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
@@ -38,7 +39,7 @@ export class PlayerStatService {
 
     /** Giá trị nguyên (HP/MP…) — thiếu stat = 0. */
     static whole(stats: Stats, key: StatKey): number {
-        return Math.floor(stats[key] ?? 0);
+        return floorBig(big(stats[key] ?? 0));
     }
 }
 

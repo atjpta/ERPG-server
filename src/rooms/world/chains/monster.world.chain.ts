@@ -3,6 +3,8 @@ import { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { applyWorldMove } from "@/rooms/world/simulation/movement.step.js";
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
+import { calculateDamage } from "@/rooms/world/chains/damage.world.chain.js";
+import { combatSeed } from "@/rooms/world/utils/combat-roll.world.util.js";
 import { distanceSquared } from "@/rooms/world/utils/world.util.js";
 import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
@@ -235,10 +237,16 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
                     : Direction.RIGHT;
         monster.direction = attackDirection;
         monster.startAttackWindup();
+        monster.attackSerial++;
         this.pendingAttacks.set(monster, {
             target,
             ticks: getSkillDurationTicks(skill, room.tickRate),
-            hitEvents: buildPendingSkillHits(skill, monster.attack, attackDirection, room.tickRate),
+            hitEvents: buildPendingSkillHits(
+                skill,
+                monster.attackSerial,
+                attackDirection,
+                room.tickRate
+            ),
             cooldownTicks: millisecondsToTicks(
                 skill.cooldownMs > 0 ? skill.cooldownMs : monster.attackCooldownMs,
                 room.tickRate
@@ -259,7 +267,16 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
                 continue;
             }
 
-            target.takeDamage(Math.max(1, hit.rawDamage - target.defense));
+            const result = calculateDamage({
+                attacker: monster.toDamageCombatant(),
+                defender: target.toDamageCombatant(),
+                event: hit.event,
+                seed: combatSeed(monster.id, hit.attackSerial, hit.eventIndex, target.id),
+            });
+            if (!result.hit) continue;
+
+            target.takeDamage(result.damage);
+            monster.heal(result.heal);
         }
     }
 }
