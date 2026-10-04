@@ -9,17 +9,21 @@ import { Players, type PlayerIdentity } from "@/modules/auth/entities/player.ent
 import { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { gameServerService } from "@/modules/auth/user/services/game-server.service.js";
+import { classService } from "@/modules/classes/services/class.service.js";
+import { PLAYER_DEFAULT_CLASS_CODE } from "@/modules/player/constants/player.constant.js";
+import { StatKey } from "@/modules/player/enums/stat.enum.js";
+import { createEquipments } from "@/modules/player/schemas/inventory.schema.js";
+import { createAttributes } from "@/modules/player/schemas/stat.schema.js";
 import {
-    PLAYER_BASE_STATS,
-    PLAYER_DEFAULT_SKILL_CODES,
-} from "@/modules/player/constants/player.constant.js";
+    PlayerStatService,
+    playerStatService,
+} from "@/modules/player/user/services/player-stat.service.js";
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { PlayerStateRepo } from "@/modules/player/repositories/player-state.repository.js";
 import { mapService } from "@/modules/maps/user/services/map.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataService } from "@/modules/master-data/user/services/master-data.service.js";
-import { skillService } from "@/modules/skills/services/skill.service.js";
 
 export type PlayerWithState = PlayerIdentity &
     Omit<PlayerState, "playerId" | "updatedAt" | "revision">;
@@ -39,6 +43,13 @@ export class PlayerService extends BaseService<typeof Players> {
             const server = await gameServerService.getDefaultOnlineOrFail(tx);
             const config = await masterDataService.getValue(MasterDataKey.PLAYER_CONFIG, tx);
             const startMap = await mapService.getActiveByCodeOrFail(config.startMapCode, tx);
+            const defaultClass = classService.getByCode(PLAYER_DEFAULT_CLASS_CODE);
+            if (!defaultClass) throw new Error(`Class "${PLAYER_DEFAULT_CLASS_CODE}" not found`);
+            const { stats } = playerStatService.compute({
+                classId: defaultClass.id,
+                allocatedAttributes: createAttributes(),
+                equipments: createEquipments(),
+            });
             const player = await PlayerIdentityRepo.create({
                 data: {
                     userId,
@@ -50,17 +61,18 @@ export class PlayerService extends BaseService<typeof Players> {
             const state = await PlayerStateRepo.create(
                 {
                     playerId: player.id,
+                    classId: defaultClass.id,
                     level: 1,
                     exp: 0,
-                    hp: PLAYER_BASE_STATS.maxHp,
-                    mp: PLAYER_BASE_STATS.maxMp,
+                    hp: PlayerStatService.whole(stats, StatKey.MAX_HP),
+                    mp: PlayerStatService.whole(stats, StatKey.MAX_MP),
                     mapCode: startMap.code,
                     x: startMap.spawnX,
                     y: startMap.spawnY,
                     direction: Direction.DOWN,
                     hitbox: { width: 0.4, height: 0.6, offsetX: 0, offsetY: 0.35 },
                     collider: { width: 0.3, height: 0.1, offsetX: 0, offsetY: 0.1 },
-                    skills: skillService.toOwnedSkills(PLAYER_DEFAULT_SKILL_CODES),
+                    skills: defaultClass.skills,
                 },
                 tx
             );

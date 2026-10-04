@@ -22,7 +22,6 @@ const MONSTER_ROAM_RADIUS = 2;
 const MONSTER_ROAM_ARRIVAL_DISTANCE = 0.15;
 const MONSTER_IDLE_MIN_MS = 1_000;
 const MONSTER_IDLE_MAX_MS = 3_000;
-const MONSTER_ATTACK_WINDUP_MS = 300;
 interface RoamTarget {
     x: number;
     y: number;
@@ -33,7 +32,6 @@ interface PendingAttack {
     ticks: number;
     hitEvents: PendingSkillHit[];
     cooldownTicks: number;
-    skillAttack: boolean;
 }
 
 export interface MonsterChainContext {
@@ -215,9 +213,6 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
             if (pending.ticks > 0) return WorldChainResult.STOP;
 
             this.pendingAttacks.delete(monster);
-            if (!pending.skillAttack) {
-                this.resolveFallbackAttack(room, monster, pending.target);
-            }
             monster.startAttack(pending.cooldownTicks);
             return WorldChainResult.STOP;
         }
@@ -226,6 +221,9 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
 
         monster.faceTarget(dx);
         if (monster.attackCooldownTicks > 0) return WorldChainResult.STOP;
+        // Monster chỉ đánh bằng skill MELEE của nó (tầm/hitbox/thời lượng nằm trong skill).
+        const skill = getMonsterAttackSkill(monster);
+        if (!skill) return WorldChainResult.STOP;
 
         const attackDirection: HorizontalDirection =
             dx < 0
@@ -237,32 +235,14 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
                     : Direction.RIGHT;
         monster.direction = attackDirection;
         monster.startAttackWindup();
-        const skill = getMonsterAttackSkill(monster);
-        if (skill) {
-            this.pendingAttacks.set(monster, {
-                target,
-                ticks: getSkillDurationTicks(skill, room.tickRate),
-                hitEvents: buildPendingSkillHits(
-                    skill,
-                    monster.attack,
-                    attackDirection,
-                    room.tickRate
-                ),
-                cooldownTicks: millisecondsToTicks(
-                    skill.cooldownMs > 0 ? skill.cooldownMs : monster.attackCooldownMs,
-                    room.tickRate
-                ),
-                skillAttack: true,
-            });
-            return WorldChainResult.STOP;
-        }
-
         this.pendingAttacks.set(monster, {
             target,
-            ticks: millisecondsToTicks(MONSTER_ATTACK_WINDUP_MS, room.tickRate),
-            hitEvents: [],
-            cooldownTicks: millisecondsToTicks(monster.attackCooldownMs, room.tickRate),
-            skillAttack: false,
+            ticks: getSkillDurationTicks(skill, room.tickRate),
+            hitEvents: buildPendingSkillHits(skill, monster.attack, attackDirection, room.tickRate),
+            cooldownTicks: millisecondsToTicks(
+                skill.cooldownMs > 0 ? skill.cooldownMs : monster.attackCooldownMs,
+                room.tickRate
+            ),
         });
         return WorldChainResult.STOP;
     }
@@ -282,23 +262,6 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
             target.takeDamage(Math.max(1, hit.rawDamage - target.defense));
         }
     }
-
-    private resolveFallbackAttack(
-        room: WorldRoom,
-        monster: MonsterWorldState,
-        target: PlayerWorldState
-    ): void {
-        const targetIsPresent = [...room.state.players.values()].includes(target);
-        const distance = Math.hypot(target.x - monster.x, target.y - monster.y);
-        if (
-            targetIsPresent &&
-            target.hp > 0 &&
-            !target.dashing &&
-            distance <= monster.attackRange
-        ) {
-            target.takeDamage(Math.max(1, monster.attack - target.defense));
-        }
-    }
 }
 
 /** Đòn đánh thường của monster = skill MELEE đầu tiên trong cột `skills` của nó. */
@@ -313,7 +276,8 @@ function isMonsterSkillHitboxInRange(
 ): boolean {
     const skill = getMonsterAttackSkill(monster);
     const hitEvents = skill?.skillHitEvents ?? [];
-    if (hitEvents.length === 0) return distance <= (skill?.castRange ?? monster.attackRange);
+    if (!skill) return false;
+    if (hitEvents.length === 0) return distance <= skill.castRange;
 
     const direction =
         target.x < monster.x

@@ -4,7 +4,9 @@ import { GameServerSeed } from "@/modules/auth/seeds/game-server.seed.js";
 import { GameMapSeed } from "@/modules/maps/seeds/game-map.seed.js";
 import { MasterDataSeed } from "@/modules/master-data/seeds/master-data.seed.js";
 import { MonsterSeed } from "@/modules/monsters/seeds/monster.seed.js";
-import { PlayerSkillSeed } from "@/modules/player/seeds/player-skill.seed.js";
+import { ClassSeed } from "@/modules/classes/seeds/class.seed.js";
+import { ItemSeed } from "@/modules/items/seeds/item.seed.js";
+import { LevelSeed } from "@/modules/levels/seeds/level.seed.js";
 import { SkillSeed } from "@/modules/skills/seeds/skill.seed.js";
 
 const force = process.argv.includes("--force");
@@ -13,10 +15,11 @@ await connectPostgres();
 await MasterDataSeed(force);
 await AdminSeed(force);
 await GameServerSeed(force);
-await GameMapSeed(force);
-// Skill trước: monster/player tham chiếu skill theo id.
+await GameMapSeed();
+await LevelSeed(force);
 await SkillSeed();
+await ItemSeed();
+await ClassSeed();
 await MonsterSeed();
-await PlayerSkillSeed();
 
 process.exit(0);

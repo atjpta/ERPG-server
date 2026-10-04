@@ -1,5 +1,6 @@
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { Monster } from "@/modules/monsters/entities/monster.entity.js";
+import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { ArraySchema, Schema, type } from "@colyseus/schema";
 import { v7 as uuidv7 } from "uuid";
@@ -28,7 +29,6 @@ export class MonsterWorldState extends Schema {
     @type("uint32") attack: number;
     @type("uint32") defense: number;
     @type("float32") moveSpeed: number;
-    @type("float32") attackRange: number;
     @type("uint32") attackCooldownMs: number;
     @type("uint16") attackCooldownTicks: number = 0;
     @type(HitboxColliderState) hitbox: HitboxColliderState;
@@ -48,12 +48,12 @@ export class MonsterWorldState extends Schema {
         this.y = y;
         this.spawnX = x;
         this.spawnY = y;
-        this.hp = monster.maxHp;
-        this.maxHp = monster.maxHp;
-        this.attack = monster.attack;
-        this.defense = monster.defense;
-        this.moveSpeed = monster.moveSpeed;
-        this.attackRange = monster.attackRange;
+        // Chỉ số cố định của monster nằm trong cột `stats`.
+        this.maxHp = Math.floor(monster.stats[StatKey.MAX_HP] ?? 0);
+        this.hp = this.maxHp;
+        this.attack = Math.floor(monster.stats[StatKey.PHYSICAL_ATTACK] ?? 0);
+        this.defense = Math.floor(monster.stats[StatKey.PHYSICAL_DEFENSE] ?? 0);
+        this.moveSpeed = monster.stats[StatKey.MOVE_SPEED] ?? 0;
         this.attackCooldownMs = monster.attackCooldownMs;
         this.attackCooldownTicks = 0;
         this.hitbox = new HitboxColliderState(monster.hitbox);

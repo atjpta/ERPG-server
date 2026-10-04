@@ -1,0 +1,1 @@
+ALTER TABLE "player_states" ALTER COLUMN "class_id" SET NOT NULL;

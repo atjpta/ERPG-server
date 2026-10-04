@@ -157,7 +157,7 @@ export class PlayerWorldService {
 
         this.respawningPlayers.add(player);
         room.clock.setTimeout(() => {
-            player.setSpawns();
+            player.setSpawns(room.map.spawnX, room.map.spawnY);
             this.respawningPlayers.delete(player);
         }, PLAYER_RESPAWN_MS);
     }

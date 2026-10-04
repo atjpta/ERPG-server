@@ -1,4 +1,4 @@
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, type Queryable } from "@/configs/postgres.config.js";
 import {
     PlayerStates,
@@ -20,12 +20,27 @@ export class PlayerStateRepository {
         return dbOrTx.select().from(PlayerStates).where(inArray(PlayerStates.playerId, playerIds));
     }
 
-    /** Gán `skills` cho mọi player chưa có skill nào (không đổi revision — không đụng state online). */
-    async fillEmptySkills(skills: NewPlayerState["skills"], dbOrTx: Queryable = db) {
+    /** Gán `skills` cho player của class này chưa có skill nào (không đổi revision — không đụng state online). */
+    async fillEmptySkills(
+        classId: string,
+        skills: NewPlayerState["skills"],
+        dbOrTx: Queryable = db
+    ) {
         return dbOrTx
             .update(PlayerStates)
             .set({ skills })
-            .where(sql`${PlayerStates.skills} = '[]'::jsonb`)
+            .where(
+                and(eq(PlayerStates.classId, classId), sql`${PlayerStates.skills} = '[]'::jsonb`)
+            )
+            .returning({ playerId: PlayerStates.playerId });
+    }
+
+    /** Gán class cho mọi player chưa có class (không đổi revision — không đụng state online). */
+    async fillMissingClass(classId: string, dbOrTx: Queryable = db) {
+        return dbOrTx
+            .update(PlayerStates)
+            .set({ classId })
+            .where(isNull(PlayerStates.classId))
             .returning({ playerId: PlayerStates.playerId });
     }
 

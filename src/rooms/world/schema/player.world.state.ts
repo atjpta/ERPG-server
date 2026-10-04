@@ -1,6 +1,10 @@
 import { ArraySchema, Schema, type } from "@colyseus/schema";
 
-import { PLAYER_BASE_STATS } from "@/modules/player/constants/player.constant.js";
+import { StatKey } from "@/modules/player/enums/stat.enum.js";
+import {
+    PlayerStatService,
+    playerStatService,
+} from "@/modules/player/user/services/player-stat.service.js";
 import type { PlayerSnapshot } from "@/modules/player/user/services/player.service.js";
 import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 import {
@@ -47,21 +51,24 @@ export class PlayerWorldState extends Schema {
         this.x = player.x;
         this.y = player.y;
         this.direction = player.direction === "left" ? "left" : "right";
-        this.hp = PLAYER_BASE_STATS.maxHp;
-        this.maxHp = PLAYER_BASE_STATS.maxHp;
+        // Stat tính từ class + điểm đã cộng + trang bị đang mặc (không lưu DB).
+        const { stats } = playerStatService.compute(player);
+        this.maxHp = PlayerStatService.whole(stats, StatKey.MAX_HP);
+        this.hp = this.maxHp;
         this.mp = player.mp;
-        this.moveSpeed = PLAYER_BASE_STATS.moveSpeed;
-        this.attack = PLAYER_BASE_STATS.attack;
-        this.defense = PLAYER_BASE_STATS.defense;
+        this.moveSpeed = stats[StatKey.MOVE_SPEED] ?? 0;
+        this.attack = PlayerStatService.whole(stats, StatKey.PHYSICAL_ATTACK);
+        this.defense = PlayerStatService.whole(stats, StatKey.PHYSICAL_DEFENSE);
         this.stateRevision = player.stateRevision;
         this.hitbox = new HitboxColliderState(player.hitbox);
         this.collider = new HitboxColliderState(player.collider);
         this.skills.push(...toOwnedSkillStates(player.skills));
     }
 
-    setSpawns() {
-        this.x = 0;
-        this.y = 0;
+    /** Hồi sinh tại điểm spawn của map (`game_maps.spawnX/spawnY`). */
+    setSpawns(spawnX: number, spawnY: number) {
+        this.x = spawnX;
+        this.y = spawnY;
         this.moving = false;
         this.attacking = false;
         this.attackCombo = 0;

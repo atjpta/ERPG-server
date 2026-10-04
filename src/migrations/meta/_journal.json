@@ -50,6 +50,27 @@
             "when": 1791103141559,
             "tag": "0006_fancy_drax",
             "breakpoints": true
+        },
+        {
+            "idx": 7,
+            "version": "7",
+            "when": 1791108764667,
+            "tag": "0007_awesome_randall",
+            "breakpoints": true
+        },
+        {
+            "idx": 8,
+            "version": "7",
+            "when": 1791109077799,
+            "tag": "0008_cultured_talkback",
+            "breakpoints": true
+        },
+        {
+            "idx": 9,
+            "version": "7",
+            "when": 1791110192008,
+            "tag": "0009_nosy_bucky",
+            "breakpoints": true
         }
     ]
 }

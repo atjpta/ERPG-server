@@ -9,8 +9,10 @@ const MAPS: NewGameMap[] = [
         type: MapType.TOWN,
         width: 64,
         height: 64,
-        spawnX: 5,
-        spawnY: 5,
+        // Tọa độ server: gốc ở góc trên-trái, y hướng xuống → giữa map = (width/2, height/2),
+        // tức (0, 0) bên Unity.
+        spawnX: 32,
+        spawnY: 32,
     },
     {
         code: "field_01",
@@ -18,18 +20,18 @@ const MAPS: NewGameMap[] = [
         type: MapType.FIELD,
         width: 128,
         height: 96,
-        spawnX: 5,
-        spawnY: 5,
+        spawnX: 64,
+        spawnY: 48,
     },
 ];
 
-export const GameMapSeed = async (force = false) => {
+export const GameMapSeed = async () => {
     for (const map of MAPS) {
         await GameMapRepo.upsert({
             data: map,
             target: GameMaps.code,
             matchValue: map.code,
-            updateData: force ? map : undefined,
+            updateData: map,
         });
     }
     console.info("✅ [GameMapSeed] Done");
