@@ -1,4 +1,3 @@
-import type { Direction } from "@/modules/player/enums/player.enum.js";
 import { playerService } from "@/modules/player/user/services/player.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
@@ -33,11 +32,8 @@ export class WorldService {
                 {
                     sessionId,
                     player,
-                    x: player.x,
-                    y: player.y,
-                    direction: player.direction,
-                    hp: player.hp,
-                    mp: player.mp,
+                    // Chụp lại ngay (không đợi await) để không lẫn thay đổi của tick sau.
+                    data: player.toSavedState(room.map.code),
                     stateRevision: player.stateRevision,
                 },
             ];
@@ -48,14 +44,7 @@ export class WorldService {
                 try {
                     const saved = await playerService.saveState(
                         snapshot.player.id,
-                        {
-                            mapCode: room.map.code,
-                            x: snapshot.x,
-                            y: snapshot.y,
-                            direction: snapshot.direction as Direction,
-                            hp: snapshot.hp,
-                            mp: snapshot.mp,
-                        },
+                        snapshot.data,
                         snapshot.stateRevision
                     );
                     const current = room.state.players.get(snapshot.sessionId);

@@ -1,5 +1,4 @@
 import { Command } from "@colyseus/command";
-import type { Direction } from "@/modules/player/enums/player.enum.js";
 import { playerService } from "@/modules/player/user/services/player.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
@@ -16,14 +15,7 @@ export class LeavePlayerWorldCommand extends Command<WorldRoom, LeavePlayerWorld
         try {
             await playerService.saveState(
                 player.id,
-                {
-                    mapCode: this.room.map.code,
-                    x: player.x,
-                    y: player.y,
-                    direction: player.direction as Direction,
-                    hp: player.hp,
-                    mp: player.mp,
-                },
+                player.toSavedState(this.room.map.code),
                 player.stateRevision
             );
         } catch (err) {

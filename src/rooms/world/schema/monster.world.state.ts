@@ -1,6 +1,7 @@
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
+import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { ArraySchema, Schema, type } from "@colyseus/schema";
 import { v7 as uuidv7 } from "uuid";
@@ -37,6 +38,9 @@ export class MonsterWorldState extends Schema {
     /** Skill MELEE đầu tiên là đòn đánh thường. */
     @type([OwnedSkillState]) skills = new ArraySchema<OwnedSkillState>();
 
+    /** Bảng rơi đồ của loại monster (không đồng bộ xuống client). */
+    drops: MonsterDrops;
+
     constructor(props: { monster: Monster; x: number; y: number }) {
         const { monster, x, y } = props;
         super();
@@ -59,6 +63,7 @@ export class MonsterWorldState extends Schema {
         this.hitbox = new HitboxColliderState(monster.hitbox);
         this.collider = new HitboxColliderState(monster.collider);
         this.skills.push(...toOwnedSkillStates(monster.skills));
+        this.drops = monster.drops;
     }
 
     setDead() {

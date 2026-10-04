@@ -5,6 +5,8 @@ import { MoveCommand, applyWorldMove } from "@/rooms/world/simulation/movement.s
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
 import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
+import { rollMonsterReward } from "@/modules/rewards/utils/reward-roll.util.js";
+import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
 import {
     PendingSkillHit,
@@ -209,10 +211,15 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
             }
 
             target.setAggroTarget(state.id);
+            const wasAlive = target.hp > 0;
             target.takeDamage(
                 Math.max(1, hit.rawDamage - target.defense),
                 millisecondsToTicks(target.attackCooldownMs, room.tickRate)
             );
+            // Đòn kết liễu → người đánh nhận thưởng (mỗi monster chỉ chết một lần).
+            if (wasAlive && target.hp <= 0) {
+                rewardWorldService.grant(room, sessionId, state, rollMonsterReward(target.drops));
+            }
         }
     }
 }

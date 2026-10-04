@@ -133,7 +133,10 @@ export class PlayerService extends BaseService<typeof Players> {
 
     async saveState(
         id: string,
-        data: Pick<PlayerState, "mapCode" | "x" | "y" | "direction" | "hp" | "mp">,
+        data: Pick<PlayerState, "mapCode" | "x" | "y" | "direction" | "hp" | "mp"> &
+            Partial<
+                Pick<PlayerState, "level" | "exp" | "wallet" | "attributePoints" | "skillPoints">
+            >,
         expectedRevision?: number
     ) {
         return withTransaction(async (tx) => {
