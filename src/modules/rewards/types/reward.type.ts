@@ -1,4 +1,5 @@
-import type { ItemRarity, ItemSource } from "@/modules/items/enums/item.enum.js";
+import type { ItemSource } from "@/modules/items/enums/item.enum.js";
+import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 import type { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 
 export interface CurrencyReward {
@@ -9,8 +10,8 @@ export interface CurrencyReward {
 export interface ItemReward {
     itemId: string;
     quantity: number;
-    rarity: ItemRarity;
-    metadata?: Record<string, unknown>;
+    /** Trang bị: chỉ số đã roll của món đó (quantity = 1). */
+    metadata?: ItemEquipmentInstanceMetadata;
 }
 
 /** Phần thưởng đã roll xong (từ drop, quest, gacha…) — sẵn sàng cộng vào player. */

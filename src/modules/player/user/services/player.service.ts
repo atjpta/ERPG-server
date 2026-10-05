@@ -169,6 +169,10 @@ export class PlayerService extends BaseService<typeof Players> {
                     | "attributePoints"
                     | "skillPoints"
                     | "allocatedAttributes"
+                    | "equipments"
+                    | "equipmentInventory"
+                    | "consumableInventory"
+                    | "materialInventory"
                 >
             >,
         expectedRevision?: number

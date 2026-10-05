@@ -9,6 +9,16 @@ import {
 import { JoinPlayerWorldCommand } from "@/rooms/world/commands/on-join.world.command.js";
 import { LeavePlayerWorldCommand } from "@/rooms/world/commands/on-leave.world.command.js";
 import { AllocateAttributesWorldCommand } from "@/rooms/world/commands/allocate-attributes.world.command.js";
+import {
+    DisassembleItemsWorldCommand,
+    EnhanceEquipmentWorldCommand,
+    EquipItemWorldCommand,
+    LockItemWorldCommand,
+    MoveItemWorldCommand,
+    RefineEquipmentWorldCommand,
+    UnequipItemWorldCommand,
+} from "@/rooms/world/commands/inventory.world.command.js";
+import { inventoryWorldService } from "@/rooms/world/services/inventory.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/world.message.js";
 import { MoveWorldInput } from "@/rooms/world/schema/move.world.input.js";
 import { WorldState } from "@/rooms/world/schema/world.state.js";
@@ -39,6 +49,27 @@ export class WorldRoom extends BasePlayerRoom<{
                 payload,
             });
         },
+        [WorldClientMessage.EQUIP_ITEM]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new EquipItemWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.UNEQUIP_ITEM]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new UnequipItemWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.MOVE_ITEM]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new MoveItemWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.LOCK_ITEM]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new LockItemWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.ENHANCE_EQUIPMENT]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new EnhanceEquipmentWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.REFINE_EQUIPMENT]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new RefineEquipmentWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.DISASSEMBLE_ITEMS]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new DisassembleItemsWorldCommand(), { client, payload });
+        },
     };
 
     map!: GameMap;
@@ -57,6 +88,9 @@ export class WorldRoom extends BasePlayerRoom<{
 
         // Subscribe kick (ban/xoá/logout) + đá kết nối cũ của cùng player ở mọi room/process.
         await this.registerOnlinePlayer(client);
+
+        const player = this.state.players.get(client.sessionId);
+        if (player) inventoryWorldService.send(client, player);
     }
 
     async onDrop(client: PlayerClient) {

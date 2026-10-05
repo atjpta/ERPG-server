@@ -10,7 +10,12 @@ import type { PlayerSnapshot } from "@/modules/player/user/services/player.servi
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
 import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
-import type { Equipments } from "@/modules/player/schemas/inventory.schema.js";
+import {
+    fromInventories,
+    toInventories,
+    type Equipments,
+    type Inventories,
+} from "@/modules/player/schemas/inventory.schema.js";
 import type { AttributeKey, Attributes, Stats } from "@/modules/player/schemas/stat.schema.js";
 import { allocateAttributePoints } from "@/modules/player/utils/player-progress.util.js";
 import type { AttributeSummary } from "@/rooms/world/world.message.js";
@@ -57,6 +62,8 @@ export class PlayerWorldState extends Schema {
     classId: string;
     allocatedAttributes: Attributes;
     equipments: Equipments;
+    /** 3 túi inventory theo ItemType (server-only, gửi client qua message `inventory`). */
+    inventories: Inventories;
     attributes: Attributes;
     stats: Stats;
     /** Tăng mỗi đòn đánh — một phần seed roll combat (`combatSeed`). */
@@ -79,6 +86,7 @@ export class PlayerWorldState extends Schema {
         this.classId = player.classId;
         this.allocatedAttributes = { ...player.allocatedAttributes };
         this.equipments = structuredClone(player.equipments);
+        this.inventories = structuredClone(toInventories(player));
         this.refreshStats();
         this.hp = this.maxHp;
         this.mp = player.mp;
@@ -190,6 +198,10 @@ export class PlayerWorldState extends Schema {
         | "attributePoints"
         | "skillPoints"
         | "allocatedAttributes"
+        | "equipments"
+        | "equipmentInventory"
+        | "consumableInventory"
+        | "materialInventory"
     > {
         return {
             mapCode,
@@ -204,6 +216,8 @@ export class PlayerWorldState extends Schema {
             attributePoints: this.attributePoints,
             skillPoints: this.skillPoints,
             allocatedAttributes: { ...this.allocatedAttributes },
+            equipments: structuredClone(this.equipments),
+            ...structuredClone(fromInventories(this.inventories)),
         };
     }
 
@@ -285,6 +299,8 @@ export class PlayerWorldState extends Schema {
         this.hp = player.hp;
         this.mp = player.mp;
         this.applyProgress(player);
+        this.equipments = structuredClone(player.equipments);
+        this.inventories = structuredClone(toInventories(player));
         this.refreshStats();
         this.stateRevision = player.stateRevision;
         this.moving = false;

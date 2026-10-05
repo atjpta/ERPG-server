@@ -83,6 +83,36 @@ export class WorldService {
         return checkpoint;
     }
 
+    /**
+     * Lưu ngay 1 player (sau cường hoá / tinh hoá / phân rã — không để thoát game chơi lại kết quả).
+     * Chạy nối tiếp với checkpoint của room để không lệch `stateRevision`.
+     */
+    async savePlayer(room: WorldRoom, sessionId: string): Promise<void> {
+        for (
+            let running = this.checkpointPromises.get(room);
+            running;
+            running = this.checkpointPromises.get(room)
+        ) {
+            await running;
+        }
+        const player = room.state.players.get(sessionId);
+        if (!player || room.isLeavingSession(sessionId)) return;
+
+        const save = playerService
+            .saveState(player.id, player.toSavedState(room.map.code), player.stateRevision)
+            .then((saved) => {
+                room.state.players.get(sessionId)?.setStateRevision(saved.revision);
+            })
+            .catch((err: unknown) => {
+                console.error(`[WorldRoom] Save player ${player.id} failed:`, err);
+            })
+            .finally(() => {
+                this.checkpointPromises.delete(room);
+            });
+        this.checkpointPromises.set(room, save);
+        await save;
+    }
+
     waitForCheckpoint(room: WorldRoom): Promise<void> {
         return this.checkpointPromises.get(room) ?? Promise.resolve();
     }
