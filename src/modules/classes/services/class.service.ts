@@ -62,6 +62,17 @@ export class ClassService {
     }
 
     /**
+     * Class tier 1 mà `code` chuyển cấp lên từ đó (chính nó nếu đã là tier 1) — client dùng hình/animation
+     * của class gốc cho các class tier cao chưa có asset riêng.
+     */
+    getBaseClassCode(code: string): string {
+        for (const candidate of this.usableItemClassCodes.get(code) ?? []) {
+            if (this.classesByCode.get(candidate)?.tier === 1) return candidate;
+        }
+        return code;
+    }
+
+    /**
      * Class `classId` dùng được đồ gắn `itemClassCode` không: `null` = mọi class, còn lại phải là
      * chính class đó hoặc class tier thấp hơn chuyển cấp được tới nó (không mặc đồ class sắp lên).
      */

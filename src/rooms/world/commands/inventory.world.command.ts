@@ -2,6 +2,7 @@ import { Command } from "@colyseus/command";
 import type { z } from "zod";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
+import { attributeWorldService } from "@/rooms/world/services/attribute.world.service.js";
 import {
     inventoryWorldService,
     type InventoryResult,
@@ -15,11 +16,7 @@ import {
     UnequipItemSchema,
     UpgradeEquipmentSchema,
 } from "@/rooms/world/validators/inventory.world.validator.js";
-import {
-    WorldMessage,
-    type AttributesMessage,
-    type EquipmentUpgradeMessage,
-} from "@/rooms/world/world.message.js";
+import { WorldMessage, type EquipmentUpgradeMessage } from "@/rooms/world/world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 interface InventoryCommandPayload {
@@ -66,10 +63,7 @@ abstract class InventoryWorldCommand<TSchema extends z.ZodType, TValue> extends 
         }
         this.onSuccess(client, result.value);
         inventoryWorldService.send(client, player);
-        if (this.changesStats) {
-            const attributes: AttributesMessage = { ok: true, ...player.getAttributeSummary() };
-            client.send(WorldMessage.ATTRIBUTES, attributes);
-        }
+        if (this.changesStats) attributeWorldService.send(client, player);
         if (this.saveImmediately) await worldService.savePlayer(this.room, client.sessionId);
     }
 }

@@ -9,6 +9,7 @@ import {
 import type { PlayerSnapshot } from "@/modules/player/user/services/player.service.js";
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
 import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
+import { classService } from "@/modules/classes/services/class.service.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
 import {
     fromInventories,
@@ -38,6 +39,7 @@ export class PlayerWorldState extends Schema {
     @type("uint32") hp: number;
     @type("uint32") maxHp: number;
     @type("uint32") mp: number;
+    @type("uint32") maxMp: number;
     @type("float32") moveSpeed: number;
     @type("uint32") attack: number;
     @type("uint32") defense: number;
@@ -56,6 +58,9 @@ export class PlayerWorldState extends Schema {
     @type([OwnedSkillState]) skills = new ArraySchema<OwnedSkillState>();
     @type("uint32") exp = 0;
     @type("uint32") expToNextLevel = 0;
+    /** Code class hiện tại và class tier 1 gốc của nó (client chọn hình/animation theo class). */
+    @type("string") classCode = "";
+    @type("string") baseClassCode = "";
 
     wallet: Wallet;
     attributePoints: number;
@@ -69,7 +74,6 @@ export class PlayerWorldState extends Schema {
     /** Tăng mỗi đòn đánh — một phần seed roll combat (`combatSeed`). */
     attackSerial = 0;
     skillPoints: number;
-    maxMp: number;
     /** Phần HP/MP hồi lẻ (< 1) cộng dồn giữa các tick. */
     private hpRegenCarry = big(0);
     private mpRegenCarry = big(0);
@@ -84,6 +88,8 @@ export class PlayerWorldState extends Schema {
         this.y = player.y;
         this.direction = player.direction === "left" ? "left" : "right";
         this.classId = player.classId;
+        this.classCode = classService.getById(player.classId)?.code ?? "";
+        this.baseClassCode = this.classCode ? classService.getBaseClassCode(this.classCode) : "";
         this.allocatedAttributes = { ...player.allocatedAttributes };
         this.equipments = structuredClone(player.equipments);
         this.inventories = structuredClone(toInventories(player));
@@ -143,6 +149,27 @@ export class PlayerWorldState extends Schema {
         this.attributePoints = result.attributePoints;
         this.refreshStats();
         return undefined;
+    }
+
+    /** Kết quả nếu cộng điểm như `request` — không đổi state; trả lỗi (string) nếu không hợp lệ. */
+    previewAttributes(request: Partial<Record<AttributeKey, number>>): AttributeSummary | string {
+        const result = allocateAttributePoints(
+            this.allocatedAttributes,
+            this.attributePoints,
+            request
+        );
+        if (typeof result === "string") return result;
+        const { attributes, stats } = playerStatService.compute({
+            classId: this.classId,
+            allocatedAttributes: result.allocatedAttributes,
+            equipments: this.equipments,
+        });
+        return {
+            attributePoints: result.attributePoints,
+            allocatedAttributes: { ...result.allocatedAttributes },
+            attributes: { ...attributes },
+            stats: { ...stats },
+        };
     }
 
     getAttributeSummary(): AttributeSummary {

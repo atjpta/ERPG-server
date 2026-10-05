@@ -8,7 +8,10 @@ import {
 } from "@/rooms/world/commands/on-create.world.command.js";
 import { JoinPlayerWorldCommand } from "@/rooms/world/commands/on-join.world.command.js";
 import { LeavePlayerWorldCommand } from "@/rooms/world/commands/on-leave.world.command.js";
-import { AllocateAttributesWorldCommand } from "@/rooms/world/commands/allocate-attributes.world.command.js";
+import {
+    AllocateAttributesWorldCommand,
+    PreviewAttributesWorldCommand,
+} from "@/rooms/world/commands/allocate-attributes.world.command.js";
 import {
     DisassembleItemsWorldCommand,
     EnhanceEquipmentWorldCommand,
@@ -18,6 +21,7 @@ import {
     RefineEquipmentWorldCommand,
     UnequipItemWorldCommand,
 } from "@/rooms/world/commands/inventory.world.command.js";
+import { attributeWorldService } from "@/rooms/world/services/attribute.world.service.js";
 import { inventoryWorldService } from "@/rooms/world/services/inventory.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/world.message.js";
 import { MoveWorldInput } from "@/rooms/world/schema/move.world.input.js";
@@ -48,6 +52,9 @@ export class WorldRoom extends BasePlayerRoom<{
                 client,
                 payload,
             });
+        },
+        [WorldClientMessage.PREVIEW_ATTRIBUTES]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new PreviewAttributesWorldCommand(), { client, payload });
         },
         [WorldClientMessage.EQUIP_ITEM]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new EquipItemWorldCommand(), { client, payload });
@@ -90,7 +97,10 @@ export class WorldRoom extends BasePlayerRoom<{
         await this.registerOnlinePlayer(client);
 
         const player = this.state.players.get(client.sessionId);
-        if (player) inventoryWorldService.send(client, player);
+        if (player) {
+            inventoryWorldService.send(client, player);
+            attributeWorldService.send(client, player);
+        }
     }
 
     async onDrop(client: PlayerClient) {

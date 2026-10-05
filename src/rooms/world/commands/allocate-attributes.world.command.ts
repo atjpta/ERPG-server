@@ -1,6 +1,6 @@
 import { Command } from "@colyseus/command";
 import { AllocateAttributesSchema } from "@/rooms/world/validators/allocate-attributes.world.validator.js";
-import { WorldMessage, type AttributesMessage } from "@/rooms/world/world.message.js";
+import { attributeWorldService } from "@/rooms/world/services/attribute.world.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
@@ -25,11 +25,18 @@ export class AllocateAttributesWorldCommand extends Command<WorldRoom, AllocateA
               ? "Player is dead"
               : player.allocateAttributes(parsed.data);
 
-        const message: AttributesMessage = {
-            ok: !error,
-            ...(error ? { error } : {}),
-            ...player.getAttributeSummary(),
-        };
-        client.send(WorldMessage.ATTRIBUTES, message);
+        attributeWorldService.send(client, player, error);
+    }
+}
+
+/** Tính thử kết quả cộng điểm (cho client hiện bảng xác nhận "100 → 110") — không đổi state. */
+export class PreviewAttributesWorldCommand extends Command<WorldRoom, AllocateAttributesPayload> {
+    execute({ client, payload }: AllocateAttributesPayload) {
+        const player = this.room.state.players.get(client.sessionId);
+        if (!player) return;
+
+        const parsed = AllocateAttributesSchema.safeParse(payload);
+        const preview = parsed.success ? player.previewAttributes(parsed.data) : "Invalid payload";
+        attributeWorldService.sendPreview(client, player, preview);
     }
 }

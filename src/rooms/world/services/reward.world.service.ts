@@ -8,6 +8,7 @@ import type { Reward } from "@/modules/rewards/types/reward.type.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import { WorldMessage, type RewardMessage } from "@/rooms/world/world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
+import { attributeWorldService } from "@/rooms/world/services/attribute.world.service.js";
 import { inventoryWorldService } from "@/rooms/world/services/inventory.world.service.js";
 
 /**
@@ -40,6 +41,8 @@ export class RewardWorldService {
         const client = room.clients.getById(sessionId);
         client?.send(WorldMessage.REWARD, message);
         if (reward.items.length > 0) inventoryWorldService.grantItems(client, player, reward.items);
+        // Lên level: có thêm điểm tiềm năng và stat đổi theo level.
+        if (progress.levelsGained > 0) attributeWorldService.send(client, player);
     }
 }
 

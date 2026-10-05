@@ -18,7 +18,7 @@ import {
     type EquipmentGroup,
     type ItemEquipmentSlotType,
 } from "@/modules/items/enums/item-equipment.enum.js";
-import { ItemSource, ItemType } from "@/modules/items/enums/item.enum.js";
+import { ItemRarity, ItemSource, ItemType } from "@/modules/items/enums/item.enum.js";
 import type {
     EquipmentMetadata,
     ItemEquipmentInstanceMetadata,
@@ -27,7 +27,11 @@ import { itemService } from "@/modules/items/services/item.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
-import type { EquippedItem, InventoryItem } from "@/modules/player/schemas/inventory.schema.js";
+import type {
+    EquippedItem,
+    Equipments,
+    InventoryItem,
+} from "@/modules/player/schemas/inventory.schema.js";
 import {
     addToInventory,
     countItem,
@@ -44,6 +48,8 @@ import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.j
 import {
     EquipmentUpgradeAction,
     WorldMessage,
+    type EquippedItemMessage,
+    type EquipmentsMessage,
     type InventoryEntryMessage,
     type EquipmentUpgradeMessage,
     type InventoryFullMessage,
@@ -56,10 +62,13 @@ export type InventoryResult<T = undefined> = { ok: true; value: T } | { ok: fals
 
 /** Ô túi → message; metadata chỉ gửi với trang bị (item khác để trống). */
 const toEntryMessage = (entry: InventoryItem): InventoryEntryMessage => {
-    const isEquipment = itemService.getById(entry.itemId)?.type === ItemType.EQUIPMENT;
+    const item = itemService.getById(entry.itemId);
+    const isEquipment = item?.type === ItemType.EQUIPMENT;
     return {
         id: entry.id,
         itemId: entry.itemId,
+        code: item?.code ?? "",
+        rarity: item?.rarity ?? ItemRarity.COMMON,
         slotIndex: entry.slotIndex,
         quantity: entry.quantity,
         source: entry.source,
@@ -67,6 +76,24 @@ const toEntryMessage = (entry: InventoryItem): InventoryEntryMessage => {
         ...(isEquipment ? { metadata: entry.metadata as ItemEquipmentInstanceMetadata } : {}),
     };
 };
+
+const toEquippedMessage = (entry: EquippedItem): EquippedItemMessage => {
+    const item = itemService.getById(entry.itemId);
+    return {
+        ...entry,
+        code: item?.code ?? "",
+        rarity: item?.rarity ?? ItemRarity.COMMON,
+    };
+};
+
+/** Đồ đang mặc kèm code/rarity; slot trống giữ `null`. */
+const toEquipmentsMessage = (equipments: Equipments): EquipmentsMessage =>
+    Object.fromEntries(
+        Object.entries(equipments).map(([slot, entry]) => [
+            slot,
+            entry ? toEquippedMessage(entry) : null,
+        ])
+    ) as EquipmentsMessage;
 
 const fail = (error: string): { ok: false; error: string } => ({ ok: false, error });
 const done = <T>(value: T): { ok: true; value: T } => ({ ok: true, value });
@@ -103,7 +130,7 @@ export class InventoryWorldService {
                 consumable: player.inventories[ItemType.CONSUMABLE].map(toEntryMessage),
                 material: player.inventories[ItemType.MATERIAL].map(toEntryMessage),
             },
-            equipments: player.equipments,
+            equipments: toEquipmentsMessage(player.equipments),
             wallet: player.wallet,
         };
         client.send(WorldMessage.INVENTORY, message);

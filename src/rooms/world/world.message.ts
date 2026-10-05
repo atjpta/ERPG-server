@@ -12,6 +12,8 @@ import type { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
 export enum WorldClientMessage {
     /** `{ strength?, dexterity?, intelligence?, vitality?, luck? }` — số điểm tiềm năng muốn cộng. */
     ALLOCATE_ATTRIBUTES = "allocateAttributes",
+    /** Giống `allocateAttributes` nhưng chỉ tính thử — trả `attributesPreview`, không đổi gì trên player. */
+    PREVIEW_ATTRIBUTES = "previewAttributes",
     /** `{ instanceId, slot? }` — mặc trang bị trong túi (slot đang có đồ thì đổi chỗ). */
     EQUIP_ITEM = "equipItem",
     /** `{ slot }` — tháo trang bị về túi. */
@@ -34,6 +36,8 @@ export enum WorldMessage {
     REWARD = "reward",
     /** Trả lời `allocateAttributes` (kể cả khi lỗi) — điểm còn lại, attribute và stat sau khi tính lại. */
     ATTRIBUTES = "attributes",
+    /** Trả lời `previewAttributes`: điểm, attribute và stat nếu cộng như yêu cầu (chưa lưu). */
+    ATTRIBUTES_PREVIEW = "attributesPreview",
     /** Túi + đồ đang mặc + ví — gửi lúc vào room và trả lời mọi thao tác inventory (kể cả lỗi). */
     INVENTORY = "inventory",
     /** Kết quả cường hoá / tinh hoá / phân rã (thành công hay thất bại theo tỉ lệ). */
@@ -72,6 +76,10 @@ export interface EquipmentInstanceMessage {
 export interface InventoryEntryMessage {
     id: string;
     itemId: string;
+    /** Code của item — client tra tên, mô tả, icon theo code. */
+    code: string;
+    /** Rarity gốc của item; trang bị lấy rarity của món trong `metadata`. */
+    rarity: ItemRarity;
     slotIndex: number;
     quantity: number;
     source: ItemSource;
@@ -89,6 +97,8 @@ export interface InventoriesMessage {
 export interface EquippedItemMessage {
     id: string;
     itemId: string;
+    code: string;
+    rarity: ItemRarity;
     source: ItemSource;
     isLocked: boolean;
     metadata: EquipmentInstanceMessage;
