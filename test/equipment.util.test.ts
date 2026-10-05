@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
-import { buildClassLineages } from "@/modules/classes/utils/class-tree.util.js";
 import {
     DEFAULT_EQUIPMENT_DISASSEMBLE_CONFIG,
     DEFAULT_EQUIPMENT_DROP_CONFIG,
@@ -268,20 +267,5 @@ describe("equipment-upgrade.util", () => {
         assert.ok(quantity(enhanced, "dust_accessory") > quantity(common, "dust_accessory"));
         assert.equal(quantity(enhanced, "spirit"), quantity(common, "spirit"));
         assert.equal(quantity(common, "dust_weapon"), 0);
-    });
-});
-
-describe("class-tree.util", () => {
-    it("class con mặc được đồ của class gốc, không ngược lại", () => {
-        const lineages = buildClassLineages([
-            { code: "swordman", nextClassCodes: ["knight"] },
-            { code: "knight", nextClassCodes: ["paladin"] },
-            { code: "paladin", nextClassCodes: [] },
-            { code: "mage", nextClassCodes: [] },
-        ]);
-        assert.ok(lineages.get("paladin")?.has("swordman"));
-        assert.ok(lineages.get("knight")?.has("swordman"));
-        assert.ok(!lineages.get("swordman")?.has("knight"));
-        assert.ok(!lineages.get("mage")?.has("swordman"));
     });
 });

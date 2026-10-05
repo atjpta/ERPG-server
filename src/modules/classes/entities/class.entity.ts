@@ -8,7 +8,10 @@ export const Classes = pgTable("classes", {
     ...baseWithCodeColumns(),
     name: text("name").notNull(),
     tier: integer("tier").notNull().default(1),
-    /** Code các class có thể chuyển lên từ class này. */
+    /**
+     * Class con trực thuộc (tier + 1) — các hướng chuyển cấp từ class này. 1 class có thể có nhiều
+     * hướng và nhiều class cha. Class con mặc được đồ của mọi class cha/ông (không ngược lại).
+     */
     nextClassCodes: jsonb("next_class_codes").$type<string[]>().notNull().default([]),
     /** Level cần để chuyển sang một class trong `nextClassCodes`; null = không chuyển được. */
     nextClassRequiredLevel: integer("next_class_required_level"),

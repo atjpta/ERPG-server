@@ -2,24 +2,30 @@ import { cacheService } from "@/core/cache/cache.service.js";
 import type { CharacterClass } from "@/modules/classes/entities/class.entity.js";
 import { STARTER_CLASS_CODES } from "@/modules/classes/constants/class.constant.js";
 import { ClassRepo } from "@/modules/classes/repositories/class.repository.js";
-import { buildClassLineages } from "@/modules/classes/utils/class-tree.util.js";
+import {
+    buildUsableItemClassCodes,
+    validateClassTree,
+} from "@/modules/classes/utils/class-tree.util.js";
 
 /** Cache class lúc khởi động (giống SkillService/ItemService). */
 export class ClassService {
     private readonly classesById = new Map<string, CharacterClass>();
     private readonly classesByCode = new Map<string, CharacterClass>();
-    /** code → chính nó + mọi class gốc. */
-    private lineages = new Map<string, Set<string>>();
+    /** code → class được mặc đồ: chính nó + các class tier thấp hơn chuyển cấp tới nó. */
+    private usableItemClassCodes = new Map<string, Set<string>>();
 
     public async setCacheData() {
         const classes = await ClassRepo.findEnabled();
+        // Cây chuyển cấp sai thì dừng lúc khởi động, không để lệch quyền mặc đồ khi đang chơi.
+        const errors = validateClassTree(classes);
+        if (errors.length > 0) throw new Error(`Invalid class tree: ${errors.join("; ")}`);
         this.classesById.clear();
         this.classesByCode.clear();
         for (const characterClass of classes) {
             this.classesById.set(characterClass.id, characterClass);
             this.classesByCode.set(characterClass.code, characterClass);
         }
-        this.lineages = buildClassLineages(classes);
+        this.usableItemClassCodes = buildUsableItemClassCodes(classes);
         await cacheService.set("classes", this.classesByCode);
         console.log(`Cached ${classes.length} classes`);
     }
@@ -30,6 +36,11 @@ export class ClassService {
 
     getByCode(code: string): CharacterClass | undefined {
         return this.classesByCode.get(code);
+    }
+
+    /** Mọi class đang bật, theo tier. */
+    listAll(): CharacterClass[] {
+        return [...this.classesById.values()].sort((a, b) => a.tier - b.tier);
     }
 
     /** Class khởi đầu (tier 1) cho màn tạo nhân vật, theo thứ tự STARTER_CLASS_CODES. */
@@ -45,15 +56,20 @@ export class ClassService {
         return characterClass;
     }
 
+    /** Code class mà class `code` mặc được đồ (chính nó + class tier thấp hơn chuyển cấp tới nó). */
+    getUsableItemClassCodes(code: string): string[] {
+        return [...(this.usableItemClassCodes.get(code) ?? [])];
+    }
+
     /**
      * Class `classId` dùng được đồ gắn `itemClassCode` không: `null` = mọi class, còn lại phải là
-     * chính class đó hoặc class gốc của nó.
+     * chính class đó hoặc class tier thấp hơn chuyển cấp được tới nó (không mặc đồ class sắp lên).
      */
     canUseClassItem(classId: string, itemClassCode: string | null): boolean {
         if (itemClassCode === null) return true;
         const characterClass = this.classesById.get(classId);
         if (!characterClass) return false;
-        return this.lineages.get(characterClass.code)?.has(itemClassCode) ?? false;
+        return this.usableItemClassCodes.get(characterClass.code)?.has(itemClassCode) ?? false;
     }
 }
 
