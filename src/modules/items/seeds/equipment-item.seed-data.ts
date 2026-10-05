@@ -39,16 +39,40 @@ const TYPE_NAMES: Record<ItemEquipmentType, string> = {
     [ItemEquipmentType.BACK]: "Cloak",
 };
 
+/** Vũ khí riêng từng class (khớp icon `{type}_{class}_default` bên client) — tên không lặp lại class. */
+const WEAPON_NAMES: Record<
+    string,
+    Record<ItemEquipmentType.MAIN_HAND | ItemEquipmentType.OFF_HAND, string>
+> = {
+    guardian: {
+        [ItemEquipmentType.MAIN_HAND]: "Longsword",
+        [ItemEquipmentType.OFF_HAND]: "Tower Shield",
+    },
+    swordman: { [ItemEquipmentType.MAIN_HAND]: "Sword", [ItemEquipmentType.OFF_HAND]: "Buckler" },
+    archer: { [ItemEquipmentType.MAIN_HAND]: "Bow", [ItemEquipmentType.OFF_HAND]: "Arrows" },
+    mage: { [ItemEquipmentType.MAIN_HAND]: "Staff", [ItemEquipmentType.OFF_HAND]: "Orb" },
+};
+
+/** "Orc Sword" cho vũ khí, "Orc Guardian Helm" cho giáp/trang sức theo class, "Novice Belt" cho đồ dùng chung. */
+const equipmentName = (biome: Biome, classCode: string | null, type: ItemEquipmentType) => {
+    const weapon =
+        classCode && (type === ItemEquipmentType.MAIN_HAND || type === ItemEquipmentType.OFF_HAND)
+            ? WEAPON_NAMES[classCode]?.[type]
+            : undefined;
+    if (weapon) return `${BIOME_NAMES[biome]} ${weapon}`;
+    const owner = classCode ? `${CLASS_NAMES[classCode] ?? classCode} ` : "";
+    return `${BIOME_NAMES[biome]} ${owner}${TYPE_NAMES[type]}`;
+};
+
 const equipment = (
     biome: Biome,
     classCode: string | null,
     equipmentType: ItemEquipmentType
 ): NewItem => {
     const metadata: EquipmentMetadata = { equipmentType, biome, classCode };
-    const owner = classCode ? `${CLASS_NAMES[classCode] ?? classCode} ` : "";
     return {
         code: equipmentItemCode(biome, classCode, equipmentType),
-        name: `${BIOME_NAMES[biome]} ${owner}${TYPE_NAMES[equipmentType]}`,
+        name: equipmentName(biome, classCode, equipmentType),
         type: ItemType.EQUIPMENT,
         // Rarity/level thật nằm ở từng món (instance metadata).
         rarity: ItemRarity.COMMON,

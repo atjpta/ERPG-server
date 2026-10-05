@@ -210,6 +210,8 @@ export interface InventoryMessage {
     inventories: InventoriesMessage;
     /** Sức chứa từng túi — client vẽ đủ ô, ô trống để nền. */
     sizes: InventorySizesMessage;
+    /** Class code của đồ mà player mặc được (class hiện tại + class tier thấp hơn chuyển cấp tới nó); đồ dùng chung luôn mặc được. */
+    usableClassCodes: string[];
     equipments: EquipmentsMessage;
     wallet: WalletMessage;
 }

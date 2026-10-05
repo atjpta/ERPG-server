@@ -158,6 +158,7 @@ export class InventoryWorldService {
                 material: this.inventorySize(ItemType.MATERIAL),
             },
             equipments: toEquipmentsMessage(player.equipments),
+            usableClassCodes: classService.getUsableItemClassCodes(player.classCode),
             wallet: player.wallet,
         };
         client.send(WorldMessage.INVENTORY, message);
