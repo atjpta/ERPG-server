@@ -8,9 +8,10 @@ import type { Reward } from "@/modules/rewards/types/reward.type.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import { WorldMessage, type RewardMessage } from "@/rooms/world/world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
+import { inventoryWorldService } from "@/rooms/world/services/inventory.world.service.js";
 
 /**
- * Cộng phần thưởng (tiền, exp → lên level) vào player đang online. Chỉ đổi state trong room;
+ * Cộng phần thưởng (tiền, item, exp → lên level) vào player đang online. Chỉ đổi state trong room;
  * checkpoint / lúc rời room lưu xuống DB (PlayerWorldState.toSavedState).
  */
 export class RewardWorldService {
@@ -32,10 +33,13 @@ export class RewardWorldService {
         const message: RewardMessage = {
             exp: reward.exp,
             currency: reward.currency,
+            items: reward.items,
             level: progress.level,
             levelsGained: progress.levelsGained,
         };
-        room.clients.getById(sessionId)?.send(WorldMessage.REWARD, message);
+        const client = room.clients.getById(sessionId);
+        client?.send(WorldMessage.REWARD, message);
+        if (reward.items.length > 0) inventoryWorldService.grantItems(client, player, reward.items);
     }
 }
 

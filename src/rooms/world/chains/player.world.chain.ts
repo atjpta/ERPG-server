@@ -7,7 +7,7 @@ import { calculateDamage } from "@/rooms/world/chains/damage.world.chain.js";
 import { combatSeed } from "@/rooms/world/utils/combat-roll.world.util.js";
 import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
-import { rollMonsterReward } from "@/modules/rewards/utils/reward-roll.util.js";
+import { monsterRewardService } from "@/modules/rewards/services/monster-reward.service.js";
 import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
 import {
@@ -252,7 +252,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
             state.heal(result.heal);
             // Đòn kết liễu → người đánh nhận thưởng (mỗi monster chỉ chết một lần).
             if (target.hp <= 0) {
-                rewardWorldService.grant(room, sessionId, state, rollMonsterReward(target.drops));
+                rewardWorldService.grant(room, sessionId, state, monsterRewardService.roll(target));
             }
         }
     }

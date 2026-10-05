@@ -44,6 +44,8 @@ export enum WorldMessage {
 export interface RewardMessage {
     exp: number;
     currency: CurrencyReward[];
+    /** Item rơi ra (trước khi xếp túi — túi đầy thì có thêm message `inventoryFull`). */
+    items: ItemReward[];
     /** Level sau khi cộng exp. */
     level: number;
     /** Số level vừa lên (0 = không lên). */

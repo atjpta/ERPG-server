@@ -1,4 +1,4 @@
-import { boolean, integer, pgEnum, pgTable, real, text } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgEnum, pgTable, real, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
 
@@ -24,7 +24,14 @@ export const GameMaps = pgTable("game_maps", {
     /** Số người tối đa trong 1 instance (room) của map — đầy thì Colyseus tự tạo instance mới (kênh). */
     maxPlayersPerChannel: integer("max_players_per_channel").notNull().default(100),
     pvpEnabled: boolean("pvp_enabled").notNull().default(false),
+    /** Monster sinh ra trong mỗi instance của map (theo `monsters.code`). */
+    monsterSpawns: jsonb("monster_spawns").$type<MonsterSpawn[]>().notNull().default([]),
 });
+
+export interface MonsterSpawn {
+    monsterCode: string;
+    count: number;
+}
 
 export type GameMap = typeof GameMaps.$inferSelect;
 export type NewGameMap = typeof GameMaps.$inferInsert;

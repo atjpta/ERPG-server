@@ -13,6 +13,7 @@ const MAPS: NewGameMap[] = [
         // tức (0, 0) bên Unity.
         spawnX: 32,
         spawnY: 32,
+        monsterSpawns: [{ monsterCode: "orc", count: 10 }],
     },
     {
         code: "field_01",
@@ -22,6 +23,11 @@ const MAPS: NewGameMap[] = [
         height: 96,
         spawnX: 64,
         spawnY: 48,
+        monsterSpawns: [
+            { monsterCode: "orc", count: 6 },
+            { monsterCode: "skeleton", count: 5 },
+            { monsterCode: "shapeshifter", count: 4 },
+        ],
     },
 ];
 

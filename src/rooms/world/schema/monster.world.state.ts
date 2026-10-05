@@ -1,6 +1,7 @@
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import type { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
+import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import type { Stats } from "@/modules/player/schemas/stat.schema.js";
 import { computeMonsterStats } from "@/modules/monsters/utils/monster-stat.util.js";
@@ -48,6 +49,7 @@ export class MonsterWorldState extends Schema {
     /** Toàn bộ chỉ số ở level hiện tại (`computeMonsterStats`) — dùng cho chain tính damage. */
     stats: Stats;
     monsterType: MonsterType;
+    biome: Biome;
     /** Tăng mỗi đòn đánh — một phần seed roll combat (`combatSeed`). */
     attackSerial = 0;
 
@@ -76,6 +78,7 @@ export class MonsterWorldState extends Schema {
         this.skills.push(...toOwnedSkillStates(monster.skills));
         this.drops = monster.drops;
         this.monsterType = monster.type;
+        this.biome = monster.biome;
     }
 
     toDamageCombatant(): DamageCombatant {

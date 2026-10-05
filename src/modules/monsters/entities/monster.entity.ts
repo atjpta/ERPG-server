@@ -4,11 +4,13 @@ import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { itemRarityEnum } from "@/modules/items/entities/item.entity.js";
+import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import type { Stats } from "@/modules/player/schemas/stat.schema.js";
 
 export const monsterTypeEnum = pgEnum("monster_type", MonsterType);
+export const biomeEnum = pgEnum("biome", Biome);
 
 /** Base combat and movement stats shared by every instance of a monster type. */
 export const Monsters = pgTable("monsters", {
@@ -28,6 +30,8 @@ export const Monsters = pgTable("monsters", {
     skills: jsonb("skills").$type<OwnedSkill[]>().notNull().default([]),
     type: monsterTypeEnum("type").notNull().default(MonsterType.NORMAL),
     rarity: itemRarityEnum("rarity").notNull().default(ItemRarity.COMMON),
+    /** Vùng của monster — quyết định bộ trang bị biome rơi ra (`drops.equipment`). */
+    biome: biomeEnum("biome").notNull().default(Biome.ORC),
     // Cùng bộ StatKey với player. Stat cuối = stats + statsPerLevel × level (computeMonsterStats).
     /** Chỉ số cố định, không đổi theo level (vd. move_speed, critical_damage). */
     stats: jsonb("stats").$type<Stats>().notNull().default({}),

@@ -24,20 +24,22 @@ export class MonsterWorldService {
         this.attackChain,
     ]);
 
+    /** Sinh monster theo `game_maps.monsterSpawns` (xếp chéo cách nhau 5 ô, như trước). */
     public async createMonster(map: GameMap) {
-        const total = 10;
-        const monsterStats = await monsterService.getByCode("orc");
-        const monsters = [];
-
-        for (let i = 0; i < total; i++) {
-            const monster = new MonsterWorldState({
-                monster: monsterStats,
-                x: i * 5,
-                y: i * 5,
-            });
-            monsters.push(monster);
+        const monsters: MonsterWorldState[] = [];
+        for (const spawn of map.monsterSpawns) {
+            const monster = await monsterService.getByCode(spawn.monsterCode);
+            if (!monster) {
+                console.warn(
+                    `[WorldRoom] Monster "${spawn.monsterCode}" not found (map ${map.code})`
+                );
+                continue;
+            }
+            for (let i = 0; i < spawn.count; i++) {
+                const index = monsters.length;
+                monsters.push(new MonsterWorldState({ monster, x: index * 5, y: index * 5 }));
+            }
         }
-
         return monsters;
     }
 
