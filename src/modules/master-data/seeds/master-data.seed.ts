@@ -1,3 +1,4 @@
+import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
@@ -13,7 +14,15 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
         note: "Cấu hình session đăng nhập",
     },
     [MasterDataKey.PLAYER_CONFIG]: {
-        value: { startMapCode: "town_01" },
+        value: {
+            startMapCode: "town_01",
+            inventorySize: {
+                [ItemType.EQUIPMENT]: 60,
+                [ItemType.CONSUMABLE]: 40,
+                [ItemType.MATERIAL]: 40,
+            },
+            inventoryNearlyFullThreshold: 5,
+        },
         note: "Cấu hình tạo player",
     },
     [MasterDataKey.LEVEL_CONFIG]: {

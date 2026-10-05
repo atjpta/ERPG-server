@@ -16,25 +16,30 @@ export const ATTRIBUTE_POINTS_PER_LEVEL = 5;
  * 1 LUCK = +0.1% tỉ lệ chí mạng (0.001) và +1% sát thương chí mạng (0.01).
  */
 export const ATTRIBUTE_SCALING: Partial<Record<StatKey, Partial<Record<StatKey, number>>>> = {
-    [StatKey.VITALITY]: { [StatKey.MAX_HP]: 10 },
+    [StatKey.VITALITY]: { [StatKey.MAX_HP]: 10, [StatKey.HP_REGEN]: 0.2 },
     [StatKey.STRENGTH]: { [StatKey.PHYSICAL_ATTACK]: 1 },
-    [StatKey.INTELLIGENCE]: { [StatKey.MAGIC_ATTACK]: 1, [StatKey.MAX_MP]: 10 },
+    [StatKey.INTELLIGENCE]: {
+        [StatKey.MAGIC_ATTACK]: 1,
+        [StatKey.MAX_MP]: 10,
+        [StatKey.MP_REGEN]: 0.2,
+    },
     [StatKey.DEXTERITY]: { [StatKey.EVASION]: 1, [StatKey.ACCURACY]: 1 },
     [StatKey.LUCK]: { [StatKey.CRITICAL_CHANCE]: 0.001, [StatKey.CRITICAL_DAMAGE]: 0.01 },
 };
 
-/** Chỉ số nền trước attribute/trang bị. */
+/** Chỉ số nền chung mọi class (cộng thêm `classes.baseStats`) trước attribute/trang bị. */
 export const BASE_STATS: Stats = {
-    [StatKey.MOVE_SPEED]: 4,
     [StatKey.CRITICAL_DAMAGE]: 1.5,
 };
 
 export interface PlayerStatSources {
     /** `classes.baseAttributes` (điểm level 1). */
     classAttributes: Attributes;
+    /** `classes.baseStats` — chỉ số nền cố định của class (move_speed, regen...). */
+    classBaseStats: Stats;
     /** `player_states.allocatedAttributes`. */
     allocatedAttributes: Attributes;
-    /** Bonus của class + mọi trang bị đang mặc (stats gốc + rarityStats). */
+    /** Bonus của class + trang bị đang mặc (main/sub/rarity) + set đang kích hoạt. */
     bonuses: StatBonus[];
 }
 
@@ -51,13 +56,15 @@ export function computeAttributes(sources: PlayerStatSources): Attributes {
     return attributes;
 }
 
-/** Stat cuối = nền + quy đổi từ attribute, rồi áp bonus nhắm vào stat (FLAT trước, PERCENT sau). */
+/** Stat cuối = nền + nền class + quy đổi từ attribute, rồi áp bonus nhắm vào stat (FLAT trước, PERCENT sau). */
 export function computeStats(sources: PlayerStatSources): { attributes: Attributes; stats: Stats } {
     const attributes = computeAttributes(sources);
     const totals = new Map<StatKey, Big>();
     const add = (stat: StatKey, value: Big) =>
         totals.set(stat, (totals.get(stat) ?? big(0)).plus(value));
-    for (const [stat, value] of Object.entries(BASE_STATS)) add(stat as StatKey, big(value ?? 0));
+    for (const base of [BASE_STATS, sources.classBaseStats]) {
+        for (const [stat, value] of Object.entries(base)) add(stat as StatKey, big(value ?? 0));
+    }
     for (const key of ATTRIBUTE_KEYS) {
         for (const [stat, perPoint] of Object.entries(ATTRIBUTE_SCALING[key] ?? {})) {
             add(stat as StatKey, big(attributes[key]).times(perPoint ?? 0));

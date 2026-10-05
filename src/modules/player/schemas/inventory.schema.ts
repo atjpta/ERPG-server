@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { generateEntityId } from "@/core/entities/base.entity.js";
 import { ItemEquipmentSlotType } from "@/modules/items/enums/item-equipment.enum.js";
-import { ItemSource } from "@/modules/items/enums/item.enum.js";
+import { ItemSource, ItemType } from "@/modules/items/enums/item.enum.js";
 import {
     GenericItemMetadataSchema,
     ItemEquipmentInstanceMetadataSchema,
 } from "@/modules/items/schemas/item-metadata.schema.js";
 
-/** Một ô trong cột `inventory` của player state. */
+/** Một ô trong một túi inventory (`*_inventory`) của player state. */
 export const InventoryItemSchema = z.object({
     /** Id riêng của từng món (uuid v7, newItemInstanceId) — phân biệt các bản cùng item. */
     id: z.uuid(),
@@ -23,6 +23,34 @@ export const InventoryItemSchema = z.object({
 export type InventoryItem = z.infer<typeof InventoryItemSchema>;
 
 export const InventorySchema = z.array(InventoryItemSchema);
+
+/** Mỗi ItemType một túi riêng — khớp các cột `*Inventory` của `player_states`. */
+export type Inventories = Record<ItemType, InventoryItem[]>;
+
+/** Tên cột `player_states` chứa túi của từng ItemType. */
+export const INVENTORY_COLUMN_BY_TYPE = {
+    [ItemType.EQUIPMENT]: "equipmentInventory",
+    [ItemType.CONSUMABLE]: "consumableInventory",
+    [ItemType.MATERIAL]: "materialInventory",
+} as const satisfies Record<ItemType, string>;
+
+export type InventoryColumn = (typeof INVENTORY_COLUMN_BY_TYPE)[ItemType];
+
+/** Gom 3 cột túi của player state thành `Inventories`. */
+export const toInventories = (state: Record<InventoryColumn, InventoryItem[]>): Inventories => ({
+    [ItemType.EQUIPMENT]: state.equipmentInventory,
+    [ItemType.CONSUMABLE]: state.consumableInventory,
+    [ItemType.MATERIAL]: state.materialInventory,
+});
+
+/** Tách `Inventories` ra lại 3 cột để lưu. */
+export const fromInventories = (
+    inventories: Inventories
+): Record<InventoryColumn, InventoryItem[]> => ({
+    equipmentInventory: inventories[ItemType.EQUIPMENT],
+    consumableInventory: inventories[ItemType.CONSUMABLE],
+    materialInventory: inventories[ItemType.MATERIAL],
+});
 
 /** Trang bị đang mặc ở một slot. */
 export const EquippedItemSchema = z.object({

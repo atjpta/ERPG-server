@@ -18,6 +18,29 @@ export enum ItemEquipmentSlotType {
     BACK = "back",
 }
 
+export const ItemEquipmentSlotTypeWeapon = [
+    ItemEquipmentSlotType.MAIN_HAND,
+    ItemEquipmentSlotType.OFF_HAND,
+];
+
+export const ItemEquipmentSlotTypeArmor = [
+    ItemEquipmentSlotType.HEAD,
+    ItemEquipmentSlotType.ARMOR,
+    ItemEquipmentSlotType.SHOULDER,
+    ItemEquipmentSlotType.GLOVES,
+    ItemEquipmentSlotType.BOOTS,
+    ItemEquipmentSlotType.BELT,
+];
+
+export const ItemEquipmentSlotTypeAccessory = [
+    ItemEquipmentSlotType.NECKLACE,
+    ItemEquipmentSlotType.EARRING_1,
+    ItemEquipmentSlotType.EARRING_2,
+    ItemEquipmentSlotType.RING_1,
+    ItemEquipmentSlotType.RING_2,
+    ItemEquipmentSlotType.BACK,
+];
+
 /** Loại trang bị của một item — quyết định item mặc được vào những slot nào. */
 export enum ItemEquipmentType {
     MAIN_HAND = "main_hand",

@@ -56,7 +56,13 @@ export const PlayerStates = pgTable("player_states", {
     /** Skill của player theo thứ tự; các skill MELEE (theo thứ tự này) là combo đánh thường. */
     skills: jsonb("skills").$type<OwnedSkill[]>().notNull().default([]),
     wallet: jsonb("wallet").$type<Wallet>().notNull().default(createWallet()),
-    inventory: jsonb("inventory").$type<InventoryItem[]>().notNull().default([]),
+    /** Inventory tách theo ItemType (mỗi loại 1 túi, kích thước ở master data `player_config`). */
+    equipmentInventory: jsonb("equipment_inventory").$type<InventoryItem[]>().notNull().default([]),
+    consumableInventory: jsonb("consumable_inventory")
+        .$type<InventoryItem[]>()
+        .notNull()
+        .default([]),
+    materialInventory: jsonb("material_inventory").$type<InventoryItem[]>().notNull().default([]),
     equipments: jsonb("equipments").$type<Equipments>().notNull().default(createEquipments()),
     /** Điểm attribute / kỹ năng chưa dùng (nhận khi lên level). */
     attributePoints: integer("attribute_points").notNull().default(0),

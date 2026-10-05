@@ -5,7 +5,41 @@ import { ItemRepo } from "@/modules/items/repositories/item.repository.js";
 import { parseItemMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 import { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
 
+const MATERIAL_MAX_STACK = 9999;
+
+const material = (code: string, name: string, rarity: ItemRarity, sellPrice: number): NewItem => ({
+    code,
+    name,
+    type: ItemType.MATERIAL,
+    rarity,
+    requiredLevel: 1,
+    stackable: true,
+    maxStack: MATERIAL_MAX_STACK,
+    sellPrice,
+    metadata: {},
+});
+
+/**
+ * Nguyên liệu nâng cấp trang bị — được tham chiếu theo code trong master data
+ * `equipment_enhance_config` / `equipment_refine_config` / `equipment_disassemble_config`.
+ */
+const MATERIALS: NewItem[] = [
+    // Đá cường hoá: bậc 1 dùng cho +1…+5, bậc 2 cho +6…+10, … bậc 5 cho +21…+25.
+    material("enhance_stone_1", "Enhance Stone I", ItemRarity.COMMON, 5),
+    material("enhance_stone_2", "Enhance Stone II", ItemRarity.GOOD, 10),
+    material("enhance_stone_3", "Enhance Stone III", ItemRarity.RARE, 20),
+    material("enhance_stone_4", "Enhance Stone IV", ItemRarity.EPIC, 40),
+    material("enhance_stone_5", "Enhance Stone V", ItemRarity.LEGENDARY, 80),
+    // Bụi cường hoá theo nhóm trang bị (phân rã ra bụi đúng nhóm).
+    material("dust_armor", "Armor Dust", ItemRarity.COMMON, 1),
+    material("dust_weapon", "Weapon Dust", ItemRarity.COMMON, 1),
+    material("dust_accessory", "Accessory Dust", ItemRarity.COMMON, 1),
+    // Tinh linh: phân rã trang bị, dùng để tinh hoá.
+    material("spirit", "Spirit", ItemRarity.RARE, 2),
+];
+
 const ITEMS: NewItem[] = [
+    ...MATERIALS,
     {
         code: "wooden_sword",
         name: "Wooden Sword",

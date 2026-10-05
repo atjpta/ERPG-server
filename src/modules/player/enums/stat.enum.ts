@@ -12,6 +12,9 @@ export enum StatKey {
 
     MAX_HP = "max_hp",
     MAX_MP = "max_mp",
+    /** Lượng HP/MP hồi mỗi giây. */
+    HP_REGEN = "hp_regen",
+    MP_REGEN = "mp_regen",
     EVASION = "evasion",
     ACCURACY = "accuracy",
     CRITICAL_CHANCE = "critical_chance",

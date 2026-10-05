@@ -62,6 +62,9 @@ export class PlayerWorldState extends Schema {
     attackSerial = 0;
     skillPoints: number;
     maxMp: number;
+    /** Phần HP/MP hồi lẻ (< 1) cộng dồn giữa các tick. */
+    private hpRegenCarry = 0;
+    private mpRegenCarry = 0;
 
     constructor(props: { player: PlayerSnapshot }) {
         const { player } = props;
@@ -140,6 +143,23 @@ export class PlayerWorldState extends Schema {
             attributes: { ...this.attributes },
             stats: { ...this.stats },
         };
+    }
+
+    /** Hồi HP/MP theo `hp_regen`/`mp_regen` (mỗi giây) sau `dt` giây; chết thì không hồi. */
+    regenerate(dt: number) {
+        if (this.hp <= 0) {
+            this.hpRegenCarry = 0;
+            this.mpRegenCarry = 0;
+            return;
+        }
+        this.hpRegenCarry += (this.stats[StatKey.HP_REGEN] ?? 0) * dt;
+        this.mpRegenCarry += (this.stats[StatKey.MP_REGEN] ?? 0) * dt;
+        const hpGain = Math.floor(this.hpRegenCarry);
+        const mpGain = Math.floor(this.mpRegenCarry);
+        this.hpRegenCarry -= hpGain;
+        this.mpRegenCarry -= mpGain;
+        if (hpGain > 0 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + hpGain);
+        if (mpGain > 0 && this.mp < this.maxMp) this.mp = Math.min(this.maxMp, this.mp + mpGain);
     }
 
     /** Hồi đầy HP/MP (lên level). */

@@ -5,6 +5,7 @@ import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.r
 import { MasterDataValueSchemas } from "@/modules/master-data/schemas/master-data-value.schema.js";
 import type { AdminUpdateMasterDataBody } from "@/modules/master-data/admin/validators/admin.master-data.validator.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
+import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 
 export class AdminMasterDataService {
     async getAll() {
@@ -26,7 +27,8 @@ export class AdminMasterDataService {
             id: row.id,
             data: { value, ...(body.note !== undefined ? { note: body.note } : {}) },
         });
-        // Bảng exp được cache trong process — nạp lại ngay để room dùng giá trị mới.
+        // Master data được cache trong process — nạp lại ngay để room dùng giá trị mới.
+        await masterDataCacheService.reload(key);
         if (key === MasterDataKey.LEVEL_CONFIG) await levelService.setCacheData();
         return updated;
     }

@@ -8,15 +8,42 @@ interface ClassSeedData extends Omit<NewCharacterClass, "skills"> {
     skillCodes: string[];
 }
 
-/** Chạy sau SkillSeed (tham chiếu skill theo id). */
+/** Tạm: class chưa có skill riêng dùng combo chém của swordman. */
+const PLACEHOLDER_SKILL_CODES = ["swordman_slash_1", "swordman_slash_2", "swordman_slash_3"];
+
+/** Chạy sau SkillSeed (tham chiếu skill theo id). 4 class khởi đầu, tổng 25 điểm ở level 1. */
 const CLASSES: ClassSeedData[] = [
+    {
+        code: "guardian",
+        name: "Guardian",
+        tier: 1,
+        nextClassCodes: [],
+        nextClassRequiredLevel: null,
+        baseAttributes: {
+            [StatKey.STRENGTH]: 5,
+            [StatKey.DEXTERITY]: 3,
+            [StatKey.INTELLIGENCE]: 3,
+            [StatKey.VITALITY]: 11,
+            [StatKey.LUCK]: 3,
+        },
+        baseStats: {
+            [StatKey.MOVE_SPEED]: 3.6,
+            [StatKey.MAX_HP]: 150,
+            [StatKey.MAX_MP]: 30,
+            [StatKey.PHYSICAL_DEFENSE]: 10,
+            [StatKey.MAGIC_DEFENSE]: 5,
+            [StatKey.HP_REGEN]: 2,
+            [StatKey.MP_REGEN]: 0.5,
+        },
+        statBonuses: [],
+        skillCodes: PLACEHOLDER_SKILL_CODES,
+    },
     {
         code: "swordman",
         name: "Swordman",
         tier: 1,
         nextClassCodes: [],
         nextClassRequiredLevel: null,
-        // Tổng 25 điểm ở level 1.
         baseAttributes: {
             [StatKey.STRENGTH]: 7,
             [StatKey.DEXTERITY]: 5,
@@ -24,8 +51,67 @@ const CLASSES: ClassSeedData[] = [
             [StatKey.VITALITY]: 7,
             [StatKey.LUCK]: 3,
         },
+        baseStats: {
+            [StatKey.MOVE_SPEED]: 4,
+            [StatKey.MAX_HP]: 100,
+            [StatKey.MAX_MP]: 30,
+            [StatKey.PHYSICAL_ATTACK]: 5,
+            [StatKey.PHYSICAL_DEFENSE]: 5,
+            [StatKey.HP_REGEN]: 1,
+            [StatKey.MP_REGEN]: 0.5,
+        },
         statBonuses: [],
         skillCodes: ["swordman_slash_1", "swordman_slash_2", "swordman_slash_3"],
+    },
+    {
+        code: "archer",
+        name: "Archer",
+        tier: 1,
+        nextClassCodes: [],
+        nextClassRequiredLevel: null,
+        baseAttributes: {
+            [StatKey.STRENGTH]: 5,
+            [StatKey.DEXTERITY]: 9,
+            [StatKey.INTELLIGENCE]: 3,
+            [StatKey.VITALITY]: 5,
+            [StatKey.LUCK]: 3,
+        },
+        baseStats: {
+            [StatKey.MOVE_SPEED]: 4.2,
+            [StatKey.MAX_HP]: 80,
+            [StatKey.MAX_MP]: 40,
+            [StatKey.PHYSICAL_ATTACK]: 5,
+            [StatKey.ACCURACY]: 5,
+            [StatKey.HP_REGEN]: 0.8,
+            [StatKey.MP_REGEN]: 0.6,
+        },
+        statBonuses: [],
+        skillCodes: PLACEHOLDER_SKILL_CODES,
+    },
+    {
+        code: "mage",
+        name: "Mage",
+        tier: 1,
+        nextClassCodes: [],
+        nextClassRequiredLevel: null,
+        baseAttributes: {
+            [StatKey.STRENGTH]: 2,
+            [StatKey.DEXTERITY]: 4,
+            [StatKey.INTELLIGENCE]: 11,
+            [StatKey.VITALITY]: 5,
+            [StatKey.LUCK]: 3,
+        },
+        baseStats: {
+            [StatKey.MOVE_SPEED]: 3.8,
+            [StatKey.MAX_HP]: 70,
+            [StatKey.MAX_MP]: 80,
+            [StatKey.MAGIC_ATTACK]: 5,
+            [StatKey.MAGIC_DEFENSE]: 5,
+            [StatKey.HP_REGEN]: 0.6,
+            [StatKey.MP_REGEN]: 1.5,
+        },
+        statBonuses: [],
+        skillCodes: PLACEHOLDER_SKILL_CODES,
     },
 ];
 

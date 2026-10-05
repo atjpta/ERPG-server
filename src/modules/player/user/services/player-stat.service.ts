@@ -32,6 +32,7 @@ export class PlayerStatService {
         }
         return computeStats({
             classAttributes: characterClass.baseAttributes,
+            classBaseStats: characterClass.baseStats,
             allocatedAttributes: state.allocatedAttributes,
             bonuses,
         });

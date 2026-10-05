@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 
 /** Bật `singleSessionPerUser` để mỗi lần login mới tự revoke các session cũ (chặn đăng nhập nhiều máy). */
@@ -9,6 +10,10 @@ export const AuthSessionConfigSchema = z.object({
 export const PlayerConfigSchema = z.object({
     /** Map xuất hiện của player mới tạo (spawn tại `spawnX/spawnY` của map). */
     startMapCode: z.string().min(1),
+    /** Số ô của từng túi inventory. */
+    inventorySize: z.record(z.enum(ItemType), z.number().int().positive()),
+    /** Còn ≤ số ô trống này sau khi nhận item → báo client túi sắp đầy. */
+    inventoryNearlyFullThreshold: z.number().int().nonnegative(),
 });
 
 /**

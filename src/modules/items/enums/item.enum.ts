@@ -6,6 +6,7 @@ export enum ItemType {
 
 export enum ItemRarity {
     COMMON = "common",
+    GOOD = "good",
     RARE = "rare",
     EPIC = "epic",
     LEGENDARY = "legendary",

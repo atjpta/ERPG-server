@@ -1,6 +1,6 @@
 import { integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
-import type { Attributes, StatBonus } from "@/modules/player/schemas/stat.schema.js";
+import type { Attributes, StatBonus, Stats } from "@/modules/player/schemas/stat.schema.js";
 import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js";
 
 /** Class nhân vật (Swordman → chuyển class lên tier sau). */
@@ -14,6 +14,8 @@ export const Classes = pgTable("classes", {
     nextClassRequiredLevel: integer("next_class_required_level"),
     /** Điểm attribute ở level 1 (tổng 25 với class tier 1). */
     baseAttributes: jsonb("base_attributes").$type<Attributes>().notNull(),
+    /** Chỉ số nền cố định của class (move_speed, hp_regen...), không tăng theo level. */
+    baseStats: jsonb("base_stats").$type<Stats>().notNull().default({}),
     statBonuses: jsonb("stat_bonuses").$type<StatBonus[]>().notNull().default([]),
     /** Skill mặc định của player thuộc class này (các skill MELEE theo thứ tự = combo đánh thường). */
     skills: jsonb("skills").$type<OwnedSkill[]>().notNull().default([]),

@@ -1,6 +1,7 @@
 import { classService } from "@/modules/classes/services/class.service.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
+import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
 
 export const setCacheDataApp = () => {
@@ -9,5 +10,6 @@ export const setCacheDataApp = () => {
         itemService.setCacheData(),
         classService.setCacheData(),
         levelService.setCacheData(),
+        masterDataCacheService.setCacheData(),
     ]);
 };

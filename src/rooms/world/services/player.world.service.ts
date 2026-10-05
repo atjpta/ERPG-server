@@ -90,6 +90,8 @@ export class PlayerWorldService {
 
             // Không có input nhưng đã hết máu (bị monster đánh) → vẫn phải xử lý chết/hồi sinh.
             if (steps === 0 && state.hp <= 0) this.step(room, sessionId, state, undefined, ctx.dt);
+            // Regen theo thời gian thực của tick (không theo input), không predict bên client.
+            state.regenerate(ctx.dt);
         }
     }
 
