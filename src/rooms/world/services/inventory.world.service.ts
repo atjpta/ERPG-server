@@ -42,7 +42,9 @@ import type { ItemReward } from "@/modules/rewards/types/reward.type.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import {
+    EquipmentUpgradeAction,
     WorldMessage,
+    type InventoryEntryMessage,
     type EquipmentUpgradeMessage,
     type InventoryFullMessage,
     type InventoryMessage,
@@ -51,6 +53,20 @@ import {
 
 /** Lỗi nghiệp vụ trả về client (chuỗi) hoặc kết quả. */
 export type InventoryResult<T = undefined> = { ok: true; value: T } | { ok: false; error: string };
+
+/** Ô túi → message; metadata chỉ gửi với trang bị (item khác để trống). */
+const toEntryMessage = (entry: InventoryItem): InventoryEntryMessage => {
+    const isEquipment = itemService.getById(entry.itemId)?.type === ItemType.EQUIPMENT;
+    return {
+        id: entry.id,
+        itemId: entry.itemId,
+        slotIndex: entry.slotIndex,
+        quantity: entry.quantity,
+        source: entry.source,
+        isLocked: entry.isLocked,
+        ...(isEquipment ? { metadata: entry.metadata as ItemEquipmentInstanceMetadata } : {}),
+    };
+};
 
 const fail = (error: string): { ok: false; error: string } => ({ ok: false, error });
 const done = <T>(value: T): { ok: true; value: T } => ({ ok: true, value });
@@ -82,7 +98,11 @@ export class InventoryWorldService {
         const message: InventoryMessage = {
             ok: !error,
             ...(error ? { error } : {}),
-            inventories: player.inventories,
+            inventories: {
+                equipment: player.inventories[ItemType.EQUIPMENT].map(toEntryMessage),
+                consumable: player.inventories[ItemType.CONSUMABLE].map(toEntryMessage),
+                material: player.inventories[ItemType.MATERIAL].map(toEntryMessage),
+            },
             equipments: player.equipments,
             wallet: player.wallet,
         };
@@ -224,7 +244,7 @@ export class InventoryWorldService {
         const success = this.rollSuccess(cost.value.rate, rng);
         this.update(player, owned, applyEnhance(owned.metadata, cost.value.step, success));
         return done({
-            action: "enhance",
+            action: EquipmentUpgradeAction.ENHANCE,
             success,
             instanceIds: [instanceId],
             instance: owned.entry.metadata as ItemEquipmentInstanceMetadata,
@@ -264,7 +284,7 @@ export class InventoryWorldService {
             );
         }
         return done({
-            action: "refine",
+            action: EquipmentUpgradeAction.REFINE,
             success,
             instanceIds: [instanceId],
             instance: owned.entry.metadata as ItemEquipmentInstanceMetadata,
@@ -311,7 +331,7 @@ export class InventoryWorldService {
         for (const id of ids) takeInstance(bag, id);
         player.inventories[ItemType.MATERIAL] = materials;
         return done({
-            action: "disassemble",
+            action: EquipmentUpgradeAction.DISASSEMBLE,
             success: true,
             instanceIds: ids,
             materials: [...received.values()],

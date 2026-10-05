@@ -1,9 +1,12 @@
-import type { ItemType } from "@/modules/items/enums/item.enum.js";
-import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
-import type { CurrencyReward, ItemReward } from "@/modules/rewards/types/reward.type.js";
-import type { Equipments, Inventories } from "@/modules/player/schemas/inventory.schema.js";
-import type { Attributes, Stats } from "@/modules/player/schemas/stat.schema.js";
-import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
+import type { ItemSource, ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
+import type { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
+import type { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
+
+/*
+ * Payload message được `yarn schema:generate` sinh ra C# (namespace ERPG.Schema). Codegen chỉ sinh
+ * interface có chữ "Message" trong tên + enum, không hiểu `extends` / type alias / kiểu inline /
+ * `| null` — mọi kiểu lồng nhau phải là interface `...Message` hoặc enum, khai báo từng field.
+ */
 
 /** Message client → server của room world. */
 export enum WorldClientMessage {
@@ -41,40 +44,152 @@ export enum WorldMessage {
     INVENTORY_FULL = "inventoryFull",
 }
 
+export enum EquipmentUpgradeAction {
+    ENHANCE = "enhance",
+    REFINE = "refine",
+    DISASSEMBLE = "disassemble",
+}
+
+/** 1 dòng chỉ số (StatBonus). */
+export interface StatLineMessage {
+    stat: StatKey;
+    type: StatType;
+    value: number;
+}
+
+/** Chỉ số của 1 trang bị (ItemEquipmentInstanceMetadata) — main stats là giá trị roll gốc. */
+export interface EquipmentInstanceMessage {
+    level: number;
+    rarity: ItemRarity;
+    enhanceLevel: number;
+    refineLevel: number;
+    mainStats: StatLineMessage[];
+    subStats: StatLineMessage[];
+    rarityStats: StatLineMessage[];
+}
+
+/** 1 ô trong túi; `metadata` chỉ có với trang bị. */
+export interface InventoryEntryMessage {
+    id: string;
+    itemId: string;
+    slotIndex: number;
+    quantity: number;
+    source: ItemSource;
+    isLocked: boolean;
+    metadata?: EquipmentInstanceMessage;
+}
+
+/** 3 túi theo ItemType. */
+export interface InventoriesMessage {
+    equipment: InventoryEntryMessage[];
+    consumable: InventoryEntryMessage[];
+    material: InventoryEntryMessage[];
+}
+
+export interface EquippedItemMessage {
+    id: string;
+    itemId: string;
+    source: ItemSource;
+    isLocked: boolean;
+    metadata: EquipmentInstanceMessage;
+}
+
+/** Đồ đang mặc theo slot (ItemEquipmentSlotType); slot trống = null. */
+export interface EquipmentsMessage {
+    main_hand?: EquippedItemMessage;
+    off_hand?: EquippedItemMessage;
+    head?: EquippedItemMessage;
+    armor?: EquippedItemMessage;
+    shoulder?: EquippedItemMessage;
+    gloves?: EquippedItemMessage;
+    boots?: EquippedItemMessage;
+    belt?: EquippedItemMessage;
+    necklace?: EquippedItemMessage;
+    earring_1?: EquippedItemMessage;
+    earring_2?: EquippedItemMessage;
+    ring_1?: EquippedItemMessage;
+    ring_2?: EquippedItemMessage;
+    back?: EquippedItemMessage;
+}
+
+export interface CurrencyBalanceMessage {
+    balance: number;
+    totalEarned: number;
+    totalSpent: number;
+}
+
+/** Ví theo CurrencyCode. */
+export interface WalletMessage {
+    gold: CurrencyBalanceMessage;
+    gem: CurrencyBalanceMessage;
+}
+
+export interface CurrencyRewardMessage {
+    code: CurrencyCode;
+    amount: number;
+}
+
+export interface ItemRewardMessage {
+    itemId: string;
+    quantity: number;
+    /** Trang bị: chỉ số đã roll (quantity = 1). */
+    metadata?: EquipmentInstanceMessage;
+}
+
+/** Nguyên liệu nhận được (phân rã). */
+export interface MaterialAmountMessage {
+    itemId: string;
+    code: string;
+    quantity: number;
+}
+
+/** Điểm attribute theo từng attribute. */
+export interface AttributeValuesMessage {
+    strength: number;
+    dexterity: number;
+    intelligence: number;
+    vitality: number;
+    luck: number;
+}
+
 export interface RewardMessage {
     exp: number;
-    currency: CurrencyReward[];
+    currency: CurrencyRewardMessage[];
     /** Item rơi ra (trước khi xếp túi — túi đầy thì có thêm message `inventoryFull`). */
-    items: ItemReward[];
+    items: ItemRewardMessage[];
     /** Level sau khi cộng exp. */
     level: number;
     /** Số level vừa lên (0 = không lên). */
     levelsGained: number;
 }
 
+/** Điểm + attribute + stat sau khi tính lại (PlayerWorldState.getAttributeSummary). */
 export interface AttributeSummary {
     attributePoints: number;
     /** Điểm player đã tự cộng. */
-    allocatedAttributes: Attributes;
+    allocatedAttributes: AttributeValuesMessage;
     /** Attribute cuối cùng (class + đã cộng + trang bị). */
-    attributes: Attributes;
-    stats: Stats;
+    attributes: AttributeValuesMessage;
+    /** StatKey → giá trị (chỉ có stat khác 0). */
+    stats: Record<string, number>;
 }
 
-export interface AttributesMessage extends AttributeSummary {
+export interface AttributesMessage {
     ok: boolean;
     error?: string;
+    attributePoints: number;
+    allocatedAttributes: AttributeValuesMessage;
+    attributes: AttributeValuesMessage;
+    stats: Record<string, number>;
 }
 
 export interface InventoryMessage {
     ok: boolean;
     error?: string;
-    inventories: Inventories;
-    equipments: Equipments;
-    wallet: Wallet;
+    inventories: InventoriesMessage;
+    equipments: EquipmentsMessage;
+    wallet: WalletMessage;
 }
-
-export type EquipmentUpgradeAction = "enhance" | "refine" | "disassemble";
 
 export interface EquipmentUpgradeMessage {
     action: EquipmentUpgradeAction;
@@ -82,9 +197,9 @@ export interface EquipmentUpgradeMessage {
     success: boolean;
     instanceIds: string[];
     /** Chỉ số của món sau khi cường hoá / tinh hoá. */
-    instance?: ItemEquipmentInstanceMetadata;
+    instance?: EquipmentInstanceMessage;
     /** Nguyên liệu nhận được khi phân rã. */
-    materials?: { itemId: string; code: string; quantity: number }[];
+    materials?: MaterialAmountMessage[];
 }
 
 export interface InventoryNearlyFullMessage {
@@ -94,5 +209,5 @@ export interface InventoryNearlyFullMessage {
 
 export interface InventoryFullMessage {
     type: ItemType;
-    lostItems: ItemReward[];
+    lostItems: ItemRewardMessage[];
 }
