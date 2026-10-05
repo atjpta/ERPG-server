@@ -193,10 +193,19 @@ export interface AttributesMessage {
     stats: Record<string, number>;
 }
 
+/** Số ô tối đa của từng túi (master data `player_config.inventorySize`). */
+export interface InventorySizesMessage {
+    equipment: number;
+    consumable: number;
+    material: number;
+}
+
 export interface InventoryMessage {
     ok: boolean;
     error?: string;
     inventories: InventoriesMessage;
+    /** Sức chứa từng túi — client vẽ đủ ô, ô trống để nền. */
+    sizes: InventorySizesMessage;
     equipments: EquipmentsMessage;
     wallet: WalletMessage;
 }

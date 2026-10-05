@@ -130,6 +130,11 @@ export class InventoryWorldService {
                 consumable: player.inventories[ItemType.CONSUMABLE].map(toEntryMessage),
                 material: player.inventories[ItemType.MATERIAL].map(toEntryMessage),
             },
+            sizes: {
+                equipment: this.inventorySize(ItemType.EQUIPMENT),
+                consumable: this.inventorySize(ItemType.CONSUMABLE),
+                material: this.inventorySize(ItemType.MATERIAL),
+            },
             equipments: toEquipmentsMessage(player.equipments),
             wallet: player.wallet,
         };
