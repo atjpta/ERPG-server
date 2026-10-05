@@ -9,7 +9,10 @@
  */
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
+import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
+import type { MonsterScaleConfig } from "@/modules/monsters/schemas/monster-scale-config.schema.js";
+import { StatKey } from "@/modules/player/enums/stat.enum.js";
 
 export interface MonsterDefinition {
     code: string;
@@ -185,3 +188,57 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
 /** Code skill đánh thường của monster. */
 export const monsterAttackSkillCode = (monster: MonsterDefinition) =>
     monster.attackSkillCode ?? `${monster.code}_attack`;
+
+const attackDefense = (attack: number, defense: number) => ({
+    [StatKey.PHYSICAL_ATTACK]: attack,
+    [StatKey.MAGIC_ATTACK]: attack,
+    [StatKey.PHYSICAL_DEFENSE]: defense,
+    [StatKey.MAGIC_DEFENSE]: defense,
+});
+
+/** Mặc định master data `monster_scale_config` — loại × độ hiếm nhân với nhau. */
+export const DEFAULT_MONSTER_SCALE_CONFIG: MonsterScaleConfig = {
+    byType: {
+        [MonsterType.NORMAL]: { stats: {}, exp: 1, gold: 1, dropRate: 1 },
+        [MonsterType.ELITE]: {
+            stats: { [StatKey.MAX_HP]: 3, ...attackDefense(1.5, 1.3) },
+            exp: 3,
+            gold: 3,
+            dropRate: 3,
+        },
+        [MonsterType.BOSS]: {
+            stats: { [StatKey.MAX_HP]: 10, ...attackDefense(2, 1.6) },
+            exp: 10,
+            gold: 10,
+            // 8% × 12.5 = luôn rơi trang bị.
+            dropRate: 12.5,
+        },
+    },
+    byRarity: {
+        [ItemRarity.COMMON]: { stats: {}, exp: 1, gold: 1, dropRate: 1 },
+        [ItemRarity.GOOD]: {
+            stats: { [StatKey.MAX_HP]: 1.2, ...attackDefense(1.1, 1.1) },
+            exp: 1.2,
+            gold: 1.2,
+            dropRate: 1.2,
+        },
+        [ItemRarity.RARE]: {
+            stats: { [StatKey.MAX_HP]: 1.5, ...attackDefense(1.25, 1.2) },
+            exp: 1.5,
+            gold: 1.5,
+            dropRate: 1.5,
+        },
+        [ItemRarity.EPIC]: {
+            stats: { [StatKey.MAX_HP]: 2, ...attackDefense(1.5, 1.35) },
+            exp: 2,
+            gold: 2,
+            dropRate: 2,
+        },
+        [ItemRarity.LEGENDARY]: {
+            stats: { [StatKey.MAX_HP]: 3, ...attackDefense(2, 1.5) },
+            exp: 3,
+            gold: 3,
+            dropRate: 3,
+        },
+    },
+};

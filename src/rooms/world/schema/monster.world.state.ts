@@ -4,7 +4,10 @@ import type { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js"
 import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import type { Stats } from "@/modules/player/schemas/stat.schema.js";
-import { computeMonsterStats } from "@/modules/monsters/utils/monster-stat.util.js";
+import { computeMonsterStats, monsterScales } from "@/modules/monsters/utils/monster-stat.util.js";
+import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import type { DamageCombatant } from "@/rooms/world/chains/damage.world.chain.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
@@ -49,6 +52,7 @@ export class MonsterWorldState extends Schema {
     /** Toàn bộ chỉ số ở level hiện tại (`computeMonsterStats`) — dùng cho chain tính damage. */
     stats: Stats;
     monsterType: MonsterType;
+    rarity: ItemRarity;
     biome: Biome;
     /** Tăng mỗi đòn đánh — một phần seed roll combat (`combatSeed`). */
     attackSerial = 0;
@@ -64,8 +68,12 @@ export class MonsterWorldState extends Schema {
         this.y = y;
         this.spawnX = x;
         this.spawnY = y;
-        // Stat cuối = cố định + tăng theo level (cùng bộ StatKey với player).
-        this.stats = computeMonsterStats(monster, monster.level);
+        // Stat cuối = (cố định + tăng theo level) × hệ số loại × độ hiếm (cùng bộ StatKey với player).
+        this.stats = computeMonsterStats(
+            monster,
+            monster.level,
+            monsterScales(monster, masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG))
+        );
         this.maxHp = Math.floor(this.stats[StatKey.MAX_HP] ?? 0);
         this.hp = this.maxHp;
         this.attack = Math.floor(this.stats[StatKey.PHYSICAL_ATTACK] ?? 0);
@@ -78,6 +86,7 @@ export class MonsterWorldState extends Schema {
         this.skills.push(...toOwnedSkillStates(monster.skills));
         this.drops = monster.drops;
         this.monsterType = monster.type;
+        this.rarity = monster.rarity;
         this.biome = monster.biome;
     }
 

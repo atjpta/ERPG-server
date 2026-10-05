@@ -8,4 +8,5 @@ export enum MasterDataKey {
     EQUIPMENT_REFINE_CONFIG = "equipment_refine_config",
     EQUIPMENT_DISASSEMBLE_CONFIG = "equipment_disassemble_config",
     EQUIPMENT_DROP_CONFIG = "equipment_drop_config",
+    MONSTER_SCALE_CONFIG = "monster_scale_config",
 }

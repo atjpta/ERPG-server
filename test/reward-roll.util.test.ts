@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { generateEntityId } from "@/core/entities/base.entity.js";
+import { big } from "@/core/utils/big-number.util.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
@@ -53,5 +54,15 @@ describe("reward-roll.util", () => {
         const miss = rollMonsterReward(drops, { rng: () => 0.9, rollEquipment: () => equipment });
         assert.deepEqual(miss.items, []);
         assert.equal(miss.currency[0].amount, 10);
+    });
+
+    it("nhân exp, vàng, tỉ lệ rơi theo hệ số (tỉ lệ tối đa 1)", () => {
+        const reward = rollMonsterReward(drops, {
+            rng: () => 0.9,
+            scale: { exp: big(3), gold: big(2.5), dropRate: big(2) },
+        });
+        assert.equal(reward.exp, 60);
+        assert.equal(reward.currency[0].amount, 25);
+        assert.equal(reward.items.length, 1);
     });
 });

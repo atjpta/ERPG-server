@@ -1,4 +1,4 @@
-import { big, bigToNumber, floorBig } from "@/core/utils/big-number.util.js";
+import { big, floorBig } from "@/core/utils/big-number.util.js";
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { ItemRepo } from "@/modules/items/repositories/item.repository.js";
@@ -27,15 +27,11 @@ interface ItemDropSeed {
     rate: number;
 }
 
-/** Hệ số theo loại monster (máu, công, thưởng, tỉ lệ rơi đồ). */
-const TYPE_SCALE: Record<
-    MonsterType,
-    { hp: number; attack: number; reward: number; equipmentRate: number }
-> = {
-    [MonsterType.NORMAL]: { hp: 1, attack: 1, reward: 1, equipmentRate: 0.08 },
-    [MonsterType.ELITE]: { hp: 3, attack: 1.5, reward: 3, equipmentRate: 0.25 },
-    [MonsterType.BOSS]: { hp: 10, attack: 2, reward: 10, equipmentRate: 1 },
-};
+/**
+ * Chỉ số + thưởng ở đây là mức NORMAL / common — nhân theo loại × độ hiếm lúc chạy bằng master data
+ * `monster_scale_config` (máu, công, exp, vàng, tỉ lệ rơi).
+ */
+const BASE_EQUIPMENT_DROP_RATE = 0.08;
 
 /** Đá cường hoá rơi theo biome (bậc tăng dần theo độ khó). */
 const STONE_TIER_BY_BIOME: Record<Biome, number> = {
@@ -46,7 +42,7 @@ const STONE_TIER_BY_BIOME: Record<Biome, number> = {
 };
 
 const equipmentDrop = (type: MonsterType): EquipmentDrop => ({
-    rate: TYPE_SCALE[type].equipmentRate,
+    rate: BASE_EQUIPMENT_DROP_RATE,
     rarity:
         type === MonsterType.NORMAL
             ? {
@@ -79,24 +75,21 @@ const BASE_STATS: Stats = {
     [StatKey.CRITICAL_DAMAGE]: 1.5,
 };
 
-/** Tạm: chỉ số / thưởng sinh theo level + loại — cân bằng lại sau. */
+/** Tạm: chỉ số / thưởng sinh theo level — cân bằng lại sau. */
 function toSeed(monster: MonsterDefinition) {
-    const scale = TYPE_SCALE[monster.type];
     const statsPerLevel: Stats = {
-        [StatKey.MAX_HP]: bigToNumber(big(50).times(scale.hp)),
-        [StatKey.PHYSICAL_ATTACK]: bigToNumber(big(5).times(scale.attack)),
+        [StatKey.MAX_HP]: 50,
+        [StatKey.PHYSICAL_ATTACK]: 5,
         [StatKey.ACCURACY]: 1,
         [StatKey.EVASION]: 1,
         ...(monster.biome === Biome.SKELETON ? { [StatKey.PHYSICAL_DEFENSE]: 1 } : {}),
     };
-    // 20 × lv × (1 + lv/10): lv1 = 22, lv10 = 400, lv30 = 2400 (× hệ số loại).
-    const exp = floorBig(
-        big(20).times(monster.level).times(big(monster.level).div(10).plus(1)).times(scale.reward)
-    );
+    // 20 × lv × (1 + lv/10): lv1 = 22, lv10 = 400, lv30 = 2400.
+    const exp = floorBig(big(20).times(monster.level).times(big(monster.level).div(10).plus(1)));
     const gold: CurrencyDrop = {
         code: CurrencyCode.GOLD,
-        min: monster.level * scale.reward,
-        max: monster.level * 10 * scale.reward,
+        min: monster.level,
+        max: monster.level * 10,
     };
     return {
         code: monster.code,

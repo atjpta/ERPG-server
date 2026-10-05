@@ -8,6 +8,7 @@ import {
     EquipmentStatConfigSchema,
 } from "@/modules/equipment/schemas/equipment-config.schema.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
+import { MonsterScaleConfigSchema } from "@/modules/monsters/schemas/monster-scale-config.schema.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 
 /** Bật `singleSessionPerUser` để mỗi lần login mới tự revoke các session cũ (chặn đăng nhập nhiều máy). */
@@ -49,6 +50,7 @@ export const MasterDataValueSchemas = {
     [MasterDataKey.EQUIPMENT_REFINE_CONFIG]: EquipmentRefineConfigSchema,
     [MasterDataKey.EQUIPMENT_DISASSEMBLE_CONFIG]: EquipmentDisassembleConfigSchema,
     [MasterDataKey.EQUIPMENT_DROP_CONFIG]: EquipmentDropConfigSchema,
+    [MasterDataKey.MONSTER_SCALE_CONFIG]: MonsterScaleConfigSchema,
 } satisfies Record<MasterDataKey, z.ZodType>;
 
 export type AuthSessionConfigValue = z.infer<typeof AuthSessionConfigSchema>;

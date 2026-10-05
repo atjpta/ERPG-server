@@ -252,7 +252,18 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
             state.heal(result.heal);
             // Đòn kết liễu → người đánh nhận thưởng (mỗi monster chỉ chết một lần).
             if (target.hp <= 0) {
-                rewardWorldService.grant(room, sessionId, state, monsterRewardService.roll(target));
+                rewardWorldService.grant(
+                    room,
+                    sessionId,
+                    state,
+                    monsterRewardService.roll({
+                        type: target.monsterType,
+                        rarity: target.rarity,
+                        level: target.level,
+                        biome: target.biome,
+                        drops: target.drops,
+                    })
+                );
             }
         }
     }

@@ -6,19 +6,27 @@ import {
     type Rng,
 } from "@/modules/equipment/utils/equipment-roll.util.js";
 import { itemService } from "@/modules/items/services/item.service.js";
-import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
+import type { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
+import { combineRewardScale, monsterScales } from "@/modules/monsters/utils/monster-stat.util.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import type { Reward } from "@/modules/rewards/types/reward.type.js";
 import { rollDropRarity, rollMonsterReward } from "@/modules/rewards/utils/reward-roll.util.js";
 
-/** Roll phần thưởng khi giết monster, kể cả trang bị biome (cần catalog item + master data). */
+/**
+ * Roll phần thưởng khi giết monster, kể cả trang bị biome (cần catalog item + master data); exp,
+ * tiền, tỉ lệ rơi nhân theo loại × độ hiếm (`monster_scale_config`).
+ */
 export class MonsterRewardService {
     roll(
-        monster: { drops: MonsterDrops; level: number; biome: Biome },
+        monster: Pick<Monster, "type" | "rarity" | "level" | "biome"> & { drops: MonsterDrops },
         rng: Rng = Math.random
     ): Reward {
+        const scaleConfig = masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG);
         return rollMonsterReward(monster.drops, {
             rng,
+            scale: combineRewardScale(monsterScales(monster, scaleConfig)),
             rollEquipment: (drop) => {
                 const level = rollDropLevel(monster.level, equipmentConfigService.drop, rng);
                 const templates = itemService.listEquipmentsByBiome(monster.biome);

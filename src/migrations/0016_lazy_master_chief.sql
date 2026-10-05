@@ -1,0 +1,1 @@
+ALTER TYPE "public"."master_data_key" ADD VALUE 'monster_scale_config';
