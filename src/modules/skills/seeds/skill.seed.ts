@@ -10,6 +10,13 @@ import {
     TargetType,
 } from "@/modules/skills/enums/skill.enum.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
+import { big, bigToNumber, floorBig } from "@/core/utils/big-number.util.js";
+import {
+    MONSTER_DEFINITIONS,
+    monsterAttackSkillCode,
+    type MonsterDefinition,
+} from "@/modules/monsters/seeds/monster.seed-data.js";
+import { BASE_SKILL_TICK_RATE } from "@/rooms/world/utils/tick.world.util.js";
 
 const damage = (scalingValue: number) => ({
     effectType: SkillEffectType.DAMAGE,
@@ -236,8 +243,56 @@ const SKILLS: NewSkill[] = [
     },
 ];
 
+const round2 = (value: ReturnType<typeof big>) => bigToNumber(value.decimalPlaces(2));
+
+/**
+ * Đòn đánh thường của monster, vùng RECT ước theo hitbox của nó (cùng công thức cho ra đúng
+ * `orc_slash` với hitbox Orc 0.4 × 0.5): bắt đầu sau lưng 0.13 ô, vươn trước mặt
+ * 0.55 × √(hitbox.width / 0.4) ô; cao 1.4 × hitbox.height + 0.14, tâm ở giữa thân. Monster đánh xa
+ * dùng vùng dài 4 ô trước mặt. Trúng đòn ở ~60% clip Attack1. Chỉnh tay bằng WorldColliderDebugView.
+ */
+const monsterAttackSkill = (monster: MonsterDefinition): NewSkill => {
+    const { hitbox } = monster;
+    const halfWidth = big(hitbox.width).div(2);
+    const offsetX = monster.ranged ? big(0) : halfWidth.plus(0.13).negated();
+    const reach = big(0.55).times(big(hitbox.width).div(0.4).sqrt());
+    const range = monster.ranged ? big(4) : halfWidth.plus(reach).minus(offsetX);
+    const triggerTicks = Math.max(
+        1,
+        floorBig(big(monster.attackClipMs).times(0.6).times(BASE_SKILL_TICK_RATE).div(1000))
+    );
+    return {
+        code: monsterAttackSkillCode(monster),
+        skillType: SkillType.MELEE,
+        targetType: TargetType.DIRECTION,
+        castRange: round2(range.plus(offsetX)),
+        castTimeMs: monster.attackClipMs,
+        cooldownMs: 0,
+        manaCost: 0,
+        staminaCost: 0,
+        maxLevel: 1,
+        levelConfig: [level(1, 2, 0.25)],
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks,
+                shape: HitShape.RECT,
+                range: round2(range),
+                width: monster.ranged ? 0.5 : round2(big(hitbox.height).times(1.4).plus(0.14)),
+                offsetX: round2(offsetX),
+                offsetY: round2(big(hitbox.offsetY ?? 0).minus(monster.ranged ? 0 : 0.02)),
+                damageScaling: monster.ranged ? 1 : 1.25,
+            }),
+        ],
+    };
+};
+
+const MONSTER_SKILLS: NewSkill[] = MONSTER_DEFINITIONS.filter(
+    (monster) => !monster.attackSkillCode
+).map(monsterAttackSkill);
+
 export const SkillSeed = async () => {
-    for (const skill of SKILLS) {
+    for (const skill of [...SKILLS, ...MONSTER_SKILLS]) {
         await SkillRepo.upsert({
             data: skill,
             target: Skills.code,
