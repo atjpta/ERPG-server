@@ -89,3 +89,16 @@ export function allocateAttributePoints(
     for (const key of ATTRIBUTE_KEYS) allocatedAttributes[key] += request[key] ?? 0;
     return { allocatedAttributes, attributePoints: available - total };
 }
+
+/** Trừ tiền (balance − amount, totalSpent + amount); không đủ tiền → `undefined`. */
+export function debitWallet(wallet: Wallet, costs: readonly CurrencyReward[]): Wallet | undefined {
+    const next = structuredClone(wallet);
+    for (const { code, amount } of costs) {
+        if (amount <= 0) continue;
+        const balance = next[code];
+        if (!balance || balance.balance < amount) return undefined;
+        balance.balance -= amount;
+        balance.totalSpent += amount;
+    }
+    return next;
+}

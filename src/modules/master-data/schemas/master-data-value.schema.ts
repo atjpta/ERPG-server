@@ -1,4 +1,12 @@
 import { z } from "zod";
+import {
+    EquipmentDisassembleConfigSchema,
+    EquipmentDropConfigSchema,
+    EquipmentEnhanceConfigSchema,
+    EquipmentRefineConfigSchema,
+    EquipmentSetConfigSchema,
+    EquipmentStatConfigSchema,
+} from "@/modules/equipment/schemas/equipment-config.schema.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 
@@ -35,6 +43,12 @@ export const MasterDataValueSchemas = {
     [MasterDataKey.AUTH_SESSION_CONFIG]: AuthSessionConfigSchema,
     [MasterDataKey.PLAYER_CONFIG]: PlayerConfigSchema,
     [MasterDataKey.LEVEL_CONFIG]: LevelConfigSchema,
+    [MasterDataKey.EQUIPMENT_STAT_CONFIG]: EquipmentStatConfigSchema,
+    [MasterDataKey.EQUIPMENT_SET_CONFIG]: EquipmentSetConfigSchema,
+    [MasterDataKey.EQUIPMENT_ENHANCE_CONFIG]: EquipmentEnhanceConfigSchema,
+    [MasterDataKey.EQUIPMENT_REFINE_CONFIG]: EquipmentRefineConfigSchema,
+    [MasterDataKey.EQUIPMENT_DISASSEMBLE_CONFIG]: EquipmentDisassembleConfigSchema,
+    [MasterDataKey.EQUIPMENT_DROP_CONFIG]: EquipmentDropConfigSchema,
 } satisfies Record<MasterDataKey, z.ZodType>;
 
 export type AuthSessionConfigValue = z.infer<typeof AuthSessionConfigSchema>;

@@ -11,7 +11,7 @@ export const Items = pgTable("items", {
     ...baseWithCodeColumns(),
     name: text("name").notNull(),
     type: itemTypeEnum("type").notNull(),
-    /** Rarity gốc; bản rơi ra có thể roll rarity khác (ItemEquipmentInstanceMetadata.rarity). */
+    /** Rarity gốc; trang bị: rarity thật nằm ở từng món (ItemEquipmentInstanceMetadata.rarity). */
     rarity: itemRarityEnum("rarity").notNull().default(ItemRarity.COMMON),
     requiredLevel: integer("required_level").notNull().default(1),
     stackable: boolean("stackable").notNull().default(false),

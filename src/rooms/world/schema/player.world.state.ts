@@ -1,5 +1,6 @@
 import { ArraySchema, Schema, type } from "@colyseus/schema";
 
+import { big, floorBig, roundBig } from "@/core/utils/big-number.util.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import {
     PlayerStatService,
@@ -63,8 +64,8 @@ export class PlayerWorldState extends Schema {
     skillPoints: number;
     maxMp: number;
     /** Phần HP/MP hồi lẻ (< 1) cộng dồn giữa các tick. */
-    private hpRegenCarry = 0;
-    private mpRegenCarry = 0;
+    private hpRegenCarry = big(0);
+    private mpRegenCarry = big(0);
 
     constructor(props: { player: PlayerSnapshot }) {
         const { player } = props;
@@ -148,16 +149,20 @@ export class PlayerWorldState extends Schema {
     /** Hồi HP/MP theo `hp_regen`/`mp_regen` (mỗi giây) sau `dt` giây; chết thì không hồi. */
     regenerate(dt: number) {
         if (this.hp <= 0) {
-            this.hpRegenCarry = 0;
-            this.mpRegenCarry = 0;
+            this.hpRegenCarry = big(0);
+            this.mpRegenCarry = big(0);
             return;
         }
-        this.hpRegenCarry += (this.stats[StatKey.HP_REGEN] ?? 0) * dt;
-        this.mpRegenCarry += (this.stats[StatKey.MP_REGEN] ?? 0) * dt;
-        const hpGain = Math.floor(this.hpRegenCarry);
-        const mpGain = Math.floor(this.mpRegenCarry);
-        this.hpRegenCarry -= hpGain;
-        this.mpRegenCarry -= mpGain;
+        this.hpRegenCarry = roundBig(
+            this.hpRegenCarry.plus(big(this.stats[StatKey.HP_REGEN] ?? 0).times(dt))
+        );
+        this.mpRegenCarry = roundBig(
+            this.mpRegenCarry.plus(big(this.stats[StatKey.MP_REGEN] ?? 0).times(dt))
+        );
+        const hpGain = floorBig(this.hpRegenCarry);
+        const mpGain = floorBig(this.mpRegenCarry);
+        this.hpRegenCarry = this.hpRegenCarry.minus(hpGain);
+        this.mpRegenCarry = this.mpRegenCarry.minus(mpGain);
         if (hpGain > 0 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + hpGain);
         if (mpGain > 0 && this.mp < this.maxMp) this.mp = Math.min(this.maxMp, this.mp + mpGain);
     }

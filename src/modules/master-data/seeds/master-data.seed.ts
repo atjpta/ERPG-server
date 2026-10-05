@@ -1,3 +1,11 @@
+import {
+    DEFAULT_EQUIPMENT_DISASSEMBLE_CONFIG,
+    DEFAULT_EQUIPMENT_DROP_CONFIG,
+    DEFAULT_EQUIPMENT_ENHANCE_CONFIG,
+    DEFAULT_EQUIPMENT_REFINE_CONFIG,
+    DEFAULT_EQUIPMENT_SET_CONFIG,
+    DEFAULT_EQUIPMENT_STAT_CONFIG,
+} from "@/modules/equipment/seeds/equipment-config.seed-data.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
@@ -31,6 +39,30 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
             expToNextLevel: Array.from({ length: MAX_LEVEL - 1 }, (_, i) => expToNextLevel(i + 1)),
         },
         note: "Bảng exp lên level (expToNextLevel[i] = exp từ level i+1 lên i+2)",
+    },
+    [MasterDataKey.EQUIPMENT_STAT_CONFIG]: {
+        value: DEFAULT_EQUIPMENT_STAT_CONFIG,
+        note: "Main/sub/rarity stats trang bị theo class + loại trang bị + level",
+    },
+    [MasterDataKey.EQUIPMENT_SET_CONFIG]: {
+        value: DEFAULT_EQUIPMENT_SET_CONFIG,
+        note: "Set bonus theo biome + class + nhóm + level (2/4/6 món)",
+    },
+    [MasterDataKey.EQUIPMENT_ENHANCE_CONFIG]: {
+        value: DEFAULT_EQUIPMENT_ENHANCE_CONFIG,
+        note: "Cường hoá: tỉ lệ + chi phí từng bậc, giới hạn theo rarity",
+    },
+    [MasterDataKey.EQUIPMENT_REFINE_CONFIG]: {
+        value: DEFAULT_EQUIPMENT_REFINE_CONFIG,
+        note: "Tinh hoá: tỉ lệ + chi phí theo rarity đích",
+    },
+    [MasterDataKey.EQUIPMENT_DISASSEMBLE_CONFIG]: {
+        value: DEFAULT_EQUIPMENT_DISASSEMBLE_CONFIG,
+        note: "Phân rã: công thức tinh linh (theo rarity) + bụi (theo cường hoá)",
+    },
+    [MasterDataKey.EQUIPMENT_DROP_CONFIG]: {
+        value: DEFAULT_EQUIPMENT_DROP_CONFIG,
+        note: "Mốc level đồ rơi + độ lệch level quái",
     },
 };
 

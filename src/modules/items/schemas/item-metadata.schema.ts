@@ -1,45 +1,40 @@
 import { z } from "zod";
+import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { ItemEquipmentType } from "@/modules/items/enums/item-equipment.enum.js";
 import { ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
-import { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
 import { StatBonusSchema } from "@/modules/player/schemas/stat.schema.js";
 
-/** Một dòng chỉ số có thể random khi item rơi/được tạo. */
-export const StatRollSchema = z.object({
-    stat: z.enum(StatKey),
-    type: z.enum(StatType),
-    min: z.number(),
-    max: z.number(),
-    /** Trọng số chọn dòng này trong pool (càng lớn càng dễ ra). */
-    weight: z.number().positive().default(1),
-});
-
-/** Cách random `rarityStats` cho một trang bị: số dòng theo rarity, chọn từ `pool`. */
-export const RollConfigSchema = z.object({
-    pool: z.array(StatRollSchema).default([]),
-    linesByRarity: z.partialRecord(z.enum(ItemRarity), z.number().int().nonnegative()).default({}),
-});
-
-/** `items.metadata` khi `type = EQUIPMENT`. */
+/**
+ * `items.metadata` khi `type = EQUIPMENT` — chỉ là khuôn (template). Chỉ số của từng món được roll
+ * theo master data `equipment_stat_config` khi món đó được tạo (ItemEquipmentInstanceMetadata).
+ */
 export const EquipmentMetadataSchema = z.object({
     /** Loại trang bị; slot mặc được: EQUIPMENT_SLOTS_BY_TYPE. */
     equipmentType: z.enum(ItemEquipmentType),
-    stats: z.array(StatBonusSchema).default([]),
-    rollConfig: RollConfigSchema.optional(),
+    biome: z.enum(Biome),
+    /** Class mặc được (class con của nó cũng mặc được); `null` = mọi class. */
+    classCode: z.string().min(1).nullable(),
 });
 
 /** Metadata của 1 trang bị cụ thể trong inventory/equipments (khác nhau giữa các bản cùng item). */
 export const ItemEquipmentInstanceMetadataSchema = z.object({
-    /** Rarity đã roll khi nhận item (drop có bảng rarity riêng); thiếu = rarity gốc của item. */
-    rarity: z.enum(ItemRarity).optional(),
-    rarityStats: z.array(StatBonusSchema).optional(),
+    /** Level của món (mốc 10/20/…; đồ tân thủ = 1) — cũng là level yêu cầu để mặc. */
+    level: z.number().int().positive(),
+    rarity: z.enum(ItemRarity),
+    /** Cấp cường hoá (+0 → +25), giới hạn theo rarity. */
+    enhanceLevel: z.number().int().nonnegative().default(0),
+    /** Số lần tinh hoá thành công (mỗi lần +1 rarity, nhân main stats). */
+    refineLevel: z.number().int().nonnegative().default(0),
+    /** Giá trị roll gốc — chưa nhân hệ số cường hoá/tinh hoá. */
+    mainStats: z.array(StatBonusSchema).default([]),
+    subStats: z.array(StatBonusSchema).default([]),
+    /** Số dòng theo rarity; mỗi lần tinh hoá thêm 1 dòng. */
+    rarityStats: z.array(StatBonusSchema).default([]),
 });
 
 /** Item không phải trang bị: chưa có field cố định. */
 export const GenericItemMetadataSchema = z.record(z.string(), z.unknown());
 
-export type StatRoll = z.infer<typeof StatRollSchema>;
-export type RollConfig = z.infer<typeof RollConfigSchema>;
 export type EquipmentMetadata = z.infer<typeof EquipmentMetadataSchema>;
 export type ItemEquipmentInstanceMetadata = z.infer<typeof ItemEquipmentInstanceMetadataSchema>;
 export type ItemMetadata = EquipmentMetadata | z.infer<typeof GenericItemMetadataSchema>;

@@ -1,9 +1,11 @@
-import { ItemEquipmentType } from "@/modules/items/enums/item-equipment.enum.js";
 import { ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
 import { Items, type NewItem } from "@/modules/items/entities/item.entity.js";
 import { ItemRepo } from "@/modules/items/repositories/item.repository.js";
 import { parseItemMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
-import { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
+import {
+    BIOME_EQUIPMENT_ITEMS,
+    STARTER_EQUIPMENT_ITEMS,
+} from "@/modules/items/seeds/equipment-item.seed-data.js";
 
 const MATERIAL_MAX_STACK = 9999;
 
@@ -40,38 +42,8 @@ const MATERIALS: NewItem[] = [
 
 const ITEMS: NewItem[] = [
     ...MATERIALS,
-    {
-        code: "wooden_sword",
-        name: "Wooden Sword",
-        type: ItemType.EQUIPMENT,
-        rarity: ItemRarity.COMMON,
-        requiredLevel: 1,
-        stackable: false,
-        maxStack: 1,
-        sellPrice: 10,
-        metadata: {
-            equipmentType: ItemEquipmentType.MAIN_HAND,
-            stats: [{ stat: StatKey.PHYSICAL_ATTACK, type: StatType.FLAT, value: 5 }],
-            rollConfig: {
-                pool: [
-                    { stat: StatKey.STRENGTH, type: StatType.FLAT, min: 1, max: 3, weight: 1 },
-                    {
-                        stat: StatKey.CRITICAL_CHANCE,
-                        type: StatType.FLAT,
-                        min: 0.01,
-                        max: 0.03,
-                        weight: 1,
-                    },
-                ],
-                linesByRarity: {
-                    [ItemRarity.COMMON]: 0,
-                    [ItemRarity.RARE]: 1,
-                    [ItemRarity.EPIC]: 2,
-                    [ItemRarity.LEGENDARY]: 3,
-                },
-            },
-        },
-    },
+    ...STARTER_EQUIPMENT_ITEMS,
+    ...BIOME_EQUIPMENT_ITEMS,
     {
         code: "hp_potion_small",
         name: "Small HP Potion",
@@ -94,6 +66,11 @@ export const ItemSeed = async () => {
             matchValue: item.code,
             updateData: item,
         });
+    }
+    // Trang bị cũ (stats cố định trong metadata) — schema mới không còn đọc được.
+    const legacySword = await ItemRepo.findByCode({ code: "wooden_sword" });
+    if (legacySword?.enabled) {
+        await ItemRepo.updateById({ id: legacySword.id, data: { enabled: false } });
     }
     console.info("✅ [ItemSeed] Done");
 };

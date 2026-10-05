@@ -59,7 +59,7 @@ export const EquippedItemSchema = z.object({
     itemId: z.uuid(),
     source: z.enum(ItemSource),
     isLocked: z.boolean().default(false),
-    metadata: ItemEquipmentInstanceMetadataSchema.default({}),
+    metadata: ItemEquipmentInstanceMetadataSchema,
 });
 
 export type EquippedItem = z.infer<typeof EquippedItemSchema>;
