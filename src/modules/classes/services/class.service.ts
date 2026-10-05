@@ -1,5 +1,6 @@
 import { cacheService } from "@/core/cache/cache.service.js";
 import type { CharacterClass } from "@/modules/classes/entities/class.entity.js";
+import { STARTER_CLASS_CODES } from "@/modules/classes/constants/class.constant.js";
 import { ClassRepo } from "@/modules/classes/repositories/class.repository.js";
 import { buildClassLineages } from "@/modules/classes/utils/class-tree.util.js";
 
@@ -29,6 +30,13 @@ export class ClassService {
 
     getByCode(code: string): CharacterClass | undefined {
         return this.classesByCode.get(code);
+    }
+
+    /** Class khởi đầu (tier 1) cho màn tạo nhân vật, theo thứ tự STARTER_CLASS_CODES. */
+    listStarter(): CharacterClass[] {
+        return STARTER_CLASS_CODES.map((code) => this.classesByCode.get(code)).filter(
+            (characterClass): characterClass is CharacterClass => characterClass !== undefined
+        );
     }
 
     getByIdOrFail(id: string): CharacterClass {

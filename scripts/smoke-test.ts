@@ -1,5 +1,5 @@
 /**
- * Smoke test end-to-end: đăng ký (tự tạo player) → join room `world` → di chuyển → lưu vị trí.
+ * Smoke test end-to-end: đăng ký → tạo nhân vật → join room `world` → di chuyển → lưu vị trí.
  * Chạy khi server đang bật: `yarn smoke` (mặc định http://localhost:2567, đổi bằng env SERVER_URL).
  */
 import { Client } from "@colyseus/sdk";
@@ -30,13 +30,27 @@ await api("GET", "/master-data/client-version?platform=android&version=0.0.1");
 await api("GET", "/game-servers");
 await api("GET", "/maps");
 
-const auth = await api("POST", "/auth/register", { email, password: "123456", ...client });
-await api("GET", "/auth/me", undefined, auth.token);
+const registered = await api("POST", "/auth/register", { email, password: "123456", ...client });
+await api("GET", "/auth/me", undefined, registered.token);
+if (registered.player !== null || registered.playerToken !== null) {
+    throw new Error("new account must not have a player before POST /players");
+}
+const starterClasses = await api<{ code: string }[]>("GET", "/classes/starter");
+const auth = await api(
+    "POST",
+    "/players",
+    { name: `Smoke${Date.now() % 100000}`, classCode: starterClasses[0].code },
+    registered.token
+);
+if (!Object.values(auth.player.equipments).every(Boolean)) {
+    throw new Error("new player must wear the full starter equipment");
+}
 
 // Login khách: cùng IP → cùng tài khoản.
 const guest = await api("POST", "/auth/guest/login", client);
 const guestAgain = await api("POST", "/auth/guest/login", client);
-if (guest.userId !== guestAgain.userId) throw new Error("guest login must map the same IP to the same user");
+if (guest.userId !== guestAgain.userId)
+    throw new Error("guest login must map the same IP to the same user");
 await api("PUT", "/players/me/name", { name: `Smoke${Date.now() % 100000}` }, auth.playerToken);
 
 const sdk = new Client(SERVER_URL);

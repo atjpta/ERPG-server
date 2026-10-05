@@ -234,8 +234,8 @@ export class AuthService {
     }
 
     /**
-     * Tạo session + token cho 1 lần login, kèm player token (hiện tại 1 user = 1 player, tự tạo ở
-     * lần đầu). Nếu bật `AUTH_SESSION_CONFIG.singleSessionPerUser` thì revoke mọi session cũ trước
+     * Tạo session + token cho 1 lần login, kèm player token nếu đã có nhân vật (hiện tại 1 user = 1
+     * player). Chưa có → `player`/`playerToken` = null, client gọi `POST /players` để tạo. Nếu bật `AUTH_SESSION_CONFIG.singleSessionPerUser` thì revoke mọi session cũ trước
      * (chặn đăng nhập nhiều máy cùng lúc).
      */
     private async issueSession(user: User, client: ClientInfo) {
@@ -259,7 +259,7 @@ export class AuthService {
                 },
                 dbOrTx: tx,
             });
-            const player = await playerService.ensureDefault(user.id, tx);
+            const player = await playerService.findByUserId(user.id, tx);
             return { session, player };
         });
 
@@ -274,11 +274,13 @@ export class AuthService {
         }
 
         const token = jwt.sign(payload, env.JWT_SECRET, { expiresIn: USER_TOKEN_EXPIRES_IN });
-        const playerToken = await playerAuthService.issueToken({
-            userId: user.id,
-            sessionId: session.id,
-            playerId: player.id,
-        });
+        const playerToken = player
+            ? await playerAuthService.issueToken({
+                  userId: user.id,
+                  sessionId: session.id,
+                  playerId: player.id,
+              })
+            : null;
         return { token, playerToken, userId: user.id, player };
     }
 

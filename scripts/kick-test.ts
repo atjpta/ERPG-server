@@ -25,9 +25,22 @@ async function api<T = any>(method: string, path: string, body?: unknown, token?
     return json.data;
 }
 
+/** Đăng ký + tạo nhân vật → `{ token, playerToken, player, ... }`. */
 async function register() {
-    const email = `kick_${Date.now()}_${Math.random().toString(36).slice(2, 6)}@erpg.local`;
-    return api("POST", "/auth/register", { email, password: "123456", ...CLIENT });
+    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const email = `kick_${suffix}@erpg.local`;
+    const registered = await api("POST", "/auth/register", {
+        email,
+        password: "123456",
+        ...CLIENT,
+    });
+    const created = await api(
+        "POST",
+        "/players",
+        { name: `Kick${suffix.slice(-8)}`, classCode: "swordman" },
+        registered.token
+    );
+    return { ...registered, ...created };
 }
 
 /** `forceNewRoom` = `create` thay vì `joinOrCreate` → chắc chắn vào room (kênh) khác. */

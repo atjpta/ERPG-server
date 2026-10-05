@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { DateTime } from "luxon";
 import type { Queryable } from "@/configs/postgres.config.js";
 import { ResponseCode } from "@/core/enums/response-code.enum.js";
@@ -10,9 +9,9 @@ import { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { gameServerService } from "@/modules/auth/user/services/game-server.service.js";
 import { classService } from "@/modules/classes/services/class.service.js";
-import { PLAYER_DEFAULT_CLASS_CODE } from "@/modules/player/constants/player.constant.js";
+import { STARTER_CLASS_CODES } from "@/modules/classes/constants/class.constant.js";
+import { equipmentFactoryService } from "@/modules/equipment/services/equipment-factory.service.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
-import { createEquipments } from "@/modules/player/schemas/inventory.schema.js";
 import { createAttributes } from "@/modules/player/schemas/stat.schema.js";
 import {
     PlayerStatService,
@@ -34,34 +33,60 @@ export class PlayerService extends BaseService<typeof Players> {
         super(PlayerIdentityRepo);
     }
 
-    /** Create the auth record and initial gameplay state in one transaction. */
-    async ensureDefault(userId: string, dbOrTx?: Queryable): Promise<PlayerWithState> {
+    /** Player đầu tiên của user (hiện tại 1 user = 1 player); chưa tạo nhân vật → `null`. */
+    async findByUserId(userId: string, dbOrTx?: Queryable): Promise<PlayerWithState | null> {
+        const [player] = await PlayerIdentityRepo.findByUserId({ userId, dbOrTx });
+        return player ? this.findWithStateById(player.id, dbOrTx) : null;
+    }
+
+    /**
+     * Tạo nhân vật: chọn tên + class khởi đầu (tier 1), mặc sẵn bộ đồ tân thủ của class đó. Mỗi user
+     * hiện chỉ có 1 nhân vật.
+     */
+    async createCharacter(params: {
+        userId: string;
+        name: string;
+        classCode: string;
+    }): Promise<PlayerWithState> {
+        const { userId, name, classCode } = params;
+        const characterClass = classService.getByCode(classCode);
+        if (
+            !characterClass ||
+            characterClass.tier !== 1 ||
+            !(STARTER_CLASS_CODES as readonly string[]).includes(classCode)
+        ) {
+            serviceError("Class is not available", 400, ResponseCode.CLASS_NOT_AVAILABLE);
+        }
         return withTransaction(async (tx) => {
             const [existing] = await PlayerIdentityRepo.findByUserId({ userId, dbOrTx: tx });
-            if (existing) return this.findWithStateById(existing.id, tx);
-
+            if (existing) {
+                serviceError("Player already exists", 409, ResponseCode.PLAYER_ALREADY_EXISTS);
+            }
             const server = await gameServerService.getDefaultOnlineOrFail(tx);
+            const duplicated = await PlayerIdentityRepo.findByServerAndName({
+                serverId: server.id,
+                name,
+                dbOrTx: tx,
+            });
+            if (duplicated) {
+                serviceError("Player name is existed", 409, ResponseCode.PLAYER_NAME_EXISTS);
+            }
             const config = await masterDataService.getValue(MasterDataKey.PLAYER_CONFIG, tx);
             const startMap = await mapService.getActiveByCodeOrFail(config.startMapCode, tx);
-            const defaultClass = classService.getByCode(PLAYER_DEFAULT_CLASS_CODE);
-            if (!defaultClass) throw new Error(`Class "${PLAYER_DEFAULT_CLASS_CODE}" not found`);
+            const equipments = equipmentFactoryService.createStarterEquipments(classCode);
             const { stats } = playerStatService.compute({
-                classId: defaultClass.id,
+                classId: characterClass.id,
                 allocatedAttributes: createAttributes(),
-                equipments: createEquipments(),
+                equipments,
             });
             const player = await PlayerIdentityRepo.create({
-                data: {
-                    userId,
-                    serverId: server.id,
-                    name: `Hero_${randomBytes(3).toString("hex")}`,
-                },
+                data: { userId, serverId: server.id, name },
                 dbOrTx: tx,
             });
             const state = await PlayerStateRepo.create(
                 {
                     playerId: player.id,
-                    classId: defaultClass.id,
+                    classId: characterClass.id,
                     level: 1,
                     exp: 0,
                     hp: PlayerStatService.whole(stats, StatKey.MAX_HP),
@@ -72,12 +97,13 @@ export class PlayerService extends BaseService<typeof Players> {
                     direction: Direction.DOWN,
                     hitbox: { width: 0.4, height: 0.6, offsetX: 0, offsetY: 0.35 },
                     collider: { width: 0.3, height: 0.1, offsetX: 0, offsetY: 0.1 },
-                    skills: defaultClass.skills,
+                    skills: characterClass.skills,
+                    equipments,
                 },
                 tx
             );
             return this.combine(player, state);
-        }, dbOrTx);
+        });
     }
 
     async rename(playerId: string, name: string) {
