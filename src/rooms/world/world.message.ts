@@ -68,6 +68,8 @@ export interface EquipmentInstanceMessage {
     enhanceLevel: number;
     refineLevel: number;
     mainStats: StatLineMessage[];
+    /** `mainStats` sau khi nhân hệ số cường hoá/tinh hoá — giá trị thật đang cộng cho player (message `inventory`). */
+    finalMainStats?: StatLineMessage[];
     subStats: StatLineMessage[];
     rarityStats: StatLineMessage[];
 }
@@ -78,6 +80,7 @@ export interface InventoryEntryMessage {
     itemId: string;
     /** Code của item — client tra tên, mô tả, icon theo code. */
     code: string;
+    type: ItemType;
     /** Rarity gốc của item; trang bị lấy rarity của món trong `metadata`. */
     rarity: ItemRarity;
     slotIndex: number;
@@ -98,6 +101,7 @@ export interface EquippedItemMessage {
     id: string;
     itemId: string;
     code: string;
+    type: ItemType;
     rarity: ItemRarity;
     source: ItemSource;
     isLocked: boolean;

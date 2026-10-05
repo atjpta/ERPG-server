@@ -1,7 +1,8 @@
-import { big } from "@/core/utils/big-number.util.js";
+import { big, bigToNumber } from "@/core/utils/big-number.util.js";
 import { classService } from "@/modules/classes/services/class.service.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
 import type { Rng } from "@/modules/equipment/utils/equipment-roll.util.js";
+import { mainStatMultiplier } from "@/modules/equipment/utils/equipment-stat.util.js";
 import {
     applyEnhance,
     applyRefine,
@@ -48,6 +49,7 @@ import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.j
 import {
     EquipmentUpgradeAction,
     WorldMessage,
+    type EquipmentInstanceMessage,
     type EquippedItemMessage,
     type EquipmentsMessage,
     type InventoryEntryMessage,
@@ -60,6 +62,21 @@ import {
 /** Lỗi nghiệp vụ trả về client (chuỗi) hoặc kết quả. */
 export type InventoryResult<T = undefined> = { ok: true; value: T } | { ok: false; error: string };
 
+/** Metadata trang bị → message, kèm main stats đã nhân hệ số cường hoá/tinh hoá. */
+const toInstanceMessage = (metadata: ItemEquipmentInstanceMetadata): EquipmentInstanceMessage => {
+    const multiplier = mainStatMultiplier(metadata, {
+        enhance: equipmentConfigService.enhance.mainStatGrowth,
+        refine: equipmentConfigService.refine.mainStatGrowth,
+    });
+    return {
+        ...metadata,
+        finalMainStats: metadata.mainStats.map((line) => ({
+            ...line,
+            value: bigToNumber(big(line.value).times(multiplier)),
+        })),
+    };
+};
+
 /** Ô túi → message; metadata chỉ gửi với trang bị (item khác để trống). */
 const toEntryMessage = (entry: InventoryItem): InventoryEntryMessage => {
     const item = itemService.getById(entry.itemId);
@@ -68,12 +85,15 @@ const toEntryMessage = (entry: InventoryItem): InventoryEntryMessage => {
         id: entry.id,
         itemId: entry.itemId,
         code: item?.code ?? "",
+        type: item?.type ?? ItemType.MATERIAL,
         rarity: item?.rarity ?? ItemRarity.COMMON,
         slotIndex: entry.slotIndex,
         quantity: entry.quantity,
         source: entry.source,
         isLocked: entry.isLocked,
-        ...(isEquipment ? { metadata: entry.metadata as ItemEquipmentInstanceMetadata } : {}),
+        ...(isEquipment
+            ? { metadata: toInstanceMessage(entry.metadata as ItemEquipmentInstanceMetadata) }
+            : {}),
     };
 };
 
@@ -82,7 +102,9 @@ const toEquippedMessage = (entry: EquippedItem): EquippedItemMessage => {
     return {
         ...entry,
         code: item?.code ?? "",
+        type: item?.type ?? ItemType.EQUIPMENT,
         rarity: item?.rarity ?? ItemRarity.COMMON,
+        metadata: toInstanceMessage(entry.metadata),
     };
 };
 
