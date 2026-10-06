@@ -28,6 +28,8 @@ export enum WorldClientMessage {
     REFINE_EQUIPMENT = "refineEquipment",
     /** `{ instanceIds }` — phân rã trang bị trong túi ra tinh linh + bụi. */
     DISASSEMBLE_ITEMS = "disassembleItems",
+    /** Giống `disassembleItems` nhưng chỉ tính thử — trả `disassemblePreview`, không đổi gì trên player. */
+    PREVIEW_DISASSEMBLE = "previewDisassemble",
 }
 
 /** Message server → client của room world (ngoài state). */
@@ -42,6 +44,8 @@ export enum WorldMessage {
     INVENTORY = "inventory",
     /** Kết quả cường hoá / tinh hoá / phân rã (thành công hay thất bại theo tỉ lệ). */
     EQUIPMENT_UPGRADE = "equipmentUpgrade",
+    /** Trả lời `previewDisassemble`: nguyên liệu sẽ nhận nếu phân rã (hoặc lỗi nếu không phân rã được). */
+    DISASSEMBLE_PREVIEW = "disassemblePreview",
     /** Túi còn ≤ `inventoryNearlyFullThreshold` ô trống sau khi nhận item. */
     INVENTORY_NEARLY_FULL = "inventoryNearlyFull",
     /** Túi đầy — các item nhận được nhưng không còn chỗ (bị mất). */
@@ -228,6 +232,14 @@ export interface EquipmentUpgradeMessage {
     instance?: EquipmentInstanceMessage;
     /** Nguyên liệu nhận được khi phân rã. */
     materials?: MaterialAmountMessage[];
+}
+
+export interface DisassemblePreviewMessage {
+    ok: boolean;
+    error?: string;
+    instanceIds: string[];
+    /** Nguyên liệu sẽ nhận (rỗng khi lỗi). */
+    materials: MaterialAmountMessage[];
 }
 
 export interface InventoryNearlyFullMessage {

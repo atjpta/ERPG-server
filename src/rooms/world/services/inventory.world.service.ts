@@ -49,6 +49,7 @@ import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.j
 import {
     EquipmentUpgradeAction,
     WorldMessage,
+    type DisassemblePreviewMessage,
     type EquipmentInstanceMessage,
     type EquippedItemMessage,
     type EquipmentsMessage,
@@ -57,6 +58,7 @@ import {
     type InventoryFullMessage,
     type InventoryMessage,
     type InventoryNearlyFullMessage,
+    type MaterialAmountMessage,
 } from "@/rooms/world/world.message.js";
 
 /** Lỗi nghiệp vụ trả về client (chuỗi) hoặc kết quả. */
@@ -351,6 +353,45 @@ export class InventoryWorldService {
         player: PlayerWorldState,
         instanceIds: string[]
     ): InventoryResult<EquipmentUpgradeMessage> {
+        const result = this.simulateDisassemble(player, instanceIds);
+        if ("error" in result) return result;
+        const { ids, materials, received } = result.value;
+
+        const bag = player.inventories[ItemType.EQUIPMENT];
+        for (const id of ids) takeInstance(bag, id);
+        player.inventories[ItemType.MATERIAL] = materials;
+        return done({
+            action: EquipmentUpgradeAction.DISASSEMBLE,
+            success: true,
+            instanceIds: ids,
+            materials: received,
+        });
+    }
+
+    /** Gửi `disassemblePreview`: nguyên liệu sẽ nhận nếu phân rã, không đổi gì trên player. */
+    sendDisassemblePreview(
+        client: PlayerClient,
+        player: PlayerWorldState,
+        instanceIds: string[],
+        error?: string
+    ) {
+        const result = error ? fail(error) : this.simulateDisassemble(player, instanceIds);
+        const message: DisassemblePreviewMessage =
+            "error" in result
+                ? { ok: false, error: result.error, instanceIds, materials: [] }
+                : { ok: true, instanceIds: result.value.ids, materials: result.value.received };
+        client.send(WorldMessage.DISASSEMBLE_PREVIEW, message);
+    }
+
+    /** Tính phân rã trên bản sao túi nguyên liệu — dùng chung cho phân rã thật và xem trước. */
+    private simulateDisassemble(
+        player: PlayerWorldState,
+        instanceIds: string[]
+    ): InventoryResult<{
+        ids: string[];
+        materials: InventoryItem[];
+        received: MaterialAmountMessage[];
+    }> {
         const ids = [...new Set(instanceIds)];
         const bag = player.inventories[ItemType.EQUIPMENT];
         const yields: MaterialCost[] = [];
@@ -382,15 +423,7 @@ export class InventoryWorldService {
             current.quantity += quantity;
             received.set(code, current);
         }
-
-        for (const id of ids) takeInstance(bag, id);
-        player.inventories[ItemType.MATERIAL] = materials;
-        return done({
-            action: EquipmentUpgradeAction.DISASSEMBLE,
-            success: true,
-            instanceIds: ids,
-            materials: [...received.values()],
-        });
+        return done({ ids, materials, received: [...received.values()] });
     }
 
     // ---- Nội bộ ---------------------------------------------------------------------------------

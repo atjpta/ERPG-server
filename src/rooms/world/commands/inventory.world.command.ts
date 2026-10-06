@@ -147,6 +147,21 @@ export class RefineEquipmentWorldCommand extends UpgradeWorldCommand<
     }
 }
 
+/** Tính thử phân rã (cho client hiện bảng xác nhận nguyên liệu nhận được) — không đổi state. */
+export class PreviewDisassembleWorldCommand extends Command<WorldRoom, InventoryCommandPayload> {
+    execute({ client, payload }: InventoryCommandPayload) {
+        const player = this.room.state.players.get(client.sessionId);
+        if (!player) return;
+
+        const parsed = DisassembleItemsSchema.safeParse(payload);
+        if (!parsed.success) {
+            inventoryWorldService.sendDisassemblePreview(client, player, [], "Invalid payload");
+            return;
+        }
+        inventoryWorldService.sendDisassemblePreview(client, player, parsed.data.instanceIds);
+    }
+}
+
 export class DisassembleItemsWorldCommand extends UpgradeWorldCommand<
     typeof DisassembleItemsSchema
 > {
