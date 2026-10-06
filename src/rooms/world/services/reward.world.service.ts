@@ -10,6 +10,7 @@ import { WorldMessage, type RewardMessage } from "@/rooms/world/world.message.js
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { attributeWorldService } from "@/rooms/world/services/attribute.world.service.js";
 import { inventoryWorldService } from "@/rooms/world/services/inventory.world.service.js";
+import { itemService } from "@/modules/items/services/item.service.js";
 
 /**
  * Cộng phần thưởng (tiền, item, exp → lên level) vào player đang online. Chỉ đổi state trong room;
@@ -34,7 +35,14 @@ export class RewardWorldService {
         const message: RewardMessage = {
             exp: reward.exp,
             currency: reward.currency,
-            items: reward.items,
+            items: reward.items.map((drop) => {
+                const item = itemService.getById(drop.itemId);
+                return {
+                    ...drop,
+                    code: item?.code,
+                    rarity: drop.metadata?.rarity ?? item?.rarity,
+                };
+            }),
             level: progress.level,
             levelsGained: progress.levelsGained,
         };

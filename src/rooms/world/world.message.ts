@@ -145,6 +145,9 @@ export interface CurrencyRewardMessage {
 
 export interface ItemRewardMessage {
     itemId: string;
+    /** Catalog display data so newly dropped items can be shown before the inventory update. */
+    code?: string;
+    rarity?: ItemRarity;
     quantity: number;
     /** Trang bị: chỉ số đã roll (quantity = 1). */
     metadata?: EquipmentInstanceMessage;
