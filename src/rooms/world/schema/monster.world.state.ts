@@ -6,6 +6,7 @@ import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import type { Stats } from "@/modules/player/schemas/stat.schema.js";
 import {
     computeMonsterStats,
+    combineSize,
     monsterScales,
     type MonsterVariant,
 } from "@/modules/monsters/utils/monster-stat.util.js";
@@ -17,6 +18,7 @@ import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schem
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { ArraySchema, Schema, type } from "@colyseus/schema";
 import { v7 as uuidv7 } from "uuid";
+import { scaleCollisionBounds } from "@/core/utils/collision-bounds.util.js";
 import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 import {
     OwnedSkillState,
@@ -32,6 +34,8 @@ export class MonsterWorldState extends Schema {
     @type("string") monsterType: MonsterType = MonsterType.NORMAL;
     /** Độ hiếm — client tô màu tên theo rarity. */
     @type("string") rarity: ItemRarity = ItemRarity.COMMON;
+    /** Kích thước (`size` của `monster_scale_config`) — client phóng sprite; hitbox/collider/vùng đánh đã nhân sẵn. */
+    @type("float32") scale = 1;
     @type("float32") x: number;
     @type("float32") y: number;
     @type("float32") spawnX: number;
@@ -76,12 +80,13 @@ export class MonsterWorldState extends Schema {
         this.y = y;
         this.spawnX = x;
         this.spawnY = y;
-        // Stat cuối = (cố định + tăng theo level) × hệ số loại × độ hiếm (cùng bộ StatKey với player).
-        this.stats = computeMonsterStats(
-            monster,
-            monster.level,
-            monsterScales(variant, masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG))
+        const scales = monsterScales(
+            variant,
+            masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG)
         );
+        this.scale = combineSize(scales);
+        // Stat cuối = (cố định + tăng theo level) × hệ số loại × độ hiếm (cùng bộ StatKey với player).
+        this.stats = computeMonsterStats(monster, monster.level, scales);
         this.maxHp = Math.floor(this.stats[StatKey.MAX_HP] ?? 0);
         this.hp = this.maxHp;
         this.attack = Math.floor(this.stats[StatKey.PHYSICAL_ATTACK] ?? 0);
@@ -89,8 +94,8 @@ export class MonsterWorldState extends Schema {
         this.moveSpeed = this.stats[StatKey.MOVE_SPEED] ?? 0;
         this.attackCooldownMs = monster.attackCooldownMs;
         this.attackCooldownTicks = 0;
-        this.hitbox = new HitboxColliderState(monster.hitbox);
-        this.collider = new HitboxColliderState(monster.collider);
+        this.hitbox = new HitboxColliderState(scaleCollisionBounds(monster.hitbox, this.scale));
+        this.collider = new HitboxColliderState(scaleCollisionBounds(monster.collider, this.scale));
         this.skills.push(...toOwnedSkillStates(monster.skills));
         this.drops = monster.drops;
         this.biome = monster.biome;

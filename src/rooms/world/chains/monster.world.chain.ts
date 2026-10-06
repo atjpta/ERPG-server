@@ -15,6 +15,7 @@ import {
     PendingSkillHit,
     buildPendingSkillHits,
     getSkillDurationTicks,
+    scaleSkillHitEvent,
     tickPendingSkillHits,
 } from "@/rooms/world/utils/skill-attack.world.util.js";
 
@@ -245,7 +246,8 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
                 skill,
                 monster.attackSerial,
                 attackDirection,
-                room.tickRate
+                room.tickRate,
+                monster.scale
             ),
             cooldownTicks: millisecondsToTicks(
                 skill.cooldownMs > 0 ? skill.cooldownMs : monster.attackCooldownMs,
@@ -294,7 +296,7 @@ function isMonsterSkillHitboxInRange(
     const skill = getMonsterAttackSkill(monster);
     const hitEvents = skill?.skillHitEvents ?? [];
     if (!skill) return false;
-    if (hitEvents.length === 0) return distance <= skill.castRange;
+    if (hitEvents.length === 0) return distance <= skill.castRange * monster.scale;
 
     const direction =
         target.x < monster.x
@@ -309,7 +311,7 @@ function isMonsterSkillHitboxInRange(
             target.x,
             target.y,
             target.hitbox,
-            event
+            scaleSkillHitEvent(event, monster.scale)
         )
     );
 }

@@ -41,6 +41,10 @@ export const monsterScales = (
     config: MonsterScaleConfig
 ): MonsterScaleEntry[] => [config.byType[monster.type], config.byRarity[monster.rarity]];
 
+/** Kích thước của monster = tích `size` của các bảng (sprite, hitbox, collider, vùng đánh). */
+export const combineSize = (scales: readonly MonsterScaleEntry[]) =>
+    bigToNumber(scales.reduce((total, scale) => total.times(scale.size), big(1)));
+
 /** Nhân các hệ số thưởng (exp / gold / dropRate) của nhiều bảng với nhau. */
 export const combineRewardScale = (scales: readonly MonsterScaleEntry[]) =>
     scales.reduce(

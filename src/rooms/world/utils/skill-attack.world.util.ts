@@ -18,15 +18,33 @@ export interface PendingSkillHit {
 export const toHorizontalDirection = (direction: string): HorizontalDirection =>
     direction === Direction.LEFT ? Direction.LEFT : Direction.RIGHT;
 
-/** Lên lịch mọi hit event của skill; damage tính lúc hit nổ (`calculateDamage`). */
+/** Vùng đánh của hit event phóng theo kích thước bên đánh (góc ARC giữ nguyên). */
+export const scaleSkillHitEvent = (event: SkillHitEvent, scale: number): SkillHitEvent =>
+    scale === 1
+        ? event
+        : {
+              ...event,
+              range: event.range * scale,
+              offsetX: event.offsetX * scale,
+              offsetY: event.offsetY * scale,
+              width: event.width * scale,
+              height: event.height * scale,
+              radius: event.radius * scale,
+          };
+
+/**
+ * Lên lịch mọi hit event của skill (vùng đánh nhân `scale` — monster elite/boss to hơn); damage tính
+ * lúc hit nổ (`calculateDamage`).
+ */
 export function buildPendingSkillHits(
     skill: Skill,
     attackSerial: number,
     direction: HorizontalDirection,
-    tickRate: number
+    tickRate: number,
+    scale = 1
 ): PendingSkillHit[] {
     return skill.skillHitEvents.map((event, eventIndex) => ({
-        event,
+        event: scaleSkillHitEvent(event, scale),
         attackSerial,
         eventIndex,
         ticksUntilHit: skillEventTicks(event.triggerTicks, tickRate),

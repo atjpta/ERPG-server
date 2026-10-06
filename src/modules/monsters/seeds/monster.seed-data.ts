@@ -166,15 +166,19 @@ const attackDefense = (attack: number, defense: number) => ({
     [StatKey.MAGIC_DEFENSE]: defense,
 });
 
-/** Mặc định master data `monster_scale_config` — loại × độ hiếm nhân với nhau. */
+/**
+ * Mặc định master data `monster_scale_config` — loại × độ hiếm nhân với nhau. `size`: elite ×1.2,
+ * boss ×1.5 (to hơn cả sprite, hitbox, collider, vùng đánh).
+ */
 export const DEFAULT_MONSTER_SCALE_CONFIG: MonsterScaleConfig = {
     byType: {
-        [MonsterType.NORMAL]: { stats: {}, exp: 1, gold: 1, dropRate: 1 },
+        [MonsterType.NORMAL]: { stats: {}, exp: 1, gold: 1, dropRate: 1, size: 1 },
         [MonsterType.ELITE]: {
             stats: { [StatKey.MAX_HP]: 3, ...attackDefense(1.5, 1.3) },
             exp: 3,
             gold: 3,
             dropRate: 3,
+            size: 1.2,
         },
         [MonsterType.BOSS]: {
             stats: { [StatKey.MAX_HP]: 10, ...attackDefense(2, 1.6) },
@@ -182,33 +186,38 @@ export const DEFAULT_MONSTER_SCALE_CONFIG: MonsterScaleConfig = {
             gold: 10,
             // 8% × 12.5 = luôn rơi trang bị.
             dropRate: 12.5,
+            size: 1.5,
         },
     },
     byRarity: {
-        [ItemRarity.COMMON]: { stats: {}, exp: 1, gold: 1, dropRate: 1 },
+        [ItemRarity.COMMON]: { stats: {}, exp: 1, gold: 1, dropRate: 1, size: 1 },
         [ItemRarity.GOOD]: {
             stats: { [StatKey.MAX_HP]: 1.2, ...attackDefense(1.1, 1.1) },
             exp: 1.2,
             gold: 1.2,
             dropRate: 1.2,
+            size: 1,
         },
         [ItemRarity.RARE]: {
             stats: { [StatKey.MAX_HP]: 1.5, ...attackDefense(1.25, 1.2) },
             exp: 1.5,
             gold: 1.5,
             dropRate: 1.5,
+            size: 1,
         },
         [ItemRarity.EPIC]: {
             stats: { [StatKey.MAX_HP]: 2, ...attackDefense(1.5, 1.35) },
             exp: 2,
             gold: 2,
             dropRate: 2,
+            size: 1,
         },
         [ItemRarity.LEGENDARY]: {
             stats: { [StatKey.MAX_HP]: 3, ...attackDefense(2, 1.5) },
             exp: 3,
             gold: 3,
             dropRate: 3,
+            size: 1,
         },
     },
 };

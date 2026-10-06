@@ -13,6 +13,8 @@ export const MonsterScaleEntrySchema = z.object({
     gold: z.number().nonnegative(),
     /** Nhân tỉ lệ rơi item + trang bị (kết quả tối đa 1). */
     dropRate: z.number().nonnegative(),
+    /** Nhân kích thước: sprite (client), hitbox, collider và vùng đánh; thiếu = ×1. */
+    size: z.number().positive().default(1),
 });
 
 /**
