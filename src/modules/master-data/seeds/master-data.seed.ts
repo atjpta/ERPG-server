@@ -7,7 +7,10 @@ import {
     DEFAULT_EQUIPMENT_STAT_CONFIG,
 } from "@/modules/equipment/seeds/equipment-config.seed-data.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
-import { DEFAULT_MONSTER_SCALE_CONFIG } from "@/modules/monsters/seeds/monster.seed-data.js";
+import {
+    DEFAULT_MONSTER_LEVEL_CONFIG,
+    DEFAULT_MONSTER_SCALE_CONFIG,
+} from "@/modules/monsters/seeds/monster.seed-data.js";
 import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
@@ -68,6 +71,10 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
     [MasterDataKey.MONSTER_SCALE_CONFIG]: {
         value: DEFAULT_MONSTER_SCALE_CONFIG,
         note: "Hệ số chỉ số + thưởng của monster theo loại và độ hiếm (nhân với nhau)",
+    },
+    [MasterDataKey.MONSTER_LEVEL_CONFIG]: {
+        value: DEFAULT_MONSTER_LEVEL_CONFIG,
+        note: "Tỉ lệ tăng mỗi level theo từng chỉ số của monster (dùng chung mọi monster)",
     },
 };
 

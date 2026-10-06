@@ -8,6 +8,7 @@ import {
     EquipmentStatConfigSchema,
 } from "@/modules/equipment/schemas/equipment-config.schema.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
+import { MonsterLevelConfigSchema } from "@/modules/monsters/schemas/monster-level-config.schema.js";
 import { MonsterScaleConfigSchema } from "@/modules/monsters/schemas/monster-scale-config.schema.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 
@@ -51,6 +52,7 @@ export const MasterDataValueSchemas = {
     [MasterDataKey.EQUIPMENT_DISASSEMBLE_CONFIG]: EquipmentDisassembleConfigSchema,
     [MasterDataKey.EQUIPMENT_DROP_CONFIG]: EquipmentDropConfigSchema,
     [MasterDataKey.MONSTER_SCALE_CONFIG]: MonsterScaleConfigSchema,
+    [MasterDataKey.MONSTER_LEVEL_CONFIG]: MonsterLevelConfigSchema,
 } satisfies Record<MasterDataKey, z.ZodType>;
 
 export type AuthSessionConfigValue = z.infer<typeof AuthSessionConfigSchema>;

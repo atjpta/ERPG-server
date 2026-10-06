@@ -85,8 +85,13 @@ export class MonsterWorldState extends Schema {
             masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG)
         );
         this.scale = combineSize(scales);
-        // Stat cuối = (cố định + tăng theo level) × hệ số loại × độ hiếm (cùng bộ StatKey với player).
-        this.stats = computeMonsterStats(monster, monster.level, scales);
+        // Stat cuối = base × tăng theo level (`monster_level_config`) × hệ số loại × độ hiếm (cùng bộ StatKey với player).
+        this.stats = computeMonsterStats(
+            monster,
+            monster.level,
+            masterDataCacheService.get(MasterDataKey.MONSTER_LEVEL_CONFIG),
+            scales
+        );
         this.maxHp = Math.floor(this.stats[StatKey.MAX_HP] ?? 0);
         this.hp = this.maxHp;
         this.attack = Math.floor(this.stats[StatKey.PHYSICAL_ATTACK] ?? 0);

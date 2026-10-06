@@ -11,6 +11,7 @@ import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
+import type { MonsterLevelConfig } from "@/modules/monsters/schemas/monster-level-config.schema.js";
 import type { MonsterScaleConfig } from "@/modules/monsters/schemas/monster-scale-config.schema.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 
@@ -158,6 +159,22 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
 /** Code skill đánh thường của monster. */
 export const monsterAttackSkillCode = (monster: MonsterDefinition) =>
     monster.attackSkillCode ?? `${monster.code}_attack`;
+
+/**
+ * Mặc định master data `monster_level_config` — +100% chỉ số gốc mỗi level (stat = base × level),
+ * move_speed / critical_damage không tăng.
+ */
+export const DEFAULT_MONSTER_LEVEL_CONFIG: MonsterLevelConfig = {
+    statsPerLevel: {
+        [StatKey.MAX_HP]: 1,
+        [StatKey.PHYSICAL_ATTACK]: 1,
+        [StatKey.MAGIC_ATTACK]: 1,
+        [StatKey.PHYSICAL_DEFENSE]: 1,
+        [StatKey.MAGIC_DEFENSE]: 1,
+        [StatKey.ACCURACY]: 1,
+        [StatKey.EVASION]: 1,
+    },
+};
 
 const attackDefense = (attack: number, defense: number) => ({
     [StatKey.PHYSICAL_ATTACK]: attack,

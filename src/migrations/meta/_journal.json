@@ -134,6 +134,13 @@
             "when": 1791279341728,
             "tag": "0018_little_lenny_balinger",
             "breakpoints": true
+        },
+        {
+            "idx": 19,
+            "version": "7",
+            "when": 1791284086349,
+            "tag": "0019_right_ultragirl",
+            "breakpoints": true
         }
     ]
 }

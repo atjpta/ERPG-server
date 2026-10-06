@@ -2,6 +2,7 @@ import { big, bigToNumber } from "@/core/utils/big-number.util.js";
 import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import type { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import type { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
+import type { MonsterLevelConfig } from "@/modules/monsters/schemas/monster-level-config.schema.js";
 import type {
     MonsterScaleConfig,
     MonsterScaleEntry,
@@ -10,19 +11,23 @@ import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import type { Stats } from "@/modules/player/schemas/stat.schema.js";
 
 /**
- * Stat cuối của monster ở `level` = (cố định `stats` + `statsPerLevel` × level) × hệ số của từng
- * `scales` (loại, độ hiếm — thiếu stat = ×1).
+ * Stat cuối của monster ở `level` = base `stats` × (1 + tỉ lệ `statsPerLevel` × (level − 1)) × hệ số
+ * của từng `scales` (loại, độ hiếm — thiếu stat = ×1).
  */
 export function computeMonsterStats(
-    monster: Pick<Monster, "stats" | "statsPerLevel">,
+    monster: Pick<Monster, "stats">,
     level: number,
+    levelConfig: MonsterLevelConfig,
     scales: readonly Pick<MonsterScaleEntry, "stats">[] = []
 ): Stats {
     const stats: Stats = {};
+    const levelsGained = Math.max(0, level - 1);
     for (const key of Object.values(StatKey)) {
-        let value = big(monster.statsPerLevel[key] ?? 0)
-            .times(level)
-            .plus(monster.stats[key] ?? 0);
+        let value = big(monster.stats[key] ?? 0).times(
+            big(levelConfig.statsPerLevel[key] ?? 0)
+                .times(levelsGained)
+                .plus(1)
+        );
         for (const scale of scales) value = value.times(scale.stats[key] ?? 1);
         if (!value.isZero()) stats[key] = bigToNumber(value);
     }

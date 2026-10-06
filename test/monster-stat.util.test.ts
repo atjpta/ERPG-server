@@ -10,28 +10,45 @@ import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 
 describe("monster-stat.util — computeMonsterStats", () => {
-    it("stat cuối = cố định + tăng theo level × level", () => {
+    const levelConfig = {
+        statsPerLevel: { [StatKey.MAX_HP]: 1, [StatKey.PHYSICAL_ATTACK]: 0.5 },
+    };
+
+    it("stat cuối = base × (1 + tỉ lệ × (level − 1)), stat không có tỉ lệ giữ nguyên", () => {
         const stats = computeMonsterStats(
             {
-                stats: { [StatKey.MOVE_SPEED]: 2, [StatKey.PHYSICAL_ATTACK]: 3 },
-                statsPerLevel: { [StatKey.MAX_HP]: 50, [StatKey.PHYSICAL_ATTACK]: 5 },
+                stats: {
+                    [StatKey.MOVE_SPEED]: 2,
+                    [StatKey.MAX_HP]: 50,
+                    [StatKey.PHYSICAL_ATTACK]: 10,
+                },
             },
-            3
+            3,
+            levelConfig
         );
         assert.deepEqual(stats, {
             [StatKey.MOVE_SPEED]: 2,
-            [StatKey.PHYSICAL_ATTACK]: 18,
+            [StatKey.PHYSICAL_ATTACK]: 20,
             [StatKey.MAX_HP]: 150,
         });
+    });
+
+    it("level 1 = chỉ số gốc", () => {
+        const stats = computeMonsterStats({ stats: { [StatKey.MAX_HP]: 50 } }, 1, levelConfig);
+        assert.deepEqual(stats, { [StatKey.MAX_HP]: 50 });
     });
 
     it("nhân hệ số loại × độ hiếm, stat không cấu hình giữ nguyên", () => {
         const stats = computeMonsterStats(
             {
-                stats: { [StatKey.MOVE_SPEED]: 2 },
-                statsPerLevel: { [StatKey.MAX_HP]: 50, [StatKey.PHYSICAL_ATTACK]: 5 },
+                stats: {
+                    [StatKey.MOVE_SPEED]: 2,
+                    [StatKey.MAX_HP]: 50,
+                    [StatKey.PHYSICAL_ATTACK]: 5,
+                },
             },
             2,
+            { statsPerLevel: { [StatKey.MAX_HP]: 1, [StatKey.PHYSICAL_ATTACK]: 1 } },
             [
                 { stats: { [StatKey.MAX_HP]: 3, [StatKey.PHYSICAL_ATTACK]: 1.5 } },
                 { stats: { [StatKey.MAX_HP]: 1.2 } },

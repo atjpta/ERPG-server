@@ -28,11 +28,11 @@ export const Monsters = pgTable("monsters", {
     skills: jsonb("skills").$type<OwnedSkill[]>().notNull().default([]),
     /** Vùng của monster — quyết định bộ trang bị biome rơi ra (`drops.equipment`). */
     biome: biomeEnum("biome").notNull().default(Biome.ORC),
-    // Cùng bộ StatKey với player. Stat cuối = stats + statsPerLevel × level (computeMonsterStats).
-    /** Chỉ số cố định, không đổi theo level (vd. move_speed, critical_damage). */
+    /**
+     * Chỉ số gốc ở mốc level 1 (cùng bộ StatKey với player). Tăng theo level bằng tỉ lệ dùng chung ở
+     * master data `monster_level_config` (computeMonsterStats).
+     */
     stats: jsonb("stats").$type<Stats>().notNull().default({}),
-    /** Chỉ số tăng thêm mỗi level (vd. max_hp, physical_attack). */
-    statsPerLevel: jsonb("stats_per_level").$type<Stats>().notNull().default({}),
     drops: jsonb("drops")
         .$type<MonsterDrops>()
         .notNull()

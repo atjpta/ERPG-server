@@ -61,14 +61,12 @@ const materialDrops = (stoneTier: number): ItemDropSeed[] => [
     { itemCode: "hp_potion_small", min: 1, max: 1, rate: 0.1 },
 ];
 
-const BASE_STATS: Stats = {
-    [StatKey.MOVE_SPEED]: 2,
-    [StatKey.CRITICAL_DAMAGE]: 1.5,
-};
-
-/** Tạm: chỉ số / thưởng sinh theo level — cân bằng lại sau. */
+/** Tạm: chỉ số gốc (mốc level 1) / thưởng sinh theo level — cân bằng lại sau. */
 function toSeed(monster: MonsterDefinition) {
-    const statsPerLevel: Stats = {
+    // Tăng theo level bằng master data `monster_level_config`.
+    const stats: Stats = {
+        [StatKey.MOVE_SPEED]: 2,
+        [StatKey.CRITICAL_DAMAGE]: 1.5,
         [StatKey.MAX_HP]: 50,
         [StatKey.PHYSICAL_ATTACK]: 5,
         [StatKey.ACCURACY]: 1,
@@ -90,8 +88,7 @@ function toSeed(monster: MonsterDefinition) {
         attackCooldownMs: monster.attackClipMs + 1200,
         hitbox: monster.hitbox,
         collider: monster.collider,
-        stats: BASE_STATS,
-        statsPerLevel,
+        stats,
         skillCodes: [monsterAttackSkillCode(monster)],
         drops: {
             currency: [gold],
