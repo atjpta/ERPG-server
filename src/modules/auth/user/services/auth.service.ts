@@ -234,8 +234,9 @@ export class AuthService {
     }
 
     /**
-     * Tạo session + token cho 1 lần login, kèm player token nếu đã có nhân vật (hiện tại 1 user = 1
-     * player). Chưa có → `player`/`playerToken` = null, client gọi `POST /players` để tạo. Nếu bật `AUTH_SESSION_CONFIG.singleSessionPerUser` thì revoke mọi session cũ trước
+     * Tạo session + token cho 1 lần login, kèm player token của nhân vật đầu tiên nếu đã có
+     * (client có thể đổi qua `GET /players` + `POST /players/:id/select`). Chưa có → `player`/`playerToken`
+     * = null, client gọi `POST /players` để tạo. Nếu bật `AUTH_SESSION_CONFIG.singleSessionPerUser` thì revoke mọi session cũ trước
      * (chặn đăng nhập nhiều máy cùng lúc).
      */
     private async issueSession(user: User, client: ClientInfo) {

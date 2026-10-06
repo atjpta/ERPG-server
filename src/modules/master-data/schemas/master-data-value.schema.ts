@@ -24,6 +24,11 @@ export const PlayerConfigSchema = z.object({
     inventorySize: z.record(z.enum(ItemType), z.number().int().positive()),
     /** Còn ≤ số ô trống này sau khi nhận item → báo client túi sắp đầy. */
     inventoryNearlyFullThreshold: z.number().int().nonnegative(),
+    /** Số nhân vật tối đa mỗi tài khoản (mỗi server). */
+    maxCharacters: z.number().int().min(1).default(4),
+    /** Độ dài tên nhân vật (tính theo ký tự). */
+    nameMinLength: z.number().int().min(1).default(3),
+    nameMaxLength: z.number().int().min(1).max(32).default(16),
 });
 
 /**

@@ -23,25 +23,118 @@ import { PlayerStateRepo } from "@/modules/player/repositories/player-state.repo
 import { mapService } from "@/modules/maps/user/services/map.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataService } from "@/modules/master-data/user/services/master-data.service.js";
+import { PlayerConfigSchema } from "@/modules/master-data/schemas/master-data-value.schema.js";
+import { playerNameLength, randomPlayerName } from "@/modules/player/utils/player-name.util.js";
 
 export type PlayerWithState = PlayerIdentity &
     Omit<PlayerState, "playerId" | "updatedAt" | "revision">;
 export type PlayerSnapshot = PlayerWithState & { stateRevision: number };
+
+/** 1 ô nhân vật ở màn chọn nhân vật. */
+export interface CharacterSummary {
+    id: string;
+    name: string;
+    classCode: string;
+    /** Class tier 1 gốc của `classCode` (client dùng hình của class này khi class sau chưa có hình). */
+    baseClassCode: string;
+    level: number;
+    status: PlayerStatus;
+    lastPlayedAt: Date | null;
+}
+
+/** Giới hạn tạo nhân vật (master data `player_config`). */
+export interface CharacterLimits {
+    maxCharacters: number;
+    nameMinLength: number;
+    nameMaxLength: number;
+}
 
 export class PlayerService extends BaseService<typeof Players> {
     constructor() {
         super(PlayerIdentityRepo);
     }
 
-    /** Player đầu tiên của user (hiện tại 1 user = 1 player); chưa tạo nhân vật → `null`. */
+    /** Giới hạn số nhân vật + độ dài tên; field thiếu trong DB (seed cũ) lấy giá trị mặc định của schema. */
+    async getCharacterLimits(dbOrTx?: Queryable): Promise<CharacterLimits> {
+        const config = PlayerConfigSchema.parse(
+            await masterDataService.getValue(MasterDataKey.PLAYER_CONFIG, dbOrTx)
+        );
+        return {
+            maxCharacters: config.maxCharacters,
+            nameMinLength: config.nameMinLength,
+            nameMaxLength: config.nameMaxLength,
+        };
+    }
+
+    /** Nhân vật của user (theo thứ tự tạo) cho màn chọn nhân vật. */
+    async listCharacters(userId: string): Promise<CharacterSummary[]> {
+        const players = await PlayerIdentityRepo.findByUserId({ userId });
+        const states = await PlayerStateRepo.findByPlayerIds(players.map((player) => player.id));
+        const stateById = new Map(states.map((state) => [state.playerId, state]));
+        return players.map((player) => {
+            const state = stateById.get(player.id);
+            const classCode = state ? (classService.getById(state.classId)?.code ?? "") : "";
+            return {
+                id: player.id,
+                name: player.name,
+                classCode,
+                baseClassCode: classCode ? classService.getBaseClassCode(classCode) : "",
+                level: state?.level ?? 1,
+                status: player.status,
+                lastPlayedAt: player.lastPlayedAt,
+            };
+        });
+    }
+
+    /** Nhân vật `playerId` có phải của user không (chặn chọn nhân vật của người khác). */
+    async getOwnedOrFail(userId: string, playerId: string): Promise<PlayerIdentity> {
+        const player = await this.assertPlayableOrFail(playerId);
+        if (player.userId !== userId) {
+            serviceError("Player not found", 404, ResponseCode.PLAYER_NOT_FOUND);
+        }
+        return player;
+    }
+
+    /** Tên ngẫu nhiên chưa ai dùng trên server mặc định (thử vài lần, thêm số nếu trùng). */
+    async randomName(): Promise<string> {
+        const limits = await this.getCharacterLimits();
+        const server = await gameServerService.getDefaultOnlineOrFail();
+        for (let attempt = 0; attempt < 8; attempt++) {
+            const name = randomPlayerName({
+                minLength: limits.nameMinLength,
+                maxLength: limits.nameMaxLength,
+                attempt,
+            });
+            const taken = await PlayerIdentityRepo.findByServerAndName({
+                serverId: server.id,
+                name,
+            });
+            if (!taken) return name;
+        }
+        serviceError("Could not find a free name", 409, ResponseCode.PLAYER_NAME_EXISTS);
+    }
+
+    /** Độ dài tên theo master data; sai → lỗi PLAYER_NAME_INVALID. */
+    private assertNameLength(name: string, limits: CharacterLimits) {
+        const length = playerNameLength(name);
+        if (length < limits.nameMinLength || length > limits.nameMaxLength) {
+            serviceError(
+                `Name must be ${limits.nameMinLength}-${limits.nameMaxLength} characters`,
+                400,
+                ResponseCode.PLAYER_NAME_INVALID
+            );
+        }
+    }
+
+    /** Player đầu tiên của user; chưa tạo nhân vật → `null`. */
     async findByUserId(userId: string, dbOrTx?: Queryable): Promise<PlayerWithState | null> {
         const [player] = await PlayerIdentityRepo.findByUserId({ userId, dbOrTx });
         return player ? this.findWithStateById(player.id, dbOrTx) : null;
     }
 
     /**
-     * Tạo nhân vật: chọn tên + class khởi đầu (tier 1), mặc sẵn bộ đồ tân thủ của class đó. Mỗi user
-     * hiện chỉ có 1 nhân vật.
+     * Tạo nhân vật: chọn tên + class khởi đầu (tier 1), mặc sẵn bộ đồ tân thủ của class đó. Mỗi user có
+     * tối đa `player_config.maxCharacters` nhân vật.
      */
     async createCharacter(params: {
         userId: string;
@@ -58,9 +151,11 @@ export class PlayerService extends BaseService<typeof Players> {
             serviceError("Class is not available", 400, ResponseCode.CLASS_NOT_AVAILABLE);
         }
         return withTransaction(async (tx) => {
-            const [existing] = await PlayerIdentityRepo.findByUserId({ userId, dbOrTx: tx });
-            if (existing) {
-                serviceError("Player already exists", 409, ResponseCode.PLAYER_ALREADY_EXISTS);
+            const limits = await this.getCharacterLimits(tx);
+            this.assertNameLength(name, limits);
+            const existing = await PlayerIdentityRepo.findByUserId({ userId, dbOrTx: tx });
+            if (existing.length >= limits.maxCharacters) {
+                serviceError("Character limit reached", 409, ResponseCode.PLAYER_LIMIT_REACHED);
             }
             const server = await gameServerService.getDefaultOnlineOrFail(tx);
             const duplicated = await PlayerIdentityRepo.findByServerAndName({
@@ -107,6 +202,7 @@ export class PlayerService extends BaseService<typeof Players> {
     }
 
     async rename(playerId: string, name: string) {
+        this.assertNameLength(name, await this.getCharacterLimits());
         const player = await PlayerIdentityRepo.findByIdOrFail({
             id: playerId,
             message: "Player not found",

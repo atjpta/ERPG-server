@@ -108,8 +108,9 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
       `/admin/account-deletion-requests`. Xoá = xoá dữ liệu game + liên kết + session, ẩn danh `users`
       (`AccountDeletionService.purgeUserData` — **thêm bảng dữ liệu người chơi mới thì phải xoá ở đây**).
     - Rate limit: đăng ký/đăng nhập theo IP + số lần thử mật khẩu theo email (`constants/rate-limit.constant.ts`).
-    - Player: user 1:N player về schema, **hiện tại 1:1** — login tự tạo player ở server mặc định
-      (`DEFAULT_GAME_SERVER_CODE`) và trả luôn `playerToken`.
+    - Player: user 1:N player, tối đa `player_config.maxCharacters` (độ dài tên `nameMinLength` /
+      `nameMaxLength`). `GET /players` liệt kê + giới hạn, `GET /players/random-name`, `POST /players`
+      tạo, `POST /players/:id/select` lấy `playerToken`; login trả sẵn token của nhân vật đầu tiên.
     - 3 loại token: user (`authMiddleware`), player (`authPlayerMiddleware`, join room), admin (`adminAuthMiddleware`, secret riêng).
 - `master-data/` — config key-value, `value` validate bằng zod theo từng key (`MasterDataValueSchemas`);
   check phiên bản client (`GET /master-data/client-version`, login bị chặn 426 nếu dưới `minVersion`).

@@ -16,14 +16,14 @@ src/
 └── index.ts     # entrypoint, loadControllers() tự quét mọi *.controller.ts
 ```
 
-| Module         | Nội dung                                                                                                                                                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `auth/`        | `User`, `Admin`, `Player`, `GameServer`, session, đăng nhập Play Games Services v2 (Android) + Google idToken (PC), xoá tài khoản (chính sách Google Play), rate limit. User 1:N player (hiện tại 1:1, tự tạo lúc login) |
-| `master-data/` | Config key-value (client version, session, player), validate theo key                                                                                                                                                    |
-| `maps/`        | `GameMap` — metadata map, spawn, số người/kênh, monster sinh ra (`monsterSpawns`)                                                                                                                                        |
-| `classes/`     | Class nhân vật (`baseAttributes`, `baseStats`, cây `nextClassCodes`); 4 class khởi đầu chọn lúc `POST /players`                                                                                                          |
-| `items/`       | Catalog item: trang bị là template (biome + class + loại), material/consumable stack được                                                                                                                                |
-| `equipment/`   | Roll/tính chỉ số trang bị, set, cường hoá, tinh hoá, phân rã — mọi bảng số nằm ở master data `equipment_*_config`                                                                                                        |
+| Module         | Nội dung                                                                                                                                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth/`        | `User`, `Admin`, `Player`, `GameServer`, session, đăng nhập Play Games Services v2 (Android) + Google idToken (PC), xoá tài khoản (chính sách Google Play), rate limit. User 1:N player (tối đa `player_config.maxCharacters`, chọn ở `/players`) |
+| `master-data/` | Config key-value (client version, session, player), validate theo key                                                                                                                                                                             |
+| `maps/`        | `GameMap` — metadata map, spawn, số người/kênh, monster sinh ra (`monsterSpawns`)                                                                                                                                                                 |
+| `classes/`     | Class nhân vật (`baseAttributes`, `baseStats`, cây `nextClassCodes`); 4 class khởi đầu chọn lúc `POST /players`                                                                                                                                   |
+| `items/`       | Catalog item: trang bị là template (biome + class + loại), material/consumable stack được                                                                                                                                                         |
+| `equipment/`   | Roll/tính chỉ số trang bị, set, cường hoá, tinh hoá, phân rã — mọi bảng số nằm ở master data `equipment_*_config`                                                                                                                                 |
 
 Realtime: room `world` (`src/rooms/world/`) — 1 room = 1 kênh của 1 map. Dùng **Colyseus Netcode**
 (`defineInput` + `setFixedTimestep`, client predict/reconcile) — xem mục 7 của `src/core/README.md`.
