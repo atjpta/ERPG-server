@@ -19,6 +19,7 @@ import {
     LockItemWorldCommand,
     MoveItemWorldCommand,
     PreviewDisassembleWorldCommand,
+    PreviewUpgradeWorldCommand,
     RefineEquipmentWorldCommand,
     UnequipItemWorldCommand,
 } from "@/rooms/world/commands/inventory.world.command.js";
@@ -77,6 +78,9 @@ export class WorldRoom extends BasePlayerRoom<{
         },
         [WorldClientMessage.DISASSEMBLE_ITEMS]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new DisassembleItemsWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.PREVIEW_UPGRADE]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new PreviewUpgradeWorldCommand(), { client, payload });
         },
         [WorldClientMessage.PREVIEW_DISASSEMBLE]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new PreviewDisassembleWorldCommand(), {

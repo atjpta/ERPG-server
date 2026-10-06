@@ -13,10 +13,15 @@ import {
     EquipItemSchema,
     LockItemSchema,
     MoveItemSchema,
+    PreviewUpgradeSchema,
     UnequipItemSchema,
     UpgradeEquipmentSchema,
 } from "@/rooms/world/validators/inventory.world.validator.js";
-import { WorldMessage, type EquipmentUpgradeMessage } from "@/rooms/world/world.message.js";
+import {
+    EquipmentUpgradeAction,
+    WorldMessage,
+    type EquipmentUpgradeMessage,
+} from "@/rooms/world/world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 interface InventoryCommandPayload {
@@ -144,6 +149,35 @@ export class RefineEquipmentWorldCommand extends UpgradeWorldCommand<
         { instanceId }: z.infer<typeof UpgradeEquipmentSchema>
     ) {
         return inventoryWorldService.refine(player, instanceId);
+    }
+}
+
+/** Chi phí / tỉ lệ cường hoá hoặc tinh hoá (cho client hiện modal nâng cấp) — không đổi state. */
+export class PreviewUpgradeWorldCommand extends Command<WorldRoom, InventoryCommandPayload> {
+    execute({ client, payload }: InventoryCommandPayload) {
+        const player = this.room.state.players.get(client.sessionId);
+        if (!player) return;
+
+        const parsed = PreviewUpgradeSchema.safeParse(payload);
+        if (!parsed.success) {
+            const { action, instanceId } = (payload ?? {}) as Record<string, unknown>;
+            inventoryWorldService.sendUpgradePreview(
+                client,
+                player,
+                action === EquipmentUpgradeAction.REFINE
+                    ? EquipmentUpgradeAction.REFINE
+                    : EquipmentUpgradeAction.ENHANCE,
+                typeof instanceId === "string" ? instanceId : "",
+                "Invalid payload"
+            );
+            return;
+        }
+        inventoryWorldService.sendUpgradePreview(
+            client,
+            player,
+            parsed.data.action,
+            parsed.data.instanceId
+        );
     }
 }
 

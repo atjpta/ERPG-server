@@ -59,6 +59,8 @@ import {
     type InventoryMessage,
     type InventoryNearlyFullMessage,
     type MaterialAmountMessage,
+    type MaterialRequirementMessage,
+    type UpgradePreviewMessage,
 } from "@/rooms/world/world.message.js";
 
 /** Lỗi nghiệp vụ trả về client (chuỗi) hoặc kết quả. */
@@ -346,6 +348,70 @@ export class InventoryWorldService {
             instanceIds: [instanceId],
             instance: owned.entry.metadata as ItemEquipmentInstanceMetadata,
         });
+    }
+
+    /** Gửi `upgradePreview`: chi phí, tỉ lệ cường hoá / tinh hoá món này và player có đủ không. */
+    sendUpgradePreview(
+        client: PlayerClient,
+        player: PlayerWorldState,
+        action: EquipmentUpgradeAction.ENHANCE | EquipmentUpgradeAction.REFINE,
+        instanceId: string,
+        error?: string
+    ) {
+        const empty = {
+            rate: 0,
+            gold: 0,
+            materials: [] as MaterialRequirementMessage[],
+            affordable: false,
+        };
+        const ownedGold = player.wallet[CurrencyCode.GOLD]?.balance ?? 0;
+        const reply = (
+            preview: Omit<UpgradePreviewMessage, "action" | "instanceId" | "ownedGold">
+        ) => {
+            const message: UpgradePreviewMessage = { action, instanceId, ownedGold, ...preview };
+            client.send(WorldMessage.UPGRADE_PREVIEW, message);
+        };
+        if (error) return reply({ ok: false, error, ...empty });
+
+        const owned = this.findOwned(player, instanceId);
+        if (!owned) return reply({ ok: false, error: "Equipment not found", ...empty });
+
+        const bag = player.inventories[ItemType.MATERIAL];
+        const requirements = (cost: UpgradeCost): MaterialRequirementMessage[] =>
+            cost.materials.map(({ code, quantity }) => {
+                const item = itemService.getByCode(code);
+                return {
+                    itemId: item?.id ?? "",
+                    code,
+                    quantity,
+                    owned: item ? countItem(bag, item.id) : 0,
+                };
+            });
+        const priced = (cost: UpgradeCost) => {
+            const materials = requirements(cost);
+            return {
+                ok: true,
+                rate: cost.rate,
+                gold: cost.gold,
+                materials,
+                affordable:
+                    ownedGold >= cost.gold &&
+                    materials.every((material) => material.owned >= material.quantity),
+            };
+        };
+
+        if (action === EquipmentUpgradeAction.ENHANCE) {
+            const cost = enhanceCost(owned.metadata, owned.group, equipmentConfigService.enhance);
+            if ("reason" in cost) return reply({ ok: false, error: cost.reason, ...empty });
+            return reply({
+                ...priced(cost.value),
+                enhanceLevel: owned.metadata.enhanceLevel + 1,
+                downgradeOnFail: cost.value.step.downgradeOnFail,
+            });
+        }
+        const cost = refineCost(owned.metadata, equipmentConfigService.refine);
+        if ("reason" in cost) return reply({ ok: false, error: cost.reason, ...empty });
+        return reply({ ...priced(cost.value), rarity: cost.value.target });
     }
 
     /** Phân rã các trang bị trong túi (không khoá); nguyên liệu không đủ chỗ thì huỷ cả lượt. */

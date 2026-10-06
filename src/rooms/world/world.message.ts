@@ -30,6 +30,8 @@ export enum WorldClientMessage {
     DISASSEMBLE_ITEMS = "disassembleItems",
     /** Giống `disassembleItems` nhưng chỉ tính thử — trả `disassemblePreview`, không đổi gì trên player. */
     PREVIEW_DISASSEMBLE = "previewDisassemble",
+    /** `{ action: "enhance" | "refine", instanceId }` — chi phí / tỉ lệ cường hoá hoặc tinh hoá, trả `upgradePreview`. */
+    PREVIEW_UPGRADE = "previewUpgrade",
 }
 
 /** Message server → client của room world (ngoài state). */
@@ -48,6 +50,8 @@ export enum WorldMessage {
     EQUIPMENT_UPGRADE = "equipmentUpgrade",
     /** Trả lời `previewDisassemble`: nguyên liệu sẽ nhận nếu phân rã (hoặc lỗi nếu không phân rã được). */
     DISASSEMBLE_PREVIEW = "disassemblePreview",
+    /** Trả lời `previewUpgrade`: chi phí, tỉ lệ và player có đủ để cường hoá / tinh hoá không. */
+    UPGRADE_PREVIEW = "upgradePreview",
     /** Túi còn ≤ `inventoryNearlyFullThreshold` ô trống sau khi nhận item. */
     INVENTORY_NEARLY_FULL = "inventoryNearlyFull",
     /** Túi đầy — các item nhận được nhưng không còn chỗ (bị mất). */
@@ -242,6 +246,35 @@ export interface DisassemblePreviewMessage {
     instanceIds: string[];
     /** Nguyên liệu sẽ nhận (rỗng khi lỗi). */
     materials: MaterialAmountMessage[];
+}
+
+/** 1 nguyên liệu cần và số player đang có. */
+export interface MaterialRequirementMessage {
+    itemId: string;
+    code: string;
+    quantity: number;
+    owned: number;
+}
+
+export interface UpgradePreviewMessage {
+    /** `false` khi món không nâng được nữa (`error` là lý do) — chi phí khi đó để trống. */
+    ok: boolean;
+    error?: string;
+    action: EquipmentUpgradeAction;
+    instanceId: string;
+    /** Tỉ lệ thành công 0 → 1. */
+    rate: number;
+    gold: number;
+    ownedGold: number;
+    materials: MaterialRequirementMessage[];
+    /** Đủ vàng + nguyên liệu để làm ngay. */
+    affordable: boolean;
+    /** Cường hoá: cấp sau khi thành công. */
+    enhanceLevel?: number;
+    /** Cường hoá: thất bại thì tụt 1 cấp. */
+    downgradeOnFail?: boolean;
+    /** Tinh hoá: rarity sau khi thành công. */
+    rarity?: ItemRarity;
 }
 
 export interface InventoryNearlyFullMessage {
