@@ -1,8 +1,75 @@
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
-import { GameMaps, type NewGameMap } from "@/modules/maps/entities/game-map.entity.js";
+import {
+    GameMaps,
+    type MonsterSpawn,
+    type NewGameMap,
+} from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { GameMapRepo } from "@/modules/maps/repositories/game-map.repository.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
+
+/**
+ * Tạm: đủ mọi loại monster để thử, đặt quanh điểm spawn của player `(x, y)` (tile, y hướng xuống):
+ * orc phía tây bắc, skeleton phía đông, shapeshifter phía nam — boss xa nhất.
+ */
+const testMonsterSpawns = (x: number, y: number): MonsterSpawn[] =>
+    (
+        [
+            // ---- Orc
+            { monsterCode: "orc", count: 2, at: [-8, -6] },
+            { monsterCode: "armored_orc", count: 1, at: [-4, -9] },
+            {
+                monsterCode: "elite_orc",
+                count: 1,
+                type: MonsterType.ELITE,
+                rarity: ItemRarity.GOOD,
+                at: [-11, -10],
+            },
+            {
+                monsterCode: "orc_rider",
+                count: 1,
+                type: MonsterType.BOSS,
+                rarity: ItemRarity.EPIC,
+                at: [-14, -14],
+            },
+            // ---- Skeleton
+            { monsterCode: "skeleton", count: 1, at: [8, -4] },
+            { monsterCode: "skeleton_archer", count: 1, at: [11, -1] },
+            {
+                monsterCode: "armored_skeleton",
+                count: 1,
+                type: MonsterType.ELITE,
+                rarity: ItemRarity.RARE,
+                at: [12, 4],
+            },
+            { monsterCode: "greatsword_skeleton", count: 1, at: [8, 6] },
+            {
+                monsterCode: "necromancer",
+                count: 1,
+                type: MonsterType.BOSS,
+                rarity: ItemRarity.LEGENDARY,
+                at: [16, 0],
+            },
+            // ---- ShapeShifter
+            { monsterCode: "bat", count: 1, at: [-6, 8] },
+            { monsterCode: "slime", count: 1, at: [-2, 10] },
+            { monsterCode: "lancer", count: 1, at: [2, 10] },
+            {
+                monsterCode: "werebear",
+                count: 1,
+                type: MonsterType.ELITE,
+                rarity: ItemRarity.RARE,
+                at: [6, 12],
+            },
+            {
+                monsterCode: "werewolf",
+                count: 1,
+                type: MonsterType.BOSS,
+                rarity: ItemRarity.LEGENDARY,
+                at: [0, 16],
+            },
+        ] satisfies (Omit<MonsterSpawn, "spawnX" | "spawnY"> & { at: [number, number] })[]
+    ).map(({ at: [dx, dy], ...spawn }) => ({ ...spawn, spawnX: x + dx, spawnY: y + dy }));
 
 const MAPS: NewGameMap[] = [
     {
@@ -15,7 +82,7 @@ const MAPS: NewGameMap[] = [
         // tức (0, 0) bên Unity.
         spawnX: 32,
         spawnY: 32,
-        monsterSpawns: [{ monsterCode: "orc", count: 10 }],
+        monsterSpawns: testMonsterSpawns(32, 32),
     },
     {
         code: "field_01",
@@ -25,43 +92,7 @@ const MAPS: NewGameMap[] = [
         height: 96,
         spawnX: 64,
         spawnY: 48,
-        // Tạm: đủ mọi loại để thử (client chưa chọn prefab theo code).
-        monsterSpawns: [
-            { monsterCode: "orc", count: 2 },
-            { monsterCode: "armored_orc", count: 1 },
-            {
-                monsterCode: "elite_orc",
-                count: 1,
-                type: MonsterType.ELITE,
-                rarity: ItemRarity.GOOD,
-            },
-            { monsterCode: "orc_rider", count: 1, type: MonsterType.BOSS, rarity: ItemRarity.EPIC },
-            { monsterCode: "skeleton", count: 1 },
-            { monsterCode: "skeleton_archer", count: 1 },
-            {
-                monsterCode: "armored_skeleton",
-                count: 1,
-                type: MonsterType.ELITE,
-                rarity: ItemRarity.RARE,
-            },
-            { monsterCode: "greatsword_skeleton", count: 1 },
-            {
-                monsterCode: "necromancer",
-                count: 1,
-                type: MonsterType.BOSS,
-                rarity: ItemRarity.LEGENDARY,
-            },
-            { monsterCode: "bat", count: 1 },
-            { monsterCode: "slime", count: 1 },
-            { monsterCode: "lancer", count: 1 },
-            { monsterCode: "werebear", count: 1, type: MonsterType.ELITE, rarity: ItemRarity.RARE },
-            {
-                monsterCode: "werewolf",
-                count: 1,
-                type: MonsterType.BOSS,
-                rarity: ItemRarity.LEGENDARY,
-            },
-        ],
+        monsterSpawns: testMonsterSpawns(64, 48),
     },
 ];
 

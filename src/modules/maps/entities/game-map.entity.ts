@@ -33,6 +33,12 @@ export const GameMaps = pgTable("game_maps", {
 export interface MonsterSpawn {
     monsterCode: string;
     count: number;
+    /**
+     * Vị trí sinh (đơn vị tile, gốc trên-trái như `spawnX/spawnY` của map). `count` > 1 → xếp hàng ngang
+     * cách nhau `MONSTER_SPAWN_SPACING` ô. Bỏ trống → xếp chéo theo thứ tự (chỉ để thử).
+     */
+    spawnX?: number;
+    spawnY?: number;
     /** Loại monster của spawn này — mặc định NORMAL. */
     type?: MonsterType;
     /** Độ hiếm (màu tên phía client) — mặc định COMMON. */

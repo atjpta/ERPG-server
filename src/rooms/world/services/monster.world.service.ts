@@ -15,6 +15,8 @@ import { WorldChain } from "@/rooms/world/chains/world.chain.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 const MONSTER_RESPAWN_MS = 10_000;
+/** Khoảng cách (tile) giữa các con cùng 1 spawn có toạ độ. */
+const MONSTER_SPAWN_SPACING = 2;
 
 export class MonsterWorldService {
     private readonly respawningMonsters = new WeakSet<MonsterWorldState>();
@@ -26,7 +28,10 @@ export class MonsterWorldService {
         this.attackChain,
     ]);
 
-    /** Sinh monster theo `game_maps.monsterSpawns` (xếp chéo cách nhau 5 ô, như trước). */
+    /**
+     * Sinh monster theo `game_maps.monsterSpawns`: tại `spawnX/spawnY` của spawn (nhiều con thì xếp hàng
+     * ngang), thiếu toạ độ thì xếp chéo cách nhau 5 ô như trước.
+     */
     public async createMonster(map: GameMap) {
         const monsters: MonsterWorldState[] = [];
         for (const spawn of map.monsterSpawns) {
@@ -43,9 +48,12 @@ export class MonsterWorldService {
             };
             for (let i = 0; i < spawn.count; i++) {
                 const index = monsters.length;
-                monsters.push(
-                    new MonsterWorldState({ monster, variant, x: index * 5, y: index * 5 })
-                );
+                const { spawnX, spawnY } = spawn;
+                const position =
+                    spawnX !== undefined && spawnY !== undefined
+                        ? { x: spawnX + i * MONSTER_SPAWN_SPACING, y: spawnY }
+                        : { x: index * 5, y: index * 5 };
+                monsters.push(new MonsterWorldState({ monster, variant, ...position }));
             }
         }
         return monsters;
