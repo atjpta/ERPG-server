@@ -120,6 +120,13 @@
             "when": 1791194248814,
             "tag": "0016_lazy_master_chief",
             "breakpoints": true
+        },
+        {
+            "idx": 17,
+            "version": "7",
+            "when": 1791268785599,
+            "tag": "0017_remove_monster_name",
+            "breakpoints": true
         }
     ]
 }

@@ -1,4 +1,4 @@
-import { integer, jsonb, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgEnum, pgTable } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js";
@@ -15,7 +15,6 @@ export const biomeEnum = pgEnum("biome", Biome);
 /** Base combat and movement stats shared by every instance of a monster type. */
 export const Monsters = pgTable("monsters", {
     ...baseWithCodeColumns(),
-    name: text("name").notNull(),
     level: integer("level").notNull().default(1),
     attackCooldownMs: integer("attack_cooldown_ms").notNull(),
     hitbox: jsonb("hitbox")

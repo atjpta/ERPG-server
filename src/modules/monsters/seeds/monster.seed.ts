@@ -93,7 +93,6 @@ function toSeed(monster: MonsterDefinition) {
     };
     return {
         code: monster.code,
-        name: monster.name,
         level: monster.level,
         biome: monster.biome,
         type: monster.type,

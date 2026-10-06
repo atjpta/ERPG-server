@@ -64,7 +64,6 @@ init project mới thì làm theo đúng thứ tự này.
 | `utils/load-controllers.util.ts`       | Quét `*.controller.ts` trong `modules/` + `rooms/`, gom export tên kết thúc `Controller` (báo lỗi nếu trùng key endpoint)                         |
 | `utils/response.util.ts`               | `Response.ok/created/badRequest/...` + `RouterContainer` (bắt ZodError → 422, `serviceError` → đúng status)                                       |
 | `utils/service-error.ts`               | `serviceError(message, status, ResponseCode)` — throw trong service                                                                               |
-| `utils/version.util.ts`                | `compareVersion("1.2.3", "1.10.0")`                                                                                                               |
 | `utils/rate-limit.util.ts`             | `assertRateLimit(rule, identity)` — fixed window qua `cacheService.incr`, vượt → 429. `getClientIp()` chỉ tin header proxy khi `TRUST_PROXY=true` |
 | `utils/big-number.util.ts`             | `Big`/`big()` (bignumber.js, 20 chữ số thập phân), `clampBig`, `floorBig` — mọi phép tính stat/damage, tránh sai số float                         |
 | `middlewares/rate-limit.middleware.ts` | `createRateLimitMiddleware(rule)` — giới hạn theo IP, gắn vào `use: [...]` của endpoint                                                           |

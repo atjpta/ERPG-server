@@ -16,7 +16,6 @@ import { StatKey } from "@/modules/player/enums/stat.enum.js";
 
 export interface MonsterDefinition {
     code: string;
-    name: string;
     biome: Biome;
     level: number;
     type: MonsterType;
@@ -40,7 +39,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     // ---- Orc (lv 1–9)
     {
         code: "orc",
-        name: "Orc",
         biome: Biome.ORC,
         level: 1,
         type: MonsterType.NORMAL,
@@ -51,7 +49,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "armored_orc",
-        name: "Armored Orc",
         biome: Biome.ORC,
         level: 5,
         type: MonsterType.NORMAL,
@@ -61,7 +58,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "elite_orc",
-        name: "Elite Orc",
         biome: Biome.ORC,
         level: 7,
         type: MonsterType.ELITE,
@@ -71,7 +67,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "orc_rider",
-        name: "Orc Rider",
         biome: Biome.ORC,
         level: 9,
         type: MonsterType.BOSS,
@@ -82,7 +77,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     // ---- Skeleton (lv 10–19)
     {
         code: "skeleton",
-        name: "Skeleton",
         biome: Biome.SKELETON,
         level: 10,
         type: MonsterType.NORMAL,
@@ -92,7 +86,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "skeleton_archer",
-        name: "Skeleton Archer",
         biome: Biome.SKELETON,
         level: 12,
         type: MonsterType.NORMAL,
@@ -103,7 +96,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "armored_skeleton",
-        name: "Armored Skeleton",
         biome: Biome.SKELETON,
         level: 15,
         type: MonsterType.ELITE,
@@ -113,7 +105,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "greatsword_skeleton",
-        name: "Greatsword Skeleton",
         biome: Biome.SKELETON,
         level: 17,
         type: MonsterType.NORMAL,
@@ -123,7 +114,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "necromancer",
-        name: "Necromancer",
         biome: Biome.SKELETON,
         level: 19,
         type: MonsterType.BOSS,
@@ -135,7 +125,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     // ---- ShapeShifter (lv 20–30)
     {
         code: "bat",
-        name: "Bat",
         biome: Biome.SHAPESHIFTER,
         level: 20,
         type: MonsterType.NORMAL,
@@ -145,7 +134,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "slime",
-        name: "Slime",
         biome: Biome.SHAPESHIFTER,
         level: 22,
         type: MonsterType.NORMAL,
@@ -155,7 +143,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "lancer",
-        name: "Lancer",
         biome: Biome.SHAPESHIFTER,
         level: 24,
         type: MonsterType.NORMAL,
@@ -165,7 +152,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "werebear",
-        name: "Werebear",
         biome: Biome.SHAPESHIFTER,
         level: 27,
         type: MonsterType.ELITE,
@@ -175,7 +161,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
     },
     {
         code: "werewolf",
-        name: "Werewolf",
         biome: Biome.SHAPESHIFTER,
         level: 30,
         type: MonsterType.BOSS,
