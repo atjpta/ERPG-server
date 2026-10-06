@@ -88,7 +88,7 @@ const SKILLS: NewSkill[] = [
         ],
     },
     {
-        code: "swordman_slash_1",
+        code: "swordsman_slash_1",
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
         castRange: 1.4,
@@ -119,7 +119,7 @@ const SKILLS: NewSkill[] = [
         ],
     },
     {
-        code: "swordman_slash_2",
+        code: "swordsman_slash_2",
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
         castRange: 1.5,
@@ -170,7 +170,7 @@ const SKILLS: NewSkill[] = [
         ],
     },
     {
-        code: "swordman_slash_3",
+        code: "swordsman_slash_3",
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
         castRange: 1.7,

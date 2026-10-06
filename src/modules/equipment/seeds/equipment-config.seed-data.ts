@@ -57,21 +57,15 @@ const levelFactor = (stat: StatKey, type: StatType, level: number) =>
 const attackStats = (classCode: StarterClassCode | null): StatKey[] =>
     classCode === null
         ? [StatKey.PHYSICAL_ATTACK, StatKey.MAGIC_ATTACK]
-        : classCode === "mage"
+        : classCode === "cleric"
           ? [StatKey.MAGIC_ATTACK]
           : [StatKey.PHYSICAL_ATTACK];
 
-/** Hệ số theo class cho một số stat (tank nhiều thủ/máu, mage nhiều mana...). */
+/** Hệ số theo class cho một số stat (swordsman đánh mạnh, archer chính xác, cleric nhiều mana/kháng phép...). */
 const CLASS_STAT_SCALE: Record<StarterClassCode, Partial<Record<StatKey, number>>> = {
-    guardian: {
-        [StatKey.PHYSICAL_DEFENSE]: 1.3,
-        [StatKey.MAGIC_DEFENSE]: 1.3,
-        [StatKey.MAX_HP]: 1.3,
-        [StatKey.PHYSICAL_ATTACK]: 0.8,
-    },
-    swordman: { [StatKey.PHYSICAL_ATTACK]: 1.1 },
+    swordsman: { [StatKey.PHYSICAL_ATTACK]: 1.1 },
     archer: { [StatKey.ACCURACY]: 1.2, [StatKey.EVASION]: 1.2 },
-    mage: { [StatKey.MAX_MP]: 1.5, [StatKey.MAX_HP]: 0.8 },
+    cleric: { [StatKey.MAX_MP]: 1.4, [StatKey.MAGIC_DEFENSE]: 1.2, [StatKey.HP_REGEN]: 1.2 },
 };
 
 type BaseLine = [StatKey, number];
@@ -84,14 +78,8 @@ const mainLines = (type: ItemEquipmentType, classCode: StarterClassCode | null):
         case ItemEquipmentType.MAIN_HAND:
             return atk(8);
         case ItemEquipmentType.OFF_HAND:
-            if (classCode === "guardian") {
-                return [
-                    [StatKey.PHYSICAL_DEFENSE, 5],
-                    [StatKey.MAX_HP, 30],
-                ];
-            }
             if (classCode === "archer") return [...atk(4), [StatKey.ACCURACY, 3]];
-            if (classCode === "mage") return [...atk(4), [StatKey.MAX_MP, 20]];
+            if (classCode === "cleric") return [...atk(4), [StatKey.MAX_MP, 20]];
             return [...atk(4), [StatKey.CRITICAL_CHANCE, 0.005]];
         case ItemEquipmentType.HEAD:
             return [
@@ -141,10 +129,9 @@ const mainLines = (type: ItemEquipmentType, classCode: StarterClassCode | null):
 };
 
 const PRIMARY_ATTRIBUTE: Record<StarterClassCode, StatKey> = {
-    guardian: StatKey.VITALITY,
-    swordman: StatKey.STRENGTH,
+    swordsman: StatKey.STRENGTH,
     archer: StatKey.DEXTERITY,
-    mage: StatKey.INTELLIGENCE,
+    cleric: StatKey.INTELLIGENCE,
 };
 
 /** Pool dòng phụ (FLAT) — attribute chính của class ra nhiều hơn. */
@@ -176,7 +163,7 @@ const rarityPool = (classCode: StarterClassCode | null): [StatKey, StatType, num
     [StatKey.CRITICAL_CHANCE, StatType.FLAT, 0.01, 2],
     [StatKey.CRITICAL_DAMAGE, StatType.FLAT, 0.05, 2],
     [
-        classCode === "mage" ? StatKey.MAGIC_PENETRATION : StatKey.PHYSICAL_PENETRATION,
+        classCode === "cleric" ? StatKey.MAGIC_PENETRATION : StatKey.PHYSICAL_PENETRATION,
         StatType.FLAT,
         0.02,
         1,

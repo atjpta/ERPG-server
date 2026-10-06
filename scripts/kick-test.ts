@@ -37,7 +37,7 @@ async function register() {
     const created = await api(
         "POST",
         "/players",
-        { name: `Kick${suffix.slice(-8)}`, classCode: "swordman" },
+        { name: `Kick${suffix.slice(-8)}`, classCode: "swordsman" },
         registered.token
     );
     return { ...registered, ...created };

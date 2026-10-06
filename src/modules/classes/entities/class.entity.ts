@@ -3,7 +3,7 @@ import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { Attributes, StatBonus, Stats } from "@/modules/player/schemas/stat.schema.js";
 import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js";
 
-/** Class nhân vật (Swordman → chuyển class lên tier sau). */
+/** Class nhân vật (Swordsman → chuyển class lên tier sau). */
 export const Classes = pgTable("classes", {
     ...baseWithCodeColumns(),
     name: text("name").notNull(),

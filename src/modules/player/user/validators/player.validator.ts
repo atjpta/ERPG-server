@@ -17,7 +17,7 @@ export type RenamePlayerBody = z.infer<typeof RenamePlayerSchema>;
 
 export const CreatePlayerSchema = z.object({
     name: PlayerNameSchema,
-    /** Class khởi đầu (tier 1): guardian / swordman / archer / mage. */
+    /** Class khởi đầu (tier 1): swordsman / archer / cleric. */
     classCode: z.string().min(1),
 });
 export type CreatePlayerBody = z.infer<typeof CreatePlayerSchema>;

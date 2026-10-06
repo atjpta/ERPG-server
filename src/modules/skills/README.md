@@ -1,10 +1,10 @@
 # Skills module
 
-Module lưu catalog skill trong PostgreSQL; `SkillService.setCacheData()` nạp chúng vào cache theo `code`. Mỗi skill gắn với `ownerType` và `ownerCode` (ví dụ monster `orc` hoặc class `swordman`).
+Module lưu catalog skill trong PostgreSQL; `SkillService.setCacheData()` nạp chúng vào cache theo `code`. Mỗi skill gắn với `ownerType` và `ownerCode` (ví dụ monster `orc` hoặc class `swordsman`).
 
 Mỗi skill có `castRange`; `skillHitEvents` mô tả nhiều lần đánh, mỗi event có `triggerTicks` (số tick tính từ lúc bắt đầu đánh), hitbox và `range` riêng (đơn vị tile). Giá trị seed được tác giả theo nhịp 20 tick/giây (50 ms/tick), sau đó server quy đổi sang tick mô phỏng 40 Hz. `levelConfig` và `effects` lưu hệ số theo cấp.
 
-Hiện dữ liệu được quản lý bằng seed. `SkillSeed` tạo skill `orc_slash` và ba bước đánh Swordman (`swordman_slash_1`, `swordman_slash_2`, `swordman_slash_3`): hit ở 150 ms; combo 2 hit ở 150/300/600 ms; combo 3 hit ở 200/250/300/350/350 ms (5 nhát đâm frame 5–9 của anim Attack03 chạy speed 2.4). `castTimeMs` là thời lượng cả đòn (khóa di chuyển): 400/750/500 ms.
+Hiện dữ liệu được quản lý bằng seed. `SkillSeed` tạo skill `orc_slash` và ba bước đánh Swordsman (`swordsman_slash_1`, `swordsman_slash_2`, `swordsman_slash_3`): hit ở 150 ms; combo 2 hit ở 150/300/600 ms; combo 3 hit ở 200/250/300/350/350 ms (5 nhát đâm frame 5–9 của anim Attack03 chạy speed 2.4). `castTimeMs` là thời lượng cả đòn (khóa di chuyển): 400/750/500 ms.
 
 ## Dữ liệu cho client
 

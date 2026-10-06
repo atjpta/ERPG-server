@@ -75,8 +75,8 @@ describe("equipment config seed", () => {
     });
 
     it("bảng stat riêng theo từng loại trang bị", () => {
-        const head = findEntry("guardian", ItemEquipmentType.HEAD, 10);
-        const ring = findEntry("guardian", ItemEquipmentType.RING, 10);
+        const head = findEntry("swordsman", ItemEquipmentType.HEAD, 10);
+        const ring = findEntry("swordsman", ItemEquipmentType.RING, 10);
         assert.notDeepEqual(
             head.main.map((line) => line.stat),
             ring.main.map((line) => line.stat)
@@ -86,7 +86,7 @@ describe("equipment config seed", () => {
 
 describe("equipment-roll.util", () => {
     it("số dòng rarity theo độ hiếm (common 1 → legendary 5), giá trị trong khoảng", () => {
-        const entry = findEntry("swordman", ItemEquipmentType.MAIN_HAND, 20);
+        const entry = findEntry("swordsman", ItemEquipmentType.MAIN_HAND, 20);
         const rarities = [
             ItemRarity.COMMON,
             ItemRarity.GOOD,
@@ -149,7 +149,7 @@ describe("equipment-stat.util", () => {
     it("set chỉ đếm các món cùng level", () => {
         const entry: EquipmentSetEntry = {
             biome: Biome.ORC,
-            classCode: "guardian",
+            classCode: "swordsman",
             group: EquipmentGroup.ARMOR,
             level: 10,
             bonuses: {
@@ -159,7 +159,7 @@ describe("equipment-stat.util", () => {
         };
         const piece = (level: number) => ({
             biome: Biome.ORC,
-            classCode: "guardian",
+            classCode: "swordsman",
             group: EquipmentGroup.ARMOR,
             level,
         });
@@ -218,7 +218,7 @@ describe("equipment-upgrade.util", () => {
     });
 
     it("tinh hoá: lên rarity kế, +1 refineLevel, thêm 1 dòng rarity", () => {
-        const entry = findEntry("mage", ItemEquipmentType.RING, 10);
+        const entry = findEntry("cleric", ItemEquipmentType.RING, 10);
         const base = rollEquipmentInstance({
             entry,
             rarity: ItemRarity.COMMON,

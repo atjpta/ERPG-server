@@ -18,10 +18,9 @@ const BIOME_NAMES: Record<Biome, string> = {
 };
 
 const CLASS_NAMES: Record<string, string> = {
-    guardian: "Guardian",
-    swordman: "Swordman",
+    swordsman: "Swordsman",
     archer: "Archer",
-    mage: "Mage",
+    cleric: "Cleric",
 };
 
 const TYPE_NAMES: Record<ItemEquipmentType, string> = {
@@ -44,16 +43,15 @@ const WEAPON_NAMES: Record<
     string,
     Record<ItemEquipmentType.MAIN_HAND | ItemEquipmentType.OFF_HAND, string>
 > = {
-    guardian: {
-        [ItemEquipmentType.MAIN_HAND]: "Longsword",
-        [ItemEquipmentType.OFF_HAND]: "Tower Shield",
+    swordsman: {
+        [ItemEquipmentType.MAIN_HAND]: "Sword",
+        [ItemEquipmentType.OFF_HAND]: "Buckler",
     },
-    swordman: { [ItemEquipmentType.MAIN_HAND]: "Sword", [ItemEquipmentType.OFF_HAND]: "Buckler" },
     archer: { [ItemEquipmentType.MAIN_HAND]: "Bow", [ItemEquipmentType.OFF_HAND]: "Arrows" },
-    mage: { [ItemEquipmentType.MAIN_HAND]: "Staff", [ItemEquipmentType.OFF_HAND]: "Orb" },
+    cleric: { [ItemEquipmentType.MAIN_HAND]: "Staff", [ItemEquipmentType.OFF_HAND]: "Holy Orb" },
 };
 
-/** "Orc Sword" cho vũ khí, "Orc Guardian Helm" cho giáp/trang sức theo class, "Novice Belt" cho đồ dùng chung. */
+/** "Orc Sword" cho vũ khí, "Orc Swordsman Helm" cho giáp/trang sức theo class, "Novice Belt" cho đồ dùng chung. */
 const equipmentName = (biome: Biome, classCode: string | null, type: ItemEquipmentType) => {
     const weapon =
         classCode && (type === ItemEquipmentType.MAIN_HAND || type === ItemEquipmentType.OFF_HAND)

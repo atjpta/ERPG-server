@@ -141,6 +141,13 @@
             "when": 1791284086349,
             "tag": "0019_right_ultragirl",
             "breakpoints": true
+        },
+        {
+            "idx": 20,
+            "version": "7",
+            "when": 1791295416386,
+            "tag": "0020_class_rework",
+            "breakpoints": true
         }
     ]
 }

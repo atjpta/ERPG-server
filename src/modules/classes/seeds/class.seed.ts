@@ -8,39 +8,14 @@ interface ClassSeedData extends Omit<NewCharacterClass, "skills"> {
     skillCodes: string[];
 }
 
-/** Tạm: class chưa có skill riêng dùng combo chém của swordman. */
-const PLACEHOLDER_SKILL_CODES = ["swordman_slash_1", "swordman_slash_2", "swordman_slash_3"];
+/** Tạm: class chưa có skill riêng dùng combo chém của swordsman. */
+const PLACEHOLDER_SKILL_CODES = ["swordsman_slash_1", "swordsman_slash_2", "swordsman_slash_3"];
 
-/** Chạy sau SkillSeed (tham chiếu skill theo id). 4 class khởi đầu, tổng 25 điểm ở level 1. */
+/** Chạy sau SkillSeed (tham chiếu skill theo id). 3 class khởi đầu, tổng 25 điểm ở level 1. */
 const CLASSES: ClassSeedData[] = [
     {
-        code: "guardian",
-        name: "Guardian",
-        tier: 1,
-        nextClassCodes: [],
-        nextClassRequiredLevel: null,
-        baseAttributes: {
-            [StatKey.STRENGTH]: 5,
-            [StatKey.DEXTERITY]: 3,
-            [StatKey.INTELLIGENCE]: 3,
-            [StatKey.VITALITY]: 11,
-            [StatKey.LUCK]: 3,
-        },
-        baseStats: {
-            [StatKey.MOVE_SPEED]: 3.6,
-            [StatKey.MAX_HP]: 150,
-            [StatKey.MAX_MP]: 30,
-            [StatKey.PHYSICAL_DEFENSE]: 10,
-            [StatKey.MAGIC_DEFENSE]: 5,
-            [StatKey.HP_REGEN]: 2,
-            [StatKey.MP_REGEN]: 0.5,
-        },
-        statBonuses: [],
-        skillCodes: PLACEHOLDER_SKILL_CODES,
-    },
-    {
-        code: "swordman",
-        name: "Swordman",
+        code: "swordsman",
+        name: "Swordsman",
         tier: 1,
         nextClassCodes: [],
         nextClassRequiredLevel: null,
@@ -61,7 +36,7 @@ const CLASSES: ClassSeedData[] = [
             [StatKey.MP_REGEN]: 0.5,
         },
         statBonuses: [],
-        skillCodes: ["swordman_slash_1", "swordman_slash_2", "swordman_slash_3"],
+        skillCodes: ["swordsman_slash_1", "swordsman_slash_2", "swordsman_slash_3"],
     },
     {
         code: "archer",
@@ -89,26 +64,26 @@ const CLASSES: ClassSeedData[] = [
         skillCodes: PLACEHOLDER_SKILL_CODES,
     },
     {
-        code: "mage",
-        name: "Mage",
+        code: "cleric",
+        name: "Cleric",
         tier: 1,
         nextClassCodes: [],
         nextClassRequiredLevel: null,
         baseAttributes: {
-            [StatKey.STRENGTH]: 2,
-            [StatKey.DEXTERITY]: 4,
-            [StatKey.INTELLIGENCE]: 11,
-            [StatKey.VITALITY]: 5,
+            [StatKey.STRENGTH]: 3,
+            [StatKey.DEXTERITY]: 3,
+            [StatKey.INTELLIGENCE]: 9,
+            [StatKey.VITALITY]: 7,
             [StatKey.LUCK]: 3,
         },
         baseStats: {
             [StatKey.MOVE_SPEED]: 3.8,
-            [StatKey.MAX_HP]: 70,
-            [StatKey.MAX_MP]: 80,
-            [StatKey.MAGIC_ATTACK]: 5,
-            [StatKey.MAGIC_DEFENSE]: 5,
-            [StatKey.HP_REGEN]: 0.6,
-            [StatKey.MP_REGEN]: 1.5,
+            [StatKey.MAX_HP]: 90,
+            [StatKey.MAX_MP]: 70,
+            [StatKey.MAGIC_ATTACK]: 4,
+            [StatKey.MAGIC_DEFENSE]: 6,
+            [StatKey.HP_REGEN]: 1,
+            [StatKey.MP_REGEN]: 1.2,
         },
         statBonuses: [],
         skillCodes: PLACEHOLDER_SKILL_CODES,
