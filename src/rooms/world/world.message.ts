@@ -42,6 +42,8 @@ export enum WorldMessage {
     ATTRIBUTES_PREVIEW = "attributesPreview",
     /** Túi + đồ đang mặc + ví — gửi lúc vào room và trả lời mọi thao tác inventory (kể cả lỗi). */
     INVENTORY = "inventory",
+    /** Ví (`WalletMessage`) — gửi riêng khi tiền đổi mà không kèm `inventory` (vd nhận tiền khi giết quái). */
+    WALLET = "wallet",
     /** Kết quả cường hoá / tinh hoá / phân rã (thành công hay thất bại theo tỉ lệ). */
     EQUIPMENT_UPGRADE = "equipmentUpgrade",
     /** Trả lời `previewDisassemble`: nguyên liệu sẽ nhận nếu phân rã (hoặc lỗi nếu không phân rã được). */
