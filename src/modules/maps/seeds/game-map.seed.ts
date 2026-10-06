@@ -1,6 +1,8 @@
+import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { GameMaps, type NewGameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { GameMapRepo } from "@/modules/maps/repositories/game-map.repository.js";
+import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 
 const MAPS: NewGameMap[] = [
     {
@@ -27,18 +29,38 @@ const MAPS: NewGameMap[] = [
         monsterSpawns: [
             { monsterCode: "orc", count: 2 },
             { monsterCode: "armored_orc", count: 1 },
-            { monsterCode: "elite_orc", count: 1 },
-            { monsterCode: "orc_rider", count: 1 },
+            {
+                monsterCode: "elite_orc",
+                count: 1,
+                type: MonsterType.ELITE,
+                rarity: ItemRarity.GOOD,
+            },
+            { monsterCode: "orc_rider", count: 1, type: MonsterType.BOSS, rarity: ItemRarity.EPIC },
             { monsterCode: "skeleton", count: 1 },
             { monsterCode: "skeleton_archer", count: 1 },
-            { monsterCode: "armored_skeleton", count: 1 },
+            {
+                monsterCode: "armored_skeleton",
+                count: 1,
+                type: MonsterType.ELITE,
+                rarity: ItemRarity.RARE,
+            },
             { monsterCode: "greatsword_skeleton", count: 1 },
-            { monsterCode: "necromancer", count: 1 },
+            {
+                monsterCode: "necromancer",
+                count: 1,
+                type: MonsterType.BOSS,
+                rarity: ItemRarity.LEGENDARY,
+            },
             { monsterCode: "bat", count: 1 },
             { monsterCode: "slime", count: 1 },
             { monsterCode: "lancer", count: 1 },
-            { monsterCode: "werebear", count: 1 },
-            { monsterCode: "werewolf", count: 1 },
+            { monsterCode: "werebear", count: 1, type: MonsterType.ELITE, rarity: ItemRarity.RARE },
+            {
+                monsterCode: "werewolf",
+                count: 1,
+                type: MonsterType.BOSS,
+                rarity: ItemRarity.LEGENDARY,
+            },
         ],
     },
 ];

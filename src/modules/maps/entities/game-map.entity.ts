@@ -1,6 +1,8 @@
 import { boolean, integer, jsonb, pgEnum, pgTable, real, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
+import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
+import type { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 
 export const mapTypeEnum = pgEnum("map_type", MapType);
 export const mapStatusEnum = pgEnum("map_status", MapStatus);
@@ -31,6 +33,10 @@ export const GameMaps = pgTable("game_maps", {
 export interface MonsterSpawn {
     monsterCode: string;
     count: number;
+    /** Loại monster của spawn này — mặc định NORMAL. */
+    type?: MonsterType;
+    /** Độ hiếm (màu tên phía client) — mặc định COMMON. */
+    rarity?: ItemRarity;
 }
 
 export type GameMap = typeof GameMaps.$inferSelect;

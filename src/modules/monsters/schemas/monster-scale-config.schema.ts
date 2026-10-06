@@ -16,8 +16,8 @@ export const MonsterScaleEntrySchema = z.object({
 });
 
 /**
- * Master data `monster_scale_config`: chỉ số + thưởng của monster nhân theo loại (`monsters.type`)
- * và độ hiếm (`monsters.rarity`) — 2 hệ số nhân với nhau.
+ * Master data `monster_scale_config`: chỉ số + thưởng của monster nhân theo loại và độ hiếm (cấu hình
+ * theo spawn — `game_maps.monsterSpawns`) — 2 hệ số nhân với nhau.
  */
 export const MonsterScaleConfigSchema = z.object({
     byType: z.record(z.enum(MonsterType), MonsterScaleEntrySchema),

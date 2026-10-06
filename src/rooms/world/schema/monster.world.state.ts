@@ -1,11 +1,15 @@
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { Monster } from "@/modules/monsters/entities/monster.entity.js";
-import type { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
+import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import type { Stats } from "@/modules/player/schemas/stat.schema.js";
-import { computeMonsterStats, monsterScales } from "@/modules/monsters/utils/monster-stat.util.js";
-import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
+import {
+    computeMonsterStats,
+    monsterScales,
+    type MonsterVariant,
+} from "@/modules/monsters/utils/monster-stat.util.js";
+import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import type { DamageCombatant } from "@/rooms/world/chains/damage.world.chain.js";
@@ -24,6 +28,10 @@ export class MonsterWorldState extends Schema {
     @type("string") MonsterId: string;
     @type("string") code: string;
     @type("uint16") level: number;
+    /** Loại (normal/elite/boss) — client ghi `[Elite]` / `[Boss]` trước tên. */
+    @type("string") monsterType: MonsterType = MonsterType.NORMAL;
+    /** Độ hiếm — client tô màu tên theo rarity. */
+    @type("string") rarity: ItemRarity = ItemRarity.COMMON;
     @type("float32") x: number;
     @type("float32") y: number;
     @type("float32") spawnX: number;
@@ -51,19 +59,19 @@ export class MonsterWorldState extends Schema {
     drops: MonsterDrops;
     /** Toàn bộ chỉ số ở level hiện tại (`computeMonsterStats`) — dùng cho chain tính damage. */
     stats: Stats;
-    monsterType: MonsterType;
-    rarity: ItemRarity;
     biome: Biome;
     /** Tăng mỗi đòn đánh — một phần seed roll combat (`combatSeed`). */
     attackSerial = 0;
 
-    constructor(props: { monster: Monster; x: number; y: number }) {
-        const { monster, x, y } = props;
+    constructor(props: { monster: Monster; variant: MonsterVariant; x: number; y: number }) {
+        const { monster, variant, x, y } = props;
         super();
         this.id = uuidv7();
         this.MonsterId = monster.id;
         this.code = monster.code;
         this.level = monster.level;
+        this.monsterType = variant.type;
+        this.rarity = variant.rarity;
         this.x = x;
         this.y = y;
         this.spawnX = x;
@@ -72,7 +80,7 @@ export class MonsterWorldState extends Schema {
         this.stats = computeMonsterStats(
             monster,
             monster.level,
-            monsterScales(monster, masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG))
+            monsterScales(variant, masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG))
         );
         this.maxHp = Math.floor(this.stats[StatKey.MAX_HP] ?? 0);
         this.hp = this.maxHp;
@@ -85,8 +93,6 @@ export class MonsterWorldState extends Schema {
         this.collider = new HitboxColliderState(monster.collider);
         this.skills.push(...toOwnedSkillStates(monster.skills));
         this.drops = monster.drops;
-        this.monsterType = monster.type;
-        this.rarity = monster.rarity;
         this.biome = monster.biome;
     }
 

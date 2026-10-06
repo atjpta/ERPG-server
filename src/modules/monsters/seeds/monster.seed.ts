@@ -3,7 +3,6 @@ import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { ItemRepo } from "@/modules/items/repositories/item.repository.js";
 import { Monsters, type NewMonster } from "@/modules/monsters/entities/monster.entity.js";
-import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import { MonsterRepo } from "@/modules/monsters/repositories/monster.repository.js";
 import {
     MonsterDropsSchema,
@@ -41,32 +40,24 @@ const STONE_TIER_BY_BIOME: Record<Biome, number> = {
     [Biome.SHAPESHIFTER]: 3,
 };
 
-const equipmentDrop = (type: MonsterType): EquipmentDrop => ({
+/** Loại monster cấu hình theo spawn của map → bảng rơi chung, elite/boss nhân qua scale config. */
+const EQUIPMENT_DROP: EquipmentDrop = {
     rate: BASE_EQUIPMENT_DROP_RATE,
-    rarity:
-        type === MonsterType.NORMAL
-            ? {
-                  [ItemRarity.COMMON]: 60,
-                  [ItemRarity.GOOD]: 25,
-                  [ItemRarity.RARE]: 10,
-                  [ItemRarity.EPIC]: 4,
-                  [ItemRarity.LEGENDARY]: 1,
-              }
-            : {
-                  [ItemRarity.COMMON]: 30,
-                  [ItemRarity.GOOD]: 35,
-                  [ItemRarity.RARE]: 20,
-                  [ItemRarity.EPIC]: 11,
-                  [ItemRarity.LEGENDARY]: type === MonsterType.BOSS ? 4 : 2,
-              },
-});
+    rarity: {
+        [ItemRarity.COMMON]: 60,
+        [ItemRarity.GOOD]: 25,
+        [ItemRarity.RARE]: 10,
+        [ItemRarity.EPIC]: 4,
+        [ItemRarity.LEGENDARY]: 1,
+    },
+};
 
-const materialDrops = (stoneTier: number, scale: number): ItemDropSeed[] => [
-    { itemCode: `enhance_stone_${stoneTier}`, min: 1, max: 2 * scale, rate: 0.25 },
-    { itemCode: "dust_weapon", min: 1, max: 3 * scale, rate: 0.15 },
-    { itemCode: "dust_armor", min: 1, max: 3 * scale, rate: 0.15 },
-    { itemCode: "dust_accessory", min: 1, max: 3 * scale, rate: 0.15 },
-    { itemCode: "spirit", min: 1, max: 2 * scale, rate: 0.05 },
+const materialDrops = (stoneTier: number): ItemDropSeed[] => [
+    { itemCode: `enhance_stone_${stoneTier}`, min: 1, max: 2, rate: 0.25 },
+    { itemCode: "dust_weapon", min: 1, max: 3, rate: 0.15 },
+    { itemCode: "dust_armor", min: 1, max: 3, rate: 0.15 },
+    { itemCode: "dust_accessory", min: 1, max: 3, rate: 0.15 },
+    { itemCode: "spirit", min: 1, max: 2, rate: 0.05 },
     { itemCode: "hp_potion_small", min: 1, max: 1, rate: 0.1 },
 ];
 
@@ -95,8 +86,6 @@ function toSeed(monster: MonsterDefinition) {
         code: monster.code,
         level: monster.level,
         biome: monster.biome,
-        type: monster.type,
-        rarity: ItemRarity.COMMON,
         // Đòn đánh + nghỉ 1.2 s giữa 2 đòn.
         attackCooldownMs: monster.attackClipMs + 1200,
         hitbox: monster.hitbox,
@@ -106,11 +95,8 @@ function toSeed(monster: MonsterDefinition) {
         skillCodes: [monsterAttackSkillCode(monster)],
         drops: {
             currency: [gold],
-            items: materialDrops(
-                STONE_TIER_BY_BIOME[monster.biome],
-                monster.type === MonsterType.NORMAL ? 1 : 2
-            ),
-            equipment: equipmentDrop(monster.type),
+            items: materialDrops(STONE_TIER_BY_BIOME[monster.biome]),
+            equipment: EQUIPMENT_DROP,
             exp,
         },
     };

@@ -1,4 +1,6 @@
+import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { GameMap } from "@/modules/maps/entities/game-map.entity.js";
+import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import { monsterService } from "@/modules/monsters/user/services/monster.service.js";
 import { MonsterWorldState } from "@/rooms/world/schema/monster.world.state.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
@@ -35,9 +37,15 @@ export class MonsterWorldService {
                 );
                 continue;
             }
+            const variant = {
+                type: spawn.type ?? MonsterType.NORMAL,
+                rarity: spawn.rarity ?? ItemRarity.COMMON,
+            };
             for (let i = 0; i < spawn.count; i++) {
                 const index = monsters.length;
-                monsters.push(new MonsterWorldState({ monster, x: index * 5, y: index * 5 }));
+                monsters.push(
+                    new MonsterWorldState({ monster, variant, x: index * 5, y: index * 5 })
+                );
             }
         }
         return monsters;

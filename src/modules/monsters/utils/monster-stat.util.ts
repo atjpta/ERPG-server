@@ -1,5 +1,7 @@
 import { big, bigToNumber } from "@/core/utils/big-number.util.js";
+import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import type { Monster } from "@/modules/monsters/entities/monster.entity.js";
+import type { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import type {
     MonsterScaleConfig,
     MonsterScaleEntry,
@@ -27,9 +29,15 @@ export function computeMonsterStats(
     return stats;
 }
 
+/** Loại + độ hiếm của 1 con monster, lấy từ spawn của map (không lưu ở bảng `monsters`). */
+export interface MonsterVariant {
+    type: MonsterType;
+    rarity: ItemRarity;
+}
+
 /** Hệ số của monster theo loại + độ hiếm (thứ tự: loại, độ hiếm). */
 export const monsterScales = (
-    monster: Pick<Monster, "type" | "rarity">,
+    monster: MonsterVariant,
     config: MonsterScaleConfig
 ): MonsterScaleEntry[] => [config.byType[monster.type], config.byRarity[monster.rarity]];
 

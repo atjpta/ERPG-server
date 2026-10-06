@@ -127,6 +127,13 @@
             "when": 1791268785599,
             "tag": "0017_remove_monster_name",
             "breakpoints": true
+        },
+        {
+            "idx": 18,
+            "version": "7",
+            "when": 1791279341728,
+            "tag": "0018_little_lenny_balinger",
+            "breakpoints": true
         }
     ]
 }

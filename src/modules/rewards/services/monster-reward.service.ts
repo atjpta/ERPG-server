@@ -8,7 +8,11 @@ import {
 import { itemService } from "@/modules/items/services/item.service.js";
 import type { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
-import { combineRewardScale, monsterScales } from "@/modules/monsters/utils/monster-stat.util.js";
+import {
+    combineRewardScale,
+    monsterScales,
+    type MonsterVariant,
+} from "@/modules/monsters/utils/monster-stat.util.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import type { Reward } from "@/modules/rewards/types/reward.type.js";
@@ -20,7 +24,7 @@ import { rollDropRarity, rollMonsterReward } from "@/modules/rewards/utils/rewar
  */
 export class MonsterRewardService {
     roll(
-        monster: Pick<Monster, "type" | "rarity" | "level" | "biome"> & { drops: MonsterDrops },
+        monster: Pick<Monster, "level" | "biome"> & MonsterVariant & { drops: MonsterDrops },
         rng: Rng = Math.random
     ): Reward {
         const scaleConfig = masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG);
