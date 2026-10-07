@@ -7,8 +7,8 @@ export const QUESTS: NewQuest[] = [
     {
         code: "slime_hunt",
         requiredLevel: 1,
-        giverNpcCode: "elder",
-        turnInNpcCode: "elder",
+        giverNpcCode: "village_chief",
+        turnInNpcCode: "village_chief",
         repeat: QuestRepeat.NONE,
         objectives: [
             { id: "kill_slime", type: QuestObjectiveType.KILL, targetCode: "slime", count: 3 },
@@ -23,11 +23,44 @@ export const QUESTS: NewQuest[] = [
         code: "meet_blacksmith",
         requiredLevel: 1,
         prerequisiteQuestCodes: ["slime_hunt"],
-        giverNpcCode: "elder",
-        turnInNpcCode: "elder",
+        giverNpcCode: "village_chief",
+        turnInNpcCode: "village_chief",
         objectives: [
             { id: "talk_smith", type: QuestObjectiveType.TALK, targetCode: "blacksmith", count: 1 },
         ],
         rewards: { exp: 50, currency: [], items: [] },
+    },
+    {
+        code: "rowan_herbs",
+        requiredLevel: 1,
+        giverNpcCode: "farmer_rowan",
+        turnInNpcCode: "farmer_rowan",
+        objectives: [
+            {
+                id: "pick_herb",
+                type: QuestObjectiveType.INTERACT,
+                targetCode: "herb_patch_1",
+                count: 1,
+            },
+        ],
+        rewards: {
+            exp: 40,
+            currency: [{ code: CurrencyCode.GOLD, amount: 30 }],
+            items: [{ itemCode: "hp_potion_small", quantity: 2 }],
+        },
+    },
+    {
+        code: "garrick_hunt",
+        requiredLevel: 1,
+        giverNpcCode: "hunter_garrick",
+        turnInNpcCode: "hunter_garrick",
+        objectives: [
+            { id: "kill_bat", type: QuestObjectiveType.KILL, targetCode: "bat", count: 3 },
+        ],
+        rewards: {
+            exp: 120,
+            currency: [{ code: CurrencyCode.GOLD, amount: 80 }],
+            items: [{ itemCode: "hp_potion_small", quantity: 3 }],
+        },
     },
 ];

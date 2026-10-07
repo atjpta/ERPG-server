@@ -125,7 +125,7 @@
     ],
     "npcs": [
         {
-            "npcCode": "elder",
+            "npcCode": "village_chief",
             "x": 62,
             "y": 46,
             "direction": "right"

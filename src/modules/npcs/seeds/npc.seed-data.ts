@@ -5,7 +5,7 @@ import { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
 /** NPC mẫu — vị trí đặt trong file map, 1 NPC có thể có mặt ở nhiều map. */
 export const NPCS: NewNpc[] = [
     {
-        code: "elder",
+        code: "village_chief",
         defaultDialogueCode: "elder_default",
         dialogueRules: [
             // Quest sau xét trước quest trước; trong mỗi quest: trả > đang làm > nhận.
@@ -67,4 +67,85 @@ export const NPCS: NewNpc[] = [
             { id: "disassemble", type: NpcFunctionType.DISASSEMBLE, config: {} },
         ],
     },
+    // ---- Greenfield Village --------------------------------------------------------------------------
+    {
+        code: "guild_officer",
+        defaultDialogueCode: "guild_officer_default",
+        functions: [{ id: "quest_board", type: NpcFunctionType.QUEST_BOARD, config: {} }],
+    },
+    { code: "swordsman_trainer", defaultDialogueCode: "swordsman_trainer_default" },
+    { code: "archer_trainer", defaultDialogueCode: "archer_trainer_default" },
+    { code: "cleric_sister", defaultDialogueCode: "cleric_sister_default" },
+    { code: "village_priestess", defaultDialogueCode: "village_priestess_default" },
+    {
+        code: "general_merchant",
+        defaultDialogueCode: "general_merchant_default",
+        functions: [{ id: "shop", type: NpcFunctionType.SHOP, config: { shop: "general_store" } }],
+    },
+    { code: "innkeeper", defaultDialogueCode: "innkeeper_default" },
+    {
+        code: "farmer_rowan",
+        defaultDialogueCode: "rowan_default",
+        dialogueRules: [
+            {
+                priority: 30,
+                conditions: [
+                    { type: "quest_state", questCode: "rowan_herbs", state: QuestState.READY },
+                ],
+                dialogueCode: "rowan_done",
+            },
+            {
+                priority: 20,
+                conditions: [
+                    { type: "quest_state", questCode: "rowan_herbs", state: QuestState.ACTIVE },
+                ],
+                dialogueCode: "rowan_progress",
+            },
+            {
+                priority: 10,
+                conditions: [
+                    {
+                        type: "quest_state",
+                        questCode: "rowan_herbs",
+                        state: QuestState.NOT_STARTED,
+                    },
+                ],
+                dialogueCode: "rowan_offer",
+            },
+        ],
+    },
+    {
+        code: "hunter_garrick",
+        defaultDialogueCode: "garrick_default",
+        dialogueRules: [
+            {
+                priority: 30,
+                conditions: [
+                    { type: "quest_state", questCode: "garrick_hunt", state: QuestState.READY },
+                ],
+                dialogueCode: "garrick_done",
+            },
+            {
+                priority: 20,
+                conditions: [
+                    { type: "quest_state", questCode: "garrick_hunt", state: QuestState.ACTIVE },
+                ],
+                dialogueCode: "garrick_progress",
+            },
+            {
+                priority: 10,
+                conditions: [
+                    {
+                        type: "quest_state",
+                        questCode: "garrick_hunt",
+                        state: QuestState.NOT_STARTED,
+                    },
+                    { type: "level_min", value: 1 },
+                ],
+                dialogueCode: "garrick_offer",
+            },
+        ],
+    },
+    { code: "guard_captain", defaultDialogueCode: "guard_captain_default" },
+    { code: "herbalist", defaultDialogueCode: "herbalist_default" },
 ];

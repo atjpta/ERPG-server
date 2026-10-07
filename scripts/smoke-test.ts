@@ -73,10 +73,11 @@ console.info(`✅ moved x: ${startX} → ${moved.x.toFixed(2)} (direction ${move
 if (!(moved.x > startX)) throw new Error("Player did not move");
 
 // ---- NPC, thoại, quest, vật thể ---------------------------------------------------------------
-// Chỉ chạy khi map hiện tại có NPC `elder` (town_01).
+// Chỉ chạy khi map hiện tại có NPC `village_chief` (town_01).
 const content = await api("GET", `/maps/${auth.player.mapCode}/content`);
 if (!content.contentHash) throw new Error("map content must carry contentHash");
-if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "elder")) {
+if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chief")) {
+    const chief = content.npcs.find((npc: { npcCode: string }) => npc.npcCode === "village_chief");
     const waitFor = <T>(type: string) =>
         new Promise<T>((resolve, reject) => {
             const timer = setTimeout(
@@ -91,15 +92,16 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "elder")) {
 
     // Đứng xa NPC / portal thì bị từ chối.
     const far = waitFor<{ ok: boolean; error?: string }>("interactResult");
-    room.send("interact", { id: "to_field" });
+    room.send("interact", { id: "south_gate" });
     if ((await far).ok) throw new Error("portal must reject a player standing far away");
     console.info("✅ interact far portal rejected");
 
-    // Đi tới sát elder (30, 30) — từ vị trí hiện tại, lái từng step theo vị trí server.
+    // Đi tới sát Trưởng làng — từ vị trí hiện tại, lái từng step theo vị trí server.
     const me = (room.state as any).players.get(room.sessionId);
-    for (let i = 0; i < 200 && Math.hypot(me.x - 30, me.y - 31) > 1.2; i++) {
-        input.data.moveX = Math.sign(30 - me.x) * (Math.abs(30 - me.x) > 0.3 ? 1 : 0);
-        input.data.moveY = Math.sign(31 - me.y) * (Math.abs(31 - me.y) > 0.3 ? 1 : 0);
+    for (let i = 0; i < 200 && Math.hypot(me.x - chief.x, me.y - (chief.y + 1)) > 0.5; i++) {
+        input.data.moveX = Math.sign(chief.x - me.x) * (Math.abs(chief.x - me.x) > 0.3 ? 1 : 0);
+        input.data.moveY =
+            Math.sign(chief.y + 1 - me.y) * (Math.abs(chief.y + 1 - me.y) > 0.3 ? 1 : 0);
         input.send();
         await sleep(50);
     }
@@ -107,15 +109,15 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "elder")) {
     input.data.moveY = 0;
     input.send();
     await sleep(300);
-    console.info(`✅ walked next to the elder at (${me.x.toFixed(2)}, ${me.y.toFixed(2)})`);
+    console.info(`✅ walked next to the village chief at (${me.x.toFixed(2)}, ${me.y.toFixed(2)})`);
 
     const offer = waitFor<{ nodeId: string; options: { id: string }[] }>("dialogue");
-    room.send("interactNpc", { npcCode: "elder" });
+    room.send("interactNpc", { npcCode: "village_chief" });
     const first = await offer;
     if (first.nodeId !== "start" || !first.options.some((o) => o.id === "accept")) {
         throw new Error(`unexpected first dialogue node ${JSON.stringify(first)}`);
     }
-    console.info("✅ elder offers the quest");
+    console.info("✅ village chief offers the quest");
 
     const updated = waitFor<{ quest: { code: string; state: string } }>("questUpdate");
     room.send("dialogueChoose", { optionId: "accept" });

@@ -1,184 +1,567 @@
 {
     "code": "town_01",
     "type": "town",
-    "width": 64,
-    "height": 64,
+    "width": 80,
+    "height": 80,
     "tileSize": 16,
+    "maxPlayersPerChannel": 100,
+    "pvpEnabled": false,
     "spawnPoints": [
         {
             "id": "default",
-            "x": 32,
-            "y": 32,
+            "x": 40.0,
+            "y": 46.0,
             "kind": "default"
         },
         {
-            "id": "respawn",
-            "x": 32,
-            "y": 32,
+            "id": "church",
+            "x": 58.0,
+            "y": 33.5,
             "kind": "respawn"
         },
         {
             "id": "from_field",
-            "x": 56,
-            "y": 8,
+            "x": 40.0,
+            "y": 74.5,
             "kind": "arrival"
         }
     ],
     "colliders": [
         {
-            "x": 0,
-            "y": 0,
-            "w": 64,
-            "h": 2
+            "x": 21.0,
+            "y": 28.3,
+            "w": 2.0,
+            "h": 1.7
         },
         {
-            "x": 0,
-            "y": 62,
-            "w": 64,
-            "h": 2
+            "x": 57.0,
+            "y": 28.3,
+            "w": 2.0,
+            "h": 1.7
         },
         {
-            "x": 0,
-            "y": 2,
-            "w": 2,
-            "h": 60
+            "x": 55.0,
+            "y": 37.3,
+            "w": 2.0,
+            "h": 1.7
         },
         {
-            "x": 62,
-            "y": 2,
-            "w": 2,
-            "h": 60
+            "x": 23.0,
+            "y": 37.3,
+            "w": 2.0,
+            "h": 1.7
+        },
+        {
+            "x": 23.0,
+            "y": 56.3,
+            "w": 2.0,
+            "h": 1.7
+        },
+        {
+            "x": 9.5,
+            "y": 23.15,
+            "w": 1.0,
+            "h": 0.85
+        },
+        {
+            "x": 11.5,
+            "y": 51.15,
+            "w": 1.0,
+            "h": 0.85
+        },
+        {
+            "x": 67.5,
+            "y": 21.15,
+            "w": 1.0,
+            "h": 0.85
+        },
+        {
+            "x": 69.5,
+            "y": 33.15,
+            "w": 1.0,
+            "h": 0.85
+        },
+        {
+            "x": 7.5,
+            "y": 65.15,
+            "w": 1.0,
+            "h": 0.85
+        },
+        {
+            "x": 52.0,
+            "y": 49.65,
+            "w": 5.5,
+            "h": 0.35
+        },
+        {
+            "x": 60.5,
+            "y": 49.65,
+            "w": 9.5,
+            "h": 0.35
+        },
+        {
+            "x": 52.0,
+            "y": 65.65,
+            "w": 18.0,
+            "h": 0.35
+        },
+        {
+            "x": 51.8,
+            "y": 50.0,
+            "w": 0.4,
+            "h": 16.0
+        },
+        {
+            "x": 69.8,
+            "y": 50.0,
+            "w": 0.4,
+            "h": 16.0
+        },
+        {
+            "x": 54.4,
+            "y": 62.4,
+            "w": 1.2,
+            "h": 0.7
+        },
+        {
+            "x": 66.4,
+            "y": 62.4,
+            "w": 1.2,
+            "h": 0.7
+        },
+        {
+            "x": 38.9,
+            "y": 38.9,
+            "w": 2.2,
+            "h": 1.1
+        },
+        {
+            "x": 34.3,
+            "y": 45.6,
+            "w": 1.4,
+            "h": 0.9
+        },
+        {
+            "x": 0.0,
+            "y": 0.0,
+            "w": 37.2,
+            "h": 3.4
+        },
+        {
+            "x": 43.0,
+            "y": 0.0,
+            "w": 37.0,
+            "h": 3.4
+        },
+        {
+            "x": 0.0,
+            "y": 77.0,
+            "w": 37.2,
+            "h": 3.0
+        },
+        {
+            "x": 43.0,
+            "y": 77.0,
+            "w": 37.0,
+            "h": 3.0
+        },
+        {
+            "x": 0.0,
+            "y": 0.0,
+            "w": 2.4,
+            "h": 80.0
+        },
+        {
+            "x": 77.6,
+            "y": 0.0,
+            "w": 2.4,
+            "h": 38.0
+        },
+        {
+            "x": 77.6,
+            "y": 46.0,
+            "w": 2.4,
+            "h": 34.0
+        },
+        {
+            "x": 51.804,
+            "y": 15.182,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 26.757,
+            "y": 31.506,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 32.318,
+            "y": 15.949,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 17.119,
+            "y": 8.423,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 45.688,
+            "y": 61.432,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 14.437,
+            "y": 7.391,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 59.978,
+            "y": 48.199,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 21.697,
+            "y": 58.125,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 50.367,
+            "y": 15.368,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 48.949,
+            "y": 20.454,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 29.992,
+            "y": 23.786,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 4.345,
+            "y": 61.961,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 48.096,
+            "y": 8.622,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 45.945,
+            "y": 55.587,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 67.181,
+            "y": 70.722,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 54.87,
+            "y": 16.641,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 59.58,
+            "y": 15.701,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 74.968,
+            "y": 49.857,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 5.654,
+            "y": 20.543,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 10.449,
+            "y": 73.157,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 11.339,
+            "y": 27.449,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 49.382,
+            "y": 48.122,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 25.103,
+            "y": 18.047,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 43.747,
+            "y": 54.049,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 71.938,
+            "y": 60.703,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 11.428,
+            "y": 5.793,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 46.237,
+            "y": 32.802,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 51.538,
+            "y": 18.49,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 67.835,
+            "y": 71.505,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 11.694,
+            "y": 60.408,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 17.996,
+            "y": 69.163,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 7.709,
+            "y": 20.182,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 16.049,
+            "y": 25.411,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 67.208,
+            "y": 37.562,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 29.312,
+            "y": 63.846,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 57.859,
+            "y": 7.699,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 50.045,
+            "y": 46.774,
+            "w": 0.6,
+            "h": 0.4
+        },
+        {
+            "x": 51.594,
+            "y": 12.37,
+            "w": 0.6,
+            "h": 0.4
         }
     ],
-    "monsterSpawns": [
-        {
-            "monsterCode": "orc",
-            "count": 2,
-            "spawnX": 24,
-            "spawnY": 26
-        },
-        {
-            "monsterCode": "armored_orc",
-            "count": 1,
-            "spawnX": 28,
-            "spawnY": 23
-        },
-        {
-            "monsterCode": "elite_orc",
-            "count": 1,
-            "spawnX": 21,
-            "spawnY": 22,
-            "type": "elite",
-            "rarity": "good"
-        },
-        {
-            "monsterCode": "orc_rider",
-            "count": 1,
-            "spawnX": 18,
-            "spawnY": 18,
-            "type": "boss",
-            "rarity": "epic"
-        },
-        {
-            "monsterCode": "skeleton",
-            "count": 1,
-            "spawnX": 40,
-            "spawnY": 28
-        },
-        {
-            "monsterCode": "skeleton_archer",
-            "count": 1,
-            "spawnX": 43,
-            "spawnY": 31
-        },
-        {
-            "monsterCode": "armored_skeleton",
-            "count": 1,
-            "spawnX": 44,
-            "spawnY": 36,
-            "type": "elite",
-            "rarity": "rare"
-        },
-        {
-            "monsterCode": "greatsword_skeleton",
-            "count": 1,
-            "spawnX": 40,
-            "spawnY": 38
-        },
-        {
-            "monsterCode": "necromancer",
-            "count": 1,
-            "spawnX": 48,
-            "spawnY": 32,
-            "type": "boss",
-            "rarity": "legendary"
-        },
-        {
-            "monsterCode": "bat",
-            "count": 1,
-            "spawnX": 26,
-            "spawnY": 40
-        },
-        {
-            "monsterCode": "slime",
-            "count": 1,
-            "spawnX": 30,
-            "spawnY": 42
-        },
-        {
-            "monsterCode": "lancer",
-            "count": 1,
-            "spawnX": 34,
-            "spawnY": 42
-        },
-        {
-            "monsterCode": "werebear",
-            "count": 1,
-            "spawnX": 38,
-            "spawnY": 44,
-            "type": "elite",
-            "rarity": "rare"
-        },
-        {
-            "monsterCode": "werewolf",
-            "count": 1,
-            "spawnX": 32,
-            "spawnY": 48,
-            "type": "boss",
-            "rarity": "legendary"
-        }
-    ],
+    "monsterSpawns": [],
     "npcs": [
         {
-            "npcCode": "elder",
-            "x": 30,
-            "y": 30,
+            "npcCode": "village_chief",
+            "x": 44.5,
+            "y": 38.8,
+            "direction": "left"
+        },
+        {
+            "npcCode": "guild_officer",
+            "x": 22.0,
+            "y": 32.3,
+            "direction": "right"
+        },
+        {
+            "npcCode": "cleric_sister",
+            "x": 56.2,
+            "y": 32.3,
+            "direction": "right"
+        },
+        {
+            "npcCode": "village_priestess",
+            "x": 59.8,
+            "y": 32.3,
             "direction": "right"
         },
         {
             "npcCode": "blacksmith",
-            "x": 34,
-            "y": 30,
+            "x": 56.0,
+            "y": 40.8,
+            "direction": "right"
+        },
+        {
+            "npcCode": "general_merchant",
+            "x": 24.0,
+            "y": 40.8,
+            "direction": "right"
+        },
+        {
+            "npcCode": "innkeeper",
+            "x": 24.0,
+            "y": 60.3,
+            "direction": "right"
+        },
+        {
+            "npcCode": "swordsman_trainer",
+            "x": 57.0,
+            "y": 58.0,
+            "direction": "right"
+        },
+        {
+            "npcCode": "archer_trainer",
+            "x": 64.0,
+            "y": 58.0,
             "direction": "left"
+        },
+        {
+            "npcCode": "farmer_rowan",
+            "x": 31.5,
+            "y": 67.2,
+            "direction": "right"
+        },
+        {
+            "npcCode": "herbalist",
+            "x": 48.0,
+            "y": 69.2,
+            "direction": "right"
+        },
+        {
+            "npcCode": "hunter_garrick",
+            "x": 44.0,
+            "y": 74.0,
+            "direction": "left"
+        },
+        {
+            "npcCode": "guard_captain",
+            "x": 36.8,
+            "y": 8.0,
+            "direction": "right"
         }
     ],
     "interactables": [
         {
-            "id": "to_field",
+            "id": "south_gate",
             "type": "portal",
-            "x": 58,
-            "y": 8,
-            "radius": 1.5,
+            "x": 40.0,
+            "y": 77.4,
+            "radius": 1.8,
             "targetMapCode": "field_01",
             "targetSpawnId": "from_town"
         },
         {
+            "id": "east_gate",
+            "type": "sign",
+            "x": 77.0,
+            "y": 42.0,
+            "radius": 2.5,
+            "dialogueCode": "gate_locked"
+        },
+        {
+            "id": "north_gate",
+            "type": "sign",
+            "x": 40.0,
+            "y": 3.2,
+            "radius": 2.5,
+            "dialogueCode": "gate_locked"
+        },
+        {
             "id": "notice_board",
             "type": "sign",
-            "x": 28,
-            "y": 34,
-            "radius": 1.5,
+            "x": 34.0,
+            "y": 34.2,
+            "radius": 1.6,
             "dialogueCode": "notice_board"
+        },
+        {
+            "id": "herb_patch_1",
+            "type": "gather",
+            "x": 46.0,
+            "y": 71.0,
+            "radius": 1.4,
+            "respawnSec": 20,
+            "reward": {
+                "exp": 5,
+                "currency": [],
+                "items": [
+                    {
+                        "itemCode": "hp_potion_small",
+                        "quantity": 1
+                    }
+                ]
+            }
+        },
+        {
+            "id": "herb_patch_2",
+            "type": "gather",
+            "x": 50.0,
+            "y": 72.5,
+            "radius": 1.4,
+            "respawnSec": 20,
+            "reward": {
+                "exp": 5,
+                "currency": [],
+                "items": [
+                    {
+                        "itemCode": "hp_potion_small",
+                        "quantity": 1
+                    }
+                ]
+            }
         }
     ]
 }

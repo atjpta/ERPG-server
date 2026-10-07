@@ -75,3 +75,13 @@ marker NPC theo quest của riêng player đến qua message `npcMarkers`.
 - Port `applyMove` mới ([movement.step.ts](../src/rooms/world/simulation/movement.step.ts)) — va chạm theo `colliders` + collider NPC + hình chân `collider` của entity.
 - Khớp `contentHash` của `.map.json` trong build với hash server trả.
 - UI thoại / quest / marker; bảng locale theo `locale-keys.json`.
+
+## Dựng map trong Unity (Greenfield Village = `town_01`)
+
+Art lấy từ `Textures/MapWorld` (Sunnyside World). Công cụ ở menu `Tools/ERPG/`:
+
+1. **Slice MapWorld Sprites** — cắt sẵn các mảnh dùng để dựng map (nhà, cây, hàng rào…) thành sprite `mw_*`; tile nền/hàng rào là texture riêng trong `Textures/MapWorld/Tiles` để không bị lem viền khi lặp.
+2. **Build Greenfield Village** — dựng lại toàn bộ làng (nền, đường, nhà, hàng rào, cây) **và** các marker spawn / collider / NPC / vật thể trong scene `World`. Bố cục sửa trong `GreenfieldVillageBuilder.cs`.
+3. **Export Map** — xuất marker thành `town_01.map.json` vào `src/modules/maps/data`, rồi `yarn seed`.
+
+Mọi object art nằm ở layer `MapArt`; minimap chụp đúng layer đó (một camera tạm render cả map ra texture) nên hiển thị y hệt map thật.
