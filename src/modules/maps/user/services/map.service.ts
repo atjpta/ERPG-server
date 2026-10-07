@@ -34,6 +34,7 @@ export class MapService {
                     ...placement,
                     colliderWidth: npc?.colliderWidth ?? 0,
                     colliderHeight: npc?.colliderHeight ?? 0,
+                    interactRadius: npc?.interactRadius ?? 0,
                 };
             }),
             interactables: map.interactables.map((it) => ({
