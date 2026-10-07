@@ -76,18 +76,19 @@ marker NPC theo quest của riêng player đến qua message `npcMarkers`.
 - Khớp `contentHash` của `.map.json` trong build với hash server trả.
 - UI thoại / quest / marker; bảng locale theo `locale-keys.json`.
 
-## Dựng map trong Unity (Greenfield Village = `town_01`)
+## Dựng map trong Unity (Greenfield Village = `greenfield_village`)
 
-Art lấy từ `Textures/MapWorld` (Sunnyside World). Công cụ ở menu `Tools/ERPG/`:
+Art lấy từ `Textures/MapWorld/Environment`. Công cụ ở menu `Tools/ERPG/Greenfield/`:
 
-1. **Slice MapWorld Sprites** — cắt sẵn các mảnh dùng để dựng map (nhà, cây, hàng rào…) thành sprite `mw_*`; tile nền/hàng rào là texture riêng trong `Textures/MapWorld/Tiles` để không bị lem viền khi lặp.
-2. **Build Greenfield Village** — dựng lại toàn bộ làng (nền, đường, nhà, hàng rào, cây) **và** các marker spawn / collider / NPC / vật thể trong scene `World`. Bố cục sửa trong `GreenfieldVillageBuilder.cs`.
-3. **Export Map** — xuất marker thành `town_01.map.json` vào `src/modules/maps/data`, rồi `yarn seed`.
+1. **Cut Sprites** — cắt các mảnh từ Environment thành sprite riêng trong `Textures/MapWorld/Greenfield` (cây, bụi, đá, đồ vật), ghép **nhà** từ bộ mái + tường + cửa + cửa sổ, và sinh tile nền (cỏ, đất, đá lát) theo bảng màu của pack. Danh sách ô cắt nằm ở `GreenfieldCatalog.cs`.
+2. **Make Prefabs** — tạo prefab trong `Prefabs/Environment/{Buildings,Nature,Props}`: gốc ở chân, sprite sắp theo y cùng nhân vật, kèm collider marker nếu vật đó chặn đường.
+3. **Build Greenfield Village** — dựng lại làng trong scene `World` bằng các prefab đó + marker spawn / NPC / vật thể. Bố cục sửa trong `GreenfieldVillageBuilder.cs`.
+4. **Export Map** (`Tools/ERPG/Export Map`) — xuất marker thành `greenfield_village.map.json` vào `src/modules/maps/data`, rồi `yarn seed`.
 
 Mọi object art nằm ở layer `MapArt`; minimap chụp đúng layer đó (một camera tạm render cả map ra texture) nên hiển thị y hệt map thật.
 
 ### Kiểm tra collider trên client trước khi đồng bộ lên server
 
 - `Tools/ERPG/Check Map Collision`: đi thử một "chân người chơi" trên toàn map đúng như bước di chuyển chặn, báo NPC / portal / điểm spawn nào **không tới được** từ điểm spawn mặc định hoặc đang kẹt trong tường.
-- `Export Map` chạy kiểm tra này trước và **từ chối xuất** nếu có lỗi — chỉ khi client ổn mới ghi `town_01.map.json` cho server.
+- `Export Map` chạy kiểm tra này trước và **từ chối xuất** nếu có lỗi — chỉ khi client ổn mới ghi `greenfield_village.map.json` cho server.
 - Khi chơi trong Editor, nhấn **F12** để vẽ viền đỏ các khối chặn (collider map + thân NPC) lên map, đối chiếu bằng mắt với hình.

@@ -138,7 +138,7 @@
             "x": 4,
             "y": 48,
             "radius": 1.5,
-            "targetMapCode": "town_01",
+            "targetMapCode": "greenfield_village",
             "targetSpawnId": "from_field"
         },
         {

@@ -33,7 +33,7 @@ const ctx = (overrides: Partial<ConditionContext> = {}): ConditionContext => ({
     level: 5,
     classCode: "knight",
     baseClassCode: "swordsman",
-    mapCode: "town_01",
+    mapCode: "greenfield_village",
     flags: {},
     questState: () => QuestState.NOT_STARTED,
     itemCount: () => 0,
@@ -73,7 +73,7 @@ describe("condition", () => {
                 { type: "quest_state", questCode: "q", state: QuestState.READY },
             ])
         );
-        assert.ok(evaluateConditions(c, [{ type: "map_is", mapCode: "town_01" }]));
+        assert.ok(evaluateConditions(c, [{ type: "map_is", mapCode: "greenfield_village" }]));
         assert.ok(
             evaluateConditions(c, [
                 { type: "currency_min", currency: "gold" as never, amount: 100 },

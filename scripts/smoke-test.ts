@@ -73,7 +73,7 @@ console.info(`✅ moved x: ${startX} → ${moved.x.toFixed(2)} (direction ${move
 if (!(moved.x > startX)) throw new Error("Player did not move");
 
 // ---- NPC, thoại, quest, vật thể ---------------------------------------------------------------
-// Chỉ chạy khi map hiện tại có NPC `village_chief` (town_01).
+// Chỉ chạy khi map hiện tại có NPC `village_chief` (greenfield_village).
 const content = await api("GET", `/maps/${auth.player.mapCode}/content`);
 if (!content.contentHash) throw new Error("map content must carry contentHash");
 if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chief")) {

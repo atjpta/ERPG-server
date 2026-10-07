@@ -27,7 +27,7 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
     },
     [MasterDataKey.PLAYER_CONFIG]: {
         value: {
-            startMapCode: "town_01",
+            startMapCode: "greenfield_village",
             inventorySize: {
                 [ItemType.EQUIPMENT]: 60,
                 [ItemType.CONSUMABLE]: 40,

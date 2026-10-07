@@ -169,6 +169,13 @@
             "when": 1791375626384,
             "tag": "0023_npc_dialogue_quest",
             "breakpoints": true
+        },
+        {
+            "idx": 24,
+            "version": "7",
+            "when": 1791399968061,
+            "tag": "0024_rename_town_to_greenfield_village",
+            "breakpoints": true
         }
     ]
 }
