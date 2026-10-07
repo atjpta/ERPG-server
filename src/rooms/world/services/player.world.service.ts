@@ -164,6 +164,7 @@ export class PlayerWorldService {
             scheduleRespawn: (player) => this.scheduleRespawn(room, player),
         });
         if (state.attackCooldownTicks > 0) state.attackCooldownTicks--;
+        if (state.skillCooldownTicks > 0) state.skillCooldownTicks--;
     }
 
     private scheduleRespawn(room: WorldRoom, player: PlayerWorldState): void {

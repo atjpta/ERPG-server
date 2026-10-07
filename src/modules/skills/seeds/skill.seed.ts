@@ -3,13 +3,21 @@ import {
     DamageScalingType,
     DamageType,
     CrowdControlType,
+    HitDelivery,
     HitShape,
+    ProjectileHitBehavior,
+    ProjectileMovementType,
     ResourceType,
     SkillEffectType,
     SkillType,
     TargetType,
 } from "@/modules/skills/enums/skill.enum.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
+import type {
+    SkillArea,
+    SkillHitEvent,
+    SkillProjectile,
+} from "@/modules/skills/schemas/skill-config.schema.js";
 import { big, bigToNumber, floorBig } from "@/core/utils/big-number.util.js";
 import {
     MONSTER_DEFINITIONS,
@@ -18,13 +26,17 @@ import {
 } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { BASE_SKILL_TICK_RATE } from "@/rooms/world/utils/tick.world.util.js";
 
-const damage = (scalingValue: number) => ({
+const damage = (
+    scalingValue: number,
+    scalingType = DamageScalingType.ATTACK,
+    damageType = DamageType.PHYSICAL
+) => ({
     effectType: SkillEffectType.DAMAGE,
     baseValue: 0,
-    scalingType: DamageScalingType.ATTACK,
+    scalingType,
     scalingValue,
     durationMs: 0,
-    damageType: DamageType.PHYSICAL,
+    damageType,
     resourceType: ResourceType.NONE,
     crowdControlType: CrowdControlType.NONE,
 });
@@ -41,7 +53,12 @@ const hitEvent = (params: {
     offsetX?: number;
     offsetY?: number;
     damageScaling: number;
-}) => ({
+    damageScalingType?: DamageScalingType;
+    damageType?: DamageType;
+    delivery?: HitDelivery;
+    projectile?: SkillProjectile;
+    area?: SkillArea;
+}): SkillHitEvent => ({
     eventIndex: params.eventIndex,
     triggerTicks: params.triggerTicks,
     shape: params.shape,
@@ -52,59 +69,51 @@ const hitEvent = (params: {
     height: params.height ?? 0,
     radius: params.radius ?? 0,
     angle: params.angle ?? 90,
-    effects: [damage(params.damageScaling)],
+    effects: [damage(params.damageScaling, params.damageScalingType, params.damageType)],
+    delivery: params.delivery ?? HitDelivery.HITBOX,
+    ...(params.projectile && { projectile: params.projectile }),
+    ...(params.area && { area: params.area }),
 });
 
-const level = (level: number, baseValue: number, scalingValue: number) => ({
+const level = (
+    level: number,
+    baseValue: number,
+    scalingValue: number,
+    scalingType = DamageScalingType.ATTACK
+) => ({
     level,
     baseValue,
-    scalingType: DamageScalingType.ATTACK,
+    scalingType,
     scalingValue,
 });
 
-const SKILLS: NewSkill[] = [
+const basicAttackLevels = (scalingType = DamageScalingType.ATTACK) => [
+    level(1, 0, 1.1, scalingType),
+    level(2, 0, 1.2, scalingType),
+    level(3, 0, 1.3, scalingType),
+    level(4, 0, 1.4, scalingType),
+    level(5, 0, 1.5, scalingType),
+];
+
+/**
+ * Đòn đánh thường (`basicAttack`) của 3 class khởi đầu, canh theo anim trong
+ * `Assets/ERPG/Animation/PackCharacters/<Class>` (12 fps × speed của state trong controller).
+ * `castTimeMs` = thời lượng cả đòn (khoá di chuyển), luôn ≥ lúc gây damage cuối + 150 ms.
+ */
+const CLASS_SKILLS: NewSkill[] = [
     {
-        code: "orc_slash",
-        skillType: SkillType.MELEE,
-        targetType: TargetType.DIRECTION,
-        castRange: 1,
-        castTimeMs: 350,
-        cooldownMs: 2000,
-        manaCost: 0,
-        staminaCost: 0,
-        maxLevel: 1,
-        levelConfig: [level(1, 2, 0.25)],
-        skillHitEvents: [
-            hitEvent({
-                eventIndex: 0,
-                triggerTicks: 3,
-                shape: HitShape.RECT,
-                range: 1.08,
-                width: 0.84,
-                offsetX: -0.33,
-                offsetY: 0.33,
-                damageScaling: 1.25,
-            }),
-        ],
-    },
-    {
-        code: "swordsman_slash_1",
+        // basic_attack (clip Attack1 cũ, speed 2, 7 frame = 292 ms), chém ở frame 3. Cần thêm đòn thì thêm skill + clip sau.
+        code: "swordsman_basic_attack",
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
         castRange: 1.4,
-        // Thời lượng cả đòn (khoá di chuyển) — khớp AttackDurationTicks bên client; anim Attack01 350 ms; hit frame 3.
-        castTimeMs: 400,
-        cooldownMs: 0,
+        castTimeMs: 300,
+        cooldownMs: 1000,
         manaCost: 0,
-        staminaCost: 3,
+        staminaCost: 0,
         maxLevel: 5,
-        levelConfig: [
-            level(1, 8, 0.3),
-            level(2, 10, 0.35),
-            level(3, 12, 0.4),
-            level(4, 14, 0.45),
-            level(5, 16, 0.5),
-        ],
+        basicAttack: true,
+        levelConfig: basicAttackLevels(),
         skillHitEvents: [
             hitEvent({
                 eventIndex: 0,
@@ -119,129 +128,97 @@ const SKILLS: NewSkill[] = [
         ],
     },
     {
-        code: "swordsman_slash_2",
-        skillType: SkillType.MELEE,
-        targetType: TargetType.DIRECTION,
-        castRange: 1.5,
-        // Thời lượng cả đòn (khoá di chuyển) — khớp AttackDurationTicks bên client; anim Attack02 750 ms; hit frame 3/6/12.
+        // basic_attack = Archer_Attack01 (9 frame = 750 ms), mũi tên rời cung ở frame 6 (500 ms).
+        code: "archer_basic_attack",
+        skillType: SkillType.PROJECTILE,
+        targetType: TargetType.TARGET,
+        castRange: 5,
         castTimeMs: 750,
-        cooldownMs: 0,
+        cooldownMs: 1000,
         manaCost: 0,
-        staminaCost: 3,
+        staminaCost: 0,
         maxLevel: 5,
-        levelConfig: [
-            level(1, 8, 0.3),
-            level(2, 10, 0.35),
-            level(3, 12, 0.4),
-            level(4, 14, 0.45),
-            level(5, 16, 0.5),
-        ],
+        basicAttack: true,
+        levelConfig: basicAttackLevels(),
         skillHitEvents: [
             hitEvent({
                 eventIndex: 0,
-                triggerTicks: 3,
-                shape: HitShape.RECT,
-                range: 1.52,
-                width: 0.97,
-                offsetX: -0.33,
-                offsetY: 0.45,
-                damageScaling: 0.5,
-            }),
-            hitEvent({
-                eventIndex: 1,
-                triggerTicks: 6,
-                shape: HitShape.RECT,
-                range: 1.58,
-                width: 0.63,
-                offsetX: -0.33,
-                offsetY: 0.22,
-                damageScaling: 0.5,
-            }),
-            hitEvent({
-                eventIndex: 2,
-                triggerTicks: 12,
-                shape: HitShape.RECT,
-                range: 1.77,
-                width: 0.94,
-                offsetX: -0.33,
-                offsetY: 0.38,
-                damageScaling: 0.5,
+                triggerTicks: 10,
+                shape: HitShape.CIRCLE,
+                range: 0,
+                radius: 0.15,
+                offsetX: 0.3,
+                offsetY: 0.3,
+                damageScaling: 1,
+                delivery: HitDelivery.PROJECTILE,
+                projectile: {
+                    movementType: ProjectileMovementType.STRAIGHT,
+                    hitBehavior: ProjectileHitBehavior.DESTROY,
+                    speed: 12,
+                    maxDistance: 6,
+                    radius: 0.15,
+                    maxHits: 1,
+                },
             }),
         ],
     },
     {
-        code: "swordsman_slash_3",
-        skillType: SkillType.MELEE,
-        targetType: TargetType.DIRECTION,
-        castRange: 1.7,
-        // Thời lượng cả đòn (khoá di chuyển) — khớp AttackDurationTicks bên client; anim Attack03
-        // (speed 2.4) 500 ms, 5 nhát đâm ở frame 5–9 (208/250/292/333/375 ms).
-        castTimeMs: 500,
-        cooldownMs: 0,
+        // basic_attack = Priest_Attack (9 frame = 750 ms): cột sáng hiện trên mục tiêu ở frame 4 (333 ms),
+        // nổ ở frame 6 (500 ms) → đặt vùng ở 350 ms, gây damage sau 150 ms.
+        code: "cleric_basic_attack",
+        skillType: SkillType.GROUND,
+        targetType: TargetType.TARGET,
+        castRange: 4,
+        castTimeMs: 750,
+        cooldownMs: 1000,
         manaCost: 0,
-        staminaCost: 3,
+        staminaCost: 0,
         maxLevel: 5,
-        levelConfig: [
-            level(1, 8, 0.3),
-            level(2, 10, 0.35),
-            level(3, 12, 0.4),
-            level(4, 14, 0.45),
-            level(5, 16, 0.5),
-        ],
+        basicAttack: true,
+        levelConfig: basicAttackLevels(DamageScalingType.MAGIC_ATTACK),
         skillHitEvents: [
             hitEvent({
                 eventIndex: 0,
-                triggerTicks: 4,
-                shape: HitShape.RECT,
-                range: 1.27,
-                width: 0.41,
-                offsetX: -0.33,
-                offsetY: 0.33,
-                damageScaling: 0.4,
-            }),
-            hitEvent({
-                eventIndex: 1,
-                triggerTicks: 5,
-                shape: HitShape.RECT,
-                range: 1.49,
-                width: 0.5,
-                offsetX: -0.33,
-                offsetY: 0.28,
-                damageScaling: 0.4,
-            }),
-            hitEvent({
-                eventIndex: 2,
-                triggerTicks: 6,
-                shape: HitShape.RECT,
-                range: 1.42,
-                width: 0.47,
-                offsetX: -0.33,
-                offsetY: 0.33,
-                damageScaling: 0.4,
-            }),
-            hitEvent({
-                eventIndex: 3,
                 triggerTicks: 7,
-                shape: HitShape.RECT,
-                range: 1.52,
-                width: 0.47,
-                offsetX: -0.33,
-                offsetY: 0.33,
-                damageScaling: 0.4,
-            }),
-            hitEvent({
-                eventIndex: 4,
-                triggerTicks: 7,
-                shape: HitShape.RECT,
-                range: 1.36,
-                width: 0.34,
-                offsetX: -0.33,
-                offsetY: 0.3,
-                damageScaling: 0.4,
+                shape: HitShape.CIRCLE,
+                range: 0,
+                radius: 0.6,
+                damageScaling: 1.1,
+                damageScalingType: DamageScalingType.MAGIC_ATTACK,
+                damageType: DamageType.MAGICAL,
+                delivery: HitDelivery.AREA,
+                area: { delayMs: 150, untargetedDistance: 1.5 },
             }),
         ],
     },
 ];
+
+/** Đòn đánh thường của Orc, chỉnh tay (monster khác sinh theo hitbox — `monsterAttackSkill`). */
+const ORC_SLASH: NewSkill = {
+    code: "orc_slash",
+    skillType: SkillType.MELEE,
+    targetType: TargetType.DIRECTION,
+    castRange: 1,
+    castTimeMs: 350,
+    cooldownMs: 2000,
+    manaCost: 0,
+    staminaCost: 0,
+    maxLevel: 1,
+    basicAttack: true,
+    levelConfig: [level(1, 2, 0.25)],
+    skillHitEvents: [
+        hitEvent({
+            eventIndex: 0,
+            triggerTicks: 3,
+            shape: HitShape.RECT,
+            range: 1.08,
+            width: 0.84,
+            offsetX: -0.33,
+            offsetY: 0.33,
+            damageScaling: 1.25,
+        }),
+    ],
+};
 
 const round2 = (value: ReturnType<typeof big>) => bigToNumber(value.decimalPlaces(2));
 
@@ -271,6 +248,7 @@ const monsterAttackSkill = (monster: MonsterDefinition): NewSkill => {
         manaCost: 0,
         staminaCost: 0,
         maxLevel: 1,
+        basicAttack: true,
         levelConfig: [level(1, 2, 0.25)],
         skillHitEvents: [
             hitEvent({
@@ -292,7 +270,7 @@ const MONSTER_SKILLS: NewSkill[] = MONSTER_DEFINITIONS.filter(
 ).map(monsterAttackSkill);
 
 export const SkillSeed = async () => {
-    for (const skill of [...SKILLS, ...MONSTER_SKILLS]) {
+    for (const skill of [...CLASS_SKILLS, ORC_SLASH, ...MONSTER_SKILLS]) {
         await SkillRepo.upsert({
             data: skill,
             target: Skills.code,
@@ -301,9 +279,5 @@ export const SkillSeed = async () => {
         });
     }
 
-    const legacySlash = await SkillRepo.findByCode({ code: "swordman_slash" });
-    if (legacySlash?.enabled) {
-        await SkillRepo.updateById({ id: legacySlash.id, data: { enabled: false } });
-    }
     console.info("✅ [SkillSeed] Done");
 };

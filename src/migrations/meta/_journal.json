@@ -148,6 +148,13 @@
             "when": 1791295416386,
             "tag": "0020_class_rework",
             "breakpoints": true
+        },
+        {
+            "idx": 21,
+            "version": "7",
+            "when": 1791365399423,
+            "tag": "0021_skill_basic_attack",
+            "breakpoints": true
         }
     ]
 }

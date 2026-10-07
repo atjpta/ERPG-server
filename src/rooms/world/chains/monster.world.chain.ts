@@ -3,11 +3,10 @@ import { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { applyWorldMove } from "@/rooms/world/simulation/movement.step.js";
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
-import { calculateDamage } from "@/rooms/world/chains/damage.world.chain.js";
-import { combatSeed } from "@/rooms/world/utils/combat-roll.world.util.js";
 import { distanceSquared } from "@/rooms/world/utils/world.util.js";
-import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
+import { skillDeliveryWorldService } from "@/rooms/world/services/skill-delivery.world.service.js";
+import { monsterSkillOwner } from "@/rooms/world/utils/skill-owner.world.util.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
 import {
@@ -15,13 +14,13 @@ import {
     PendingSkillHit,
     buildPendingSkillHits,
     getSkillDurationTicks,
-    scaleSkillHitEvent,
+    skillReachesTarget,
     tickPendingSkillHits,
 } from "@/rooms/world/utils/skill-attack.world.util.js";
 
-const MONSTER_DETECTION_RADIUS = 4;
+const MONSTER_DETECTION_RADIUS = 6;
 const MONSTER_LEASH_RADIUS = 8;
-const MONSTER_ROAM_RADIUS = 2;
+const MONSTER_ROAM_RADIUS = 4;
 const MONSTER_ROAM_ARRIVAL_DISTANCE = 0.15;
 const MONSTER_IDLE_MIN_MS = 1_000;
 const MONSTER_IDLE_MAX_MS = 3_000;
@@ -210,7 +209,14 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
         if (pending) {
             monster.startAttackWindup();
             tickPendingSkillHits(pending.hitEvents, (hit) =>
-                this.resolveSkillHit(room, monster, hit)
+                skillDeliveryWorldService.deliver(room, {
+                    owner: monsterSkillOwner(monster),
+                    skill: hit.skill,
+                    hit,
+                    originX: monster.x,
+                    originY: monster.y,
+                    aim: pending.target.hp > 0 ? pending.target : undefined,
+                })
             );
             pending.ticks--;
             if (pending.ticks > 0) return WorldChainResult.STOP;
@@ -224,7 +230,7 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
 
         monster.faceTarget(dx);
         if (monster.attackCooldownTicks > 0) return WorldChainResult.STOP;
-        // Monster chỉ đánh bằng skill MELEE của nó (tầm/hitbox/thời lượng nằm trong skill).
+        // Monster đánh bằng skill `basicAttack` của nó (tầm/hitbox/thời lượng nằm trong skill).
         const skill = getMonsterAttackSkill(monster);
         if (!skill) return WorldChainResult.STOP;
 
@@ -256,34 +262,9 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
         });
         return WorldChainResult.STOP;
     }
-
-    private resolveSkillHit(
-        room: WorldRoom,
-        monster: MonsterWorldState,
-        hit: PendingSkillHit
-    ): void {
-        const origin = { x: monster.x, y: monster.y, direction: hit.direction };
-        for (const target of room.state.players.values()) {
-            if (target.hp <= 0) continue;
-            if (!intersectsSkillHitEvent(origin, target.x, target.y, target.hitbox, hit.event)) {
-                continue;
-            }
-
-            const result = calculateDamage({
-                attacker: monster.toDamageCombatant(),
-                defender: target.toDamageCombatant(),
-                event: hit.event,
-                seed: combatSeed(monster.id, hit.attackSerial, hit.eventIndex, target.id),
-            });
-            if (!result.hit) continue;
-
-            target.takeDamage(result.damage);
-            monster.heal(result.heal);
-        }
-    }
 }
 
-/** Đòn đánh thường của monster = skill MELEE đầu tiên trong cột `skills` của nó. */
+/** Đòn đánh thường của monster = skill `basicAttack` đầu tiên trong cột `skills` của nó. */
 function getMonsterAttackSkill(monster: MonsterWorldState) {
     return skillService.getBasicAttackCombo(monster.skills)[0];
 }
@@ -294,9 +275,8 @@ function isMonsterSkillHitboxInRange(
     distance: number
 ): boolean {
     const skill = getMonsterAttackSkill(monster);
-    const hitEvents = skill?.skillHitEvents ?? [];
     if (!skill) return false;
-    if (hitEvents.length === 0) return distance <= skill.castRange * monster.scale;
+    if (skill.skillHitEvents.length === 0) return distance <= skill.castRange * monster.scale;
 
     const direction =
         target.x < monster.x
@@ -304,15 +284,11 @@ function isMonsterSkillHitboxInRange(
             : target.x > monster.x
               ? Direction.RIGHT
               : monster.direction;
-
-    return hitEvents.some((event) =>
-        intersectsSkillHitEvent(
-            { x: monster.x, y: monster.y, direction },
-            target.x,
-            target.y,
-            target.hitbox,
-            scaleSkillHitEvent(event, monster.scale)
-        )
+    return skillReachesTarget(
+        skill,
+        { x: monster.x, y: monster.y, direction },
+        target,
+        monster.scale
     );
 }
 

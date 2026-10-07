@@ -1,4 +1,4 @@
-import { integer, jsonb, pgEnum, pgTable, real } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgEnum, pgTable, real } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import { SkillOwnerType, SkillType, TargetType } from "@/modules/skills/enums/skill.enum.js";
 import type {
@@ -21,6 +21,8 @@ export const Skills = pgTable("skills", {
     manaCost: integer("mana_cost").notNull().default(0),
     staminaCost: integer("stamina_cost").notNull().default(0),
     maxLevel: integer("max_level").notNull().default(10),
+    /** Đòn đánh thường: các skill này trong cột `skills` của player/monster, theo thứ tự, là combo đánh thường. */
+    basicAttack: boolean("basic_attack").notNull().default(false),
     levelConfig: jsonb("level_config").$type<SkillLevelConfig[]>().notNull().default([]),
     skillHitEvents: jsonb("skill_hit_events").$type<SkillHitEvent[]>().notNull().default([]),
 });

@@ -1,12 +1,16 @@
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
+import { HitDelivery } from "@/modules/skills/enums/skill.enum.js";
 import type { SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
 import { hasDamageEffect } from "@/rooms/world/chains/damage.world.chain.js";
+import type { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
+import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import { millisecondsToTicks, skillEventTicks } from "@/rooms/world/utils/tick.world.util.js";
 
 export type HorizontalDirection = Direction.LEFT | Direction.RIGHT;
 
 export interface PendingSkillHit {
+    skill: Skill;
     event: SkillHitEvent;
     /** Số thứ tự đòn của bên đánh + thứ tự trong `skill.skillHitEvents` — ghép thành seed roll combat. */
     attackSerial: number;
@@ -44,6 +48,7 @@ export function buildPendingSkillHits(
     scale = 1
 ): PendingSkillHit[] {
     return skill.skillHitEvents.map((event, eventIndex) => ({
+        skill,
         event: scaleSkillHitEvent(event, scale),
         attackSerial,
         eventIndex,
@@ -58,6 +63,31 @@ export const getSkillDurationTicks = (skill: Skill, tickRate: number) =>
         millisecondsToTicks(skill.castTimeMs, tickRate),
         ...skill.skillHitEvents.map((event) => skillEventTicks(event.triggerTicks, tickRate))
     );
+
+/**
+ * Skill đã với tới mục tiêu khi bên đánh đứng ở `origin` quay về phía nó: một hit event HITBOX chạm
+ * hitbox mục tiêu, hoặc (PROJECTILE / AREA) mục tiêu trong `castRange × scale`.
+ * Khớp SkillAttackWorldUtil.ReachesTarget bên client.
+ */
+export function skillReachesTarget(
+    skill: Skill,
+    origin: { x: number; y: number; direction: string },
+    target: { x: number; y: number; hitbox: HitboxColliderState },
+    scale = 1
+): boolean {
+    const castRangeSquared = (skill.castRange * scale) ** 2;
+    return skill.skillHitEvents.some((event) =>
+        (event.delivery ?? HitDelivery.HITBOX) === HitDelivery.HITBOX
+            ? intersectsSkillHitEvent(
+                  origin,
+                  target.x,
+                  target.y,
+                  target.hitbox,
+                  scaleSkillHitEvent(event, scale)
+              )
+            : (target.x - origin.x) ** 2 + (target.y - origin.y) ** 2 <= castRangeSquared
+    );
+}
 
 /** Giảm 1 tick cho mọi hit đang chờ, gọi `onHit` cho hit đến lượt và bỏ nó khỏi danh sách. */
 export function tickPendingSkillHits(

@@ -1,7 +1,7 @@
 import { cacheService } from "@/core/cache/cache.service.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
-import { SkillType } from "@/modules/skills/enums/skill.enum.js";
-import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js";
+import { HitDelivery } from "@/modules/skills/enums/skill.enum.js";
+import type { OwnedSkill, SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
 
 /** `triggerTicks` của hit event được tác giả theo nhịp 20 tick/giây. */
@@ -45,14 +45,14 @@ export class SkillService {
     }
 
     /**
-     * Combo đánh thường của một player/monster: các skill MELEE nó sở hữu, đúng thứ tự trong cột
-     * `skills` (bước 1, 2, 3…). Skill đã tắt hoặc không tồn tại bị bỏ qua.
+     * Combo đánh thường của một player/monster: các skill `basicAttack` nó sở hữu, đúng thứ tự trong
+     * cột `skills` (bước 1, 2, 3…). Skill đã tắt hoặc không tồn tại bị bỏ qua.
      */
     getBasicAttackCombo(owned: Iterable<Pick<OwnedSkill, "skillId">>): Skill[] {
         const combo: Skill[] = [];
         for (const { skillId } of owned) {
             const skill = this.skillsById.get(skillId);
-            if (skill?.skillType === SkillType.MELEE) combo.push(skill);
+            if (skill?.basicAttack) combo.push(skill);
         }
         return combo;
     }
@@ -78,10 +78,17 @@ function warnIfLastHitTooLate(code: string, castTimeMs: number, events: Skill["s
         console.warn(`[Skill] ${code}: castTimeMs is 0 — run \`yarn seed --force\` to update it.`);
         return;
     }
-    const lastHitMs = Math.max(0, ...events.map((event) => event.triggerTicks * AUTHORED_TICK_MS));
+    // Vùng AREA gây damage sau `delayMs`; đạn còn phải bay nên không tính trước được.
+    const lastHitMs = Math.max(
+        0,
+        ...events.map((event) => event.triggerTicks * AUTHORED_TICK_MS + areaDelayMs(event))
+    );
     if (lastHitMs + HIT_CONFIRM_BUDGET_MS <= castTimeMs) return;
     console.warn(
         `[Skill] ${code}: last hit at ${lastHitMs}ms leaves less than ${HIT_CONFIRM_BUDGET_MS}ms ` +
             `before the attack ends (${castTimeMs}ms) — damage may show after the animation.`
     );
 }
+
+const areaDelayMs = (event: SkillHitEvent) =>
+    event.delivery === HitDelivery.AREA ? (event.area?.delayMs ?? 0) : 0;

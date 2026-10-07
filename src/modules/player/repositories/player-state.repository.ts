@@ -20,17 +20,23 @@ export class PlayerStateRepository {
         return dbOrTx.select().from(PlayerStates).where(inArray(PlayerStates.playerId, playerIds));
     }
 
-    /** Gán `skills` cho player của class này chưa có skill nào (không đổi revision — không đụng state online). */
-    async fillEmptySkills(
+    /**
+     * Gán `skills` cho mọi player của class này đang có bộ khác (không đổi revision — room không lưu
+     * `skills`, player đang online nhận bộ mới ở lần vào room sau).
+     */
+    async replaceClassSkills(
         classId: string,
-        skills: NewPlayerState["skills"],
+        skills: NonNullable<NewPlayerState["skills"]>,
         dbOrTx: Queryable = db
     ) {
         return dbOrTx
             .update(PlayerStates)
             .set({ skills })
             .where(
-                and(eq(PlayerStates.classId, classId), sql`${PlayerStates.skills} = '[]'::jsonb`)
+                and(
+                    eq(PlayerStates.classId, classId),
+                    sql`${PlayerStates.skills} <> ${JSON.stringify(skills)}::jsonb`
+                )
             )
             .returning({ playerId: PlayerStates.playerId });
     }

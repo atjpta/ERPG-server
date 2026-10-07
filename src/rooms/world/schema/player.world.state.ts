@@ -27,6 +27,9 @@ import {
     toOwnedSkillStates,
 } from "@/rooms/world/schema/owned-skill.world.state.js";
 
+/** Trần của `skillCooldownTicks` (uint16). */
+const MAX_SKILL_COOLDOWN_TICKS = 0xffff;
+
 /** Player hiển thị trên map — chỉ chứa dữ liệu mọi người chơi khác cần thấy. */
 export class PlayerWorldState extends Schema {
     @type("string") id: string;
@@ -45,6 +48,12 @@ export class PlayerWorldState extends Schema {
     @type("uint32") defense: number;
     @type("uint32") stateRevision: number;
     @type("uint8") attackCooldownTicks: number = 0;
+    /**
+     * Tick còn lại tới khi được bắt đầu đòn đánh thường kế tiếp: đếm từ lúc bắt đầu đòn, = thời lượng
+     * đòn + `cooldownMs` của skill. Khác `attackCooldownTicks` (khoá di chuyển lúc vung), hết vung
+     * vẫn đi lại được trong lúc chờ.
+     */
+    @type("uint16") skillCooldownTicks: number = 0;
     @type("boolean") dashing: boolean = false;
     @type("uint8") dashTicks: number = 0;
     @type("uint8") dashCooldownTicks: number = 0;
@@ -261,6 +270,7 @@ export class PlayerWorldState extends Schema {
         this.dashing = false;
         this.hp = this.maxHp;
         this.attackCooldownTicks = 0;
+        this.skillCooldownTicks = 0;
         this.dashTicks = 0;
         this.dashCooldownTicks = 0;
     }
@@ -281,9 +291,17 @@ export class PlayerWorldState extends Schema {
         if (!Number.isFinite(this.y) || this.y < 0 || this.y > height) this.y = spawnY;
     }
 
-    startAttack(cooldownTicks: number) {
+    /** Bắt đầu đòn: khoá di chuyển `durationTicks`, đòn kế tiếp phải đợi thêm `cooldownTicks` sau đó. */
+    startAttack(durationTicks: number, cooldownTicks = 0) {
         this.attacking = true;
-        this.attackCooldownTicks = cooldownTicks;
+        this.attackCooldownTicks = durationTicks;
+        this.skillCooldownTicks = Math.min(durationTicks + cooldownTicks, MAX_SKILL_COOLDOWN_TICKS);
+    }
+
+    /** Dash / bị đánh trúng cắt đòn đang vung: bỏ phần khoá di chuyển còn lại, giữ phần cooldown. */
+    cancelAttackLock() {
+        this.skillCooldownTicks = Math.max(0, this.skillCooldownTicks - this.attackCooldownTicks);
+        this.attackCooldownTicks = 0;
     }
 
     chainDash(requested: boolean, tickRate: number) {
@@ -314,7 +332,7 @@ export class PlayerWorldState extends Schema {
         this.moving = false;
         this.attacking = false;
         this.attackCombo = 0;
-        this.attackCooldownTicks = 0;
+        this.cancelAttackLock();
         this.dashing = false;
         this.dashTicks = 0;
     }

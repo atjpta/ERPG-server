@@ -1,11 +1,19 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { DamageScalingType, SkillEffectType } from "@/modules/skills/enums/skill.enum.js";
+import {
+    DamageScalingType,
+    HitDelivery,
+    SkillEffectType,
+} from "@/modules/skills/enums/skill.enum.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
 import { sortSkillHitEvents } from "@/modules/skills/services/skill.service.js";
 import { getSkillDurationTicks } from "@/rooms/world/utils/skill-attack.world.util.js";
-import { WORLD_TICK_RATE, skillEventTicks } from "@/rooms/world/utils/tick.world.util.js";
+import {
+    WORLD_TICK_RATE,
+    millisecondsToTicks,
+    skillEventTicks,
+} from "@/rooms/world/utils/tick.world.util.js";
 
 /**
  * Xuất skill đang bật trong DB ra `<outputDir>/skills.json` cho client — client không giữ bản copy
@@ -43,6 +51,8 @@ function toClientSkill(skill: Skill) {
         skillType: skill.skillType,
         castRange: skill.castRange,
         cooldownMs: skill.cooldownMs,
+        /** Thuộc combo đánh thường (theo thứ tự trong `skills` của player/monster). */
+        basicAttack: skill.basicAttack,
         /** Số tick mô phỏng của cả đòn (khoá di chuyển) — giống PlayerAttackChain. */
         durationTicks: getSkillDurationTicks(skill, WORLD_TICK_RATE),
         hitEvents: sortSkillHitEvents(skill.skillHitEvents).map((event) => {
@@ -65,6 +75,27 @@ function toClientSkill(skill: Skill) {
                 damageAttackScaling: damageEffects
                     .filter((effect) => effect.scalingType === DamageScalingType.ATTACK)
                     .reduce((total, effect) => total + effect.scalingValue, 0),
+                /** HITBOX / PROJECTILE / AREA — xem SkillDeliveryWorldService. */
+                delivery: event.delivery ?? HitDelivery.HITBOX,
+                projectile: event.projectile
+                    ? {
+                          speed: event.projectile.speed,
+                          maxDistance: event.projectile.maxDistance,
+                          radius: event.projectile.radius,
+                          hitBehavior: event.projectile.hitBehavior,
+                          maxHits: event.projectile.maxHits,
+                      }
+                    : null,
+                area: event.area
+                    ? {
+                          /** Tick mô phỏng từ lúc đặt vùng tới lúc gây damage (0 = ngay). */
+                          delayTicks:
+                              event.area.delayMs > 0
+                                  ? millisecondsToTicks(event.area.delayMs, WORLD_TICK_RATE)
+                                  : 0,
+                          untargetedDistance: event.area.untargetedDistance,
+                      }
+                    : null,
             };
         }),
     };

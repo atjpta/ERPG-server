@@ -4,6 +4,7 @@ import { mapService } from "@/modules/maps/user/services/map.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { monsterWorldService } from "@/rooms/world/services/monster.world.service.js";
 import { playerWorldService } from "@/rooms/world/services/player.world.service.js";
+import { skillDeliveryWorldService } from "@/rooms/world/services/skill-delivery.world.service.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 
 export interface WorldRoomOptions {
@@ -34,6 +35,8 @@ export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
         this.room.setFixedTimestep((ctx) => {
             playerWorldService.chain(this.room, ctx);
             monsterWorldService.chain(this.room, ctx.dt);
+            // Đạn bay / vùng chờ nổ — sau player và monster để thấy vị trí mới nhất của tick này.
+            skillDeliveryWorldService.chain(this.room, ctx.dt);
         }, this.room.tickRate);
         this.room.clock.setInterval((): void => {
             void worldService.checkpointPlayers(this.room);

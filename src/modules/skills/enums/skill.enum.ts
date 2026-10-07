@@ -34,6 +34,17 @@ export enum HitShape {
     LINE = "LINE",
 }
 
+/**
+ * Cách một hit event chạm mục tiêu: HITBOX = vùng quanh người đánh nổ ngay (cận chiến); PROJECTILE =
+ * bắn ra một viên đạn bay, trúng khi chạm hitbox mục tiêu; AREA = vùng tròn đặt tại vị trí mục tiêu,
+ * nổ sau `area.delayMs`.
+ */
+export enum HitDelivery {
+    HITBOX = "HITBOX",
+    PROJECTILE = "PROJECTILE",
+    AREA = "AREA",
+}
+
 export enum SkillEffectType {
     DAMAGE = "DAMAGE",
     HEAL = "HEAL",

@@ -3,26 +3,27 @@ import { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { MoveCommand, applyWorldMove } from "@/rooms/world/simulation/movement.step.js";
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
-import { calculateDamage } from "@/rooms/world/chains/damage.world.chain.js";
-import { combatSeed } from "@/rooms/world/utils/combat-roll.world.util.js";
-import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
-import { monsterRewardService } from "@/modules/rewards/services/monster-reward.service.js";
-import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
+import { skillDeliveryWorldService } from "@/rooms/world/services/skill-delivery.world.service.js";
 import {
     PendingSkillHit,
     buildPendingSkillHits,
     getSkillDurationTicks,
+    skillReachesTarget,
     tickPendingSkillHits,
     toHorizontalDirection,
 } from "@/rooms/world/utils/skill-attack.world.util.js";
+import {
+    findPlayerAimTarget,
+    playerSkillOwner,
+} from "@/rooms/world/utils/skill-owner.world.util.js";
 
 /** Không lock: mỗi step tự chọn monster gần nhất trong tầm này. */
 const PLAYER_AUTO_TARGET_RANGE = 4;
 /** Target đã lock bị mất khi ra xa quá tầm này (khớp KeepTargetRangeSquared bên client). */
 const PLAYER_KEEP_TARGET_RANGE = 6;
-/** Chỉ quay mặt về target khi nó ở gần. */
+/** Chỉ quay mặt về target khi nó ở gần (bấm đánh: trong tầm này hoặc `castRange` của đòn kế tiếp). */
 const PLAYER_FACE_TARGET_RANGE = 2;
 /** Lệch tối thiểu (ô) theo mỗi trục để còn đi về phía target khi tự áp sát — giống monster. */
 const PLAYER_APPROACH_DEADZONE = 0.1;
@@ -79,7 +80,7 @@ export class PlayerDashChain implements WorldChainAction<PlayerChainContext> {
         if (canStartDash) {
             // Dash huỷ đòn đánh đang dở, kể cả các hit chưa nổ.
             state.attacking = false;
-            state.attackCooldownTicks = 0;
+            state.cancelAttackLock();
             this.attackChain.interrupt(state);
         }
 
@@ -121,13 +122,17 @@ export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
             state.targetId = target?.id ?? "";
         }
 
-        // Khớp WorldMovementStep.cs: quay mặt về target hiện tại khi nó trong tầm 2 ô.
+        // Khớp WorldMovementStep.cs: quay mặt về target hiện tại khi nó trong tầm 2 ô — khi bấm đánh thì
+        // trong cả tầm của đòn kế tiếp (đánh xa: cung thủ quay về con đang ngắm).
+        const faceRange = attackRequested
+            ? Math.max(PLAYER_FACE_TARGET_RANGE, getNextBasicAttack(state)?.castRange ?? 0)
+            : PLAYER_FACE_TARGET_RANGE;
         if (
             target &&
             !state.dashing &&
             !dashRequested &&
             (state.moving || targetSwitchPressed || attackRequested) &&
-            distanceSquared(state.x, state.y, target.x, target.y) <= PLAYER_FACE_TARGET_RANGE ** 2
+            distanceSquared(state.x, state.y, target.x, target.y) <= faceRange ** 2
         ) {
             faceTarget(state, target.x - state.x);
         }
@@ -175,7 +180,9 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         approachingAttack,
     }: PlayerChainContext): WorldChainResult {
         this.processPendingHits(room, sessionId, state);
-        if (state.dashing || state.attackCooldownTicks > 0) return WorldChainResult.CONTINUE;
+        if (state.dashing || state.attackCooldownTicks > 0 || state.skillCooldownTicks > 0) {
+            return WorldChainResult.CONTINUE;
+        }
 
         // Hết đòn mà không có yêu cầu đánh tiếp ngay tick đầu tiên → mất combo.
         if (!attackRequested) {
@@ -190,7 +197,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
     }
 
     private startAttack(room: WorldRoom, state: PlayerWorldState): void {
-        // Combo = các skill MELEE player sở hữu, theo thứ tự cột `skills`; thời lượng mỗi đòn =
+        // Combo = các skill `basicAttack` player sở hữu, theo thứ tự cột `skills`; thời lượng mỗi đòn =
         // `castTimeMs` của skill đó (khớp WorldMovementStep.cs qua skills.json).
         const combo = skillService.getBasicAttackCombo(state.skills);
         state.attackCombo =
@@ -208,7 +215,10 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
             state,
             buildPendingSkillHits(skill, state.attackSerial, direction, room.tickRate)
         );
-        state.startAttack(getSkillDurationTicks(skill, room.tickRate));
+        state.startAttack(
+            getSkillDurationTicks(skill, room.tickRate),
+            skill.cooldownMs > 0 ? millisecondsToTicks(skill.cooldownMs, room.tickRate) : 0
+        );
     }
 
     private processPendingHits(room: WorldRoom, sessionId: string, state: PlayerWorldState): void {
@@ -225,47 +235,16 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         state: PlayerWorldState,
         hit: PendingSkillHit
     ): void {
-        // Player tự predict nên vị trí của chính nó là live; monster thì đọc lại đúng chỗ client đang vẽ.
-        const seen = room.rewind.lastSeenBy(sessionId);
-        const origin = { x: state.x, y: state.y, direction: hit.direction };
-        for (const target of room.state.monsters.values()) {
-            if (target.hp <= 0) continue;
-            const targetX = seen.value(target, "x");
-            const targetY = seen.value(target, "y");
-            if (!intersectsSkillHitEvent(origin, targetX, targetY, target.hitbox, hit.event)) {
-                continue;
-            }
-
-            target.setAggroTarget(state.id);
-            const result = calculateDamage({
-                attacker: state.toDamageCombatant(),
-                defender: target.toDamageCombatant(),
-                event: hit.event,
-                seed: combatSeed(state.id, hit.attackSerial, hit.eventIndex, target.id),
-            });
-            if (!result.hit) continue;
-
-            target.takeDamage(
-                result.damage,
-                millisecondsToTicks(target.attackCooldownMs, room.tickRate)
-            );
-            state.heal(result.heal);
-            // Đòn kết liễu → người đánh nhận thưởng (mỗi monster chỉ chết một lần).
-            if (target.hp <= 0) {
-                rewardWorldService.grant(
-                    room,
-                    sessionId,
-                    state,
-                    monsterRewardService.roll({
-                        type: target.monsterType,
-                        rarity: target.rarity,
-                        level: target.level,
-                        biome: target.biome,
-                        drops: target.drops,
-                    })
-                );
-            }
-        }
+        // HITBOX trúng ngay; đạn / vùng bay hoặc chờ nổ ở SkillDeliveryWorldService. Vị trí monster đọc
+        // đúng chỗ client này đang vẽ (rewind) — cả lúc ngắm lẫn lúc trúng.
+        skillDeliveryWorldService.deliver(room, {
+            owner: playerSkillOwner(sessionId, state),
+            skill: hit.skill,
+            hit,
+            originX: state.x,
+            originY: state.y,
+            aim: findPlayerAimTarget(room, sessionId, state),
+        });
     }
 }
 
@@ -278,8 +257,8 @@ function getNextBasicAttack(state: PlayerWorldState) {
 }
 
 /**
- * Hướng đi khi tự áp sát: target hiện tại trong tầm quay mặt (2 ô) nhưng chưa hit event nào của đòn kế tiếp
- * chạm hitbox của nó (quay mặt về target). `undefined` = đánh tại chỗ (không có target / đã trong tầm).
+ * Hướng đi khi tự áp sát: target hiện tại trong tầm quay mặt (2 ô) nhưng đòn kế tiếp chưa với tới nó
+ * (`skillReachesTarget`, quay mặt về target). `undefined` = đánh tại chỗ (không có target / đã trong tầm).
  * Khớp WorldMovementStep.TryGetAttackApproach bên client.
  */
 function getAttackApproachMove(room: WorldRoom, state: PlayerWorldState): MoveCommand | undefined {
@@ -292,11 +271,7 @@ function getAttackApproachMove(room: WorldRoom, state: PlayerWorldState): MoveCo
     const dx = target.x - state.x;
     const dy = target.y - state.y;
     const direction = dx < 0 ? "left" : dx > 0 ? "right" : state.direction;
-    const origin = { x: state.x, y: state.y, direction };
-    const inRange = skill.skillHitEvents.some((event) =>
-        intersectsSkillHitEvent(origin, target.x, target.y, target.hitbox, event)
-    );
-    if (inRange) return undefined;
+    if (skillReachesTarget(skill, { x: state.x, y: state.y, direction }, target)) return undefined;
 
     const moveX = Math.abs(dx) > PLAYER_APPROACH_DEADZONE ? Math.sign(dx) : 0;
     const moveY = Math.abs(dy) > PLAYER_APPROACH_DEADZONE ? Math.sign(dy) : 0;

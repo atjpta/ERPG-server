@@ -2,14 +2,12 @@ import { Classes, type NewCharacterClass } from "@/modules/classes/entities/clas
 import { toOwnedSkills } from "@/modules/skills/seeds/owned-skills.seed.util.js";
 import { ClassRepo } from "@/modules/classes/repositories/class.repository.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
+import { PlayerStateRepo } from "@/modules/player/repositories/player-state.repository.js";
 
 interface ClassSeedData extends Omit<NewCharacterClass, "skills"> {
     /** Skill mặc định theo code, đúng thứ tự combo đánh thường. */
     skillCodes: string[];
 }
-
-/** Tạm: class chưa có skill riêng dùng combo chém của swordsman. */
-const PLACEHOLDER_SKILL_CODES = ["swordsman_slash_1", "swordsman_slash_2", "swordsman_slash_3"];
 
 /** Chạy sau SkillSeed (tham chiếu skill theo id). 3 class khởi đầu, tổng 25 điểm ở level 1. */
 const CLASSES: ClassSeedData[] = [
@@ -36,7 +34,7 @@ const CLASSES: ClassSeedData[] = [
             [StatKey.MP_REGEN]: 0.5,
         },
         statBonuses: [],
-        skillCodes: ["swordsman_slash_1", "swordsman_slash_2", "swordsman_slash_3"],
+        skillCodes: ["swordsman_basic_attack"],
     },
     {
         code: "archer",
@@ -61,7 +59,7 @@ const CLASSES: ClassSeedData[] = [
             [StatKey.MP_REGEN]: 0.6,
         },
         statBonuses: [],
-        skillCodes: PLACEHOLDER_SKILL_CODES,
+        skillCodes: ["archer_basic_attack"],
     },
     {
         code: "cleric",
@@ -86,22 +84,22 @@ const CLASSES: ClassSeedData[] = [
             [StatKey.MP_REGEN]: 1.2,
         },
         statBonuses: [],
-        skillCodes: PLACEHOLDER_SKILL_CODES,
+        skillCodes: ["cleric_basic_attack"],
     },
 ];
 
 export const ClassSeed = async () => {
     for (const { skillCodes, ...rest } of CLASSES) {
-        const characterClass: NewCharacterClass = {
-            ...rest,
-            skills: await toOwnedSkills(skillCodes),
-        };
-        await ClassRepo.upsert({
+        const skills = await toOwnedSkills(skillCodes);
+        const characterClass: NewCharacterClass = { ...rest, skills };
+        const saved = await ClassRepo.upsert({
             data: characterClass,
             target: Classes.code,
             matchValue: characterClass.code,
             updateData: characterClass,
         });
+        // Chưa có học skill: skill của player = bộ mặc định của class, đổi bộ này thì đổi luôn cho player.
+        await PlayerStateRepo.replaceClassSkills(saved.id, skills);
     }
     console.info("✅ [ClassSeed] Done");
 };
