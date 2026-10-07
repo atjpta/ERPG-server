@@ -85,3 +85,9 @@ Art lấy từ `Textures/MapWorld` (Sunnyside World). Công cụ ở menu `Tools
 3. **Export Map** — xuất marker thành `town_01.map.json` vào `src/modules/maps/data`, rồi `yarn seed`.
 
 Mọi object art nằm ở layer `MapArt`; minimap chụp đúng layer đó (một camera tạm render cả map ra texture) nên hiển thị y hệt map thật.
+
+### Kiểm tra collider trên client trước khi đồng bộ lên server
+
+- `Tools/ERPG/Check Map Collision`: đi thử một "chân người chơi" trên toàn map đúng như bước di chuyển chặn, báo NPC / portal / điểm spawn nào **không tới được** từ điểm spawn mặc định hoặc đang kẹt trong tường.
+- `Export Map` chạy kiểm tra này trước và **từ chối xuất** nếu có lỗi — chỉ khi client ổn mới ghi `town_01.map.json` cho server.
+- Khi chơi trong Editor, nhấn **F12** để vẽ viền đỏ các khối chặn (collider map + thân NPC) lên map, đối chiếu bằng mắt với hình.
