@@ -13,6 +13,8 @@ import { DateTime } from "luxon";
 import { GameMaps } from "@/modules/maps/entities/game-map.entity.js";
 import { Players } from "@/modules/auth/entities/player.entity.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
+import type { FlagValue } from "@/modules/dialogues/schemas/condition.schema.js";
+import type { PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
 import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js";
 import { Classes } from "@/modules/classes/entities/class.entity.js";
@@ -75,6 +77,10 @@ export const PlayerStates = pgTable("player_states", {
         .$type<Attributes>()
         .notNull()
         .default(createAttributes()),
+    /** Cờ trạng thái cốt truyện (set bởi action `set_flag` của dialogue) — key tự đặt trong data. */
+    flags: jsonb("flags").$type<Record<string, FlagValue>>().notNull().default({}),
+    /** Quest của player theo quest code — lưu cùng checkpoint với túi đồ nên nhận thưởng và hoàn thành quest luôn khớp nhau. */
+    quests: jsonb("quests").$type<PlayerQuests>().notNull().default({}),
     revision: integer("revision").notNull().default(0),
     updatedAt: timestamp("updated_at", { withTimezone: true })
         .notNull()

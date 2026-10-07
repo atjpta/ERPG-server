@@ -26,7 +26,6 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const client = { platform: "android", clientVersion: "0.0.1", device: "smoke-test" };
 const email = `smoke_${Date.now()}@erpg.local`;
 
-await api("GET", "/master-data/client-version?platform=android&version=0.0.1");
 await api("GET", "/game-servers");
 await api("GET", "/maps");
 
@@ -72,6 +71,66 @@ await sleep(200);
 const moved = (room.state as any).players.get(room.sessionId);
 console.info(`✅ moved x: ${startX} → ${moved.x.toFixed(2)} (direction ${moved.direction})`);
 if (!(moved.x > startX)) throw new Error("Player did not move");
+
+// ---- NPC, thoại, quest, vật thể ---------------------------------------------------------------
+// Chỉ chạy khi map hiện tại có NPC `elder` (town_01).
+const content = await api("GET", `/maps/${auth.player.mapCode}/content`);
+if (!content.contentHash) throw new Error("map content must carry contentHash");
+if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "elder")) {
+    const waitFor = <T>(type: string) =>
+        new Promise<T>((resolve, reject) => {
+            const timer = setTimeout(
+                () => reject(new Error(`timeout waiting for "${type}"`)),
+                3000
+            );
+            room.onMessage(type, (message: T) => {
+                clearTimeout(timer);
+                resolve(message);
+            });
+        });
+
+    // Đứng xa NPC / portal thì bị từ chối.
+    const far = waitFor<{ ok: boolean; error?: string }>("interactResult");
+    room.send("interact", { id: "to_field" });
+    if ((await far).ok) throw new Error("portal must reject a player standing far away");
+    console.info("✅ interact far portal rejected");
+
+    // Đi tới sát elder (30, 30) — từ vị trí hiện tại, lái từng step theo vị trí server.
+    const me = (room.state as any).players.get(room.sessionId);
+    for (let i = 0; i < 200 && Math.hypot(me.x - 30, me.y - 31) > 1.2; i++) {
+        input.data.moveX = Math.sign(30 - me.x) * (Math.abs(30 - me.x) > 0.3 ? 1 : 0);
+        input.data.moveY = Math.sign(31 - me.y) * (Math.abs(31 - me.y) > 0.3 ? 1 : 0);
+        input.send();
+        await sleep(50);
+    }
+    input.data.moveX = 0;
+    input.data.moveY = 0;
+    input.send();
+    await sleep(300);
+    console.info(`✅ walked next to the elder at (${me.x.toFixed(2)}, ${me.y.toFixed(2)})`);
+
+    const offer = waitFor<{ nodeId: string; options: { id: string }[] }>("dialogue");
+    room.send("interactNpc", { npcCode: "elder" });
+    const first = await offer;
+    if (first.nodeId !== "start" || !first.options.some((o) => o.id === "accept")) {
+        throw new Error(`unexpected first dialogue node ${JSON.stringify(first)}`);
+    }
+    console.info("✅ elder offers the quest");
+
+    const updated = waitFor<{ quest: { code: string; state: string } }>("questUpdate");
+    room.send("dialogueChoose", { optionId: "accept" });
+    const { quest } = await updated;
+    if (quest.code !== "slime_hunt" || quest.state !== "active") {
+        throw new Error(`quest not accepted: ${JSON.stringify(quest)}`);
+    }
+    console.info("✅ quest accepted via dialogue");
+
+    // Option bịa → server đóng thoại và báo lỗi, không chạy gì.
+    const ended = waitFor<{ error?: string }>("dialogueEnd");
+    room.send("dialogueChoose", { optionId: "does_not_exist" });
+    if (!(await ended).error) throw new Error("unknown dialogue option must be rejected");
+    console.info("✅ unknown dialogue option rejected");
+}
 
 await room.leave();
 await sleep(500);

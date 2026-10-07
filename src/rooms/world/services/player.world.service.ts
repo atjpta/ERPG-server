@@ -12,6 +12,7 @@ import {
 } from "@/rooms/world/chains/player.world.chain.js";
 import { WorldChain } from "@/rooms/world/chains/world.chain.js";
 import { MoveCommand } from "@/rooms/world/simulation/movement.step.js";
+import { respawnPointOf } from "@/modules/maps/utils/map-file.util.js";
 import { StepContext } from "colyseus";
 const PLAYER_RESPAWN_MS = 5_000;
 /** Tối đa bao nhiêu input của 1 player được xử lý trong 1 tick khi đang đuổi theo input bị dồn. */
@@ -172,7 +173,11 @@ export class PlayerWorldService {
 
         this.respawningPlayers.add(player);
         room.clock.setTimeout(() => {
-            player.setSpawns(room.map.spawnX, room.map.spawnY);
+            // Đã bước qua portal sang map khác thì không kéo về điểm hồi sinh của map cũ.
+            if (!player.pendingMapCode) {
+                const point = respawnPointOf(room.map);
+                player.setSpawns(point.x, point.y);
+            }
             this.respawningPlayers.delete(player);
         }, PLAYER_RESPAWN_MS);
     }

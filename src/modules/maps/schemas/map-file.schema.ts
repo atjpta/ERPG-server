@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { ConditionSchema } from "@/modules/dialogues/schemas/condition.schema.js";
+import { RewardSpecSchema } from "@/modules/rewards/schemas/reward-spec.schema.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MapSpawnKind } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
@@ -30,6 +32,37 @@ const MonsterSpawnSchema = z.object({
     rarity: z.enum(ItemRarity).optional(),
 });
 
+const NpcPlacementSchema = z.object({
+    npcCode: z.string().min(1),
+    x: tile,
+    y: tile,
+    direction: z.enum(["left", "right"]).default("right"),
+});
+
+const interactableBase = {
+    id: idSchema,
+    x: tile,
+    y: tile,
+    radius: z.number().positive().default(1.5),
+    conditions: z.array(ConditionSchema).optional(),
+};
+
+const InteractableSchema = z.discriminatedUnion("type", [
+    z.object({
+        ...interactableBase,
+        type: z.literal("portal"),
+        targetMapCode: z.string().min(1),
+        targetSpawnId: idSchema,
+    }),
+    z.object({
+        ...interactableBase,
+        type: z.literal("gather"),
+        reward: RewardSpecSchema,
+        respawnSec: z.number().int().positive(),
+    }),
+    z.object({ ...interactableBase, type: z.literal("sign"), dialogueCode: z.string().min(1) }),
+]);
+
 /**
  * File `<mapCode>.map.json` — nguồn dữ liệu duy nhất của layout map, do Unity export (xem docs/map-file-format.md).
  * Toạ độ theo tile, gốc trên-trái, y hướng xuống. Tên hiển thị không nằm ở đây: client tra locale theo `map.{code}.name`.
@@ -46,6 +79,8 @@ export const MapFileSchema = z
         spawnPoints: z.array(SpawnPointSchema).min(1),
         colliders: z.array(ColliderSchema).default([]),
         monsterSpawns: z.array(MonsterSpawnSchema).default([]),
+        npcs: z.array(NpcPlacementSchema).default([]),
+        interactables: z.array(InteractableSchema).default([]),
     })
     .superRefine((map, ctx) => {
         const ids = new Set<string>();
@@ -69,6 +104,29 @@ export const MapFileSchema = z
                 path: ["spawnPoints"],
                 message: "exactly one spawn point with kind=default is required",
             });
+        }
+        const interactableIds = new Set<string>();
+        for (const [i, it] of map.interactables.entries()) {
+            if (interactableIds.has(it.id)) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["interactables", i, "id"],
+                    message: "duplicate id",
+                });
+            }
+            interactableIds.add(it.id);
+            if (it.x > map.width || it.y > map.height) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["interactables", i],
+                    message: "outside map",
+                });
+            }
+        }
+        for (const [i, npc] of map.npcs.entries()) {
+            if (npc.x > map.width || npc.y > map.height) {
+                ctx.addIssue({ code: "custom", path: ["npcs", i], message: "outside map" });
+            }
         }
         for (const [i, c] of map.colliders.entries()) {
             if (c.x + c.w > map.width || c.y + c.h > map.height) {

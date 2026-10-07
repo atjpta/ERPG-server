@@ -56,7 +56,8 @@ export class RewardWorldService {
             const wallet: WalletMessage = player.wallet;
             client?.send(WorldMessage.WALLET, wallet);
         }
-        if (reward.items.length > 0) inventoryWorldService.grantItems(client, player, reward.items);
+        if (reward.items.length > 0)
+            inventoryWorldService.grantItems(client, player, reward.items, reward.source);
         // Lên level: có thêm điểm tiềm năng và stat đổi theo level.
         if (progress.levelsGained > 0) attributeWorldService.send(client, player);
     }

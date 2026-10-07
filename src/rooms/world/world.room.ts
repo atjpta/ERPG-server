@@ -23,6 +23,16 @@ import {
     RefineEquipmentWorldCommand,
     UnequipItemWorldCommand,
 } from "@/rooms/world/commands/inventory.world.command.js";
+import {
+    DialogueChooseWorldCommand,
+    DialogueCloseWorldCommand,
+    InteractNpcWorldCommand,
+    InteractWorldCommand,
+    QuestAbandonWorldCommand,
+    QuestListWorldCommand,
+} from "@/rooms/world/commands/content.world.command.js";
+import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.service.js";
+import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
 import { attributeWorldService } from "@/rooms/world/services/attribute.world.service.js";
 import { inventoryWorldService } from "@/rooms/world/services/inventory.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/world.message.js";
@@ -82,6 +92,24 @@ export class WorldRoom extends BasePlayerRoom<{
         [WorldClientMessage.PREVIEW_UPGRADE]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new PreviewUpgradeWorldCommand(), { client, payload });
         },
+        [WorldClientMessage.INTERACT]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new InteractWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.INTERACT_NPC]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new InteractNpcWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.DIALOGUE_CHOOSE]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new DialogueChooseWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.DIALOGUE_CLOSE]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new DialogueCloseWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.QUEST_LIST]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new QuestListWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.QUEST_ABANDON]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new QuestAbandonWorldCommand(), { client, payload });
+        },
         [WorldClientMessage.PREVIEW_DISASSEMBLE]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new PreviewDisassembleWorldCommand(), {
                 client,
@@ -111,6 +139,7 @@ export class WorldRoom extends BasePlayerRoom<{
         if (player) {
             inventoryWorldService.send(client, player);
             attributeWorldService.send(client, player);
+            questWorldService.sendInitial(this, client, player);
         }
     }
 
@@ -126,6 +155,7 @@ export class WorldRoom extends BasePlayerRoom<{
 
     async onLeave(client: PlayerClient) {
         this.leavingSessions.add(client.sessionId);
+        dialogueWorldService.drop(this, client.sessionId);
         await this.unregisterOnlinePlayer(client);
         await worldService.waitForCheckpoint(this);
         await this.dispatcher.dispatch(new LeavePlayerWorldCommand(), {

@@ -16,6 +16,12 @@
             "x": 64,
             "y": 48,
             "kind": "respawn"
+        },
+        {
+            "id": "from_town",
+            "x": 6,
+            "y": 48,
+            "kind": "arrival"
         }
     ],
     "colliders": [],
@@ -115,6 +121,43 @@
             "spawnY": 64,
             "type": "boss",
             "rarity": "legendary"
+        }
+    ],
+    "npcs": [
+        {
+            "npcCode": "elder",
+            "x": 62,
+            "y": 46,
+            "direction": "right"
+        }
+    ],
+    "interactables": [
+        {
+            "id": "to_town",
+            "type": "portal",
+            "x": 4,
+            "y": 48,
+            "radius": 1.5,
+            "targetMapCode": "town_01",
+            "targetSpawnId": "from_field"
+        },
+        {
+            "id": "herb_1",
+            "type": "gather",
+            "x": 66,
+            "y": 50,
+            "radius": 1.5,
+            "respawnSec": 30,
+            "reward": {
+                "exp": 5,
+                "currency": [],
+                "items": [
+                    {
+                        "itemCode": "hp_potion_small",
+                        "quantity": 1
+                    }
+                ]
+            }
         }
     ]
 }

@@ -33,6 +33,7 @@ import type {
     Equipments,
     InventoryItem,
 } from "@/modules/player/schemas/inventory.schema.js";
+import { worldEvents } from "@/rooms/world/utils/world-events.js";
 import {
     addToInventory,
     countItem,
@@ -166,6 +167,39 @@ export class InventoryWorldService {
             wallet: player.wallet,
         };
         client.send(WorldMessage.INVENTORY, message);
+        worldEvents.emitInventoryChanged(client, player);
+    }
+
+    /** Số item (theo code) player đang có — 0 nếu code không có trong catalog. */
+    countByCode(player: PlayerWorldState, itemCode: string): number {
+        const item = itemService.getByCode(itemCode);
+        return item ? countItem(player.inventories[item.type], item.id) : 0;
+    }
+
+    /** Trừ item theo code; `false` (không đổi gì) nếu không đủ. */
+    takeByCode(player: PlayerWorldState, itemCode: string, quantity: number): boolean {
+        const item = itemService.getByCode(itemCode);
+        return !!item && removeFromInventory(player.inventories[item.type], item.id, quantity);
+    }
+
+    /** Túi có đủ chỗ nhận hết `items` không (tính thử trên bản sao — không đổi túi thật). */
+    canFit(player: PlayerWorldState, items: readonly ItemReward[]): boolean {
+        const trial = new Map<ItemType, InventoryItem[]>();
+        for (const reward of items) {
+            const item = itemService.getById(reward.itemId);
+            if (!item) continue;
+            const bag = trial.get(item.type) ?? structuredClone(player.inventories[item.type]);
+            trial.set(item.type, bag);
+            const { overflow } = addToInventory(
+                bag,
+                this.inventorySize(item.type),
+                item,
+                reward.quantity,
+                { source: ItemSource.QUEST, metadata: reward.metadata }
+            );
+            if (overflow > 0) return false;
+        }
+        return true;
     }
 
     // ---- Nhận item ------------------------------------------------------------------------------
@@ -174,7 +208,12 @@ export class InventoryWorldService {
      * Cộng item (thưởng, rơi đồ...) vào đúng túi theo ItemType; báo túi sắp đầy / đã đầy (item không
      * còn chỗ bị mất).
      */
-    grantItems(client: PlayerClient | undefined, player: PlayerWorldState, items: ItemReward[]) {
+    grantItems(
+        client: PlayerClient | undefined,
+        player: PlayerWorldState,
+        items: ItemReward[],
+        source: ItemSource = ItemSource.DROP
+    ) {
         const lostByType = new Map<ItemType, ItemReward[]>();
         const touched = new Set<ItemType>();
         for (const reward of items) {
@@ -186,7 +225,7 @@ export class InventoryWorldService {
                 this.inventorySize(item.type),
                 item,
                 reward.quantity,
-                { source: ItemSource.DROP, metadata: reward.metadata }
+                { source, metadata: reward.metadata }
             );
             if (overflow > 0) {
                 const lost = lostByType.get(item.type) ?? [];

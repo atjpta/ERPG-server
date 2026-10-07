@@ -6,6 +6,8 @@ import {
     PlayerStatService,
     playerStatService,
 } from "@/modules/player/user/services/player-stat.service.js";
+import type { FlagValue } from "@/modules/dialogues/schemas/condition.schema.js";
+import type { PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
 import type { PlayerSnapshot } from "@/modules/player/user/services/player.service.js";
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
 import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
@@ -72,6 +74,11 @@ export class PlayerWorldState extends Schema {
     @type("string") baseClassCode = "";
 
     wallet: Wallet;
+    /** Cờ cốt truyện và quest (server-only) — xem `player_states.flags/quests`. */
+    flags: Record<string, FlagValue>;
+    quests: PlayerQuests;
+    /** Map đích khi đã bước vào portal/teleport và đang đợi client vào room mới. */
+    pendingMapCode?: string;
     attributePoints: number;
     classId: string;
     allocatedAttributes: Attributes;
@@ -119,6 +126,8 @@ export class PlayerWorldState extends Schema {
         this.attributePoints = player.attributePoints;
         this.skillPoints = player.skillPoints;
         this.allocatedAttributes = { ...player.allocatedAttributes };
+        this.flags = { ...player.flags };
+        this.quests = structuredClone(player.quests);
     }
 
     setLevelProgress(level: number, exp: number) {
@@ -238,9 +247,12 @@ export class PlayerWorldState extends Schema {
         | "equipmentInventory"
         | "consumableInventory"
         | "materialInventory"
+        | "flags"
+        | "quests"
     > {
         return {
-            mapCode,
+            // Đang chuyển map (portal/teleport): lưu map đích để rời room không ghi đè về map cũ.
+            mapCode: this.pendingMapCode ?? mapCode,
             x: this.x,
             y: this.y,
             direction: this.direction as PlayerState["direction"],
@@ -254,6 +266,8 @@ export class PlayerWorldState extends Schema {
             allocatedAttributes: { ...this.allocatedAttributes },
             equipments: structuredClone(this.equipments),
             ...structuredClone(fromInventories(this.inventories)),
+            flags: { ...this.flags },
+            quests: structuredClone(this.quests),
         };
     }
 

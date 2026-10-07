@@ -1,4 +1,5 @@
 import type { ItemSource, ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
+import type { QuestState } from "@/modules/quests/enums/quest.enum.js";
 import type { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import type { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
 
@@ -32,6 +33,18 @@ export enum WorldClientMessage {
     PREVIEW_DISASSEMBLE = "previewDisassemble",
     /** `{ action: "enhance" | "refine", instanceId }` — chi phí / tỉ lệ cường hoá hoặc tinh hoá, trả `upgradePreview`. */
     PREVIEW_UPGRADE = "previewUpgrade",
+    /** `{ id }` — tương tác vật thể trong map (portal, thu thập, biển báo) theo id trong file map. */
+    INTERACT = "interact",
+    /** `{ npcCode }` — bắt đầu nói chuyện với NPC (phải đứng trong `interactRadius`). */
+    INTERACT_NPC = "interactNpc",
+    /** `{ optionId }` — chọn option của node thoại hiện tại; `optionId` rỗng = "Tiếp tục". */
+    DIALOGUE_CHOOSE = "dialogueChoose",
+    /** Đóng hội thoại đang mở. */
+    DIALOGUE_CLOSE = "dialogueClose",
+    /** Xin danh sách quest đang làm (trả `questList`). */
+    QUEST_LIST = "questList",
+    /** `{ questCode }` — bỏ quest đang làm. */
+    QUEST_ABANDON = "questAbandon",
 }
 
 /** Message server → client của room world (ngoài state). */
@@ -56,6 +69,32 @@ export enum WorldMessage {
     INVENTORY_NEARLY_FULL = "inventoryNearlyFull",
     /** Túi đầy — các item nhận được nhưng không còn chỗ (bị mất). */
     INVENTORY_FULL = "inventoryFull",
+    /** Kết quả `interact` (kể cả lỗi) — thành công thì kèm thêm message của hiệu ứng (reward, mapChange, dialogue...). */
+    INTERACT_RESULT = "interactResult",
+    /** 1 node thoại để hiện — gửi khi bắt đầu thoại và sau mỗi lần chọn. */
+    DIALOGUE = "dialogue",
+    /** Thoại kết thúc (hết node, đi quá xa, hay lỗi). */
+    DIALOGUE_END = "dialogueEnd",
+    /** Mở UI chức năng của NPC (shop, cường hoá...). */
+    NPC_FUNCTION_OPEN = "npcFunctionOpen",
+    /** Player đã được chuyển sang map khác — client rời room này và vào room của `mapCode`. */
+    MAP_CHANGE = "mapChange",
+    /** Danh sách quest đang làm và tiến độ. */
+    QUEST_LIST = "questList",
+    /** 1 quest vừa đổi (nhận, tiến độ, hoàn thành, bỏ). */
+    QUEST_UPDATE = "questUpdate",
+    /** Dấu `!` / `?` trên đầu NPC của riêng player này — cũng dùng cho minimap. */
+    NPC_MARKERS = "npcMarkers",
+}
+
+export enum NpcMarker {
+    NONE = "none",
+    /** Có quest nhận được. */
+    AVAILABLE = "available",
+    /** Có quest đang làm chưa xong. */
+    IN_PROGRESS = "inProgress",
+    /** Có quest xong, đến trả. */
+    READY = "ready",
 }
 
 export enum EquipmentUpgradeAction {
@@ -285,4 +324,82 @@ export interface InventoryNearlyFullMessage {
 export interface InventoryFullMessage {
     type: ItemType;
     lostItems: ItemRewardMessage[];
+}
+
+export interface InteractResultMessage {
+    ok: boolean;
+    error?: string;
+    /** Id vật thể (hoặc npcCode) đã tương tác. */
+    id: string;
+}
+
+export interface DialogueOptionMessage {
+    id: string;
+    /** Key locale của chữ trên nút. */
+    textKey: string;
+    /** `false` = không đủ điều kiện (hiện mờ). */
+    enabled: boolean;
+}
+
+export interface DialogueMessage {
+    /** NPC code, hoặc id vật thể (biển báo) đang nói. */
+    sourceCode: string;
+    dialogueCode: string;
+    nodeId: string;
+    /** Key locale của lời thoại. */
+    textKey: string;
+    /** Key locale của người nói; trống = dùng tên NPC. */
+    speakerKey?: string;
+    options: DialogueOptionMessage[];
+    /** Không có option nhưng còn node sau → hiện nút "Tiếp tục" (gửi `dialogueChoose` với optionId rỗng). */
+    hasNext: boolean;
+}
+
+export interface DialogueEndMessage {
+    sourceCode: string;
+    error?: string;
+}
+
+export interface NpcFunctionOpenMessage {
+    npcCode: string;
+    functionId: string;
+    /** NpcFunctionType: shop, storage, enhance, refine, disassemble, quest_board. */
+    type: string;
+    /** Tham số riêng của chức năng, dạng JSON. */
+    config: string;
+}
+
+export interface MapChangeMessage {
+    mapCode: string;
+    /** Điểm đến trong map mới (id spawn point). */
+    spawnId: string;
+}
+
+export interface QuestObjectiveMessage {
+    id: string;
+    current: number;
+    count: number;
+}
+
+export interface QuestMessage {
+    code: string;
+    state: QuestState;
+    objectives: QuestObjectiveMessage[];
+}
+
+export interface QuestListMessage {
+    quests: QuestMessage[];
+}
+
+export interface QuestUpdateMessage {
+    quest: QuestMessage;
+}
+
+export interface NpcMarkerEntryMessage {
+    npcCode: string;
+    marker: NpcMarker;
+}
+
+export interface NpcMarkersMessage {
+    markers: NpcMarkerEntryMessage[];
 }

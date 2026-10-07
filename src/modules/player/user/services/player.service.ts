@@ -269,6 +269,8 @@ export class PlayerService extends BaseService<typeof Players> {
                     | "equipmentInventory"
                     | "consumableInventory"
                     | "materialInventory"
+                    | "flags"
+                    | "quests"
                 >
             >,
         expectedRevision?: number

@@ -16,6 +16,12 @@
             "x": 32,
             "y": 32,
             "kind": "respawn"
+        },
+        {
+            "id": "from_field",
+            "x": 56,
+            "y": 8,
+            "kind": "arrival"
         }
     ],
     "colliders": [
@@ -140,6 +146,39 @@
             "spawnY": 48,
             "type": "boss",
             "rarity": "legendary"
+        }
+    ],
+    "npcs": [
+        {
+            "npcCode": "elder",
+            "x": 30,
+            "y": 30,
+            "direction": "right"
+        },
+        {
+            "npcCode": "blacksmith",
+            "x": 34,
+            "y": 30,
+            "direction": "left"
+        }
+    ],
+    "interactables": [
+        {
+            "id": "to_field",
+            "type": "portal",
+            "x": 58,
+            "y": 8,
+            "radius": 1.5,
+            "targetMapCode": "field_01",
+            "targetSpawnId": "from_town"
+        },
+        {
+            "id": "notice_board",
+            "type": "sign",
+            "x": 28,
+            "y": 34,
+            "radius": 1.5,
+            "dialogueCode": "notice_board"
         }
     ]
 }

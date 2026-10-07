@@ -1,12 +1,23 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { GameMaps } from "@/modules/maps/entities/game-map.entity.js";
 import { GameMapRepo } from "@/modules/maps/repositories/game-map.repository.js";
-import { mapFileToRow, parseMapFile } from "@/modules/maps/utils/map-file.util.js";
+import {
+    mapFileToRow,
+    parseMapFile,
+    validateMapFileRefs,
+} from "@/modules/maps/utils/map-file.util.js";
 
 const DATA_DIR = new URL("../data/", import.meta.url);
 
 /** Đọc mọi `data/*.map.json` (file do Unity export) — thêm map mới = thêm 1 file, không sửa code. */
-export const loadMapFiles = () =>
+export const loadMapFiles = () => {
+    const maps = readMapFiles();
+    const errors = validateMapFileRefs(maps);
+    if (errors.length > 0) throw new Error(`[GameMapSeed] ${errors.join("; ")}`);
+    return maps;
+};
+
+const readMapFiles = () =>
     readdirSync(DATA_DIR)
         .filter((file) => file.endsWith(".map.json"))
         .sort()

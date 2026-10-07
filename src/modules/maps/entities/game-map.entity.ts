@@ -1,5 +1,7 @@
 import { boolean, integer, jsonb, pgEnum, pgTable, real, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
+import type { Condition } from "@/modules/dialogues/schemas/condition.schema.js";
+import type { RewardSpec } from "@/modules/rewards/schemas/reward-spec.schema.js";
 import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
 import type { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
@@ -34,7 +36,48 @@ export const GameMaps = pgTable("game_maps", {
     colliders: jsonb("colliders").$type<MapCollider[]>().notNull().default([]),
     /** Hash nội dung file `<code>.map.json` đã seed — client so với bản trong build để phát hiện lệch. */
     contentHash: text("content_hash").notNull().default(""),
+    /** NPC đặt trong map (NPC dùng chung nhiều map — định nghĩa ở bảng `npcs`). */
+    npcs: jsonb("npcs").$type<MapNpc[]>().notNull().default([]),
+    /** Vật thể tương tác được: portal, thu thập, biển báo. */
+    interactables: jsonb("interactables").$type<MapInteractable[]>().notNull().default([]),
 });
+
+export interface MapNpc {
+    npcCode: string;
+    x: number;
+    y: number;
+    direction: "left" | "right";
+}
+
+interface MapInteractableBase {
+    /** Id ổn định trong map — client và quest tham chiếu theo id này. */
+    id: string;
+    x: number;
+    y: number;
+    /** Khoảng cách tối đa (tile) để tương tác. */
+    radius: number;
+    conditions?: Condition[];
+}
+
+export interface MapPortal extends MapInteractableBase {
+    type: "portal";
+    targetMapCode: string;
+    targetSpawnId: string;
+}
+
+export interface MapGatherable extends MapInteractableBase {
+    type: "gather";
+    reward: RewardSpec;
+    /** Thu thập xong ẩn đi trong kênh, hiện lại sau chừng này giây. */
+    respawnSec: number;
+}
+
+export interface MapSign extends MapInteractableBase {
+    type: "sign";
+    dialogueCode: string;
+}
+
+export type MapInteractable = MapPortal | MapGatherable | MapSign;
 
 export enum MapSpawnKind {
     /** Chỗ vào map mặc định (spawn của `spawnX/spawnY`). */

@@ -16,14 +16,15 @@ src/
 └── index.ts     # entrypoint, loadControllers() tự quét mọi *.controller.ts
 ```
 
-| Module         | Nội dung                                                                                                                                                                                                                                          |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth/`        | `User`, `Admin`, `Player`, `GameServer`, session, đăng nhập Play Games Services v2 (Android) + Google idToken (PC), xoá tài khoản (chính sách Google Play), rate limit. User 1:N player (tối đa `player_config.maxCharacters`, chọn ở `/players`) |
-| `master-data/` | Config key-value (client version, session, player), validate theo key                                                                                                                                                                             |
-| `maps/`        | `GameMap` — metadata map, spawn, số người/kênh, monster sinh ra (`monsterSpawns`)                                                                                                                                                                 |
-| `classes/`     | Class nhân vật (`baseAttributes`, `baseStats`, cây `nextClassCodes`); 4 class khởi đầu chọn lúc `POST /players`                                                                                                                                   |
-| `items/`       | Catalog item: trang bị là template (biome + class + loại), material/consumable stack được                                                                                                                                                         |
-| `equipment/`   | Roll/tính chỉ số trang bị, set, cường hoá, tinh hoá, phân rã — mọi bảng số nằm ở master data `equipment_*_config`                                                                                                                                 |
+| Module                         | Nội dung                                                                                                                                                                                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth/`                        | `User`, `Admin`, `Player`, `GameServer`, session, đăng nhập Play Games Services v2 (Android) + Google idToken (PC), xoá tài khoản (chính sách Google Play), rate limit. User 1:N player (tối đa `player_config.maxCharacters`, chọn ở `/players`) |
+| `master-data/`                 | Config key-value (client version, session, player), validate theo key                                                                                                                                                                             |
+| `maps/`                        | `GameMap` từ file `data/<code>.map.json` (Unity export): spawn point, collider, monster spawn, NPC đặt chỗ, vật thể tương tác (portal/thu thập/biển báo) — xem `docs/map-file-format.md`                                                          |
+| `classes/`                     | Class nhân vật (`baseAttributes`, `baseStats`, cây `nextClassCodes`); 4 class khởi đầu chọn lúc `POST /players`                                                                                                                                   |
+| `items/`                       | Catalog item: trang bị là template (biome + class + loại), material/consumable stack được                                                                                                                                                         |
+| `equipment/`                   | Roll/tính chỉ số trang bị, set, cường hoá, tinh hoá, phân rã — mọi bảng số nằm ở master data `equipment_*_config`                                                                                                                                 |
+| `npcs/` `dialogues/` `quests/` | NPC dùng chung nhiều map, đồ thị thoại + rule chọn thoại theo hoàn cảnh, quest — data-driven, text qua key locale — xem `docs/content-authoring.md`                                                                                               |
 
 Realtime: room `world` (`src/rooms/world/`) — 1 room = 1 kênh của 1 map. Dùng **Colyseus Netcode**
 (`defineInput` + `setFixedTimestep`, client predict/reconcile) — xem mục 7 của `src/core/README.md`.
@@ -32,6 +33,8 @@ bản C# tương ứng (cùng thứ tự phép tính, cùng hằng số), không
 
 ## Conventions
 
+- Text hiển thị (tên NPC/quest/thoại...) không lưu ở server — chỉ code/text key, client tra locale.
+- Layout map (vị trí quái, spawn, NPC, collider) chỉ nằm ở file `.map.json`, không hardcode trong seed/code.
 - Luôn dùng `yarn`, không `npm run`.
 - Commit theo Conventional Commits (husky + commitlint), pre-commit chạy eslint + prettier.
 - Controller viết tường minh từng endpoint — **không** dùng generic CRUD controller factory.

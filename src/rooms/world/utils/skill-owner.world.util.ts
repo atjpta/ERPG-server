@@ -1,3 +1,5 @@
+import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
+import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
 import { monsterRewardService } from "@/modules/rewards/services/monster-reward.service.js";
 import { calculateDamage } from "@/rooms/world/chains/damage.world.chain.js";
 import type { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
@@ -122,6 +124,10 @@ export function applySkillHit(
     attacker.heal(result.heal);
     // Đòn kết liễu → người đánh nhận thưởng (mỗi monster chỉ chết một lần).
     if (target.hp <= 0) {
+        questWorldService.onEvent(room, owner.sessionId, attacker, {
+            type: QuestObjectiveType.KILL,
+            targetCode: target.code,
+        });
         rewardWorldService.grant(
             room,
             owner.sessionId,

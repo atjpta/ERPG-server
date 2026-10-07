@@ -9,3 +9,6 @@ Nguồn dữ liệu duy nhất của layout map. Unity export → commit vào `s
 - `monsterSpawns`: `{monsterCode, count, spawnX, spawnY, type?, rarity?}`.
 - `contentHash` (sha1 của nội dung đã chuẩn hoá) lưu ở `game_maps.content_hash` — client so với hash của file trong build.
 - Tên hiển thị không nằm trong file: client tra locale theo `map.{code}.name`.
+- `npcs`: `{npcCode, x, y, direction}` — NPC được định nghĩa ở bảng `npcs` (dùng chung nhiều map).
+- `interactables`: `portal` / `gather` / `sign`, id ổn định trong map — chi tiết ở [content-authoring.md](content-authoring.md).
+- Portal trỏ tới `targetMapCode` + `targetSpawnId` (id spawn point, không phải toạ độ).

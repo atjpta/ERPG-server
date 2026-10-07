@@ -1,5 +1,8 @@
 import { Command } from "@colyseus/command";
 
+import { npcService } from "@/modules/npcs/services/npc.service.js";
+import { NpcWorldState } from "@/rooms/world/schema/npc.world.state.js";
+import { interactWorldService } from "@/rooms/world/services/interact.world.service.js";
 import { mapService } from "@/modules/maps/user/services/map.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { monsterWorldService } from "@/rooms/world/services/monster.world.service.js";
@@ -15,13 +18,42 @@ const CHECKPOINT_INTERVAL_MS = 30_000;
 
 export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
     async execute({ mapCode }: WorldRoomOptions) {
-        const map = await mapService.getActiveByCodeOrFail(mapCode);
+        const loaded = await mapService.getActiveByCodeOrFail(mapCode);
+        // NPC cũng là vật cản: gộp collider của chúng vào map để `applyMove` chặn như tường.
+        const npcColliders = loaded.npcs.flatMap((placement) => {
+            const npc = npcService.getByCode(placement.npcCode);
+            if (!npc) return [];
+            return [
+                {
+                    x: placement.x - npc.colliderWidth / 2,
+                    y: placement.y - npc.colliderHeight,
+                    w: npc.colliderWidth,
+                    h: npc.colliderHeight,
+                },
+            ];
+        });
+        const map = { ...loaded, colliders: [...loaded.colliders, ...npcColliders] };
         this.room.map = map;
         this.room.maxClients = map.maxPlayersPerChannel;
         this.room.state.mapCode = map.code;
         this.room.state.mapWidth = map.width;
         this.room.state.mapHeight = map.height;
         this.room.patchRate = 25;
+
+        this.room.state.npcs.push(
+            ...map.npcs
+                .filter((placement) => npcService.getByCode(placement.npcCode))
+                .map(
+                    (placement) =>
+                        new NpcWorldState({
+                            code: placement.npcCode,
+                            x: placement.x,
+                            y: placement.y,
+                            direction: placement.direction,
+                        })
+                )
+        );
+        this.room.state.interactables.push(...interactWorldService.build(this.room));
 
         const monsters = await monsterWorldService.createMonster(map);
 

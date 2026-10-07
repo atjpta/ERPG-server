@@ -162,6 +162,13 @@
             "when": 1791370538153,
             "tag": "0022_map_content",
             "breakpoints": true
+        },
+        {
+            "idx": 23,
+            "version": "7",
+            "when": 1791375626384,
+            "tag": "0023_npc_dialogue_quest",
+            "breakpoints": true
         }
     ]
 }

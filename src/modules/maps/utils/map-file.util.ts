@@ -39,6 +39,36 @@ export const mapFileToRow = (map: MapFile): NewGameMap => {
         monsterSpawns: map.monsterSpawns,
         spawnPoints: map.spawnPoints,
         colliders: map.colliders,
+        npcs: map.npcs,
+        interactables: map.interactables,
         contentHash: hashMapFile(map),
     };
 };
+
+/** Tham chiếu chéo giữa các file map (portal trỏ tới map/spawn có thật); trả danh sách lỗi. */
+export const validateMapFileRefs = (maps: readonly MapFile[]): string[] => {
+    const errors: string[] = [];
+    const byCode = new Map(maps.map((map) => [map.code, map]));
+    for (const map of maps) {
+        for (const it of map.interactables) {
+            if (it.type !== "portal") continue;
+            const target = byCode.get(it.targetMapCode);
+            if (!target) {
+                errors.push(`${map.code}.${it.id}: unknown map "${it.targetMapCode}"`);
+            } else if (!target.spawnPoints.some((p) => p.id === it.targetSpawnId)) {
+                errors.push(
+                    `${map.code}.${it.id}: unknown spawn "${it.targetMapCode}.${it.targetSpawnId}"`
+                );
+            }
+        }
+    }
+    return errors;
+};
+
+/** Điểm hồi sinh của map: spawn `respawn` đầu tiên, không có thì spawn mặc định. */
+export const respawnPointOf = (map: {
+    spawnX: number;
+    spawnY: number;
+    spawnPoints: readonly { x: number; y: number; kind: string }[];
+}): { x: number; y: number } =>
+    map.spawnPoints.find((p) => p.kind === "respawn") ?? { x: map.spawnX, y: map.spawnY };
