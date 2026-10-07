@@ -51,6 +51,13 @@ export interface MoveBounds {
     colliders?: readonly BlockRect[];
 }
 
+/**
+ * Sai số khi xét "đã nằm trong khối chặn từ trước": vị trí sau lần snap sát tường lệch vài 1e-6 do float32 của state
+ * (client nhận x từ server dạng float32), không có ngưỡng này entity đứng sát tường bị coi là đang kẹt trong tường và đi xuyên.
+ * Client C# (WorldCollision) phải dùng cùng giá trị.
+ */
+export const TERRAIN_EPSILON = 1e-4;
+
 /** Hệ số chuẩn hoá khi đi chéo (1/√2) — hằng số để C# port khớp tuyệt đối. */
 export const DIAGONAL_FACTOR = 0.7071067811865476;
 
@@ -129,8 +136,8 @@ function resolveTerrain(
         const left = x + offX - halfW;
         const right = x + offX + halfW;
         if (right <= r.x || left >= r.x + r.w) continue;
-        if (x > prevX && prevRight <= r.x) x = r.x - halfW - offX;
-        else if (x < prevX && prevLeft >= r.x + r.w) x = r.x + r.w + halfW - offX;
+        if (x > prevX && prevRight <= r.x + TERRAIN_EPSILON) x = r.x - halfW - offX;
+        else if (x < prevX && prevLeft >= r.x + r.w - TERRAIN_EPSILON) x = r.x + r.w + halfW - offX;
     }
     state.x = x;
 
@@ -143,8 +150,9 @@ function resolveTerrain(
         const top = y - offY - halfH;
         const bottom = y - offY + halfH;
         if (bottom <= r.y || top >= r.y + r.h) continue;
-        if (y > prevY && prevCy + halfH <= r.y) y = r.y - halfH + offY;
-        else if (y < prevY && prevCy - halfH >= r.y + r.h) y = r.y + r.h + halfH + offY;
+        if (y > prevY && prevCy + halfH <= r.y + TERRAIN_EPSILON) y = r.y - halfH + offY;
+        else if (y < prevY && prevCy - halfH >= r.y + r.h - TERRAIN_EPSILON)
+            y = r.y + r.h + halfH + offY;
     }
     state.y = y;
 }

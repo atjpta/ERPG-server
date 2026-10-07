@@ -106,3 +106,15 @@ describe("movement.step — va chạm địa hình", () => {
         assert.equal(state.x, 13 + SPEED * DT);
     });
 });
+
+describe("movement.step — đứng sát tường (float32 từ server)", () => {
+    const footprint = { width: 1, height: 1 };
+    const terrain = { ...bounds, colliders: [{ x: 12, y: 0, w: 2, h: 64 }] };
+
+    it("x lệch epsilon nhỏ so với mép tường vẫn không đi xuyên", () => {
+        // 11.5 là vị trí sát tường; float32 làm x lớn hơn vài 1e-6.
+        const state = createState(Math.fround(11.5000001), 10);
+        applyMove(state, { moveX: 1, moveY: 0 }, terrain, SPEED, DT, footprint);
+        assert.ok(state.x <= 11.5 + 1e-5, `x=${state.x}`);
+    });
+});
