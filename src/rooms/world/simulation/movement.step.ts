@@ -13,8 +13,28 @@ export interface MovableState {
     moving: boolean;
 }
 
+/** Vùng chặn tĩnh (tile, gốc trên-trái, y xuống) — tường, nước, cây... lấy từ file map. */
+export interface BlockRect {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
+/**
+ * Hình chân của entity khi va chạm địa hình — cùng quy ước `CollisionBounds`: tâm = (x + offsetX, y - offsetY),
+ * offsetY dương hướng lên (như prefab client), rộng `width` cao `height`.
+ */
+export interface MoveFootprint {
+    width: number;
+    height: number;
+    offsetX?: number;
+    offsetY?: number;
+}
+
 export interface WorldMovableState extends MovableState {
     moveSpeed: number;
+    collider?: MoveFootprint;
 }
 
 export interface MoveCommand {
@@ -27,6 +47,8 @@ export interface MoveCommand {
 export interface MoveBounds {
     width: number;
     height: number;
+    /** Vùng không đi vào được; bỏ trống = chỉ chặn ở biên map. */
+    colliders?: readonly BlockRect[];
 }
 
 /** Hệ số chuẩn hoá khi đi chéo (1/√2) — hằng số để C# port khớp tuyệt đối. */
@@ -37,7 +59,8 @@ export function applyMove(
     cmd: MoveCommand,
     bounds: MoveBounds,
     speed: number,
-    dt: number
+    dt: number,
+    footprint?: MoveFootprint
 ): void {
     const moveX = Number.isFinite(cmd.moveX) ? cmd.moveX : 0;
     const moveY = Number.isFinite(cmd.moveY) ? cmd.moveY : 0;
@@ -49,12 +72,18 @@ export function applyMove(
     }
     state.moving = moveX !== 0 || moveY !== 0;
     if (!state.moving) return;
+    const prevX = state.x;
+    const prevY = state.y;
 
     // Đi chéo không nhanh hơn đi thẳng.
     const factor = moveX !== 0 && moveY !== 0 ? DIAGONAL_FACTOR : 1;
     const step = speed * dt * factor;
+    // Tách trục (X rồi Y) để trượt dọc tường thay vì đứng khựng.
     state.x = clamp(state.x + moveX * step, 0, bounds.width);
     state.y = clamp(state.y + moveY * step, 0, bounds.height);
+    if (footprint && bounds.colliders?.length) {
+        resolveTerrain(state, prevX, prevY, bounds.colliders, footprint);
+    }
     if (moveX < 0) state.direction = Direction.LEFT;
     else if (moveX > 0) state.direction = Direction.RIGHT;
 }
@@ -71,7 +100,53 @@ export function applyWorldMove(
     const stepSeconds = Number.isFinite(dt) && dt > 0 ? dt : 1 / 20;
     const moveSpeed =
         Number.isFinite(state.moveSpeed) && state.moveSpeed > 0 ? state.moveSpeed : fallbackSpeed;
-    applyMove(state, cmd, bounds, moveSpeed * speedMultiplier, stepSeconds);
+    applyMove(state, cmd, bounds, moveSpeed * speedMultiplier, stepSeconds, state.collider);
+}
+
+/**
+ * Đẩy entity về sát cạnh vùng chặn theo từng trục. Rect mà entity đã nằm trong từ trước (spawn lỡ vào tường)
+ * bị bỏ qua để entity còn đường thoát ra.
+ */
+function resolveTerrain(
+    state: MovableState,
+    prevX: number,
+    prevY: number,
+    colliders: readonly BlockRect[],
+    footprint: MoveFootprint
+): void {
+    const halfW = footprint.width / 2;
+    const halfH = footprint.height / 2;
+    const offX = footprint.offsetX ?? 0;
+    const offY = footprint.offsetY ?? 0;
+
+    // Trục X: giữ y cũ.
+    const cy = prevY - offY;
+    let x = state.x;
+    for (const r of colliders) {
+        if (cy + halfH <= r.y || cy - halfH >= r.y + r.h) continue;
+        const prevLeft = prevX + offX - halfW;
+        const prevRight = prevX + offX + halfW;
+        const left = x + offX - halfW;
+        const right = x + offX + halfW;
+        if (right <= r.x || left >= r.x + r.w) continue;
+        if (x > prevX && prevRight <= r.x) x = r.x - halfW - offX;
+        else if (x < prevX && prevLeft >= r.x + r.w) x = r.x + r.w + halfW - offX;
+    }
+    state.x = x;
+
+    // Trục Y: dùng x đã xử lý.
+    const cx = state.x + offX;
+    let y = state.y;
+    const prevCy = prevY - offY;
+    for (const r of colliders) {
+        if (cx + halfW <= r.x || cx - halfW >= r.x + r.w) continue;
+        const top = y - offY - halfH;
+        const bottom = y - offY + halfH;
+        if (bottom <= r.y || top >= r.y + r.h) continue;
+        if (y > prevY && prevCy + halfH <= r.y) y = r.y - halfH + offY;
+        else if (y < prevY && prevCy - halfH >= r.y + r.h) y = r.y + r.h + halfH + offY;
+    }
+    state.y = y;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);

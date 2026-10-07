@@ -155,6 +155,13 @@
             "when": 1791365399423,
             "tag": "0021_skill_basic_attack",
             "breakpoints": true
+        },
+        {
+            "idx": 22,
+            "version": "7",
+            "when": 1791370538153,
+            "tag": "0022_map_content",
+            "breakpoints": true
         }
     ]
 }

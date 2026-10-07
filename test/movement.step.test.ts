@@ -68,3 +68,41 @@ describe("movement.step — applyMove", () => {
         assert.equal(state.x.toFixed(6), (32 + SPEED).toFixed(6));
     });
 });
+
+describe("movement.step — va chạm địa hình", () => {
+    const footprint = { width: 1, height: 1 };
+    const wall = { x: 12, y: 0, w: 2, h: 64 };
+    const terrain = { ...bounds, colliders: [wall] };
+
+    it("dừng sát tường khi đi ngang", () => {
+        const state = createState(11.4, 10);
+        applyMove(state, { moveX: 1, moveY: 0 }, terrain, SPEED, DT, footprint);
+        assert.equal(state.x, 11.5);
+        assert.equal(state.y, 10);
+    });
+
+    it("trượt dọc tường khi đi chéo", () => {
+        const state = createState(11.5, 10);
+        applyMove(state, { moveX: 1, moveY: 1 }, terrain, SPEED, DT, footprint);
+        assert.equal(state.x, 11.5);
+        assert.ok(state.y > 10);
+    });
+
+    it("tường chặn cả khi đi ngược chiều", () => {
+        const state = createState(14.6, 10);
+        applyMove(state, { moveX: -1, moveY: 0 }, terrain, SPEED, DT, footprint);
+        assert.equal(state.x, 14.5);
+    });
+
+    it("không có footprint thì bỏ qua collider", () => {
+        const state = createState(11.9, 10);
+        applyMove(state, { moveX: 1, moveY: 0 }, terrain, SPEED, DT);
+        assert.ok(state.x > 11.9);
+    });
+
+    it("đang nằm trong tường vẫn đi ra được", () => {
+        const state = createState(13, 10);
+        applyMove(state, { moveX: 1, moveY: 0 }, terrain, SPEED, DT, footprint);
+        assert.equal(state.x, 13 + SPEED * DT);
+    });
+});

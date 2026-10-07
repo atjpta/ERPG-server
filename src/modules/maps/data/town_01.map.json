@@ -1,0 +1,145 @@
+{
+    "code": "town_01",
+    "type": "town",
+    "width": 64,
+    "height": 64,
+    "tileSize": 16,
+    "spawnPoints": [
+        {
+            "id": "default",
+            "x": 32,
+            "y": 32,
+            "kind": "default"
+        },
+        {
+            "id": "respawn",
+            "x": 32,
+            "y": 32,
+            "kind": "respawn"
+        }
+    ],
+    "colliders": [
+        {
+            "x": 0,
+            "y": 0,
+            "w": 64,
+            "h": 2
+        },
+        {
+            "x": 0,
+            "y": 62,
+            "w": 64,
+            "h": 2
+        },
+        {
+            "x": 0,
+            "y": 2,
+            "w": 2,
+            "h": 60
+        },
+        {
+            "x": 62,
+            "y": 2,
+            "w": 2,
+            "h": 60
+        }
+    ],
+    "monsterSpawns": [
+        {
+            "monsterCode": "orc",
+            "count": 2,
+            "spawnX": 24,
+            "spawnY": 26
+        },
+        {
+            "monsterCode": "armored_orc",
+            "count": 1,
+            "spawnX": 28,
+            "spawnY": 23
+        },
+        {
+            "monsterCode": "elite_orc",
+            "count": 1,
+            "spawnX": 21,
+            "spawnY": 22,
+            "type": "elite",
+            "rarity": "good"
+        },
+        {
+            "monsterCode": "orc_rider",
+            "count": 1,
+            "spawnX": 18,
+            "spawnY": 18,
+            "type": "boss",
+            "rarity": "epic"
+        },
+        {
+            "monsterCode": "skeleton",
+            "count": 1,
+            "spawnX": 40,
+            "spawnY": 28
+        },
+        {
+            "monsterCode": "skeleton_archer",
+            "count": 1,
+            "spawnX": 43,
+            "spawnY": 31
+        },
+        {
+            "monsterCode": "armored_skeleton",
+            "count": 1,
+            "spawnX": 44,
+            "spawnY": 36,
+            "type": "elite",
+            "rarity": "rare"
+        },
+        {
+            "monsterCode": "greatsword_skeleton",
+            "count": 1,
+            "spawnX": 40,
+            "spawnY": 38
+        },
+        {
+            "monsterCode": "necromancer",
+            "count": 1,
+            "spawnX": 48,
+            "spawnY": 32,
+            "type": "boss",
+            "rarity": "legendary"
+        },
+        {
+            "monsterCode": "bat",
+            "count": 1,
+            "spawnX": 26,
+            "spawnY": 40
+        },
+        {
+            "monsterCode": "slime",
+            "count": 1,
+            "spawnX": 30,
+            "spawnY": 42
+        },
+        {
+            "monsterCode": "lancer",
+            "count": 1,
+            "spawnX": 34,
+            "spawnY": 42
+        },
+        {
+            "monsterCode": "werebear",
+            "count": 1,
+            "spawnX": 38,
+            "spawnY": 44,
+            "type": "elite",
+            "rarity": "rare"
+        },
+        {
+            "monsterCode": "werewolf",
+            "count": 1,
+            "spawnX": 32,
+            "spawnY": 48,
+            "type": "boss",
+            "rarity": "legendary"
+        }
+    ]
+}

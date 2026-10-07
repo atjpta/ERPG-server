@@ -28,7 +28,37 @@ export const GameMaps = pgTable("game_maps", {
     pvpEnabled: boolean("pvp_enabled").notNull().default(false),
     /** Monster sinh ra trong mỗi instance của map (theo `monsters.code`). */
     monsterSpawns: jsonb("monster_spawns").$type<MonsterSpawn[]>().notNull().default([]),
+    /** Điểm đặt player theo id ổn định (spawn mặc định, hồi sinh, điểm đến của portal...). */
+    spawnPoints: jsonb("spawn_points").$type<MapSpawnPoint[]>().notNull().default([]),
+    /** Vùng chặn tĩnh (tile) — server chặn di chuyển, client dự đoán cùng dữ liệu. */
+    colliders: jsonb("colliders").$type<MapCollider[]>().notNull().default([]),
+    /** Hash nội dung file `<code>.map.json` đã seed — client so với bản trong build để phát hiện lệch. */
+    contentHash: text("content_hash").notNull().default(""),
 });
+
+export enum MapSpawnKind {
+    /** Chỗ vào map mặc định (spawn của `spawnX/spawnY`). */
+    DEFAULT = "default",
+    /** Chỗ player hồi sinh khi chết trong map. */
+    RESPAWN = "respawn",
+    /** Điểm đến của portal/teleport từ map khác. */
+    ARRIVAL = "arrival",
+}
+
+export interface MapSpawnPoint {
+    id: string;
+    x: number;
+    y: number;
+    kind: MapSpawnKind;
+}
+
+/** Hình chữ nhật chặn đường (tile, gốc trên-trái, y hướng xuống). */
+export interface MapCollider {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
 
 export interface MonsterSpawn {
     monsterCode: string;
