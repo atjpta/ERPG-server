@@ -31,25 +31,6 @@ export const QUESTS: NewQuest[] = [
         rewards: { exp: 50, currency: [], items: [] },
     },
     {
-        code: "rowan_herbs",
-        requiredLevel: 1,
-        giverNpcCode: "farmer_rowan",
-        turnInNpcCode: "farmer_rowan",
-        objectives: [
-            {
-                id: "pick_herb",
-                type: QuestObjectiveType.INTERACT,
-                targetCode: "herb_patch_1",
-                count: 1,
-            },
-        ],
-        rewards: {
-            exp: 40,
-            currency: [{ code: CurrencyCode.GOLD, amount: 30 }],
-            items: [{ itemCode: "hp_potion_small", quantity: 2 }],
-        },
-    },
-    {
         code: "garrick_hunt",
         requiredLevel: 1,
         giverNpcCode: "hunter_garrick",

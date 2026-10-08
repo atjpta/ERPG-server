@@ -86,33 +86,6 @@ export const NPCS: NewNpc[] = [
     {
         code: "farmer_rowan",
         defaultDialogueCode: "rowan_default",
-        dialogueRules: [
-            {
-                priority: 30,
-                conditions: [
-                    { type: "quest_state", questCode: "rowan_herbs", state: QuestState.READY },
-                ],
-                dialogueCode: "rowan_done",
-            },
-            {
-                priority: 20,
-                conditions: [
-                    { type: "quest_state", questCode: "rowan_herbs", state: QuestState.ACTIVE },
-                ],
-                dialogueCode: "rowan_progress",
-            },
-            {
-                priority: 10,
-                conditions: [
-                    {
-                        type: "quest_state",
-                        questCode: "rowan_herbs",
-                        state: QuestState.NOT_STARTED,
-                    },
-                ],
-                dialogueCode: "rowan_offer",
-            },
-        ],
     },
     {
         code: "hunter_garrick",

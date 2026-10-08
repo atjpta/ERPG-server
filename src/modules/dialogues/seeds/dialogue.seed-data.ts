@@ -214,45 +214,6 @@ export const DIALOGUES: NewDialogue[] = [
         nodes: [{ id: "start" }],
     },
     {
-        code: "rowan_offer",
-        nodes: [
-            {
-                id: "start",
-                options: [
-                    {
-                        id: "accept",
-                        hideIfFail: false,
-                        next: "accepted",
-                        actions: [{ type: "start_quest", questCode: "rowan_herbs" }],
-                    },
-                    { id: "decline", hideIfFail: false },
-                ],
-            },
-            { id: "accepted" },
-        ],
-    },
-    {
-        code: "rowan_progress",
-        nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
-    },
-    {
-        code: "rowan_done",
-        nodes: [
-            {
-                id: "start",
-                options: [
-                    {
-                        id: "claim",
-                        hideIfFail: false,
-                        next: "thanks",
-                        actions: [{ type: "complete_quest", questCode: "rowan_herbs" }],
-                    },
-                ],
-            },
-            { id: "thanks" },
-        ],
-    },
-    {
         code: "garrick_offer",
         nodes: [
             {
