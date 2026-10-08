@@ -19,20 +19,8 @@ const CHECKPOINT_INTERVAL_MS = 30_000;
 export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
     async execute({ mapCode }: WorldRoomOptions) {
         const loaded = await mapService.getActiveByCodeOrFail(mapCode);
-        // NPC cũng là vật cản: gộp collider của chúng vào map để `applyMove` chặn như tường.
-        const npcColliders = loaded.npcs.flatMap((placement) => {
-            const npc = npcService.getByCode(placement.npcCode);
-            if (!npc) return [];
-            return [
-                {
-                    x: placement.x - npc.colliderWidth / 2,
-                    y: placement.y - npc.colliderHeight,
-                    w: npc.colliderWidth,
-                    h: npc.colliderHeight,
-                },
-            ];
-        });
-        const map = { ...loaded, colliders: [...loaded.colliders, ...npcColliders] };
+        // NPC không chặn đường: người chơi đi xuyên qua, chỉ collider của map mới là vật cản.
+        const map = loaded;
         this.room.map = map;
         this.room.maxClients = map.maxPlayersPerChannel;
         this.room.state.mapCode = map.code;

@@ -36,7 +36,7 @@ Thêm vào `modules/npcs/seeds/npc.seed-data.ts` (hoặc `POST /admin/npcs`), r�
 - `dialogueRules`: `{ mapCode?, priority, conditions, dialogueCode }` — rule thoả điều kiện có `priority` cao nhất thắng,
   nhờ đó **cùng NPC nói khác nhau theo hoàn cảnh** (quest xong/chưa, level, class, map, flag...).
 - `functions`: UI chức năng (`shop`, `storage`, `enhance`, `refine`, `disassemble`, `quest_board`), mở bằng action `open_function`.
-- `colliderWidth/Height`: vùng chặn dưới chân NPC (server gộp vào collider của map — client phải làm giống).
+- `colliderWidth/Height`: vùng chặn dưới chân NPC (hiện không dùng để chặn đường: người chơi đi xuyên qua NPC).
 
 ## Thêm thoại
 
@@ -72,7 +72,7 @@ marker NPC theo quest của riêng player đến qua message `npcMarkers`.
 
 ## Phía Unity cần làm theo
 
-- Port `applyMove` mới ([movement.step.ts](../src/rooms/world/simulation/movement.step.ts)) — va chạm theo `colliders` + collider NPC + hình chân `collider` của entity.
+- Port `applyMove` mới ([movement.step.ts](../src/rooms/world/simulation/movement.step.ts)) — va chạm theo `colliders` của map (NPC không chặn) + hình chân `collider` của entity.
 - Khớp `contentHash` của `.map.json` trong build với hash server trả.
 - UI thoại / quest / marker; bảng locale theo `locale-keys.json`.
 
@@ -91,4 +91,4 @@ Mọi object art nằm ở layer `MapArt`; minimap chụp đúng layer đó (m�
 
 - `Tools/ERPG/Check Map Collision`: đi thử một "chân người chơi" trên toàn map đúng như bước di chuyển chặn, báo NPC / portal / điểm spawn nào **không tới được** từ điểm spawn mặc định hoặc đang kẹt trong tường.
 - `Export Map` chạy kiểm tra này trước và **từ chối xuất** nếu có lỗi — chỉ khi client ổn mới ghi `greenfield_village.map.json` cho server.
-- Khi chơi trong Editor, nhấn **F12** để vẽ viền đỏ các khối chặn (collider map + thân NPC) lên map, đối chiếu bằng mắt với hình.
+- Khi chơi trong Editor, nhấn **F12** để vẽ viền đỏ các khối chặn (collider map) lên map, đối chiếu bằng mắt với hình.
