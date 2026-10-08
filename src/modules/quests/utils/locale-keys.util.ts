@@ -19,7 +19,10 @@ export const collectLocaleKeys = (data: {
         keys.add(`map.${map.code}.name`);
         for (const it of map.interactables) keys.add(`interactable.${it.id}.name`);
     }
-    for (const npc of data.npcs) keys.add(`npc.${npc.code}.name`);
+    for (const npc of data.npcs) {
+        keys.add(`npc.${npc.code}.name`);
+        keys.add(`npc.${npc.code}.role`);
+    }
     for (const quest of data.quests) {
         keys.add(`quest.${quest.code}.name`);
         keys.add(`quest.${quest.code}.desc`);

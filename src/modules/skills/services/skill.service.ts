@@ -4,6 +4,9 @@ import { HitDelivery } from "@/modules/skills/enums/skill.enum.js";
 import type { OwnedSkill, SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
 
+/** Skill `dash`: `castTimeMs` = thời gian lướt (khoá di chuyển), `cooldownMs` = hồi chiêu — chỉnh ở skill seed, không ở code. */
+export const DASH_SKILL_CODE = "dash";
+
 /** `triggerTicks` của hit event được tác giả theo nhịp 20 tick/giây. */
 const AUTHORED_TICK_MS = 50;
 /**

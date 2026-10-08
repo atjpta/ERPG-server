@@ -62,11 +62,13 @@ export class PlayerDeathChain implements WorldChainAction<PlayerChainContext> {
 export class PlayerHitInterruptChain implements WorldChainAction<PlayerChainContext> {
     constructor(private readonly attackChain: PlayerAttackChain) {}
 
-    execute({ state }: PlayerChainContext): WorldChainResult {
+    execute({ room, state }: PlayerChainContext): WorldChainResult {
         if (!state.hitInterrupted) return WorldChainResult.CONTINUE;
 
         state.hitInterrupted = false;
         this.attackChain.interrupt(state);
+        // Bước này bị cắt nên PlayerDashChain không chạy: vẫn phải trừ thời gian lướt / hồi dash, như client (WorldMovementStep).
+        state.chainDash(false, room.tickRate);
         return WorldChainResult.STOP;
     }
 }
