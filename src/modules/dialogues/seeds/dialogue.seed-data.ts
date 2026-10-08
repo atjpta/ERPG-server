@@ -101,11 +101,6 @@ export const DIALOGUES: NewDialogue[] = [
                         hideIfFail: false,
                         actions: [{ type: "open_function", function: "refine" }],
                     },
-                    {
-                        id: "disassemble",
-                        hideIfFail: false,
-                        actions: [{ type: "open_function", function: "disassemble" }],
-                    },
                     { id: "bye", hideIfFail: false },
                 ],
             },

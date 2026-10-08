@@ -64,7 +64,6 @@ export const NPCS: NewNpc[] = [
         functions: [
             { id: "enhance", type: NpcFunctionType.ENHANCE, config: {} },
             { id: "refine", type: NpcFunctionType.REFINE, config: {} },
-            { id: "disassemble", type: NpcFunctionType.DISASSEMBLE, config: {} },
         ],
     },
     // ---- Greenfield Village --------------------------------------------------------------------------

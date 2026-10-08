@@ -13,6 +13,8 @@ import type { PlayerState } from "@/modules/player/entities/player-state.entity.
 import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
 import { classService } from "@/modules/classes/services/class.service.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
+import { DASH_SKILL_CODE, skillService } from "@/modules/skills/services/skill.service.js";
+import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
 import {
     fromInventories,
     toInventories,
@@ -28,6 +30,9 @@ import {
     OwnedSkillState,
     toOwnedSkillStates,
 } from "@/rooms/world/schema/owned-skill.world.state.js";
+
+/** Trần của `dashTicks` / `dashCooldownTicks` (uint8). */
+const MAX_DASH_TICKS = 0xff;
 
 /** Trần của `skillCooldownTicks` (uint16). */
 const MAX_SKILL_COOLDOWN_TICKS = 0xffff;
@@ -320,8 +325,16 @@ export class PlayerWorldState extends Schema {
 
     chainDash(requested: boolean, tickRate: number) {
         if (requested && this.dashCooldownTicks === 0 && this.dashTicks === 0) {
-            this.dashTicks = Math.ceil((300 * tickRate) / 1000);
-            this.dashCooldownTicks = Math.ceil((600 * tickRate) / 1000);
+            const dash = skillService.getByCode(DASH_SKILL_CODE);
+            const cooldownMs = dash?.cooldownMs;
+            this.dashTicks = Math.min(
+                MAX_DASH_TICKS,
+                millisecondsToTicks(dash?.castTimeMs, tickRate)
+            );
+            this.dashCooldownTicks = Math.min(
+                MAX_DASH_TICKS,
+                cooldownMs > 0 ? millisecondsToTicks(cooldownMs, tickRate) : 0
+            );
         }
 
         this.dashing = this.dashTicks > 0;

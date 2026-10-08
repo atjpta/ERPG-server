@@ -13,6 +13,7 @@ import {
     TargetType,
 } from "@/modules/skills/enums/skill.enum.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
+import { DASH_SKILL_CODE } from "@/modules/skills/services/skill.service.js";
 import type {
     SkillArea,
     SkillHitEvent,
@@ -102,13 +103,29 @@ const basicAttackLevels = (scalingType = DamageScalingType.ATTACK) => [
  */
 const CLASS_SKILLS: NewSkill[] = [
     {
+        // Dash của mọi class: lướt `castTimeMs` (khoá di chuyển, huỷ đòn đang dở), rồi `cooldownMs` mới lướt lại.
+        // PlayerWorldState.chainDash và client (WorldMovementStep) đọc hai số này — đổi ở đây rồi `yarn seed --force` + `yarn config:export`.
+        code: DASH_SKILL_CODE,
+        skillType: SkillType.DASH,
+        targetType: TargetType.DIRECTION,
+        castRange: 0,
+        castTimeMs: 300,
+        cooldownMs: 3000,
+        manaCost: 0,
+        staminaCost: 0,
+        maxLevel: 1,
+        basicAttack: false,
+        levelConfig: [],
+        skillHitEvents: [],
+    },
+    {
         // basic_attack (clip Attack1 cũ, speed 2, 7 frame = 292 ms), chém ở frame 3. Cần thêm đòn thì thêm skill + clip sau.
         code: "swordsman_basic_attack",
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
         castRange: 1.4,
         castTimeMs: 300,
-        cooldownMs: 1000,
+        cooldownMs: 0,
         manaCost: 0,
         staminaCost: 0,
         maxLevel: 5,
@@ -133,8 +150,8 @@ const CLASS_SKILLS: NewSkill[] = [
         skillType: SkillType.PROJECTILE,
         targetType: TargetType.TARGET,
         castRange: 5,
-        castTimeMs: 750,
-        cooldownMs: 1000,
+        castTimeMs: 600,
+        cooldownMs: 0,
         manaCost: 0,
         staminaCost: 0,
         maxLevel: 5,
@@ -169,8 +186,8 @@ const CLASS_SKILLS: NewSkill[] = [
         skillType: SkillType.GROUND,
         targetType: TargetType.TARGET,
         castRange: 4,
-        castTimeMs: 750,
-        cooldownMs: 1000,
+        castTimeMs: 500,
+        cooldownMs: 0,
         manaCost: 0,
         staminaCost: 0,
         maxLevel: 5,
