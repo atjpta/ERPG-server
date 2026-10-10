@@ -10,6 +10,7 @@ import { ItemType } from "@/modules/items/enums/item.enum.js";
 import {
     DEFAULT_MONSTER_LEVEL_CONFIG,
     DEFAULT_MONSTER_SCALE_CONFIG,
+    DEFAULT_MONSTER_SPAWN_CONFIG,
 } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
@@ -78,6 +79,10 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
     [MasterDataKey.MONSTER_LEVEL_CONFIG]: {
         value: DEFAULT_MONSTER_LEVEL_CONFIG,
         note: "Tỉ lệ tăng mỗi level theo từng chỉ số của monster (dùng chung mọi monster)",
+    },
+    [MasterDataKey.MONSTER_SPAWN_CONFIG]: {
+        value: DEFAULT_MONSTER_SPAWN_CONFIG,
+        note: "Roll loại (normal/elite) + độ hiếm của monster khi sinh / hồi sinh; giới hạn elite mỗi map",
     },
 };
 

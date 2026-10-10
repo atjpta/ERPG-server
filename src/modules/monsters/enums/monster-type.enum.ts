@@ -4,3 +4,7 @@ export enum MonsterType {
     ELITE = "elite",
     BOSS = "boss",
 }
+
+/** `type` của spawn trong map: một loại cố định, hoặc `random` = mỗi lần sinh / hồi sinh roll normal hoặc elite. */
+export const RANDOM_MONSTER_TYPE = "random";
+export type MonsterSpawnType = MonsterType | typeof RANDOM_MONSTER_TYPE;

@@ -36,7 +36,11 @@ export const mapFileToRow = (map: MapFile): NewGameMap => {
         spawnY: spawn.y,
         maxPlayersPerChannel: map.maxPlayersPerChannel,
         pvpEnabled: map.pvpEnabled,
-        monsterSpawns: map.monsterSpawns,
+        monsterSpawns: map.monsterSpawns.map((spawn) => ({
+            ...spawn,
+            minLevel: spawn.minLevel ?? map.monsterLevel?.min,
+            maxLevel: spawn.maxLevel ?? map.monsterLevel?.max,
+        })),
         spawnPoints: map.spawnPoints,
         colliders: map.colliders,
         npcs: map.npcs,

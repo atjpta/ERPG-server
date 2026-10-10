@@ -1,6 +1,7 @@
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
+import type { MonsterSpawn } from "@/modules/maps/entities/game-map.entity.js";
 import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import type { Stats } from "@/modules/player/schemas/stat.schema.js";
@@ -64,22 +65,45 @@ export class MonsterWorldState extends Schema {
     /** Toàn bộ chỉ số ở level hiện tại (`computeMonsterStats`) — dùng cho chain tính damage. */
     stats: Stats;
     biome: Biome;
+    /** Monster gốc + spawn của map: hồi sinh roll lại loại / độ hiếm / level từ đây. */
+    readonly definition: Monster;
+    readonly spawn: MonsterSpawn;
     /** Tăng mỗi đòn đánh — một phần seed roll combat (`combatSeed`). */
     attackSerial = 0;
 
-    constructor(props: { monster: Monster; variant: MonsterVariant; x: number; y: number }) {
-        const { monster, variant, x, y } = props;
+    constructor(props: {
+        monster: Monster;
+        spawn: MonsterSpawn;
+        variant: MonsterVariant;
+        level: number;
+        x: number;
+        y: number;
+    }) {
+        const { monster, spawn, variant, level, x, y } = props;
         super();
         this.id = uuidv7();
         this.MonsterId = monster.id;
         this.code = monster.code;
-        this.level = monster.level;
-        this.monsterType = variant.type;
-        this.rarity = variant.rarity;
+        this.definition = monster;
+        this.spawn = spawn;
         this.x = x;
         this.y = y;
         this.spawnX = x;
         this.spawnY = y;
+        this.applyVariant(variant, level);
+        this.attackCooldownMs = monster.attackCooldownMs;
+        this.attackCooldownTicks = 0;
+        this.skills.push(...toOwnedSkillStates(monster.skills));
+        this.drops = monster.drops;
+        this.biome = monster.biome;
+    }
+
+    /** Đặt loại / độ hiếm / level (sinh lần đầu và mỗi lần hồi sinh) rồi tính lại chỉ số, kích thước, máu. */
+    applyVariant(variant: MonsterVariant, level: number) {
+        const monster = this.definition;
+        this.level = level;
+        this.monsterType = variant.type;
+        this.rarity = variant.rarity;
         const scales = monsterScales(
             variant,
             masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG)
@@ -88,7 +112,7 @@ export class MonsterWorldState extends Schema {
         // Stat cuối = base × tăng theo level (`monster_level_config`) × hệ số loại × độ hiếm (cùng bộ StatKey với player).
         this.stats = computeMonsterStats(
             monster,
-            monster.level,
+            level,
             masterDataCacheService.get(MasterDataKey.MONSTER_LEVEL_CONFIG),
             scales
         );
@@ -97,13 +121,8 @@ export class MonsterWorldState extends Schema {
         this.attack = Math.floor(this.stats[StatKey.PHYSICAL_ATTACK] ?? 0);
         this.defense = Math.floor(this.stats[StatKey.PHYSICAL_DEFENSE] ?? 0);
         this.moveSpeed = this.stats[StatKey.MOVE_SPEED] ?? 0;
-        this.attackCooldownMs = monster.attackCooldownMs;
-        this.attackCooldownTicks = 0;
         this.hitbox = new HitboxColliderState(scaleCollisionBounds(monster.hitbox, this.scale));
         this.collider = new HitboxColliderState(scaleCollisionBounds(monster.collider, this.scale));
-        this.skills.push(...toOwnedSkillStates(monster.skills));
-        this.drops = monster.drops;
-        this.biome = monster.biome;
     }
 
     toDamageCombatant(): DamageCombatant {

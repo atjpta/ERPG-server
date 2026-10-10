@@ -10,4 +10,5 @@ export enum MasterDataKey {
     EQUIPMENT_DROP_CONFIG = "equipment_drop_config",
     MONSTER_SCALE_CONFIG = "monster_scale_config",
     MONSTER_LEVEL_CONFIG = "monster_level_config",
+    MONSTER_SPAWN_CONFIG = "monster_spawn_config",
 }

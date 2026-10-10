@@ -7,6 +7,7 @@ import {
 } from "@/modules/equipment/utils/equipment-roll.util.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import type { Monster } from "@/modules/monsters/entities/monster.entity.js";
+import { scaleDropsToLevel } from "@/modules/monsters/utils/monster-spawn.util.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import {
     combineRewardScale,
@@ -24,11 +25,21 @@ import { rollDropRarity, rollMonsterReward } from "@/modules/rewards/utils/rewar
  */
 export class MonsterRewardService {
     roll(
-        monster: Pick<Monster, "level" | "biome"> & MonsterVariant & { drops: MonsterDrops },
+        monster: Pick<Monster, "level" | "biome"> &
+            MonsterVariant & {
+                drops: MonsterDrops;
+                /** Level của monster gốc (nơi `drops` được seed) — quái sinh ở level khác thì thưởng đổi theo. */
+                baseLevel?: number;
+            },
         rng: Rng = Math.random
     ): Reward {
         const scaleConfig = masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG);
-        return rollMonsterReward(monster.drops, {
+        const drops = scaleDropsToLevel(
+            monster.drops,
+            monster.baseLevel ?? monster.level,
+            monster.level
+        );
+        return rollMonsterReward(drops, {
             rng,
             scale: combineRewardScale(monsterScales(monster, scaleConfig)),
             rollEquipment: (drop) => {

@@ -13,6 +13,7 @@ import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import type { MonsterLevelConfig } from "@/modules/monsters/schemas/monster-level-config.schema.js";
 import type { MonsterScaleConfig } from "@/modules/monsters/schemas/monster-scale-config.schema.js";
+import type { MonsterSpawnConfig } from "@/modules/monsters/schemas/monster-spawn-config.schema.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 
 export interface MonsterDefinition {
@@ -235,6 +236,32 @@ export const DEFAULT_MONSTER_SCALE_CONFIG: MonsterScaleConfig = {
             gold: 3,
             dropRate: 3,
             size: 1,
+        },
+    },
+};
+
+/**
+ * Mặc định master data `monster_spawn_config`: spawn `random` có 10% ra elite (tối đa 1 con elite sống
+ * trong map); độ hiếm roll theo trọng số của loại — normal hiếm dần, elite/boss lệch về độ hiếm cao.
+ */
+export const DEFAULT_MONSTER_SPAWN_CONFIG: MonsterSpawnConfig = {
+    maxElitesPerMap: 1,
+    eliteChance: 0.1,
+    rarityWeights: {
+        [MonsterType.NORMAL]: {
+            [ItemRarity.COMMON]: 80,
+            [ItemRarity.GOOD]: 15,
+            [ItemRarity.RARE]: 5,
+        },
+        [MonsterType.ELITE]: {
+            [ItemRarity.GOOD]: 50,
+            [ItemRarity.RARE]: 35,
+            [ItemRarity.EPIC]: 15,
+        },
+        [MonsterType.BOSS]: {
+            [ItemRarity.RARE]: 40,
+            [ItemRarity.EPIC]: 45,
+            [ItemRarity.LEGENDARY]: 15,
         },
     },
 };

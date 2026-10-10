@@ -136,6 +136,7 @@ export function applySkillHit(
                 type: target.monsterType,
                 rarity: target.rarity,
                 level: target.level,
+                baseLevel: target.definition.level,
                 biome: target.biome,
                 drops: target.drops,
             })

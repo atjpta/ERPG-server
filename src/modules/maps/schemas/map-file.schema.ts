@@ -4,7 +4,7 @@ import { RewardSpecSchema } from "@/modules/rewards/schemas/reward-spec.schema.j
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MapSpawnKind } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
-import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
+import { MonsterType, RANDOM_MONSTER_TYPE } from "@/modules/monsters/enums/monster-type.enum.js";
 
 const idSchema = z.string().regex(/^[a-z0-9_]+$/);
 const tile = z.number().min(0);
@@ -23,14 +23,28 @@ const ColliderSchema = z.object({
     h: z.number().positive(),
 });
 
-const MonsterSpawnSchema = z.object({
-    monsterCode: z.string().min(1),
-    count: z.number().int().positive(),
-    spawnX: tile,
-    spawnY: tile,
-    type: z.enum(MonsterType).optional(),
-    rarity: z.enum(ItemRarity).optional(),
-});
+const level = z.number().int().positive();
+const LevelRangeSchema = z
+    .object({ min: level, max: level })
+    .refine((range) => range.min <= range.max, { message: "min must be <= max" });
+
+const MonsterSpawnSchema = z
+    .object({
+        monsterCode: z.string().min(1),
+        count: z.number().int().positive(),
+        spawnX: tile,
+        spawnY: tile,
+        /** Bỏ trống = normal; `random` = roll normal/elite mỗi lần sinh (xem `monster_spawn_config`). */
+        type: z.enum([...Object.values(MonsterType), RANDOM_MONSTER_TYPE]).optional(),
+        /** Cố định độ hiếm; bỏ trống = random theo `monster_spawn_config`. */
+        rarity: z.enum(ItemRarity).optional(),
+        /** Khoảng level riêng của spawn; bỏ trống = khoảng của map (`monsterLevel`), rồi level của monster. */
+        minLevel: level.optional(),
+        maxLevel: level.optional(),
+    })
+    .refine((spawn) => (spawn.minLevel ?? 0) <= (spawn.maxLevel ?? Infinity), {
+        message: "minLevel must be <= maxLevel",
+    });
 
 const NpcPlacementSchema = z.object({
     npcCode: z.string().min(1),
@@ -78,6 +92,8 @@ export const MapFileSchema = z
         pvpEnabled: z.boolean().default(false),
         spawnPoints: z.array(SpawnPointSchema).min(1),
         colliders: z.array(ColliderSchema).default([]),
+        /** Khoảng level quái của map: mỗi con sinh ra / hồi sinh roll level trong khoảng này. */
+        monsterLevel: LevelRangeSchema.optional(),
         monsterSpawns: z.array(MonsterSpawnSchema).default([]),
         npcs: z.array(NpcPlacementSchema).default([]),
         interactables: z.array(InteractableSchema).default([]),

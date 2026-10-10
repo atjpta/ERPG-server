@@ -4,7 +4,7 @@ import type { Condition } from "@/modules/dialogues/schemas/condition.schema.js"
 import type { RewardSpec } from "@/modules/rewards/schemas/reward-spec.schema.js";
 import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
-import type { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
+import type { MonsterSpawnType } from "@/modules/monsters/enums/monster-type.enum.js";
 
 export const mapTypeEnum = pgEnum("map_type", MapType);
 export const mapStatusEnum = pgEnum("map_status", MapStatus);
@@ -112,10 +112,13 @@ export interface MonsterSpawn {
      */
     spawnX?: number;
     spawnY?: number;
-    /** Loại monster của spawn này — mặc định NORMAL. */
-    type?: MonsterType;
-    /** Độ hiếm (màu tên phía client) — mặc định COMMON. */
+    /** Loại monster của spawn này — mặc định NORMAL; `random` = roll normal/elite mỗi lần sinh. */
+    type?: MonsterSpawnType;
+    /** Độ hiếm cố định; bỏ trống = random theo master data `monster_spawn_config`. */
     rarity?: ItemRarity;
+    /** Khoảng level của quái sinh ra (map file đã điền sẵn từ `monsterLevel` của map); bỏ trống = level của monster. */
+    minLevel?: number;
+    maxLevel?: number;
 }
 
 export type GameMap = typeof GameMaps.$inferSelect;
