@@ -2,6 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { DungeonConfigSchema } from "@/modules/maps/schemas/map-file.schema.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
+import {
+    DungeonDropConfigSchema,
+    DungeonDropTuningSchema,
+} from "@/modules/maps/schemas/dungeon-drop.schema.js";
+import { DEFAULT_DUNGEON_DROP_CONFIG } from "@/modules/maps/seeds/dungeon-drop-config.seed-data.js";
+import { MapType } from "@/modules/maps/enums/map.enum.js";
+import { MAP_REGISTRY } from "@/modules/maps/seeds/map-registry.js";
 import { big } from "@/core/utils/big-number.util.js";
 import { applyDungeonScale, tuneDungeonDrops } from "@/modules/maps/utils/dungeon-drop.util.js";
 import { dungeonMonsterLevel, phasesMonsterCount } from "@/modules/maps/utils/dungeon.util.js";
@@ -131,21 +138,20 @@ describe("dungeon drop tuning", () => {
         assert.equal(scale.dropRate.toNumber(), 6);
     });
 
-    it("schema nhận khối drops hợp lệ, từ chối min > max", () => {
-        const base = {
-            maxLevel: 10,
-            chambers: [chamber("a", { isBoss: true, exit: undefined })],
-        };
+    it("schema từ chối min > max và config mặc định hợp lệ", () => {
         assert.equal(
-            DungeonConfigSchema.safeParse({ ...base, drops: { goldMultiplier: 2 } }).success,
-            true
-        );
-        assert.equal(
-            DungeonConfigSchema.safeParse({
-                ...base,
-                drops: { extraItems: [{ itemCode: "gem", min: 3, max: 1, rate: 0.5 }] },
+            DungeonDropTuningSchema.safeParse({
+                extraItems: [{ itemCode: "gem", min: 3, max: 1, rate: 0.5 }],
             }).success,
             false
         );
+        assert.doesNotThrow(() => DungeonDropConfigSchema.parse(DEFAULT_DUNGEON_DROP_CONFIG));
+    });
+
+    it("mặc định chỉnh đúng 3 dungeon đã khai báo", () => {
+        const dungeons = MAP_REGISTRY.filter((map) => map.type === MapType.DUNGEON).map(
+            (map) => map.code
+        );
+        assert.deepEqual(Object.keys(DEFAULT_DUNGEON_DROP_CONFIG.byMap).sort(), dungeons.sort());
     });
 });

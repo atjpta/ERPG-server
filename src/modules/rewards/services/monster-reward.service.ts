@@ -5,7 +5,7 @@ import {
     dropLevelOf,
     type Rng,
 } from "@/modules/equipment/utils/equipment-roll.util.js";
-import type { DungeonDropTuning } from "@/modules/maps/entities/game-map.entity.js";
+import type { DungeonDropTuning } from "@/modules/maps/schemas/dungeon-drop.schema.js";
 import { applyDungeonScale, tuneDungeonDrops } from "@/modules/maps/utils/dungeon-drop.util.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";

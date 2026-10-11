@@ -30,6 +30,8 @@ export class MapService {
             contentHash: map.contentHash,
             spawnPoints: map.spawnPoints,
             colliders: map.colliders,
+            /** Monster có thể xuất hiện trong map — client tải trước prefab của chúng. */
+            monsterCodes: [...new Set(map.monsterSpawns.map((spawn) => spawn.monsterCode))],
             npcs: map.npcs.map((placement) => {
                 const npc = npcService.getByCode(placement.npcCode);
                 return {

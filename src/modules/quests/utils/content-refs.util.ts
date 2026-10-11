@@ -3,6 +3,7 @@ import type { MapFile } from "@/modules/maps/schemas/map-file.schema.js";
 import type { Npc } from "@/modules/npcs/entities/npc.entity.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
+import type { DungeonDropConfig } from "@/modules/maps/schemas/dungeon-drop.schema.js";
 import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
 import type { Action, Condition } from "@/modules/dialogues/schemas/condition.schema.js";
 
@@ -24,6 +25,8 @@ export interface ContentData {
     monsterCodes: ReadonlySet<string>;
     /** Code map dungeon (kể cả map placeholder chưa có file Unity) — mục tiêu `clear_dungeon` trỏ vào đây. */
     dungeonMapCodes: ReadonlySet<string>;
+    /** Master data `dungeon_drop_config` — item code và map phải có thật. */
+    dungeonDrops: DungeonDropConfig;
 }
 
 /**
@@ -91,11 +94,14 @@ export const findContentRefErrors = (data: ContentData): string[] => {
                     need(data.itemCodes, item.itemCode, where, "item");
             }
         }
-        for (const item of map.dungeon?.drops?.extraItems ?? []) {
-            need(data.itemCodes, item.itemCode, `map ${map.code} dungeon drops`, "item");
-        }
         for (const spawn of map.monsterSpawns) {
             need(data.monsterCodes, spawn.monsterCode, `map ${map.code}`, "monster");
+        }
+    }
+    for (const [mapCode, tuning] of Object.entries(data.dungeonDrops.byMap)) {
+        need(data.dungeonMapCodes, mapCode, "dungeon_drop_config", "dungeon map");
+        for (const item of tuning.extraItems ?? []) {
+            need(data.itemCodes, item.itemCode, `dungeon_drop_config ${mapCode}`, "item");
         }
     }
     for (const npc of data.npcs) {

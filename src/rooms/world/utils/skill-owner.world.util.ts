@@ -1,3 +1,5 @@
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
 import { monsterRewardService } from "@/modules/rewards/services/monster-reward.service.js";
@@ -142,7 +144,11 @@ export function applySkillHit(
                     drops: target.drops,
                 },
                 Math.random,
-                room.dungeon?.config.drops
+                room.dungeon
+                    ? masterDataCacheService.get(MasterDataKey.DUNGEON_DROP_CONFIG).byMap[
+                          room.map.code
+                      ]
+                    : undefined
             )
         );
     }

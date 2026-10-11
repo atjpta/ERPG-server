@@ -103,33 +103,8 @@ const DungeonChamberSchema = z.object({
     clearReward: RewardSpecSchema.optional(),
 });
 
-const multiplier = z.number().nonnegative();
-const chance = z.number().min(0).max(1);
-
-export const DungeonDropTuningSchema = z.object({
-    expMultiplier: multiplier.optional(),
-    goldMultiplier: multiplier.optional(),
-    dropRateMultiplier: multiplier.optional(),
-    equipmentRate: chance.optional(),
-    equipmentRarity: z.partialRecord(z.enum(ItemRarity), z.number().nonnegative()).optional(),
-    extraItems: z
-        .array(
-            z
-                .object({
-                    itemCode: z.string().min(1),
-                    min: z.number().int().positive(),
-                    max: z.number().int().positive(),
-                    rate: chance,
-                    bossOnly: z.boolean().optional(),
-                })
-                .refine((drop) => drop.min <= drop.max, { message: "min must be <= max" })
-        )
-        .optional(),
-});
-
 export const DungeonConfigSchema = z
     .object({
-        drops: DungeonDropTuningSchema.optional(),
         maxLevel: level,
         timeLimitSec: z.number().int().positive().optional(),
         chambers: z.array(DungeonChamberSchema).min(1),

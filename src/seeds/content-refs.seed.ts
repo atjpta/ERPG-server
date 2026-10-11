@@ -1,6 +1,7 @@
 import { db } from "@/configs/postgres.config.js";
 import { Dialogues } from "@/modules/dialogues/entities/dialogue.entity.js";
 import { Items } from "@/modules/items/entities/item.entity.js";
+import { DEFAULT_DUNGEON_DROP_CONFIG } from "@/modules/maps/seeds/dungeon-drop-config.seed-data.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { MAP_REGISTRY } from "@/modules/maps/seeds/map-registry.js";
 import { loadMapFiles } from "@/modules/maps/seeds/game-map.seed.js";
@@ -25,6 +26,7 @@ export const ContentRefsCheck = async () => {
         quests,
         itemCodes: new Set(items.map((item) => item.code)),
         monsterCodes: new Set(monsters.map((monster) => monster.code)),
+        dungeonDrops: DEFAULT_DUNGEON_DROP_CONFIG,
         dungeonMapCodes: new Set(
             MAP_REGISTRY.filter((map) => map.type === MapType.DUNGEON).map((map) => map.code)
         ),

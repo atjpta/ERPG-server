@@ -1,5 +1,5 @@
 import type { Big } from "@/core/utils/big-number.util.js";
-import type { DungeonDropTuning } from "@/modules/maps/entities/game-map.entity.js";
+import type { DungeonDropTuning } from "@/modules/maps/schemas/dungeon-drop.schema.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import type { RewardScale } from "@/modules/rewards/utils/reward-roll.util.js";
 
