@@ -78,4 +78,5 @@ Toạ độ theo **tile**, gốc trên-trái, y hướng xuống (server). Unity
     - `isBoss` (chỉ chamber cuối), `hasExit` (mặc định có, trừ chamber boss), `exitRadius`, `clearReward?`.
     - Cổng exit là interactable động id `exit_<chamberId>` (không khai trong `interactables`).
     - Vào dungeon: đặt `portal` trong field trỏ tới code dungeon + id spawn arrival của dungeon; server lưu chỗ đứng cũ, cấp `instanceId` riêng (`mapChange.roomName = "dungeon"`).
-    - Drop quái trong dungeon: master data `dungeon_drop_config` (seed `DEFAULT_DUNGEON_DROP_CONFIG` hoặc `PUT /admin/master-data/dungeon_drop_config`) theo code map — `expMultiplier` / `goldMultiplier` / `dropRateMultiplier`, `equipmentRate` + `equipmentRarity`, `extraItems` `[{itemCode, min, max, rate, bossOnly?}]`.
+    - Sức chứa dungeon = cài đặt party (`party_config.maxMembers`), không khai `maxPlayersPerChannel` cho dungeon.
+    - Quái thường trong dungeon rớt như bình thường. **Thưởng thêm chỉ khi hạ boss**: master data `dungeon_drop_config` (seed `DEFAULT_DUNGEON_DROP_CONFIG` hoặc `PUT /admin/master-data/dungeon_drop_config`) theo code map — `expMultiplier` / `goldMultiplier` / `dropRateMultiplier`, `equipmentRate` + `equipmentRarity`, `extraItems` `[{itemCode, min, max, rate}]`; cùng với `clearReward` của chamber/dungeon.

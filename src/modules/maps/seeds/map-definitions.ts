@@ -287,7 +287,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
         code: "slime_hollow",
         type: MapType.DUNGEON,
         minLevel: 1,
-        maxPlayersPerChannel: 4,
         spawnPoints: [
             { id: "default", kind: MapSpawnKind.DEFAULT },
             { id: "from_plains", kind: MapSpawnKind.ARRIVAL },
@@ -386,7 +385,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
         code: "werewolf_den",
         type: MapType.DUNGEON,
         minLevel: 10,
-        maxPlayersPerChannel: 4,
         spawnPoints: [
             { id: "default", kind: MapSpawnKind.DEFAULT },
             { id: "from_forest", kind: MapSpawnKind.ARRIVAL },
@@ -508,7 +506,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
         code: "sanctuary_of_life",
         type: MapType.DUNGEON,
         minLevel: 20,
-        maxPlayersPerChannel: 4,
         spawnPoints: [
             { id: "default", kind: MapSpawnKind.DEFAULT },
             { id: "from_evergrowth", kind: MapSpawnKind.ARRIVAL },

@@ -17,7 +17,7 @@ export const applyDungeonScale = (scale: RewardScale, tuning: DungeonDropTuning)
 export const tuneDungeonDrops = (
     drops: MonsterDrops,
     tuning: DungeonDropTuning,
-    options: { boss: boolean; itemId: (itemCode: string) => string | undefined }
+    options: { itemId: (itemCode: string) => string | undefined }
 ): MonsterDrops => {
     const equipment =
         drops.equipment && (tuning.equipmentRate !== undefined || tuning.equipmentRarity)
@@ -28,7 +28,7 @@ export const tuneDungeonDrops = (
             : drops.equipment;
     const extra = (tuning.extraItems ?? []).flatMap((drop) => {
         const itemId = options.itemId(drop.itemCode);
-        if (!itemId || (drop.bossOnly && !options.boss)) return [];
+        if (!itemId) return [];
         return [{ itemId, min: drop.min, max: drop.max, rate: drop.rate }];
     });
     return { ...drops, equipment, items: [...drops.items, ...extra] };

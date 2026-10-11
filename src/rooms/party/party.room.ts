@@ -173,10 +173,10 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
      */
     async requestDungeon(
         leaderPlayerId: string,
-        dungeon: { code: string; minLevel: number; capacity: number; spawnId: string }
+        dungeon: { code: string; minLevel: number; spawnId: string }
     ): Promise<{ ok: boolean; error?: string }> {
         if (!this.model.isLeader(leaderPlayerId)) return { ok: false, error: "not_leader" };
-        const failures = this.model.checkDungeon(dungeon.minLevel, dungeon.capacity);
+        const failures = this.model.checkDungeon(dungeon.minLevel);
         if (failures.length > 0) {
             this.broadcastDenied(dungeon.code, failures);
             return { ok: false, error: "denied" };

@@ -44,16 +44,17 @@ export class MonsterRewardService {
             monster.baseLevel ?? monster.level,
             monster.level
         );
-        const drops = dungeonDrops
-            ? tuneDungeonDrops(scaled, dungeonDrops, {
-                  boss: monster.type === MonsterType.BOSS,
+        // Thưởng thêm của dungeon chỉ áp dụng khi hạ boss; quái thường rớt như bình thường.
+        const bossBonus = monster.type === MonsterType.BOSS ? dungeonDrops : undefined;
+        const drops = bossBonus
+            ? tuneDungeonDrops(scaled, bossBonus, {
                   itemId: (code) => itemService.getByCode(code)?.id,
               })
             : scaled;
         const baseScale = combineRewardScale(monsterScales(monster, scaleConfig));
         return rollMonsterReward(drops, {
             rng,
-            scale: dungeonDrops ? applyDungeonScale(baseScale, dungeonDrops) : baseScale,
+            scale: bossBonus ? applyDungeonScale(baseScale, bossBonus) : baseScale,
             rollEquipment: (drop) => {
                 const level = dropLevelOf(monster.biome, equipmentConfigService.drop);
                 const templates = itemService.listEquipmentsByBiome(monster.biome);

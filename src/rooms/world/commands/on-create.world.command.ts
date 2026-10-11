@@ -3,6 +3,8 @@ import { Command } from "@colyseus/command";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
 import { NpcWorldState } from "@/rooms/world/schema/npc.world.state.js";
 import { interactWorldService } from "@/rooms/world/services/interact.world.service.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
 import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
@@ -36,7 +38,11 @@ export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
         // NPC không chặn đường: người chơi đi xuyên qua, chỉ collider của map mới là vật cản.
         const map = loaded;
         this.room.map = map;
-        this.room.maxClients = map.maxPlayersPerChannel;
+        // Dungeon chứa tối đa bằng một party (cài đặt `party_config.maxMembers`); map thường theo map.
+        this.room.maxClients =
+            instanceId !== undefined
+                ? masterDataCacheService.get(MasterDataKey.PARTY_CONFIG).maxMembers
+                : map.maxPlayersPerChannel;
         this.room.state.mapCode = map.code;
         this.room.state.mapWidth = map.width;
         this.room.state.mapHeight = map.height;

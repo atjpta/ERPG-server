@@ -57,7 +57,7 @@ describe("nextLeader", () => {
 });
 
 describe("checkPartyDungeonEntry", () => {
-    const options = { minLevel: 10, capacity: 4, leaderId: "a" };
+    const options = { minLevel: 10 };
 
     it("đủ điều kiện: không có lỗi", () => {
         assert.deepEqual(checkPartyDungeonEntry([member("a"), member("b")], options), []);
@@ -72,7 +72,7 @@ describe("checkPartyDungeonEntry", () => {
                 member("away", { inWorld: false }),
                 member("busy", { inDungeon: true }),
             ],
-            { ...options, capacity: 5 }
+            options
         );
         assert.deepEqual(
             failures.map((f) => [f.playerId, f.reason]),
@@ -82,15 +82,6 @@ describe("checkPartyDungeonEntry", () => {
                 ["away", PartyDungeonDenyReason.OFFLINE],
                 ["busy", PartyDungeonDenyReason.IN_DUNGEON],
             ]
-        );
-    });
-
-    it("party quá sức chứa dungeon: báo cho chủ", () => {
-        const members = ["a", "b", "c"].map((id) => member(id));
-        const failures = checkPartyDungeonEntry(members, { ...options, capacity: 2 });
-        assert.deepEqual(
-            failures.map((f) => [f.playerId, f.reason]),
-            [["a", PartyDungeonDenyReason.PARTY_TOO_LARGE]]
         );
     });
 });
@@ -251,14 +242,14 @@ describe("PartyModel", () => {
         const party = model();
         party.addInvite("b", { fromName: "a", snapshot: member("b"), expiresAt: 1000 });
         party.joinWithInvite("b", 0);
-        assert.deepEqual(party.checkDungeon(10, 4), []);
+        assert.deepEqual(party.checkDungeon(10), []);
         party.patch("b", { level: 3 });
         assert.deepEqual(
-            party.checkDungeon(10, 4).map((f) => [f.playerId, f.reason]),
+            party.checkDungeon(10).map((f) => [f.playerId, f.reason]),
             [["b", PartyDungeonDenyReason.LEVEL_TOO_LOW]]
         );
         party.patch("b", { inWorld: false });
-        assert.equal(party.checkDungeon(10, 4)[0].reason, PartyDungeonDenyReason.OFFLINE);
+        assert.equal(party.checkDungeon(10)[0].reason, PartyDungeonDenyReason.OFFLINE);
     });
 });
 

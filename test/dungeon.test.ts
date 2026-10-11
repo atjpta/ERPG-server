@@ -112,13 +112,10 @@ describe("dungeon drop tuning", () => {
         const tuned = tuneDungeonDrops(
             drops,
             { equipmentRate: 0.5, equipmentRarity: { rare: 1 } },
-            { boss: false, itemId }
+            { itemId }
         );
         assert.deepEqual(tuned.equipment, { rate: 0.5, rarity: { rare: 1 } });
-        assert.deepEqual(
-            tuneDungeonDrops(drops, {}, { boss: false, itemId }).equipment,
-            drops.equipment
-        );
+        assert.deepEqual(tuneDungeonDrops(drops, {}, { itemId }).equipment, drops.equipment);
     });
 
     it("item rơi thêm: bossOnly chỉ cho boss, item không tồn tại bị bỏ", () => {
@@ -128,8 +125,8 @@ describe("dungeon drop tuning", () => {
                 { itemCode: "ghost", min: 1, max: 1, rate: 1 },
             ],
         };
-        assert.equal(tuneDungeonDrops(drops, tuning, { boss: false, itemId }).items.length, 1);
-        assert.equal(tuneDungeonDrops(drops, tuning, { boss: true, itemId }).items.length, 2);
+        assert.equal(tuneDungeonDrops(drops, tuning, { itemId }).items.length, 1);
+        assert.equal(tuneDungeonDrops(drops, tuning, { itemId }).items.length, 2);
     });
 
     it("hệ số exp / vàng / tỉ lệ rơi nhân vào scale", () => {

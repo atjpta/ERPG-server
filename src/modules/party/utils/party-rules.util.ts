@@ -18,12 +18,13 @@ export interface DungeonEntryFailure {
 
 /**
  * Kiểm điều kiện cả party vào dungeon (all-or-nothing): trả danh sách người không đạt, rỗng = được vào.
- * Mỗi người một lý do (ưu tiên: ngoài world > đang trong dungeon > chết > thiếu level); quá sức chứa
- * thì thêm một dòng cho chủ party (`leaderId`).
+ * Mỗi người một lý do (ưu tiên: ngoài world > đang trong dungeon > chết > thiếu level). Sức chứa dungeon
+ * chính là `party_config.maxMembers` nên không cần kiểm riêng.
+
  */
 export const checkPartyDungeonEntry = (
     members: readonly PartyMemberInfo[],
-    options: { minLevel: number; capacity: number; leaderId: string }
+    options: { minLevel: number }
 ): DungeonEntryFailure[] => {
     const failures: DungeonEntryFailure[] = [];
     for (const member of members) {
@@ -37,14 +38,6 @@ export const checkPartyDungeonEntry = (
                   ? PartyDungeonDenyReason.LEVEL_TOO_LOW
                   : undefined;
         if (reason) failures.push({ playerId: member.playerId, name: member.name, reason });
-    }
-    if (members.length > options.capacity) {
-        const leader = members.find((member) => member.playerId === options.leaderId);
-        failures.push({
-            playerId: options.leaderId,
-            name: leader?.name ?? "",
-            reason: PartyDungeonDenyReason.PARTY_TOO_LARGE,
-        });
     }
     return failures;
 };

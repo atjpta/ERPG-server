@@ -12,7 +12,7 @@ export enum PartyLootMode {
 
 /** Master data `party_config`. */
 export const PartyConfigSchema = z.object({
-    /** Số thành viên tối đa (≤ `maxPlayersPerChannel` của dungeon). */
+    /** Số thành viên tối đa của party — cũng là sức chứa của mỗi instance dungeon. */
     maxMembers: z.number().int().min(1).max(10),
     /** Lời mời hết hạn sau chừng này giây. */
     inviteTtlSec: z.number().int().positive(),
@@ -37,7 +37,6 @@ export enum PartyDungeonDenyReason {
     OFFLINE = "offline",
     DEAD = "dead",
     IN_DUNGEON = "in_dungeon",
-    PARTY_TOO_LARGE = "party_too_large",
 }
 
 /** Thông tin thành viên mà party room giữ (và gửi cho client qua Schema). */

@@ -152,11 +152,7 @@ export class PartyModel {
     }
 
     /** Chủ muốn vào dungeon: danh sách người không đạt (rỗng = cả party được vào). */
-    checkDungeon(minLevel: number, capacity: number): DungeonEntryFailure[] {
-        return checkPartyDungeonEntry([...this.members.values()], {
-            minLevel,
-            capacity,
-            leaderId: this.leaderId,
-        });
+    checkDungeon(minLevel: number): DungeonEntryFailure[] {
+        return checkPartyDungeonEntry([...this.members.values()], { minLevel });
     }
 }

@@ -211,7 +211,6 @@ export class PartyWorldService {
                 {
                     code: dungeon.code,
                     minLevel: dungeon.minLevel,
-                    capacity: dungeon.maxPlayersPerChannel,
                     spawnId,
                 },
             ],
