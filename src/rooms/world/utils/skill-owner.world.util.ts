@@ -7,7 +7,7 @@ import { calculateDamage } from "@/rooms/world/chains/damage.world.chain.js";
 import type { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 import type { MonsterWorldState } from "@/rooms/world/schema/monster.world.state.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
-import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
+import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
 import { combatSeed } from "@/rooms/world/utils/combat-roll.world.util.js";
 import type { PendingSkillHit } from "@/rooms/world/utils/skill-attack.world.util.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
@@ -130,7 +130,7 @@ export function applySkillHit(
             type: QuestObjectiveType.KILL,
             targetCode: target.code,
         });
-        rewardWorldService.grant(
+        partyWorldService.grantKill(
             room,
             owner.sessionId,
             attacker,
@@ -149,7 +149,8 @@ export function applySkillHit(
                           room.map.code
                       ]
                     : undefined
-            )
+            ),
+            target.code
         );
     }
     return true;

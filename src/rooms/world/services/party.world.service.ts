@@ -1,8 +1,15 @@
 import { matchMaker, type Room } from "colyseus";
 import type { PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { splitPartyExp } from "@/modules/party/utils/party-exp.util.js";
+import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
+import type { Reward } from "@/modules/rewards/types/reward.type.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { PartyRoomOptions } from "@/rooms/party/party.room.js";
+import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
+import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import {
     WorldMessage,
@@ -195,6 +202,63 @@ export class PartyWorldService {
 
     async declineInvite(playerId: string, partyRoomId: string): Promise<void> {
         await callParty(partyRoomId, "declineInvite", [playerId], undefined);
+    }
+
+    /**
+     * Thành viên cùng party đang ở **room này** và còn sống (gồm `attacker`). Không party → chỉ `attacker`.
+     * Phạm vi chia thưởng = cùng map (cùng room), không xét khoảng cách.
+     */
+    killParticipants(
+        room: WorldRoom,
+        attackerSessionId: string,
+        attacker: PlayerWorldState
+    ): { sessionId: string; player: PlayerWorldState }[] {
+        const solo = [{ sessionId: attackerSessionId, player: attacker }];
+        if (!attacker.partyRoomId) return solo;
+        const members: { sessionId: string; player: PlayerWorldState }[] = [];
+        for (const [sessionId, player] of room.state.players) {
+            if (player.partyRoomId === attacker.partyRoomId && player.hp > 0) {
+                members.push({ sessionId, player });
+            }
+        }
+        return members.some((member) => member.player === attacker) ? members : solo;
+    }
+
+    /**
+     * Phần thưởng khi hạ quái: người kết liễu nhận nguyên vàng + item; **exp** chia đều cho thành viên
+     * party cùng room (có bonus theo số người, `party_config`). Mỗi thành viên đủ điều kiện nhận tiến độ
+     * quest kill như người kết liễu.
+     */
+    grantKill(
+        room: WorldRoom,
+        attackerSessionId: string,
+        attacker: PlayerWorldState,
+        reward: Reward,
+        targetCode: string
+    ): void {
+        const participants = this.killParticipants(room, attackerSessionId, attacker);
+        if (participants.length <= 1) {
+            rewardWorldService.grant(room, attackerSessionId, attacker, reward);
+            return;
+        }
+        const config = masterDataCacheService.get(MasterDataKey.PARTY_CONFIG);
+        const exp = splitPartyExp(reward.exp, participants.length, config.expBonusPerExtraMember);
+        for (const { sessionId, player } of participants) {
+            if (player === attacker) {
+                rewardWorldService.grant(room, sessionId, player, { ...reward, exp });
+                continue;
+            }
+            rewardWorldService.grant(room, sessionId, player, {
+                currency: [],
+                items: [],
+                source: reward.source,
+                exp,
+            });
+            questWorldService.onEvent(room, sessionId, player, {
+                type: QuestObjectiveType.KILL,
+                targetCode,
+            });
+        }
     }
 
     findPlayer(
