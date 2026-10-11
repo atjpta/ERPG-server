@@ -214,6 +214,11 @@ export class DialogueWorldService {
             ...(node.speakerKey ? { speakerKey: node.speakerKey } : {}),
             options,
             hasNext: options.length === 0 && !!node.next,
+            offerQuestCodes: (node.options ?? []).flatMap((option) =>
+                (option.actions ?? []).flatMap((action) =>
+                    action.type === "start_quest" ? [action.questCode] : []
+                )
+            ),
         };
         client.send(WorldMessage.DIALOGUE, message);
     }

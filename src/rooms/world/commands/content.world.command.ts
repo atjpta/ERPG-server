@@ -8,6 +8,7 @@ import {
     InteractNpcSchema,
     InteractSchema,
     QuestAbandonSchema,
+    QuestPreviewSchema,
 } from "@/rooms/world/validators/content.world.validator.js";
 import {
     WorldMessage,
@@ -77,6 +78,15 @@ export class QuestListWorldCommand extends Command<WorldRoom, ContentPayload> {
     execute({ client }: ContentPayload) {
         const player = this.room.state.players.get(client.sessionId);
         if (player) questWorldService.sendInitial(this.room, client, player);
+    }
+}
+
+export class QuestPreviewWorldCommand extends Command<WorldRoom, ContentPayload> {
+    execute({ client, payload }: ContentPayload) {
+        const player = this.room.state.players.get(client.sessionId);
+        const parsed = QuestPreviewSchema.safeParse(payload);
+        if (!player || !parsed.success) return;
+        questWorldService.sendPreview(client, player, parsed.data.questCode);
     }
 }
 

@@ -31,6 +31,7 @@ import {
     InteractWorldCommand,
     QuestAbandonWorldCommand,
     QuestListWorldCommand,
+    QuestPreviewWorldCommand,
 } from "@/rooms/world/commands/content.world.command.js";
 import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.service.js";
@@ -108,6 +109,9 @@ export class WorldRoom extends BasePlayerRoom<{
         },
         [WorldClientMessage.QUEST_LIST]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new QuestListWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.QUEST_PREVIEW]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new QuestPreviewWorldCommand(), { client, payload });
         },
         [WorldClientMessage.QUEST_ABANDON]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new QuestAbandonWorldCommand(), { client, payload });

@@ -1,5 +1,5 @@
 import type { ItemSource, ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
-import type { QuestState } from "@/modules/quests/enums/quest.enum.js";
+import type { QuestCategory, QuestState } from "@/modules/quests/enums/quest.enum.js";
 import type { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import type { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
 
@@ -45,6 +45,8 @@ export enum WorldClientMessage {
     QUEST_LIST = "questList",
     /** `{ questCode }` — bỏ quest đang làm. */
     QUEST_ABANDON = "questAbandon",
+    /** `{ questCode }` — xem trước quest (mục tiêu, thưởng) trước khi nhận; trả `questPreview`. */
+    QUEST_PREVIEW = "questPreview",
     /** Rời dungeon, về chỗ đứng trước khi vào. */
     DUNGEON_LEAVE = "dungeonLeave",
 }
@@ -87,6 +89,10 @@ export enum WorldMessage {
     QUEST_UPDATE = "questUpdate",
     /** Dấu `!` / `?` trên đầu NPC của riêng player này — cũng dùng cho minimap. */
     NPC_MARKERS = "npcMarkers",
+    /** Quái / item / vật thể / NPC / hầm ngục liên quan quest đang làm — client đánh chữ Q. */
+    QUEST_TARGETS = "questTargets",
+    /** Trả lời `questPreview`: quest kèm mục tiêu và phần thưởng. */
+    QUEST_PREVIEW = "questPreview",
     /** Chức năng đã mở khoá (quest hero) — gửi lúc vào room và khi mở thêm. */
     FEATURES = "features",
     /** Chamber vừa dọn xong — cổng exit mở. */
@@ -108,13 +114,18 @@ export enum MapTransferError {
     EXIT_LOCKED = "exit_locked",
 }
 
+/**
+ * Dấu trên đầu NPC của riêng player (màu theo `category` của quest, xám khi chưa cần làm gì thêm):
+ * - available `!` màu loại quest — có quest chưa nhận.
+ * - talkTarget `!` xám — NPC là đích nói chuyện của quest đang làm.
+ * - inProgress `?` xám — quest đang làm, trả ở NPC này.
+ * - ready `?` màu loại quest — quest xong, đến trả.
+ */
 export enum NpcMarker {
     NONE = "none",
-    /** Có quest nhận được. */
     AVAILABLE = "available",
-    /** Có quest đang làm chưa xong. */
+    TALK_TARGET = "talkTarget",
     IN_PROGRESS = "inProgress",
-    /** Có quest xong, đến trả. */
     READY = "ready",
 }
 
@@ -374,6 +385,8 @@ export interface DialogueMessage {
     options: DialogueOptionMessage[];
     /** Không có option nhưng còn node sau → hiện nút "Tiếp tục" (gửi `dialogueChoose` với optionId rỗng). */
     hasNext: boolean;
+    /** Quest mà các option của node này nhận (action `start_quest`) — client hiện xem trước phần thưởng. */
+    offerQuestCodes: string[];
 }
 
 export interface DialogueEndMessage {
@@ -421,10 +434,47 @@ export interface QuestObjectiveMessage {
     count: number;
 }
 
+export interface QuestCurrencyRewardMessage {
+    code: CurrencyCode;
+    amount: number;
+}
+
+export interface QuestItemRewardMessage {
+    itemCode: string;
+    quantity: number;
+}
+
+/** Phần thưởng hiển thị trước (xem trước / danh sách quest). */
+export interface QuestRewardMessage {
+    exp: number;
+    currency: QuestCurrencyRewardMessage[];
+    items: QuestItemRewardMessage[];
+}
+
 export interface QuestMessage {
     code: string;
     state: QuestState;
+    /** hero đỏ · side vàng · daily xanh lá. */
+    category: QuestCategory;
+    requiredLevel: number;
+    giverNpcCode: string;
+    turnInNpcCode: string;
     objectives: QuestObjectiveMessage[];
+    rewards: QuestRewardMessage;
+}
+
+export interface QuestPreviewMessage {
+    quest: QuestMessage;
+}
+
+export interface QuestTargetsMessage {
+    /** Code quái cần giết — dấu Q bên trái tên. */
+    monsterCodes: string[];
+    /** Code item cần có trong túi — dấu Q góc trên phải. */
+    itemCodes: string[];
+    interactableIds: string[];
+    npcCodes: string[];
+    dungeonMapCodes: string[];
 }
 
 export interface QuestListMessage {
@@ -438,6 +488,8 @@ export interface QuestUpdateMessage {
 export interface NpcMarkerEntryMessage {
     npcCode: string;
     marker: NpcMarker;
+    /** Loại quest quyết định màu dấu; bỏ trống khi `marker` = none. */
+    category?: QuestCategory;
 }
 
 export interface NpcMarkersMessage {

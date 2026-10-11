@@ -6,6 +6,7 @@ import {
     QuestObjectiveType,
     QuestState,
 } from "@/modules/quests/enums/quest.enum.js";
+import { collectQuestTargets, npcMarkerFor } from "@/rooms/world/utils/quest-marker.world.util.js";
 import { questOf, questsOf } from "@/rooms/world/utils/quest-resolve.world.util.js";
 import {
     applyQuestEvent,
@@ -33,11 +34,12 @@ import {
 import { unlockedFeatures, unlockFlagKey } from "@/modules/quests/utils/unlock.util.js";
 import { worldEvents } from "@/rooms/world/utils/world-events.js";
 import {
-    NpcMarker,
     WorldMessage,
     type FeaturesMessage,
     type NpcMarkersMessage,
     type QuestListMessage,
+    type QuestPreviewMessage,
+    type QuestTargetsMessage,
     type QuestMessage,
     type QuestUpdateMessage,
 } from "@/rooms/world/world.message.js";
@@ -65,6 +67,15 @@ export class QuestWorldService {
         return {
             code: quest.code,
             state: contentWorldService.questState(player, quest.code),
+            category: quest.category,
+            requiredLevel: quest.requiredLevel,
+            giverNpcCode: quest.giverNpcCode,
+            turnInNpcCode: quest.turnInNpcCode,
+            rewards: {
+                exp: quest.rewards.exp,
+                currency: quest.rewards.currency,
+                items: quest.rewards.items,
+            },
             objectives: quest.objectives.map((objective) => ({
                 id: objective.id,
                 current: entry ? objectiveCurrent(objective, entry, this.itemCount(player)) : 0,
@@ -87,32 +98,65 @@ export class QuestWorldService {
         client.send(WorldMessage.QUEST_UPDATE, message);
     }
 
-    /** Dấu trên đầu NPC của riêng player này: trả > đang làm > nhận. */
+    /** Xem trước 1 quest (mục tiêu + thưởng) — dùng ở thoại nhận quest và bảng nhiệm vụ. */
+    sendPreview(client: PlayerClient, player: PlayerWorldState, questCode: string) {
+        const quest = questOf(player, questCode);
+        if (!quest) return;
+        const message: QuestPreviewMessage = { quest: this.toMessage(player, quest) };
+        client.send(WorldMessage.QUEST_PREVIEW, message);
+    }
+
+    /** Dấu trên đầu NPC của riêng player này (màu theo loại quest) — cũng dùng cho minimap. */
     sendMarkers(room: WorldRoom, client: PlayerClient, player: PlayerWorldState) {
         const ctx = contentWorldService.conditionContext(room, player);
         const now = DateTime.now();
+        const quests = questsOf(player).map((quest) => {
+            const entry = player.quests[quest.code];
+            return {
+                category: quest.category,
+                giverNpcCode: quest.giverNpcCode,
+                turnInNpcCode: quest.turnInNpcCode,
+                objectives: quest.objectives,
+                state: contentWorldService.questState(player, quest.code),
+                acceptable: canAcceptQuest(quest, entry, ctx, now),
+                doneObjectiveIds: new Set(
+                    quest.objectives
+                        .filter(
+                            (objective) =>
+                                entry &&
+                                objectiveCurrent(objective, entry, this.itemCount(player)) >=
+                                    objective.count
+                        )
+                        .map((objective) => objective.id)
+                ),
+            };
+        });
         const markers = room.state.npcs.map((npc) => {
-            let marker = NpcMarker.NONE;
-            for (const quest of questsOf(player)) {
-                const state = contentWorldService.questState(player, quest.code);
-                if (quest.turnInNpcCode === npc.code && state === QuestState.READY) {
-                    marker = NpcMarker.READY;
-                    break;
-                }
-                if (quest.turnInNpcCode === npc.code && state === QuestState.ACTIVE) {
-                    marker = NpcMarker.IN_PROGRESS;
-                } else if (
-                    quest.giverNpcCode === npc.code &&
-                    marker === NpcMarker.NONE &&
-                    canAcceptQuest(quest, player.quests[quest.code], ctx, now)
-                ) {
-                    marker = NpcMarker.AVAILABLE;
-                }
-            }
-            return { npcCode: npc.code, marker };
+            const { marker, category } = npcMarkerFor(npc.code, quests);
+            return { npcCode: npc.code, marker, ...(category ? { category } : {}) };
         });
         const message: NpcMarkersMessage = { markers };
         client.send(WorldMessage.NPC_MARKERS, message);
+    }
+
+    /** Quái / item / vật thể liên quan quest đang làm — client đánh chữ Q. */
+    sendTargets(client: PlayerClient, player: PlayerWorldState) {
+        const targets: QuestTargetsMessage = collectQuestTargets(
+            questsOf(player).flatMap((quest) => {
+                const entry = player.quests[quest.code];
+                if (!entry) return [];
+                return [
+                    {
+                        state: contentWorldService.questState(player, quest.code),
+                        objectives: quest.objectives.map((objective) => ({
+                            ...objective,
+                            current: objectiveCurrent(objective, entry, this.itemCount(player)),
+                        })),
+                    },
+                ];
+            })
+        );
+        client.send(WorldMessage.QUEST_TARGETS, targets);
     }
 
     /**
@@ -147,6 +191,7 @@ export class QuestWorldService {
         this.sendFeatures(client, player);
         this.sendList(client, player);
         this.sendMarkers(room, client, player);
+        this.sendTargets(client, player);
     }
 
     /** Nhận quest (từ action của dialogue) — kiểm điều kiện ở server. */
@@ -167,6 +212,7 @@ export class QuestWorldService {
         player.quests[questCode] = newQuestEntry(DateTime.now());
         this.sendUpdate(client, player, quest);
         this.sendMarkers(room, client, player);
+        this.sendTargets(client, player);
         return undefined;
     }
 
@@ -204,6 +250,7 @@ export class QuestWorldService {
 
         this.sendUpdate(client, player, quest);
         this.sendMarkers(room, client, player);
+        this.sendTargets(client, player);
         if (quest.unlockFeatures.length > 0) {
             // Vừa mở quest hằng ngày thì giao luôn, không đợi tới lần đăng nhập sau.
             if (this.ensureDaily(room, client.sessionId, player)) this.sendList(client, player);
@@ -227,6 +274,7 @@ export class QuestWorldService {
         delete player.quests[questCode];
         this.sendUpdate(client, player, quest);
         this.sendMarkers(room, client, player);
+        this.sendTargets(client, player);
         return undefined;
     }
 
@@ -241,6 +289,7 @@ export class QuestWorldService {
             if (quest) this.sendUpdate(client, player, quest);
         }
         this.sendMarkers(room, client, player);
+        this.sendTargets(client, player);
     }
 
     private onInventoryChanged(client: PlayerClient, player: PlayerWorldState) {

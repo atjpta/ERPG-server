@@ -2,6 +2,7 @@ import type { Dialogue } from "@/modules/dialogues/entities/dialogue.entity.js";
 import { nodeTextKey, optionTextKey } from "@/modules/dialogues/utils/dialogue-graph.util.js";
 import type { MapFile } from "@/modules/maps/schemas/map-file.schema.js";
 import type { Npc } from "@/modules/npcs/entities/npc.entity.js";
+import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
 
 /**
@@ -29,6 +30,13 @@ export const collectLocaleKeys = (data: {
         for (const objective of quest.objectives) {
             keys.add(`quest.${quest.code}.obj.${objective.id}`);
         }
+    }
+    // Quest hằng ngày sinh động nhưng text tra theo code cố định + id mục tiêu cố định.
+    for (const code of DAILY_QUEST_CODES) {
+        const objectiveId = code.replace("daily_", "");
+        keys.add(`quest.${code}.name`);
+        keys.add(`quest.${code}.desc`);
+        keys.add(`quest.${code}.obj.${objectiveId}`);
     }
     for (const dialogue of data.dialogues) {
         for (const node of dialogue.nodes) {

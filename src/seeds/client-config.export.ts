@@ -127,6 +127,10 @@ async function exportContentConfig(directory: string): Promise<void> {
         dialogues: dialogues.map(({ code, nodes }) => ({ code, nodes })),
         quests: quests.map((quest) => ({
             code: quest.code,
+            category: quest.category,
+            sortOrder: quest.sortOrder,
+            chapter: quest.chapter,
+            unlockFeatures: quest.unlockFeatures,
             requiredLevel: quest.requiredLevel,
             giverNpcCode: quest.giverNpcCode,
             turnInNpcCode: quest.turnInNpcCode,
