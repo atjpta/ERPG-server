@@ -64,7 +64,10 @@ export const InteractableDefSchema = z.discriminatedUnion("type", [
         ...interactableBase,
         type: z.literal("portal"),
         targetMapCode: z.string().min(1),
-        targetSpawnId: idSchema,
+        /** Đích là spawn point của map đích (đúng một trong `targetSpawnId` / `targetPortalId`). */
+        targetSpawnId: idSchema.optional(),
+        /** Đích là vị trí của một cổng khác (cùng map hoặc map khác) — dịch chuyển giữa 2 cổng. */
+        targetPortalId: idSchema.optional(),
     }),
     z.object({
         ...interactableBase,
@@ -213,6 +216,16 @@ export const MapDefinitionSchema = z
         map.interactables.forEach((it, i) => {
             if (interactableIds.has(it.id)) duplicate(["interactables", i, "id"]);
             interactableIds.add(it.id);
+            if (
+                it.type === "portal" &&
+                (it.targetSpawnId === undefined) === (it.targetPortalId === undefined)
+            ) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["interactables", i],
+                    message: "portal needs exactly one of targetSpawnId / targetPortalId",
+                });
+            }
         });
     });
 

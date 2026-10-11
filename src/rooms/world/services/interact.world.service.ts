@@ -66,13 +66,7 @@ export class InteractWorldService {
 
         switch (def.type) {
             case "portal":
-                return transferWorldService.transfer(
-                    room,
-                    client,
-                    player,
-                    def.targetMapCode,
-                    def.targetSpawnId
-                );
+                return transferWorldService.viaPortal(room, client, player, def);
             case "gather":
                 return this.gather(room, client, player, def, state);
             case "sign": {

@@ -281,3 +281,103 @@ describe("tham chiếu giữa các map", () => {
         );
     });
 });
+
+describe("dịch chuyển giữa 2 cổng", () => {
+    const portal = (id: string, extra: Record<string, unknown>) =>
+        ({ id, type: "portal", ...extra }) as NonNullable<
+            MapDefinitionInput["interactables"]
+        >[number];
+
+    it("portal phải có đúng một trong targetSpawnId / targetPortalId", () => {
+        assert.throws(() => definition({ interactables: [portal("p", { targetMapCode: "t" })] }));
+        assert.throws(() =>
+            definition({
+                interactables: [
+                    portal("p", {
+                        targetMapCode: "t",
+                        targetSpawnId: "default",
+                        targetPortalId: "q",
+                    }),
+                ],
+            })
+        );
+        assert.doesNotThrow(() =>
+            definition({
+                interactables: [portal("p", { targetMapCode: "t", targetPortalId: "p" })],
+            })
+        );
+    });
+
+    it("cặp cổng A↔B (khác map) hợp lệ; cổng đích không tồn tại bị bắt", () => {
+        const a = definition({
+            code: "a",
+            monsterGroups: [],
+            npcs: [],
+            interactables: [portal("gate_a", { targetMapCode: "b", targetPortalId: "gate_b" })],
+        });
+        const b = definition({
+            code: "b",
+            monsterGroups: [],
+            npcs: [],
+            interactables: [portal("gate_b", { targetMapCode: "a", targetPortalId: "gate_a" })],
+        });
+        assert.deepEqual(validateDefinitionRefs([a, b]), []);
+        const broken = definition({
+            code: "a",
+            monsterGroups: [],
+            npcs: [],
+            interactables: [portal("gate_a", { targetMapCode: "b", targetPortalId: "nope" })],
+        });
+        assert.equal(validateDefinitionRefs([broken, b]).length, 1);
+    });
+
+    it("hai cổng cùng map dịch chuyển cho nhau", () => {
+        const same = definition({
+            monsterGroups: [],
+            npcs: [],
+            interactables: [
+                portal("left", { targetMapCode: "t", targetPortalId: "right" }),
+                portal("right", { targetMapCode: "t", targetPortalId: "left" }),
+            ],
+        });
+        assert.deepEqual(validateDefinitionRefs([same]), []);
+        const { row } = buildMapRow(
+            same,
+            layout({
+                monsters: [],
+                npcs: [],
+                interactables: [
+                    { id: "left", x: 2, y: 2 },
+                    { id: "right", x: 15, y: 15 },
+                ],
+            }),
+            "h"
+        );
+        const left = row.interactables?.find((i) => i.id === "left");
+        assert.equal(left?.type === "portal" && left.targetPortalId, "right");
+    });
+
+    it("không cho dịch chuyển cổng-tới-cổng vào dungeon (phải dùng spawn)", () => {
+        const dungeon = loadMapDefinitions().find((d) => d.code === "slime_hollow")!;
+        const from = definition({
+            code: "a",
+            monsterGroups: [],
+            npcs: [],
+            interactables: [
+                portal("gate_a", { targetMapCode: "slime_hollow", targetPortalId: "x" }),
+            ],
+        });
+        assert.ok(
+            validateDefinitionRefs([from, dungeon]).some((error) => error.includes("dungeon"))
+        );
+    });
+
+    it("danh sách marker xuất cho Unity có đích cổng", () => {
+        const def = definition({
+            monsterGroups: [],
+            npcs: [],
+            interactables: [portal("p", { targetMapCode: "t", targetPortalId: "p" })],
+        });
+        assert.equal(mapMarkerList(def).interactables[0].targetPortalId, "p");
+    });
+});
