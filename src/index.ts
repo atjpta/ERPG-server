@@ -10,14 +10,14 @@ import { loadControllers } from "@/core/utils/load-controllers.util.js";
 import { createRooms } from "@/rooms/index.room.js";
 import { setCacheDataApp } from "@/cache-data/index.js";
 import { GameMapRepo } from "@/modules/maps/repositories/game-map.repository.js";
-import { warnMissingMapLayouts } from "@/modules/maps/seeds/game-map.seed.js";
+import { warnMapLayouts } from "@/modules/maps/seeds/game-map.seed.js";
 
 await connectPostgres();
 await connectRedisCache();
 applyCorsPolicy();
 const controllers = await loadControllers();
 await setCacheDataApp();
-warnMissingMapLayouts(await GameMapRepo.findCodesWithoutLayout());
+warnMapLayouts(await GameMapRepo.findIncompleteLayouts());
 await listen(
     defineServer({
         rooms: createRooms(),

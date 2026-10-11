@@ -1,8 +1,5 @@
 import { createHash } from "node:crypto";
-import { MapSpawnKind, type NewGameMap } from "@/modules/maps/entities/game-map.entity.js";
-import { MapFileSchema, type MapFile } from "@/modules/maps/schemas/map-file.schema.js";
-import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
-import type { MapPlaceholder } from "@/modules/maps/seeds/map-registry.js";
+import { MapLayoutSchema, type MapLayout } from "@/modules/maps/schemas/map-layout.schema.js";
 
 /** Chuẩn hoá khoá object theo thứ tự chữ cái để hash không phụ thuộc cách sắp xếp/format file JSON. */
 const canonicalize = (value: unknown): unknown => {
@@ -17,68 +14,12 @@ const canonicalize = (value: unknown): unknown => {
     return value;
 };
 
-export const hashMapFile = (map: MapFile): string =>
+export const hashMapLayout = (layout: MapLayout): string =>
     createHash("sha1")
-        .update(JSON.stringify(canonicalize(map)))
+        .update(JSON.stringify(canonicalize(layout)))
         .digest("hex");
 
-export const parseMapFile = (raw: unknown): MapFile => MapFileSchema.parse(raw);
-
-/** Map file → row `game_maps` (không có `name` — tên hiển thị tra locale theo code). */
-export const mapFileToRow = (map: MapFile): NewGameMap => {
-    const spawn = map.spawnPoints.find((p) => p.kind === MapSpawnKind.DEFAULT)!;
-    return {
-        code: map.code,
-        name: map.code,
-        type: map.type,
-        width: map.width,
-        height: map.height,
-        tileSize: map.tileSize,
-        spawnX: spawn.x,
-        spawnY: spawn.y,
-        maxPlayersPerChannel: map.maxPlayersPerChannel,
-        pvpEnabled: map.pvpEnabled,
-        minLevel: map.minLevel,
-        layoutReady: true,
-        dungeon: map.dungeon ?? null,
-        monsterSpawns: map.monsterSpawns.map((spawn) => ({
-            ...spawn,
-            minLevel: spawn.minLevel ?? map.monsterLevel?.min,
-            maxLevel: spawn.maxLevel ?? map.monsterLevel?.max,
-        })),
-        spawnPoints: map.spawnPoints,
-        colliders: map.colliders,
-        npcs: map.npcs,
-        interactables: map.interactables,
-        contentHash: hashMapFile(map),
-    };
-};
-
-/** Tham chiếu chéo giữa các file map (portal trỏ tới map/spawn có thật); trả danh sách lỗi. */
-export const validateMapFileRefs = (
-    maps: readonly MapFile[],
-    placeholders: readonly MapPlaceholder[] = []
-): string[] => {
-    const errors: string[] = [];
-    const byCode = new Map<string, { spawnPoints: readonly { id: string }[] }>([
-        ...placeholders.map((map) => [map.code, placeholderToFile(map)] as const),
-        ...maps.map((map) => [map.code, map] as const),
-    ]);
-    for (const map of maps) {
-        for (const it of map.interactables) {
-            if (it.type !== "portal") continue;
-            const target = byCode.get(it.targetMapCode);
-            if (!target) {
-                errors.push(`${map.code}.${it.id}: unknown map "${it.targetMapCode}"`);
-            } else if (!target.spawnPoints.some((p) => p.id === it.targetSpawnId)) {
-                errors.push(
-                    `${map.code}.${it.id}: unknown spawn "${it.targetMapCode}.${it.targetSpawnId}"`
-                );
-            }
-        }
-    }
-    return errors;
-};
+export const parseMapLayout = (raw: unknown): MapLayout => MapLayoutSchema.parse(raw);
 
 /** Điểm hồi sinh của map: spawn `respawn` đầu tiên, không có thì spawn mặc định. */
 export const respawnPointOf = (map: {
@@ -87,33 +28,3 @@ export const respawnPointOf = (map: {
     spawnPoints: readonly { x: number; y: number; kind: string }[];
 }): { x: number; y: number } =>
     map.spawnPoints.find((p) => p.kind === "respawn") ?? { x: map.spawnX, y: map.spawnY };
-
-const PLACEHOLDER_SIZE = 16;
-
-const placeholderSpawns = (map: MapPlaceholder) => [
-    { id: "default", x: 0.5, y: 0.5, kind: MapSpawnKind.DEFAULT },
-    ...map.arrivalSpawnIds.map((id) => ({ id, x: 0.5, y: 0.5, kind: MapSpawnKind.ARRIVAL })),
-];
-
-const placeholderToFile = (map: MapPlaceholder) => ({ spawnPoints: placeholderSpawns(map) });
-
-/**
- * Map đã khai báo nhưng chưa có file Unity: row inactive, không layout — đủ để portal/quest/ContentRefsCheck
- * tham chiếu, và để server log "cần cập nhật" cho tới khi file thật được thêm.
- */
-export const placeholderToRow = (map: MapPlaceholder): NewGameMap => ({
-    code: map.code,
-    name: map.code,
-    type: map.type,
-    status: MapStatus.INACTIVE,
-    width: PLACEHOLDER_SIZE,
-    height: PLACEHOLDER_SIZE,
-    spawnX: 0.5,
-    spawnY: 0.5,
-    minLevel: map.minLevel,
-    layoutReady: false,
-    dungeon:
-        map.type === MapType.DUNGEON ? { maxLevel: map.dungeonMaxLevel ?? 1, chambers: [] } : null,
-    spawnPoints: placeholderSpawns(map),
-    contentHash: "",
-});

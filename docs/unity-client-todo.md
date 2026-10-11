@@ -23,13 +23,16 @@ Server: `GET /maps` và `GET /maps/:code/content` trả `minLevel` (chỉ map `a
 - [ ] Hiển thị **"Lv X+"** theo `minLevel` ở: tên map khi vào, loading, cổng/portal (tooltip khi đứng gần), world map/minimap header.
     - Greenfield Village (town, không level) · Greenfield Plains **Lv1+** · Whispering Forest **Lv10+** · Deep Evergrowth **Lv20+**. Dungeon: Slime Hollow Lv1+ (cap quái 10), Werewolf Den Lv10+ (cap 20), Sanctuary of Life Lv20+ (cap 30).
 - [ ] Xử lý `interactResult.error` khi bước vào portal: `level_too_low` ("Cần đạt Lv X"), `map_not_open` ("Khu vực chưa mở"), `exit_locked` ("Dọn hết quái để mở cổng").
-- [ ] **Dựng 6 map mới trong Unity và export `.map.json`** (Tools/ERPG/Export Map) vào `src/modules/maps/data/`, rồi `yarn seed`. Server log cảnh báo `chưa có data Unity` cho tới khi đủ file:
-    - `greenfield_plains` (đã có, từ `greenfield_farmlands` đổi tên), `whispering_forest`, `deep_evergrowth`, `slime_hollow`, `werewolf_den`, `sanctuary_of_life`.
-    - Spawn id bắt buộc (portal server đã trỏ vào): village `from_field` (đã có); plains `from_village`; forest `from_village` + `from_evergrowth`; evergrowth `from_forest`; slime_hollow `from_plains`; werewolf_den `from_forest`; sanctuary_of_life `from_evergrowth`. Mọi map field cần thêm `default` + `respawn`.
-    - **Flow portal**: village `east_gate` → `whispering_forest/from_village` (đã khai trong file village, đã bỏ biển "cổng khoá"); forest cổng phải → `deep_evergrowth/from_forest`; forest cổng trái → `greenfield_village/from_field`; evergrowth cổng trái → `whispering_forest/from_evergrowth`; plains `to_village` (đã có).
-    - **Cổng dungeon** (portal trong field): plains → `slime_hollow/from_plains`; forest → `werewolf_den/from_forest`; evergrowth → `sanctuary_of_life/from_evergrowth`.
-    - `monsterLevel` mỗi field: plains 1–5 (slime, bat), forest 10–19 (bat, werewolf), evergrowth 20–29 (werewolf, werebear).
-- [ ] Đặt lại vị trí NPC `researcher` (12.0, 4.9) và `alchemist` (29.9, 4.8) trong village cho đúng bố cục nhà (server tạm đặt vào chỗ trống, không trùng collider).
+- [ ] **Quy trình layout mới — Unity chỉ đặt vị trí, mọi config ở server**: số người/kênh, PvP, level quái, loại/số lượng/nhóm quái, đích portal, NPC nào ở slot nào đều nằm trong `map-definitions.ts` (server). `.map.json` chỉ còn `code`, `width`, `height`, `tileSize`, `spawnPoints[{id,x,y}]`, `colliders`, `monsters[{id,x,y}]`, `npcs[{id,x,y}]`, `interactables[{id,x,y}]`, `chambers[{id,bounds,entry,exit?}]` — xem `docs/map-file-format.md`.
+- [ ] Cập nhật tool Export Map: bỏ xuất `type`, `maxPlayersPerChannel`, `pvpEnabled`, `minLevel`, `monsterLevel`, `monsterSpawns`, `interactables.type/target/...`; thêm đọc `map-markers.json` (do `yarn config:export` xuất vào Resources/Config) để **dựng sẵn mọi marker** (đủ id, nhãn hiển thị nội dung: nhóm quái `slime x3, bat x1`, NPC code, portal đích) — người làm map chỉ kéo vị trí. Marker của dungeon: nhóm quái từng phase, hình học chamber (`bounds`, `entry`, `exit`).
+- [ ] **Nhóm quái**: 1 marker = 1 nhóm nhiều loại quái (server trải các con quanh marker: hàng 3 con căn giữa, cách 2 tile). Gizmo marker nên vẽ vùng ~ 6×4 tile để căn chỗ trống; không đặt toạ độ từng con.
+- [ ] **Dựng/ export layout cho 6 map** vào `src/modules/maps/data/` rồi `yarn seed`. Server cảnh báo `chưa có data Unity` (thiếu file) và `Unity chưa đặt vị trí marker: ...` (thiếu marker) cho tới khi đủ:
+    - Đã có layout: `greenfield_village`, `greenfield_plains` (marker `to_slime_hollow` của plains **chưa đặt** — đặt cổng vào Slime Hollow).
+    - Cần làm: `whispering_forest`, `deep_evergrowth`, `slime_hollow`, `werewolf_den`, `sanctuary_of_life`.
+    - Id marker (chốt trong `map-markers.json`): field plains `g01..g16`, forest `f01..f10`, evergrowth `e01..e10`; dungeon `c1_p1`, `c1_p2`, `c2_p1a`, `c2_p1b`, `c2_p2`, `c3_boss`, `c3_p1`, `c3_p2`; chamber `c1`, `c2`, `c3` (`c1`,`c2` có exit, `c3` boss không có).
+    - Spawn id server đã chốt (portal trỏ vào): village `from_field`; plains `from_village`; forest `from_village` + `from_evergrowth`; evergrowth `from_forest`; slime_hollow `from_plains`; werewolf_den `from_forest`; sanctuary_of_life `from_evergrowth`; mọi map cần `default` (+ `respawn` cho field).
+    - Portal (id vật thể, toàn cục duy nhất): village `south_gate`, `east_gate`; plains `to_village`, `to_slime_hollow`; forest `forest_to_village`, `forest_to_evergrowth`, `forest_to_werewolf_den`; evergrowth `evergrowth_to_forest`, `evergrowth_to_sanctuary`.
+- [ ] Kéo lại vị trí slot NPC `npc_researcher` (12.0, 4.9) và `npc_alchemist` (29.9, 4.8) trong village cho đúng bố cục nhà (tạm đặt vào chỗ trống, không trùng collider).
 - [ ] Minimap: ảnh theo `map.code` cho 6 map mới (quy trình chụp layer `MapArt` như village).
 
 ## 2. Dungeon
@@ -39,7 +42,7 @@ Server: join room `dungeon` (khác `world`), instance riêng mỗi lượt; chi 
 - [ ] Khi nhận `mapChange`:
     - `roomName = "world"` → `joinOrCreate("world", { mapCode })` như cũ.
     - `roomName = "dungeon"` → `joinOrCreate("dungeon", { mapCode, instanceId })` (dùng đúng `instanceId` server cấp; **không tự sinh**).
-- [ ] Dựng dungeon trong Unity: mỗi dungeon nhiều **chamber** nối tuần tự; export marker: `bounds`, `entry`, `exit` (cổng sang chamber kế), `phases` (đặt `monsterSpawns` theo phase + `delaySec`), chamber cuối `isBoss` (boss + tinh anh), `clearReward`, `timeLimitSec?`, `maxLevel`. Cập nhật tool Export Map để xuất khối `dungeon`.
+- [ ] Dựng dungeon trong Unity: 3 **chamber** nối tuần tự (`c1`, `c2`, `c3` boss). Chỉ đặt `bounds`, `entry`, `exit` và vị trí marker nhóm quái của từng phase; số phase, `delaySec`, loại quái, tinh anh/boss, thưởng, `maxLevel`, `timeLimitSec` do server định nghĩa.
 - [ ] Interactable exit có id `exit_<chamberId>` (server tự tạo state, `active = false` khi khoá): vẽ cổng khoá/mở theo `InteractableWorldState.active`, dùng message `interact {id}` để đi qua. Cần prefab cổng (code `portal` có sẵn).
 - [ ] Collider/tường ngăn giữa các chamber trong `colliders` (server chỉ khoá bằng cổng exit, không chặn bằng vị trí).
 - [ ] **HUD dungeon** từ `state.dungeon`: chamber `chamberIndex+1/chamberCount`, phase `phaseIndex/phaseCount`, **"Còn X quái"** (`remaining`, `total`), đếm ngược phase kế (`nextPhaseInSec`, ẩn khi 0), thời gian còn lại (`timeLeftSec`, 0 = không giới hạn), level quái (`monsterLevel`), cổng mở (`exitOpen`).

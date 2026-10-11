@@ -1,23 +1,18 @@
 {
     "code": "greenfield_village",
-    "type": "town",
     "width": 36,
     "height": 16,
     "tileSize": 16,
-    "maxPlayersPerChannel": 100,
-    "pvpEnabled": false,
     "spawnPoints": [
         {
             "id": "default",
             "x": 16.5,
-            "y": 10.5,
-            "kind": "default"
+            "y": 10.5
         },
         {
             "id": "from_field",
             "x": 16.5,
-            "y": 10.5,
-            "kind": "arrival"
+            "y": 10.5
         }
     ],
     "colliders": [
@@ -340,133 +335,104 @@
             "h": 1.344
         }
     ],
-    "monsterSpawns": [],
+    "monsters": [],
     "npcs": [
         {
-            "npcCode": "swordsman_trainer",
+            "id": "npc_swordsman_trainer",
             "x": 10.3,
-            "y": 9.86,
-            "direction": "right"
+            "y": 9.86
         },
         {
-            "npcCode": "archer_trainer",
+            "id": "npc_archer_trainer",
             "x": 20.19,
-            "y": 9.82,
-            "direction": "left"
+            "y": 9.82
         },
         {
-            "npcCode": "village_chief",
+            "id": "npc_village_chief",
             "x": 21.81,
-            "y": 7.5,
-            "direction": "left"
+            "y": 7.5
         },
         {
-            "npcCode": "guild_officer",
+            "id": "npc_guild_officer",
             "x": 7.81,
-            "y": 7.81,
-            "direction": "right"
+            "y": 7.81
         },
         {
-            "npcCode": "cleric_trainer",
+            "id": "npc_cleric_trainer",
             "x": 25.33,
-            "y": 7.88,
-            "direction": "right"
+            "y": 7.88
         },
         {
-            "npcCode": "village_priestess",
+            "id": "npc_village_priestess",
             "x": 27.53,
-            "y": 7.9,
-            "direction": "left"
+            "y": 7.9
         },
         {
-            "npcCode": "blacksmith",
+            "id": "npc_blacksmith",
             "x": 32.52,
-            "y": 7.87,
-            "direction": "left"
+            "y": 7.87
         },
         {
-            "npcCode": "general_merchant",
+            "id": "npc_general_merchant",
             "x": 14.97,
-            "y": 5.29,
-            "direction": "right"
+            "y": 5.29
         },
         {
-            "npcCode": "innkeeper",
+            "id": "npc_innkeeper",
             "x": 3.95,
-            "y": 7.78,
-            "direction": "right"
+            "y": 7.78
         },
         {
-            "npcCode": "farmer_rowan",
+            "id": "npc_farmer_rowan",
             "x": 7.38,
-            "y": 5.66,
-            "direction": "right"
+            "y": 5.66
         },
         {
-            "npcCode": "herbalist",
+            "id": "npc_herbalist",
             "x": 19.62,
-            "y": 4.76,
-            "direction": "left"
+            "y": 4.76
         },
         {
-            "npcCode": "hunter_garrick",
+            "id": "npc_hunter_garrick",
             "x": 23.54,
-            "y": 4.74,
-            "direction": "left"
+            "y": 4.74
         },
         {
-            "npcCode": "guard_captain",
+            "id": "npc_guard_captain",
             "x": 17.01,
-            "y": 1.94,
-            "direction": "right"
+            "y": 1.94
         },
         {
-            "npcCode": "researcher",
+            "id": "npc_researcher",
             "x": 12.0,
-            "y": 4.9,
-            "direction": "right"
+            "y": 4.9
         },
         {
-            "npcCode": "alchemist",
+            "id": "npc_alchemist",
             "x": 29.9,
-            "y": 4.8,
-            "direction": "left"
+            "y": 4.8
         }
     ],
     "interactables": [
         {
             "id": "notice_board",
-            "type": "sign",
             "x": 19.5,
-            "y": 6.85,
-            "radius": 0.5,
-            "dialogueCode": "notice_board"
+            "y": 6.85
         },
         {
             "id": "south_gate",
-            "type": "portal",
             "x": 16.5,
-            "y": 14.5,
-            "radius": 1.8,
-            "targetMapCode": "greenfield_plains",
-            "targetSpawnId": "from_village"
+            "y": 14.5
         },
         {
             "id": "east_gate",
-            "type": "portal",
             "x": 35.5,
-            "y": 9.0,
-            "radius": 1.0,
-            "targetMapCode": "whispering_forest",
-            "targetSpawnId": "from_village"
+            "y": 9.0
         },
         {
             "id": "north_gate",
-            "type": "sign",
             "x": 16.5,
-            "y": 0.84,
-            "radius": 1.0,
-            "dialogueCode": "gate_locked"
+            "y": 0.84
         }
     ]
 }

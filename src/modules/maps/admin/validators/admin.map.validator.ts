@@ -24,6 +24,7 @@ export const AdminCreateMapSchema = z.object({
     spawnY: z.number().min(0),
     maxPlayersPerChannel: z.number().int().positive().optional(),
     pvpEnabled: z.boolean().optional(),
+    minLevel: z.number().int().positive().optional(),
 });
 export type AdminCreateMapBody = z.infer<typeof AdminCreateMapSchema>;
 

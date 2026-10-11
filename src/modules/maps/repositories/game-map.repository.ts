@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, or, sql } from "drizzle-orm";
 import { db, type Queryable } from "@/configs/postgres.config.js";
 import { BaseRepository } from "@/core/repositories/base.repository.js";
 import { GameMaps } from "@/modules/maps/entities/game-map.entity.js";
@@ -14,14 +14,23 @@ export class GameMapRepository extends BaseRepository<typeof GameMaps> {
         return this.findOne({ where: eq(GameMaps.code, code), dbOrTx });
     }
 
-    async findCodesWithoutLayout(params: { dbOrTx?: Queryable } = {}) {
+    /** Map thiếu file Unity, hoặc có file nhưng còn marker chưa đặt vị trí. */
+    async findIncompleteLayouts(params: { dbOrTx?: Queryable } = {}) {
         const { dbOrTx = db } = params;
-        const rows = await dbOrTx
-            .select({ code: GameMaps.code })
+        return dbOrTx
+            .select({
+                code: GameMaps.code,
+                layoutReady: GameMaps.layoutReady,
+                missingMarkers: GameMaps.missingMarkers,
+            })
             .from(GameMaps)
-            .where(eq(GameMaps.layoutReady, false))
+            .where(
+                or(
+                    eq(GameMaps.layoutReady, false),
+                    sql`jsonb_array_length(${GameMaps.missingMarkers}) > 0`
+                )
+            )
             .orderBy(asc(GameMaps.code));
-        return rows.map((row) => row.code);
     }
 
     async findActive(params: { dbOrTx?: Queryable } = {}) {

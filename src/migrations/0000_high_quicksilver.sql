@@ -169,6 +169,7 @@ CREATE TABLE "game_maps" (
 	"pvp_enabled" boolean DEFAULT false NOT NULL,
 	"min_level" integer DEFAULT 1 NOT NULL,
 	"layout_ready" boolean DEFAULT true NOT NULL,
+	"missing_markers" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"dungeon" jsonb,
 	"monster_spawns" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"spawn_points" jsonb DEFAULT '[]'::jsonb NOT NULL,

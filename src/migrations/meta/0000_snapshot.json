@@ -1,5 +1,5 @@
 {
-    "id": "bad697b4-4e65-41ff-a4f0-db64357a0e70",
+    "id": "30de706c-b35a-4f6b-828e-1f4eb2c09e21",
     "prevId": "00000000-0000-0000-0000-000000000000",
     "version": "7",
     "dialect": "postgresql",
@@ -1035,6 +1035,13 @@
                     "primaryKey": false,
                     "notNull": true,
                     "default": true
+                },
+                "missing_markers": {
+                    "name": "missing_markers",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
                 },
                 "dungeon": {
                     "name": "dungeon",

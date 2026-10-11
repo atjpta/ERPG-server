@@ -36,6 +36,8 @@ export const GameMaps = pgTable("game_maps", {
      * layout) — server log cảnh báo lúc khởi động cho tới khi file được thêm và `yarn seed`.
      */
     layoutReady: boolean("layout_ready").notNull().default(true),
+    /** Marker mà định nghĩa liệt kê nhưng file Unity chưa đặt vị trí (bị bỏ qua cho tới khi đủ). */
+    missingMarkers: jsonb("missing_markers").$type<string[]>().notNull().default([]),
     /** Chỉ map `dungeon`: các chamber tuần tự, phase quái, level cap. */
     dungeon: jsonb("dungeon").$type<DungeonConfig>(),
     /** Monster sinh ra trong mỗi instance của map (theo `monsters.code`). */
@@ -164,6 +166,8 @@ export interface MapCollider {
 }
 
 export interface MonsterSpawn {
+    /** Marker (nhóm quái) mà spawn này thuộc về — các quái cùng marker đứng quanh điểm đó. */
+    groupId?: string;
     monsterCode: string;
     count: number;
     /**

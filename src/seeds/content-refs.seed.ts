@@ -3,8 +3,7 @@ import { Dialogues } from "@/modules/dialogues/entities/dialogue.entity.js";
 import { Items } from "@/modules/items/entities/item.entity.js";
 import { DEFAULT_DUNGEON_DROP_CONFIG } from "@/modules/maps/seeds/dungeon-drop-config.seed-data.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
-import { MAP_REGISTRY } from "@/modules/maps/seeds/map-registry.js";
-import { loadMapFiles } from "@/modules/maps/seeds/game-map.seed.js";
+import { loadMapDefinitions } from "@/modules/maps/seeds/game-map.seed.js";
 import { Monsters } from "@/modules/monsters/entities/monster.entity.js";
 import { Npcs } from "@/modules/npcs/entities/npc.entity.js";
 import { Quests } from "@/modules/quests/entities/quest.entity.js";
@@ -20,7 +19,7 @@ export const ContentRefsCheck = async () => {
         db.select({ code: Monsters.code }).from(Monsters),
     ]);
     const errors = findContentRefErrors({
-        maps: loadMapFiles(),
+        maps: loadMapDefinitions(),
         npcs,
         dialogues,
         quests,
@@ -28,7 +27,9 @@ export const ContentRefsCheck = async () => {
         monsterCodes: new Set(monsters.map((monster) => monster.code)),
         dungeonDrops: DEFAULT_DUNGEON_DROP_CONFIG,
         dungeonMapCodes: new Set(
-            MAP_REGISTRY.filter((map) => map.type === MapType.DUNGEON).map((map) => map.code)
+            loadMapDefinitions()
+                .filter((map) => map.type === MapType.DUNGEON)
+                .map((map) => map.code)
         ),
     });
     if (errors.length > 0) {

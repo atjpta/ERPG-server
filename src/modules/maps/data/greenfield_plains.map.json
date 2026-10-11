@@ -1,30 +1,23 @@
 {
     "code": "greenfield_plains",
-    "type": "field",
     "width": 56,
     "height": 64,
     "tileSize": 16,
-    "maxPlayersPerChannel": 100,
-    "pvpEnabled": false,
-    "minLevel": 1,
     "spawnPoints": [
         {
             "id": "default",
             "x": 16.5,
-            "y": 4.0,
-            "kind": "default"
+            "y": 4.0
         },
         {
             "id": "from_village",
             "x": 16.5,
-            "y": 4.0,
-            "kind": "arrival"
+            "y": 4.0
         },
         {
             "id": "respawn",
             "x": 16.5,
-            "y": 4.0,
-            "kind": "respawn"
+            "y": 4.0
         }
     ],
     "colliders": [
@@ -257,134 +250,94 @@
             "h": 31.344
         }
     ],
-    "monsterSpawns": [
+    "monsters": [
         {
-            "monsterCode": "slime",
-            "count": 3,
-            "spawnX": 5.43,
-            "spawnY": 13.99,
-            "type": "random"
+            "id": "g01",
+            "x": 7.43,
+            "y": 13.99
         },
         {
-            "monsterCode": "slime",
-            "count": 3,
-            "spawnX": 5.43,
-            "spawnY": 24.01,
-            "type": "random"
+            "id": "g02",
+            "x": 7.43,
+            "y": 24.01
         },
         {
-            "monsterCode": "slime",
-            "count": 3,
-            "spawnX": 5.43,
-            "spawnY": 33.87,
-            "type": "random"
+            "id": "g03",
+            "x": 7.43,
+            "y": 33.87
         },
         {
-            "monsterCode": "slime",
-            "count": 3,
-            "spawnX": 5.43,
-            "spawnY": 44.0,
-            "type": "random"
+            "id": "g04",
+            "x": 7.43,
+            "y": 44.0
         },
         {
-            "monsterCode": "slime",
-            "count": 3,
-            "spawnX": 26.2,
-            "spawnY": 13.99,
-            "type": "random"
+            "id": "g05",
+            "x": 28.2,
+            "y": 13.99
         },
         {
-            "monsterCode": "slime",
-            "count": 3,
-            "spawnX": 39.49,
-            "spawnY": 13.99,
-            "type": "random"
+            "id": "g06",
+            "x": 41.49,
+            "y": 13.99
         },
         {
-            "monsterCode": "slime",
-            "count": 3,
-            "spawnX": 28.89,
-            "spawnY": 41.88,
-            "type": "random"
+            "id": "g07",
+            "x": 30.89,
+            "y": 41.88
         },
         {
-            "monsterCode": "slime",
-            "count": 3,
-            "spawnX": 43.38,
-            "spawnY": 41.88,
-            "type": "random"
+            "id": "g08",
+            "x": 45.38,
+            "y": 41.88
         },
         {
-            "monsterCode": "slime",
-            "count": 3,
-            "spawnX": 18.65,
-            "spawnY": 34.71,
-            "type": "random"
+            "id": "g09",
+            "x": 20.65,
+            "y": 34.71
         },
         {
-            "monsterCode": "slime",
-            "count": 3,
-            "spawnX": 18.57,
-            "spawnY": 50.38,
-            "type": "random"
+            "id": "g10",
+            "x": 20.57,
+            "y": 50.38
         },
         {
-            "monsterCode": "bat",
-            "count": 3,
-            "spawnX": 46.21,
-            "spawnY": 52.09,
-            "type": "random"
+            "id": "g11",
+            "x": 48.21,
+            "y": 52.09
         },
         {
-            "monsterCode": "bat",
-            "count": 3,
-            "spawnX": 32.19,
-            "spawnY": 56.42,
-            "type": "random"
+            "id": "g12",
+            "x": 34.19,
+            "y": 56.42
         },
         {
-            "monsterCode": "bat",
-            "count": 3,
-            "spawnX": 14.39,
-            "spawnY": 60.12,
-            "type": "random"
+            "id": "g13",
+            "x": 16.39,
+            "y": 60.12
         },
         {
-            "monsterCode": "bat",
-            "count": 3,
-            "spawnX": 47.79,
-            "spawnY": 18.46,
-            "type": "random"
+            "id": "g14",
+            "x": 49.79,
+            "y": 18.46
         },
         {
-            "monsterCode": "bat",
-            "count": 3,
-            "spawnX": 31.09,
-            "spawnY": 19.48,
-            "type": "random"
+            "id": "g15",
+            "x": 33.09,
+            "y": 19.48
         },
         {
-            "monsterCode": "bat",
-            "count": 3,
-            "spawnX": 40.54,
-            "spawnY": 4.05,
-            "type": "random"
+            "id": "g16",
+            "x": 42.54,
+            "y": 4.05
         }
     ],
     "npcs": [],
     "interactables": [
         {
             "id": "to_village",
-            "type": "portal",
             "x": 16.5,
-            "y": 2.0,
-            "radius": 1.2,
-            "targetMapCode": "greenfield_village",
-            "targetSpawnId": "from_field"
+            "y": 2.0
         }
-    ],
-    "monsterLevel": {
-        "min": 1,
-        "max": 5
-    }
+    ]
 }

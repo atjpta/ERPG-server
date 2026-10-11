@@ -1,27 +1,81 @@
-# Map file `<mapCode>.map.json`
+# Map: định nghĩa (server) + layout (Unity)
 
-Nguồn dữ liệu duy nhất của layout map. Unity export → commit vào `src/modules/maps/data/` → `yarn seed` validate (`MapFileSchema`) rồi upsert vào `game_maps`.
+Map gồm hai nguồn, ghép lúc `yarn seed` thành row `game_maps`:
 
-- Toạ độ theo **tile**, gốc trên-trái, y hướng xuống (server). Unity: trừ nửa kích thước map, đảo dấu y.
-- Tên file = `code` + `.map.json`.
-- `spawnPoints`: id ổn định (không đổi sau khi phát hành). Đúng 1 điểm `kind=default`; `respawn` = chỗ hồi sinh; `arrival` = điểm đến của portal.
+| Nguồn                                          | Ai sở hữu | Chứa gì                                                                                                                                                                                                 |
+| ---------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Định nghĩa** `maps/seeds/map-definitions.ts` | Server    | **Config**: loại map, `minLevel`, số người/kênh, PvP, khoảng level quái, nhóm quái ở từng marker, NPC nào ở slot nào, portal đi đâu, vật thu thập/biển báo, dungeon (chamber, phase, thưởng, level cap) |
+| **Layout** `maps/data/<code>.map.json`         | Unity     | **Vị trí/hình học**: kích thước map, vị trí các marker, collider, hình học chamber                                                                                                                      |
+
+Config chỉnh trong định nghĩa rồi `yarn seed` (admin sửa row `game_maps` qua `/admin/maps` cho các trường cơ bản, nhưng seed lại sẽ ghi đè). Unity **không** nhập số người, PvP, level quái, loại quái, đích portal — chỉ kéo marker tới đúng chỗ.
+
+## Quy trình
+
+1. Server khai báo marker trong `map-definitions.ts` (id ổn định, không đổi sau khi phát hành).
+2. `yarn config:export` xuất `map-markers.json`: danh sách marker từng map. Unity dựng sẵn mọi marker theo danh sách này (đủ id), người làm map chỉ chỉnh **vị trí**.
+3. Unity export `<code>.map.json` → commit vào `src/modules/maps/data/` → `yarn seed` ghép + validate.
+4. Marker có trong định nghĩa nhưng chưa có vị trí: bị bỏ qua và seed/`yarn dev` cảnh báo `Unity chưa đặt vị trí marker: ...`. Marker trong layout mà định nghĩa không có: **lỗi seed**. Map chưa có file: row placeholder `inactive` + cảnh báo.
+
+## Layout `<mapCode>.map.json`
+
+Toạ độ theo **tile**, gốc trên-trái, y hướng xuống (server). Unity: trừ nửa kích thước map, đảo dấu y. Tên file = `code` + `.map.json`.
+
+```json
+{
+    "code": "greenfield_plains",
+    "width": 56,
+    "height": 64,
+    "tileSize": 16,
+    "spawnPoints": [{ "id": "default", "x": 16.5, "y": 4 }],
+    "colliders": [{ "x": 0, "y": 0, "w": 56, "h": 1 }],
+    "monsters": [{ "id": "g01", "x": 7.43, "y": 13.99 }],
+    "npcs": [{ "id": "npc_blacksmith", "x": 32.5, "y": 7.9 }],
+    "interactables": [{ "id": "to_village", "x": 16.5, "y": 2 }],
+    "chambers": [
+        {
+            "id": "c1",
+            "bounds": { "x": 0, "y": 0, "w": 20, "h": 20 },
+            "entry": { "x": 2, "y": 2 },
+            "exit": { "x": 18, "y": 18 }
+        }
+    ]
+}
+```
+
+- `spawnPoints` / `monsters` / `npcs` / `interactables`: `{id, x, y}` theo id server liệt kê. `kind` của spawn (`default`/`respawn`/`arrival`) là config của server.
 - `colliders`: rect `{x,y,w,h}` chặn đường. Server chặn trong `applyMove` bằng `collider` của entity; client phải dùng **cùng** danh sách này để dự đoán.
-- `monsterSpawns`: `{monsterCode, count, spawnX, spawnY, type?, rarity?, minLevel?, maxLevel?}`.
-    - `type`: `normal` (mặc định) / `elite` / `boss` cố định, hoặc `random` — mỗi lần sinh / hồi sinh server roll normal hoặc elite (xác suất `eliteChance`), và map chỉ có tối đa `maxElitesPerMap` elite sống cùng lúc (vượt thì ra normal). Spawn `elite` / `boss` cố định không bị giới hạn này.
-    - `rarity`: bỏ trống (Unity không xuất) = server roll theo trọng số của loại; điền = cố định.
-    - Level: mỗi con roll trong `[minLevel, maxLevel]` của spawn, không có thì trong `monsterLevel` của map, không có nữa thì level của monster; exp/tiền rơi đổi theo tỉ lệ level. Hồi sinh roll lại cả loại, độ hiếm, level.
-    - Cấu hình roll (`eliteChance`, `maxElitesPerMap`, trọng số độ hiếm theo loại) là master data `monster_spawn_config` — seed mặc định ở `DEFAULT_MONSTER_SPAWN_CONFIG`, admin sửa được qua master data.
-- `monsterLevel`: `{min, max}` khoảng level quái của cả map (tuỳ chọn), `yarn seed` điền vào từng spawn chưa có khoảng riêng.
-- `minLevel`: level tối thiểu để vào map (mặc định 1) — client hiện "Lv X+"; server chặn ở `transfer` (lỗi `level_too_low`). Map đã khai báo trong `MAP_REGISTRY` (`maps/seeds/map-registry.ts`) nhưng chưa có file thì seed tạo row **placeholder** (`inactive`, `layout_ready = false`, không layout) và server log cảnh báo lúc `yarn dev` cho tới khi file được thêm + `yarn seed`.
-- `dungeon` (bắt buộc với `type: "dungeon"`, cấm với loại khác): `{maxLevel, timeLimitSec?, clearReward?, chambers[]}`. Level quái = ceil(trung bình level người trong instance), tối đa `maxLevel`. `chambers` đi tuần tự, mỗi chamber:
-    - `bounds {x,y,w,h}`, `entry {x,y}` (chỗ đặt player khi vào chamber), `exit {x,y,radius}` (cổng sang chamber kế; chamber boss có thể không có), `isBoss` (chỉ chamber cuối), `clearReward?`.
-    - `phases[]`: `{id, delaySec, monsterSpawns[]}` — phase đầu `delaySec = 0`, các phase sau tăng dần; phase k spawn khi đủ `delaySec` giây kể từ lúc chamber bắt đầu. Phải hạ **hết quái mọi phase** mới mở `exit`. Quái trong dungeon không hồi sinh; `type: "elite"` / `"boss"` đặt trong `monsterSpawns` của phase.
-    - Drop quái trong dungeon **không** nằm trong file (đây là config, không phải layout): chỉnh bằng master data `dungeon_drop_config` (seed `DEFAULT_DUNGEON_DROP_CONFIG` hoặc `PUT /admin/master-data/dungeon_drop_config`) theo code map — `expMultiplier` / `goldMultiplier` / `dropRateMultiplier`, `equipmentRate` + `equipmentRarity`, `extraItems` `[{itemCode, min, max, rate, bossOnly?}]`.
-    - Cổng exit là interactable động có id `exit_<chamberId>` (không khai trong `interactables`), server khoá tới khi chamber xong.
-    - Map `monsterSpawns` / `monsterLevel` ở cấp map không dùng cho dungeon.
-    - Vào dungeon: đặt `portal` trong field trỏ tới `targetMapCode` = code dungeon + `targetSpawnId` (id arrival của file dungeon); server lưu chỗ đứng cũ, cấp `instanceId` riêng (`mapChange.roomName = "dungeon"`).
-- `contentHash` (sha1 của nội dung đã chuẩn hoá) lưu ở `game_maps.content_hash` — client so với hash của file trong build.
+- `chambers` (chỉ dungeon): hình học từng chamber — `bounds`, `entry` (chỗ đặt player khi vào chamber), `exit` (cổng sang chamber kế; chamber nào `hasExit = false` thì không cần).
+- `contentHash` (sha1 của layout đã chuẩn hoá) lưu ở `game_maps.content_hash` — client so với hash của file trong build.
 - Tên hiển thị không nằm trong file: client tra locale theo `map.{code}.name`.
-- `npcs`: `{npcCode, x, y, direction}` — NPC được định nghĩa ở bảng `npcs` (dùng chung nhiều map).
-- `interactables`: `portal` / `gather` / `sign`, id ổn định trong map, `code` (tuỳ chọn, `InteractableCode`) là diện mạo để client chọn prefab — chi tiết ở [content-authoring.md](content-authoring.md).
-- Portal trỏ tới `targetMapCode` + `targetSpawnId` (id spawn point, không phải toạ độ).
+
+## Định nghĩa (server)
+
+```ts
+{
+    code: "whispering_forest", type: MapType.FIELD,
+    minLevel: 10, maxPlayersPerChannel: 100, pvpEnabled: false,
+    monsterLevel: { min: 10, max: 19 },
+    spawnPoints: [{ id: "default", kind: "default" }, { id: "from_village", kind: "arrival" }],
+    monsterGroups: [
+        // nhóm hỗn hợp: 2 werewolf + 1 bat đứng quanh marker f01
+        { markerId: "f01", members: [
+            { monsterCode: "werewolf", count: 2, type: "random" },
+            { monsterCode: "bat", count: 1, type: "random" },
+        ] },
+    ],
+    npcs: [{ id: "npc_hunter", npcCode: "hunter_garrick", direction: "left" }],
+    interactables: [{ id: "forest_to_village", type: "portal", targetMapCode: "greenfield_village", targetSpawnId: "from_field" }],
+}
+```
+
+- **Nhóm quái** (`monsterGroups`): mỗi marker có 1 nhóm gồm nhiều loại quái (`members`). Các con trải quanh marker — hàng ngang tối đa 3 con căn giữa marker, hàng sau nằm dưới, cách nhau 2 tile; mỗi con vẫn hồi sinh riêng. Không đặt toạ độ từng con.
+    - Mỗi `member`: `monsterCode`, `count`, `type` (`normal` mặc định / `elite` / `boss` cố định, hoặc `random` = roll normal/elite mỗi lần sinh, giới hạn `maxElitesPerMap`), `rarity?`, `minLevel?`/`maxLevel?` (không có thì dùng `monsterLevel` của map, rồi level gốc của monster).
+    - Cấu hình roll (`eliteChance`, `maxElitesPerMap`, trọng số độ hiếm) là master data `monster_spawn_config`.
+- **Interactable**: `portal` (`targetMapCode` + `targetSpawnId`), `gather` (`reward`, `respawnSec`), `sign` (`dialogueCode`), kèm `code` diện mạo (`InteractableCode`), `radius`, `conditions`. Id vật thể **duy nhất toàn hệ thống** (quest tham chiếu theo id).
+- Portal trỏ tới `targetMapCode` + `targetSpawnId` (id spawn point trong định nghĩa map đích) — `validateDefinitionRefs` kiểm lúc seed.
+- **Dungeon** (`type: "dungeon"` ⇔ có khối `dungeon`): `{maxLevel, timeLimitSec?, clearReward?, chambers[]}`. Level quái = ceil(trung bình level người trong instance), tối đa `maxLevel`. Mỗi chamber:
+    - `phases[]`: `{id, delaySec, groups[]}` — `groups` là các nhóm quái như trên (marker id duy nhất trong map). Phase đầu `delaySec = 0`, phase sau tăng dần; phase k spawn khi đủ `delaySec` giây kể từ lúc chamber bắt đầu. Phải hạ **hết quái mọi phase** mới mở cổng `exit`. Quái trong dungeon không hồi sinh; `type: "elite"` / `"boss"` đặt trong member.
+    - `isBoss` (chỉ chamber cuối), `hasExit` (mặc định có, trừ chamber boss), `exitRadius`, `clearReward?`.
+    - Cổng exit là interactable động id `exit_<chamberId>` (không khai trong `interactables`).
+    - Vào dungeon: đặt `portal` trong field trỏ tới code dungeon + id spawn arrival của dungeon; server lưu chỗ đứng cũ, cấp `instanceId` riêng (`mapChange.roomName = "dungeon"`).
+    - Drop quái trong dungeon: master data `dungeon_drop_config` (seed `DEFAULT_DUNGEON_DROP_CONFIG` hoặc `PUT /admin/master-data/dungeon_drop_config`) theo code map — `expMultiplier` / `goldMultiplier` / `dropRateMultiplier`, `equipmentRate` + `equipmentRarity`, `extraItems` `[{itemCode, min, max, rate, bossOnly?}]`.

@@ -1,6 +1,6 @@
 import type { Dialogue } from "@/modules/dialogues/entities/dialogue.entity.js";
 import { nodeTextKey, optionTextKey } from "@/modules/dialogues/utils/dialogue-graph.util.js";
-import type { MapFile } from "@/modules/maps/schemas/map-file.schema.js";
+import type { MapDefinition } from "@/modules/maps/schemas/map-definition.schema.js";
 import type { Npc } from "@/modules/npcs/entities/npc.entity.js";
 import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
@@ -10,7 +10,7 @@ import type { Quest } from "@/modules/quests/entities/quest.entity.js";
  * tra bảng text theo các key này. Xuất ra `locale-keys.json` để người dịch đối chiếu thiếu sót.
  */
 export const collectLocaleKeys = (data: {
-    maps: readonly Pick<MapFile, "code" | "interactables">[];
+    maps: readonly Pick<MapDefinition, "code" | "interactables">[];
     npcs: readonly Pick<Npc, "code">[];
     dialogues: readonly Pick<Dialogue, "code" | "nodes">[];
     quests: readonly Pick<Quest, "code" | "objectives">[];

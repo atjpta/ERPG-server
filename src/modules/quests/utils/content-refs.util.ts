@@ -1,5 +1,6 @@
 import type { Dialogue } from "@/modules/dialogues/entities/dialogue.entity.js";
-import type { MapFile } from "@/modules/maps/schemas/map-file.schema.js";
+import type { MapDefinition } from "@/modules/maps/schemas/map-definition.schema.js";
+import { definitionMonsterCodes } from "@/modules/maps/utils/map-build.util.js";
 import type { Npc } from "@/modules/npcs/entities/npc.entity.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
@@ -8,7 +9,7 @@ import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.j
 import type { Action, Condition } from "@/modules/dialogues/schemas/condition.schema.js";
 
 export interface ContentData {
-    maps: readonly MapFile[];
+    maps: readonly MapDefinition[];
     npcs: readonly Pick<Npc, "code" | "defaultDialogueCode" | "dialogueRules" | "functions">[];
     dialogues: readonly Pick<Dialogue, "code" | "nodes">[];
     quests: readonly Pick<
@@ -94,8 +95,16 @@ export const findContentRefErrors = (data: ContentData): string[] => {
                     need(data.itemCodes, item.itemCode, where, "item");
             }
         }
-        for (const spawn of map.monsterSpawns) {
-            need(data.monsterCodes, spawn.monsterCode, `map ${map.code}`, "monster");
+        for (const monsterCode of definitionMonsterCodes(map)) {
+            need(data.monsterCodes, monsterCode, `map ${map.code}`, "monster");
+        }
+        for (const chamber of map.dungeon?.chambers ?? []) {
+            for (const item of chamber.clearReward?.items ?? []) {
+                need(data.itemCodes, item.itemCode, `map ${map.code}.${chamber.id}`, "item");
+            }
+        }
+        for (const item of map.dungeon?.clearReward?.items ?? []) {
+            need(data.itemCodes, item.itemCode, `map ${map.code} dungeon`, "item");
         }
     }
     for (const [mapCode, tuning] of Object.entries(data.dungeonDrops.byMap)) {

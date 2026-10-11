@@ -13,14 +13,12 @@ import {
 import { validateDialogueGraph } from "@/modules/dialogues/utils/dialogue-graph.util.js";
 import { selectDialogueCode } from "@/modules/dialogues/utils/dialogue-rule.util.js";
 import { DIALOGUES } from "@/modules/dialogues/seeds/dialogue.seed-data.js";
-import { loadMapFiles, loadMapPlaceholders } from "@/modules/maps/seeds/game-map.seed.js";
+import { loadMapDefinitions } from "@/modules/maps/seeds/game-map.seed.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { DEFAULT_DUNGEON_DROP_CONFIG } from "@/modules/maps/seeds/dungeon-drop-config.seed-data.js";
-import { MAP_REGISTRY } from "@/modules/maps/seeds/map-registry.js";
 import { MONSTER_DEFINITIONS } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { QuestCategory } from "@/modules/quests/enums/quest.enum.js";
 import { unlockedFeatures, unlockFlagKey } from "@/modules/quests/utils/unlock.util.js";
-import { parseMapFile, validateMapFileRefs } from "@/modules/maps/utils/map-file.util.js";
 import { NPCS } from "@/modules/npcs/seeds/npc.seed-data.js";
 import { QuestObjectiveType, QuestRepeat, QuestState } from "@/modules/quests/enums/quest.enum.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
@@ -288,23 +286,27 @@ describe("hero / side quests", () => {
     });
 });
 
-describe("map registry", () => {
-    it("mọi map đã khai báo có file Unity hoặc là placeholder, không trùng code", () => {
-        const codes = MAP_REGISTRY.map((map) => map.code);
-        assert.equal(new Set(codes).size, codes.length);
-        const files = new Set(loadMapFiles().map((map) => map.code));
-        const placeholders = loadMapPlaceholders().map((map) => map.code);
-        for (const code of codes) assert.ok(files.has(code) || placeholders.includes(code), code);
-    });
+describe("map definitions", () => {
+    const definitions = loadMapDefinitions();
 
-    it("dungeon phải khai báo level cap, field có level tối thiểu tăng dần theo cốt truyện", () => {
-        for (const map of MAP_REGISTRY.filter((m) => m.type === MapType.DUNGEON)) {
-            assert.ok((map.dungeonMaxLevel ?? 0) > 0, map.code);
+    it("không trùng code, mỗi dungeon có level cap, level vào map tăng dần theo cốt truyện", () => {
+        const codes = definitions.map((map) => map.code);
+        assert.equal(new Set(codes).size, codes.length);
+        for (const map of definitions.filter((m) => m.type === MapType.DUNGEON)) {
+            assert.ok((map.dungeon?.maxLevel ?? 0) > 0, map.code);
         }
-        const minLevel = (code: string) => MAP_REGISTRY.find((m) => m.code === code)?.minLevel;
+        const minLevel = (code: string) => definitions.find((m) => m.code === code)?.minLevel;
         assert.equal(minLevel("greenfield_plains"), 1);
         assert.equal(minLevel("whispering_forest"), 10);
         assert.equal(minLevel("deep_evergrowth"), 20);
+    });
+
+    it("level cap dungeon: slime hollow 10, werewolf den 20, sanctuary of life 30", () => {
+        const cap = (code: string) => definitions.find((m) => m.code === code)?.dungeon?.maxLevel;
+        assert.deepEqual(
+            [cap("slime_hollow"), cap("werewolf_den"), cap("sanctuary_of_life")],
+            [10, 20, 30]
+        );
     });
 });
 
@@ -315,7 +317,7 @@ describe("content data", () => {
 
     it("mọi tham chiếu chéo trong data seed đều tồn tại", () => {
         const errors = findContentRefErrors({
-            maps: loadMapFiles(),
+            maps: loadMapDefinitions(),
             npcs: NPCS.map((npc) => ({
                 code: npc.code,
                 defaultDialogueCode: npc.defaultDialogueCode ?? null,
@@ -336,7 +338,9 @@ describe("content data", () => {
             monsterCodes: new Set(MONSTER_DEFINITIONS.map((monster) => monster.code)),
             dungeonDrops: DEFAULT_DUNGEON_DROP_CONFIG,
             dungeonMapCodes: new Set(
-                MAP_REGISTRY.filter((map) => map.type === MapType.DUNGEON).map((map) => map.code)
+                loadMapDefinitions()
+                    .filter((map) => map.type === MapType.DUNGEON)
+                    .map((map) => map.code)
             ),
         });
         assert.deepEqual(errors, []);
@@ -354,24 +358,5 @@ describe("content data", () => {
             dungeonDrops: { byMap: {} },
         });
         assert.equal(errors.length, 1);
-    });
-
-    it("portal phải trỏ tới map và spawn có thật", () => {
-        const base = {
-            type: "town",
-            width: 10,
-            height: 10,
-            spawnPoints: [{ id: "default", x: 1, y: 1, kind: "default" }],
-        };
-        const a = parseMapFile({
-            ...base,
-            code: "a",
-            interactables: [
-                { id: "p", type: "portal", x: 1, y: 1, targetMapCode: "b", targetSpawnId: "nope" },
-            ],
-        });
-        const b = parseMapFile({ ...base, code: "b" });
-        assert.equal(validateMapFileRefs([a, b]).length, 1);
-        assert.equal(validateMapFileRefs([a]).length, 1);
     });
 });
