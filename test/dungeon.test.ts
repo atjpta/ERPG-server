@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { DungeonConfigSchema } from "@/modules/maps/schemas/map-file.schema.js";
+import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
+import { big } from "@/core/utils/big-number.util.js";
+import { applyDungeonScale, tuneDungeonDrops } from "@/modules/maps/utils/dungeon-drop.util.js";
 import { dungeonMonsterLevel, phasesMonsterCount } from "@/modules/maps/utils/dungeon.util.js";
 
 const spawn = (count: number) => ({ monsterCode: "slime", count, spawnX: 1, spawnY: 1 });
@@ -78,6 +81,69 @@ describe("DungeonConfigSchema", () => {
             DungeonConfigSchema.safeParse({
                 maxLevel: 10,
                 chambers: [same, chamber("b", { isBoss: true })],
+            }).success,
+            false
+        );
+    });
+});
+
+describe("dungeon drop tuning", () => {
+    const drops: MonsterDrops = {
+        currency: [],
+        items: [{ itemId: "11111111-1111-4111-8111-111111111111", min: 1, max: 2, rate: 0.1 }],
+        equipment: { rate: 0.08, rarity: { common: 60 } },
+        exp: 100,
+    };
+    const itemId = (code: string) =>
+        code === "gem" ? "22222222-2222-4222-8222-222222222222" : undefined;
+
+    it("ghi đè tỉ lệ + rarity trang bị, giữ nguyên khi không chỉnh", () => {
+        const tuned = tuneDungeonDrops(
+            drops,
+            { equipmentRate: 0.5, equipmentRarity: { rare: 1 } },
+            { boss: false, itemId }
+        );
+        assert.deepEqual(tuned.equipment, { rate: 0.5, rarity: { rare: 1 } });
+        assert.deepEqual(
+            tuneDungeonDrops(drops, {}, { boss: false, itemId }).equipment,
+            drops.equipment
+        );
+    });
+
+    it("item rơi thêm: bossOnly chỉ cho boss, item không tồn tại bị bỏ", () => {
+        const tuning = {
+            extraItems: [
+                { itemCode: "gem", min: 1, max: 1, rate: 1, bossOnly: true },
+                { itemCode: "ghost", min: 1, max: 1, rate: 1 },
+            ],
+        };
+        assert.equal(tuneDungeonDrops(drops, tuning, { boss: false, itemId }).items.length, 1);
+        assert.equal(tuneDungeonDrops(drops, tuning, { boss: true, itemId }).items.length, 2);
+    });
+
+    it("hệ số exp / vàng / tỉ lệ rơi nhân vào scale", () => {
+        const scale = applyDungeonScale(
+            { exp: big(2), gold: big(1), dropRate: big(3) },
+            { expMultiplier: 1.5, dropRateMultiplier: 2 }
+        );
+        assert.equal(scale.exp.toNumber(), 3);
+        assert.equal(scale.gold.toNumber(), 1);
+        assert.equal(scale.dropRate.toNumber(), 6);
+    });
+
+    it("schema nhận khối drops hợp lệ, từ chối min > max", () => {
+        const base = {
+            maxLevel: 10,
+            chambers: [chamber("a", { isBoss: true, exit: undefined })],
+        };
+        assert.equal(
+            DungeonConfigSchema.safeParse({ ...base, drops: { goldMultiplier: 2 } }).success,
+            true
+        );
+        assert.equal(
+            DungeonConfigSchema.safeParse({
+                ...base,
+                drops: { extraItems: [{ itemCode: "gem", min: 3, max: 1, rate: 0.5 }] },
             }).success,
             false
         );

@@ -132,14 +132,18 @@ export function applySkillHit(
             room,
             owner.sessionId,
             attacker,
-            monsterRewardService.roll({
-                type: target.monsterType,
-                rarity: target.rarity,
-                level: target.level,
-                baseLevel: target.definition.level,
-                biome: target.biome,
-                drops: target.drops,
-            })
+            monsterRewardService.roll(
+                {
+                    type: target.monsterType,
+                    rarity: target.rarity,
+                    level: target.level,
+                    baseLevel: target.definition.level,
+                    biome: target.biome,
+                    drops: target.drops,
+                },
+                Math.random,
+                room.dungeon?.config.drops
+            )
         );
     }
     return true;

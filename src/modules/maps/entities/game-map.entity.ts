@@ -79,7 +79,22 @@ export interface DungeonChamber {
     clearReward?: RewardSpec;
 }
 
+/** Chỉnh drop của quái trong dungeon (so với bảng drop gốc của monster) — sửa trong file map, không cần code. */
+export interface DungeonDropTuning {
+    /** Nhân exp / tiền / tỉ lệ rơi của mọi quái trong dungeon (mặc định 1). */
+    expMultiplier?: number;
+    goldMultiplier?: number;
+    dropRateMultiplier?: number;
+    /** Ghi đè tỉ lệ rơi trang bị gốc (0 → 1) và trọng số rarity; bỏ trống = giữ của monster. */
+    equipmentRate?: number;
+    equipmentRarity?: Partial<Record<ItemRarity, number>>;
+    /** Item rơi thêm (ngoài bảng drop của monster); `bossOnly` = chỉ quái `boss`. */
+    extraItems?: { itemCode: string; min: number; max: number; rate: number; bossOnly?: boolean }[];
+}
+
 export interface DungeonConfig {
+    /** Chỉnh drop của quái trong dungeon. */
+    drops?: DungeonDropTuning;
     /** Level quái = ceil(trung bình level người trong instance), tối đa giá trị này. */
     maxLevel: number;
     timeLimitSec?: number;

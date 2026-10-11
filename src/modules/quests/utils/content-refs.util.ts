@@ -91,6 +91,9 @@ export const findContentRefErrors = (data: ContentData): string[] => {
                     need(data.itemCodes, item.itemCode, where, "item");
             }
         }
+        for (const item of map.dungeon?.drops?.extraItems ?? []) {
+            need(data.itemCodes, item.itemCode, `map ${map.code} dungeon drops`, "item");
+        }
         for (const spawn of map.monsterSpawns) {
             need(data.monsterCodes, spawn.monsterCode, `map ${map.code}`, "monster");
         }

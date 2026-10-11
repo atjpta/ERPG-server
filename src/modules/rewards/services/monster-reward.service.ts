@@ -5,6 +5,9 @@ import {
     dropLevelOf,
     type Rng,
 } from "@/modules/equipment/utils/equipment-roll.util.js";
+import type { DungeonDropTuning } from "@/modules/maps/entities/game-map.entity.js";
+import { applyDungeonScale, tuneDungeonDrops } from "@/modules/maps/utils/dungeon-drop.util.js";
+import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import type { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import { scaleDropsToLevel } from "@/modules/monsters/utils/monster-spawn.util.js";
@@ -31,17 +34,26 @@ export class MonsterRewardService {
                 /** Level của monster gốc (nơi `drops` được seed) — quái sinh ở level khác thì thưởng đổi theo. */
                 baseLevel?: number;
             },
-        rng: Rng = Math.random
+        rng: Rng = Math.random,
+        /** Chỉnh drop của dungeon (nếu quái chết trong dungeon). */
+        dungeonDrops?: DungeonDropTuning
     ): Reward {
         const scaleConfig = masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG);
-        const drops = scaleDropsToLevel(
+        const scaled = scaleDropsToLevel(
             monster.drops,
             monster.baseLevel ?? monster.level,
             monster.level
         );
+        const drops = dungeonDrops
+            ? tuneDungeonDrops(scaled, dungeonDrops, {
+                  boss: monster.type === MonsterType.BOSS,
+                  itemId: (code) => itemService.getByCode(code)?.id,
+              })
+            : scaled;
+        const baseScale = combineRewardScale(monsterScales(monster, scaleConfig));
         return rollMonsterReward(drops, {
             rng,
-            scale: combineRewardScale(monsterScales(monster, scaleConfig)),
+            scale: dungeonDrops ? applyDungeonScale(baseScale, dungeonDrops) : baseScale,
             rollEquipment: (drop) => {
                 const level = dropLevelOf(monster.biome, equipmentConfigService.drop);
                 const templates = itemService.listEquipmentsByBiome(monster.biome);
