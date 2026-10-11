@@ -88,6 +88,18 @@ export interface DungeonConfig {
     clearReward?: RewardSpec;
 }
 
+/**
+ * Lượt vào dungeon đang diễn ra của player (`player_states.dungeon_session`): `mapCode/x/y` của map
+ * trước khi vào được lưu trong `return*` để thoát ra về đúng chỗ; `instanceId` = room dungeon được phép join.
+ */
+export interface DungeonSession {
+    dungeonCode: string;
+    instanceId: string;
+    returnMapCode: string;
+    returnX: number;
+    returnY: number;
+}
+
 export interface MapNpc {
     npcCode: string;
     x: number;

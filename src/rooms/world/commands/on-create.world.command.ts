@@ -3,6 +3,8 @@ import { Command } from "@colyseus/command";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
 import { NpcWorldState } from "@/rooms/world/schema/npc.world.state.js";
 import { interactWorldService } from "@/rooms/world/services/interact.world.service.js";
+import { MapType } from "@/modules/maps/enums/map.enum.js";
+import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { mapService } from "@/modules/maps/user/services/map.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { monsterWorldService } from "@/rooms/world/services/monster.world.service.js";
@@ -12,13 +14,19 @@ import { worldService } from "@/rooms/world/services/world.service.js";
 
 export interface WorldRoomOptions {
     mapCode: string;
+    /** Chỉ room `dungeon`: id instance server cấp lúc vào dungeon. */
+    instanceId?: string;
 }
 
 const CHECKPOINT_INTERVAL_MS = 30_000;
 
 export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
-    async execute({ mapCode }: WorldRoomOptions) {
+    async execute({ mapCode, instanceId }: WorldRoomOptions) {
         const loaded = await mapService.getActiveByCodeOrFail(mapCode);
+        // Dungeon chỉ mở qua room `dungeon` (có instanceId), map thường không được mở bằng instanceId.
+        if ((loaded.type === MapType.DUNGEON) !== (instanceId !== undefined)) {
+            throw new Error(`Map "${mapCode}" cannot be opened this way`);
+        }
         // NPC không chặn đường: người chơi đi xuyên qua, chỉ collider của map mới là vật cản.
         const map = loaded;
         this.room.map = map;
@@ -42,6 +50,7 @@ export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
                 )
         );
         this.room.state.interactables.push(...interactWorldService.build(this.room));
+        if (instanceId !== undefined) dungeonWorldService.setup(this.room, instanceId);
 
         const monsters = await monsterWorldService.createMonster(map);
 
@@ -57,6 +66,7 @@ export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
             monsterWorldService.chain(this.room, ctx.dt);
             // Đạn bay / vùng chờ nổ — sau player và monster để thấy vị trí mới nhất của tick này.
             skillDeliveryWorldService.chain(this.room, ctx.dt);
+            dungeonWorldService.tick(this.room);
         }, this.room.tickRate);
         this.room.clock.setInterval((): void => {
             void worldService.checkpointPlayers(this.room);

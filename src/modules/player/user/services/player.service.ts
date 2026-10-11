@@ -271,6 +271,8 @@ export class PlayerService extends BaseService<typeof Players> {
                     | "materialInventory"
                     | "flags"
                     | "quests"
+                    | "lastTownMapCode"
+                    | "dungeonSession"
                 >
             >,
         expectedRevision?: number

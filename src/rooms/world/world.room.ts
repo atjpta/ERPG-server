@@ -1,5 +1,6 @@
 import { Dispatcher } from "@colyseus/command";
 import type { Rewind } from "colyseus";
+import type { DungeonRuntime } from "@/rooms/world/services/dungeon.world.service.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { BasePlayerRoom, type PlayerClient } from "@/rooms/base/base-player.room.js";
 import {
@@ -31,6 +32,7 @@ import {
     QuestAbandonWorldCommand,
     QuestListWorldCommand,
 } from "@/rooms/world/commands/content.world.command.js";
+import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.service.js";
 import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
 import { attributeWorldService } from "@/rooms/world/services/attribute.world.service.js";
@@ -110,6 +112,9 @@ export class WorldRoom extends BasePlayerRoom<{
         [WorldClientMessage.QUEST_ABANDON]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new QuestAbandonWorldCommand(), { client, payload });
         },
+        [WorldClientMessage.DUNGEON_LEAVE]: (client: PlayerClient) => {
+            if (this.dungeon) void dungeonWorldService.leaveByClient(this, client);
+        },
         [WorldClientMessage.PREVIEW_DISASSEMBLE]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new PreviewDisassembleWorldCommand(), {
                 client,
@@ -119,6 +124,8 @@ export class WorldRoom extends BasePlayerRoom<{
     };
 
     map!: GameMap;
+    /** Chỉ có ở room dungeon. */
+    dungeon?: DungeonRuntime;
     rewind!: Rewind;
     private readonly leavingSessions = new Set<string>();
 
@@ -137,6 +144,7 @@ export class WorldRoom extends BasePlayerRoom<{
 
         const player = this.state.players.get(client.sessionId);
         if (player) {
+            if (this.dungeon) dungeonWorldService.onPlayerJoined(this, player);
             inventoryWorldService.send(client, player);
             attributeWorldService.send(client, player);
             questWorldService.sendInitial(this, client, player);

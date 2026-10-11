@@ -6,6 +6,7 @@ import {
     PlayerStatService,
     playerStatService,
 } from "@/modules/player/user/services/player-stat.service.js";
+import type { DungeonSession } from "@/modules/maps/entities/game-map.entity.js";
 import type { FlagValue } from "@/modules/dialogues/schemas/condition.schema.js";
 import type { PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
 import type { PlayerSnapshot } from "@/modules/player/user/services/player.service.js";
@@ -84,6 +85,10 @@ export class PlayerWorldState extends Schema {
     quests: PlayerQuests;
     /** Map đích khi đã bước vào portal/teleport và đang đợi client vào room mới. */
     pendingMapCode?: string;
+    /** Làng gần nhất đã đến (server-only) — chết trong dungeon thì hồi sinh ở đây. */
+    lastTownMapCode: string | null = null;
+    /** Lượt dungeon đang diễn ra (từ lúc bước vào portal dungeon tới khi thoát ra). */
+    dungeonSession?: DungeonSession;
     attributePoints: number;
     classId: string;
     allocatedAttributes: Attributes;
@@ -133,6 +138,7 @@ export class PlayerWorldState extends Schema {
         this.allocatedAttributes = { ...player.allocatedAttributes };
         this.flags = { ...player.flags };
         this.quests = structuredClone(player.quests);
+        this.lastTownMapCode = player.lastTownMapCode;
     }
 
     setLevelProgress(level: number, exp: number) {
@@ -254,12 +260,18 @@ export class PlayerWorldState extends Schema {
         | "materialInventory"
         | "flags"
         | "quests"
+        | "lastTownMapCode"
+        | "dungeonSession"
     > {
+        // Trong dungeon (hoặc đang bước vào): lưu chỗ quay về — mất kết nối thì đăng nhập lại ở ngoài dungeon.
+        const session = this.dungeonSession;
         return {
             // Đang chuyển map (portal/teleport): lưu map đích để rời room không ghi đè về map cũ.
-            mapCode: this.pendingMapCode ?? mapCode,
-            x: this.x,
-            y: this.y,
+            mapCode: session?.returnMapCode ?? this.pendingMapCode ?? mapCode,
+            x: session?.returnX ?? this.x,
+            y: session?.returnY ?? this.y,
+            lastTownMapCode: this.lastTownMapCode,
+            dungeonSession: session ? { ...session } : null,
             direction: this.direction as PlayerState["direction"],
             hp: this.hp,
             mp: this.mp,

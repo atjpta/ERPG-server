@@ -45,6 +45,8 @@ export enum WorldClientMessage {
     QUEST_LIST = "questList",
     /** `{ questCode }` — bỏ quest đang làm. */
     QUEST_ABANDON = "questAbandon",
+    /** Rời dungeon, về chỗ đứng trước khi vào. */
+    DUNGEON_LEAVE = "dungeonLeave",
 }
 
 /** Message server → client của room world (ngoài state). */
@@ -85,6 +87,23 @@ export enum WorldMessage {
     QUEST_UPDATE = "questUpdate",
     /** Dấu `!` / `?` trên đầu NPC của riêng player này — cũng dùng cho minimap. */
     NPC_MARKERS = "npcMarkers",
+    /** Chamber vừa dọn xong — cổng exit mở. */
+    DUNGEON_CHAMBER_CLEAR = "dungeonChamberClear",
+    /** Hạ boss, clear dungeon — sắp bị đưa ra ngoài. */
+    DUNGEON_CLEAR = "dungeonClear",
+}
+
+/** Room mà client phải join sau `mapChange`. */
+export enum WorldRoomName {
+    WORLD = "world",
+    DUNGEON = "dungeon",
+}
+
+/** Mã lỗi của `interactResult.error` khi chuyển map. */
+export enum MapTransferError {
+    LEVEL_TOO_LOW = "level_too_low",
+    MAP_NOT_OPEN = "map_not_open",
+    EXIT_LOCKED = "exit_locked",
 }
 
 export enum NpcMarker {
@@ -373,6 +392,20 @@ export interface MapChangeMessage {
     mapCode: string;
     /** Điểm đến trong map mới (id spawn point). */
     spawnId: string;
+    /** Room cần join: `world` (filter `mapCode`) hoặc `dungeon` (filter `instanceId`, kèm `mapCode`). */
+    roomName: WorldRoomName;
+    /** Chỉ dungeon: id instance — join room `dungeon` với option `{ mapCode, instanceId }`. */
+    instanceId?: string;
+}
+
+export interface DungeonChamberClearMessage {
+    chamberIndex: number;
+    chamberCount: number;
+}
+
+export interface DungeonClearMessage {
+    /** Giây nữa người chơi bị đưa ra ngoài. */
+    leaveInSec: number;
 }
 
 export interface QuestObjectiveMessage {

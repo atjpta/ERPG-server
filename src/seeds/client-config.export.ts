@@ -4,6 +4,7 @@ import { ClassRepo } from "@/modules/classes/repositories/class.repository.js";
 import { DialogueRepo } from "@/modules/dialogues/repositories/dialogue.repository.js";
 import { InteractableCode } from "@/modules/maps/enums/interactable-code.enum.js";
 import { MonsterRepo } from "@/modules/monsters/repositories/monster.repository.js";
+import type { MapFile } from "@/modules/maps/schemas/map-file.schema.js";
 import { loadMapFiles, loadMapPlaceholders } from "@/modules/maps/seeds/game-map.seed.js";
 import { NpcRepo } from "@/modules/npcs/repositories/npc.repository.js";
 import { QuestRepo } from "@/modules/quests/repositories/quest.repository.js";
@@ -137,7 +138,10 @@ async function exportContentConfig(directory: string): Promise<void> {
     const keys = collectLocaleKeys({
         maps: [
             ...loadMapFiles(),
-            ...loadMapPlaceholders().map((map) => ({ code: map.code, interactables: [] })),
+            ...loadMapPlaceholders().map((map) => ({
+                code: map.code,
+                interactables: [] as MapFile["interactables"],
+            })),
         ],
         npcs,
         dialogues,

@@ -12,6 +12,7 @@ import {
 } from "@/rooms/world/chains/player.world.chain.js";
 import { WorldChain } from "@/rooms/world/chains/world.chain.js";
 import { MoveCommand } from "@/rooms/world/simulation/movement.step.js";
+import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { respawnPointOf } from "@/modules/maps/utils/map-file.util.js";
 import { StepContext } from "colyseus";
 const PLAYER_RESPAWN_MS = 5_000;
@@ -173,6 +174,13 @@ export class PlayerWorldService {
 
         this.respawningPlayers.add(player);
         room.clock.setTimeout(() => {
+            // Chết trong dungeon: ra làng gần nhất đã đến thay vì hồi sinh tại chỗ.
+            if (room.dungeon) {
+                void dungeonWorldService.onPlayerDeath(room, player).finally(() => {
+                    this.respawningPlayers.delete(player);
+                });
+                return;
+            }
             // Đã bước qua portal sang map khác thì không kéo về điểm hồi sinh của map cũ.
             if (!player.pendingMapCode) {
                 const point = respawnPointOf(room.map);

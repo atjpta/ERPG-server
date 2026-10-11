@@ -2,6 +2,7 @@ import { ArraySchema, MapSchema, Schema, type } from "@colyseus/schema";
 
 import { AreaWorldState } from "@/rooms/world/schema/area.world.state.js";
 import { MonsterWorldState } from "@/rooms/world/schema/monster.world.state.js";
+import { DungeonWorldState } from "@/rooms/world/schema/dungeon.world.state.js";
 import { InteractableWorldState } from "@/rooms/world/schema/interactable.world.state.js";
 import { NpcWorldState } from "@/rooms/world/schema/npc.world.state.js";
 import { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
@@ -19,4 +20,6 @@ export class WorldState extends Schema {
     @type({ map: ProjectileWorldState }) projectiles = new MapSchema<ProjectileWorldState>();
     /** Vùng sát thương chờ nổ, theo id. */
     @type({ map: AreaWorldState }) areas = new MapSchema<AreaWorldState>();
+    /** Chỉ có ở room dungeon. */
+    @type(DungeonWorldState) dungeon?: DungeonWorldState;
 }
