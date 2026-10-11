@@ -49,6 +49,8 @@ export enum WorldClientMessage {
     QUEST_PREVIEW = "questPreview",
     /** Rời dungeon, về chỗ đứng trước khi vào. */
     DUNGEON_LEAVE = "dungeonLeave",
+    /** `{ mapCode }` — dịch chuyển tới bệ teleport của map đó (phải đang đứng gần một bệ teleport). */
+    TELEPORT_TO = "teleportTo",
     /** Tạo party (chưa có thì server tạo mới) — trả `party { roomId }` để client `joinById`. */
     PARTY_CREATE = "partyCreate",
     /** `{ partyRoomId }` — từ chối lời mời party. */
@@ -97,6 +99,8 @@ export enum WorldMessage {
     QUEST_TARGETS = "questTargets",
     /** Trả lời `questPreview`: quest kèm mục tiêu và phần thưởng. */
     QUEST_PREVIEW = "questPreview",
+    /** Danh sách map có thể teleport tới — gửi khi dùng bệ teleport (`interact`). */
+    TELEPORT_LIST = "teleportList",
     /** Room party của người chơi: client `joinById(roomId)` (sau `partyCreate`, hoặc khi chấp nhận lời mời thì dùng `partyRoomId` của lời mời). */
     PARTY = "party",
     /** Lời mời vào party. Chấp nhận = `joinById(partyRoomId)` trong hạn; từ chối = `partyDecline`. */
@@ -120,6 +124,10 @@ export enum MapTransferError {
     LEVEL_TOO_LOW = "level_too_low",
     MAP_NOT_OPEN = "map_not_open",
     EXIT_LOCKED = "exit_locked",
+    /** `teleportTo` khi không đứng gần bệ teleport / không ở trạng thái dùng được. */
+    NOT_AT_TELEPORT = "not_at_teleport",
+    /** `teleportTo` tới map không có bệ teleport (hoặc không mở). */
+    NO_DESTINATION = "no_destination",
     /** Vào dungeon theo party: chỉ chủ party được bấm. */
     PARTY_NOT_LEADER = "party_not_leader",
     /** Vào dungeon theo party: có thành viên không đủ điều kiện (cả party nhận `dungeonDenied`). */
@@ -443,6 +451,17 @@ export interface PartyInviteReceivedMessage {
     partyRoomId: string;
     fromName: string;
     expiresInSec: number;
+}
+
+export interface TeleportDestinationMessage {
+    mapCode: string;
+    minLevel: number;
+    /** Player đủ level để tới map này. */
+    available: boolean;
+}
+
+export interface TeleportListMessage {
+    destinations: TeleportDestinationMessage[];
 }
 
 export interface FeaturesMessage {

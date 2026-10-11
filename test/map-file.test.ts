@@ -20,6 +20,7 @@ import {
     validateDefinitionRefs,
     validateLayoutAgainstDefinition,
 } from "@/modules/maps/utils/map-build.util.js";
+import { listTeleportDestinations } from "@/modules/maps/utils/teleport.util.js";
 import { hashMapLayout, parseMapLayout } from "@/modules/maps/utils/map-file.util.js";
 
 const definition = (extra: Partial<MapDefinitionInput> = {}) =>
@@ -279,5 +280,84 @@ describe("tham chiếu giữa các map", () => {
             row.spawnPoints?.map((p) => p.id),
             ["default", "respawn"]
         );
+    });
+});
+
+describe("teleport (dịch chuyển nhanh)", () => {
+    const maps = (extra: Partial<Parameters<typeof listTeleportDestinations>[0][number]>[] = []) =>
+        [
+            {
+                code: "village",
+                type: "town",
+                minLevel: 1,
+                interactables: [{ id: "tp_v", type: "teleport", x: 5, y: 6 }],
+            },
+            {
+                code: "forest",
+                type: "field",
+                minLevel: 10,
+                interactables: [{ id: "tp_f", type: "teleport", x: 1, y: 2 }],
+            },
+            {
+                code: "plains",
+                type: "field",
+                minLevel: 1,
+                interactables: [{ id: "g", type: "portal", x: 1, y: 1 }],
+            },
+            {
+                code: "den",
+                type: "dungeon",
+                minLevel: 10,
+                interactables: [{ id: "tp_d", type: "teleport", x: 1, y: 1 }],
+            },
+            ...extra,
+        ] as Parameters<typeof listTeleportDestinations>[0];
+
+    it("điểm đến = map có bệ teleport, trừ dungeon và map hiện tại, sắp theo level", () => {
+        assert.deepEqual(
+            listTeleportDestinations(maps(), "village").map((d) => d.mapCode),
+            ["forest"]
+        );
+        assert.deepEqual(
+            listTeleportDestinations(maps(), "plains").map((d) => d.mapCode),
+            ["village", "forest"]
+        );
+    });
+
+    it("trả về bệ và vị trí để đặt player", () => {
+        const [forest] = listTeleportDestinations(maps(), "village");
+        assert.deepEqual(
+            [forest.teleportId, forest.x, forest.y, forest.minLevel],
+            ["tp_f", 1, 2, 10]
+        );
+    });
+
+    it("map chỉ có portal (không có teleport) không phải điểm đến", () => {
+        assert.ok(!listTeleportDestinations(maps()).some((d) => d.mapCode === "plains"));
+    });
+
+    it("định nghĩa teleport không cần đích; row giữ vị trí bệ", () => {
+        const def = definition({
+            monsterGroups: [],
+            npcs: [],
+            interactables: [{ id: "tp", type: "teleport" }],
+        });
+        const { row, missing } = buildMapRow(
+            def,
+            layout({ monsters: [], npcs: [], interactables: [{ id: "tp", x: 7, y: 8 }] }),
+            "h"
+        );
+        assert.deepEqual(missing, []);
+        assert.deepEqual(
+            [row.interactables?.[0].type, row.interactables?.[0].x, row.interactables?.[0].y],
+            ["teleport", 7, 8]
+        );
+    });
+
+    it("map trong repo: các map không phải dungeon đều khai bệ teleport", () => {
+        for (const def of loadMapDefinitions()) {
+            const has = def.interactables.some((it) => it.type === "teleport");
+            assert.equal(has, def.type !== MapType.DUNGEON, def.code);
+        }
     });
 });

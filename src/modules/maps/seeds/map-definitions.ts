@@ -46,6 +46,7 @@ const DEFINITIONS: MapDefinitionInput[] = [
             { id: "npc_guard_captain", npcCode: "guard_captain" },
         ],
         interactables: [
+            { id: "teleport_village", type: "teleport", code: InteractableCode.TELEPORT },
             {
                 id: "notice_board",
                 type: "sign",
@@ -101,6 +102,7 @@ const DEFINITIONS: MapDefinitionInput[] = [
             { markerId: "g16", members: [{ monsterCode: "bat", count: 3, type: "random" }] },
         ],
         interactables: [
+            { id: "teleport_plains", type: "teleport", code: InteractableCode.TELEPORT },
             {
                 id: "to_village",
                 type: "portal",
@@ -179,6 +181,7 @@ const DEFINITIONS: MapDefinitionInput[] = [
             { markerId: "f10", members: [{ monsterCode: "bat", count: 3, type: "random" }] },
         ],
         interactables: [
+            { id: "teleport_forest", type: "teleport", code: InteractableCode.TELEPORT },
             {
                 id: "forest_to_village",
                 type: "portal",
@@ -264,6 +267,7 @@ const DEFINITIONS: MapDefinitionInput[] = [
             { markerId: "e10", members: [{ monsterCode: "werebear", count: 2, type: "random" }] },
         ],
         interactables: [
+            { id: "teleport_evergrowth", type: "teleport", code: InteractableCode.TELEPORT },
             {
                 id: "evergrowth_to_forest",
                 type: "portal",

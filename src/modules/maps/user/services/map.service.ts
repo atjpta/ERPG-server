@@ -2,6 +2,7 @@ import type { Queryable } from "@/configs/postgres.config.js";
 import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
+import { listTeleportDestinations } from "@/modules/maps/utils/teleport.util.js";
 import { MapStatus } from "@/modules/maps/enums/map.enum.js";
 import { GameMapRepo } from "@/modules/maps/repositories/game-map.repository.js";
 
@@ -61,6 +62,11 @@ export class MapService {
                     : {}),
             })),
         };
+    }
+
+    /** Điểm đến teleport từ map `currentMapCode` (map active có bệ teleport, trừ dungeon và map hiện tại). */
+    async listTeleportDestinations(currentMapCode: string) {
+        return listTeleportDestinations(await GameMapRepo.findActive(), currentMapCode);
     }
 
     async getActiveByCodeOrFail(code: string, dbOrTx?: Queryable) {

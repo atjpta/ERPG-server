@@ -73,6 +73,11 @@ export const InteractableDefSchema = z.discriminatedUnion("type", [
         respawnSec: z.number().int().positive(),
     }),
     z.object({ ...interactableBase, type: z.literal("sign"), dialogueCode: z.string().min(1) }),
+    /**
+     * Bệ teleport (dịch chuyển nhanh): dùng thì mở danh sách mọi map có bệ teleport, chọn map nào là tới
+     * ngay bệ teleport của map đó. Không có đích cố định — map nào có teleport thì là điểm đến.
+     */
+    z.object({ ...interactableBase, type: z.literal("teleport") }),
 ]);
 export type InteractableDef = z.infer<typeof InteractableDefSchema>;
 

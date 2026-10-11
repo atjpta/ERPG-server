@@ -15,6 +15,7 @@ import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.serv
 import { inventoryWorldService } from "@/rooms/world/services/inventory.world.service.js";
 import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
 import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
+import { teleportWorldService } from "@/rooms/world/services/teleport.world.service.js";
 import { transferWorldService } from "@/rooms/world/services/transfer.world.service.js";
 import { WorldMessage, type InteractResultMessage } from "@/rooms/world/world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
@@ -73,6 +74,9 @@ export class InteractWorldService {
                     def.targetMapCode,
                     def.targetSpawnId
                 );
+            case "teleport":
+                await teleportWorldService.open(room, client, player);
+                return undefined;
             case "gather":
                 return this.gather(room, client, player, def, state);
             case "sign": {

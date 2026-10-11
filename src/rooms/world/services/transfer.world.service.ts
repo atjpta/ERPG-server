@@ -21,7 +21,9 @@ export class TransferWorldService {
         client: PlayerClient,
         player: PlayerWorldState,
         mapCode: string,
-        spawnId: string
+        spawnId: string,
+        /** Đặt player đúng toạ độ này thay vì tra spawn point (dịch chuyển tới bệ teleport). */
+        point?: { x: number; y: number }
     ): Promise<string | undefined> {
         if (player.pendingMapCode) return "Already changing map";
         const sameMap = mapCode === room.map.code;
@@ -40,7 +42,7 @@ export class TransferWorldService {
             }
             return partyWorldService.startDungeon(room, client, player, target, spawnId);
         }
-        const spawn = target.spawnPoints.find((point) => point.id === spawnId);
+        const spawn = point ?? target.spawnPoints.find((p) => p.id === spawnId);
         if (!spawn) return "Spawn point not found";
 
         player.x = spawn.x;

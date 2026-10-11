@@ -2,6 +2,7 @@ import { Command } from "@colyseus/command";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.service.js";
 import { interactWorldService } from "@/rooms/world/services/interact.world.service.js";
+import { teleportWorldService } from "@/rooms/world/services/teleport.world.service.js";
 import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
 import {
     DialogueChooseSchema,
@@ -9,6 +10,7 @@ import {
     InteractSchema,
     QuestAbandonSchema,
     QuestPreviewSchema,
+    TeleportToSchema,
 } from "@/rooms/world/validators/content.world.validator.js";
 import {
     WorldMessage,
@@ -78,6 +80,27 @@ export class QuestListWorldCommand extends Command<WorldRoom, ContentPayload> {
     execute({ client }: ContentPayload) {
         const player = this.room.state.players.get(client.sessionId);
         if (player) questWorldService.sendInitial(this.room, client, player);
+    }
+}
+
+/** Chọn điểm đến teleport; kết quả trả qua `interactResult` (id = mapCode). */
+export class TeleportToWorldCommand extends Command<WorldRoom, ContentPayload> {
+    async execute({ client, payload }: ContentPayload) {
+        const player = this.room.state.players.get(client.sessionId);
+        const parsed = TeleportToSchema.safeParse(payload);
+        if (!player || !parsed.success) return;
+        const error = await teleportWorldService.travel(
+            this.room,
+            client,
+            player,
+            parsed.data.mapCode
+        );
+        const message: InteractResultMessage = {
+            ok: !error,
+            id: parsed.data.mapCode,
+            ...(error ? { error } : {}),
+        };
+        client.send(WorldMessage.INTERACT_RESULT, message);
     }
 }
 

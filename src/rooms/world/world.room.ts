@@ -32,6 +32,7 @@ import {
     QuestAbandonWorldCommand,
     QuestListWorldCommand,
     QuestPreviewWorldCommand,
+    TeleportToWorldCommand,
 } from "@/rooms/world/commands/content.world.command.js";
 import type { MoveBounds } from "@/rooms/world/simulation/movement.step.js";
 import {
@@ -123,6 +124,9 @@ export class WorldRoom extends BasePlayerRoom<{
         },
         [WorldClientMessage.QUEST_ABANDON]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new QuestAbandonWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.TELEPORT_TO]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new TeleportToWorldCommand(), { client, payload });
         },
         [WorldClientMessage.PARTY_CREATE]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new PartyCreateWorldCommand(), { client, payload });
