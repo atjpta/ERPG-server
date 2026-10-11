@@ -5,6 +5,7 @@ import {
     PartyDungeonDenyReason,
     type PartyMemberInfo,
 } from "@/modules/party/schemas/party.schema.js";
+import { PartyError, PartyModel } from "@/modules/party/party.model.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
 import { splitPartyExp } from "@/modules/party/utils/party-exp.util.js";
 import { checkPartyDungeonEntry, nextLeader } from "@/modules/party/utils/party-rules.util.js";
@@ -135,5 +136,98 @@ describe("party directory (memory cache)", () => {
             if (await partyDirectoryService.allowInvite("spammer")) allowed++;
         }
         assert.equal(allowed, 10);
+    });
+});
+
+describe("PartyModel", () => {
+    const config = { maxMembers: 3, inviteTtlSec: 30, expBonusPerExtraMember: 0.1 };
+    const model = () => new PartyModel(config, member("a"));
+
+    it("tạo party với chủ là người đầu tiên", () => {
+        const party = model();
+        assert.equal(party.leaderId, "a");
+        assert.equal(party.size, 1);
+        assert.ok(party.isLeader("a"));
+    });
+
+    it("chỉ chủ mời; không tự mời, không mời người đã trong party", () => {
+        const party = model();
+        assert.equal(party.canInvite("b", "c", 0), PartyError.NOT_LEADER);
+        assert.equal(party.canInvite("a", "a", 0), PartyError.SELF_TARGET);
+        assert.equal(party.canInvite("a", "b", 0), undefined);
+        party.addInvite("b", { fromName: "a", snapshot: member("b"), expiresAt: 1000 });
+        assert.equal(party.joinWithInvite("b", 10), undefined);
+        assert.equal(party.canInvite("a", "b", 10), PartyError.ALREADY_MEMBER);
+    });
+
+    it("lời mời giữ chỗ: không mời quá số chỗ kể cả lời mời chưa nhận", () => {
+        const party = model();
+        party.addInvite("b", { fromName: "a", snapshot: member("b"), expiresAt: 1000 });
+        party.addInvite("c", { fromName: "a", snapshot: member("c"), expiresAt: 1000 });
+        assert.equal(party.canInvite("a", "d", 10), PartyError.PARTY_FULL);
+        // mời lại chính người đã có lời mời thì không tính hai lần
+        assert.equal(party.canInvite("a", "c", 10), undefined);
+    });
+
+    it("lời mời hết hạn thì không vào được và được dọn ra", () => {
+        const party = model();
+        party.addInvite("b", { fromName: "a", snapshot: member("b"), expiresAt: 100 });
+        assert.equal(party.joinWithInvite("b", 100), "no_invite");
+        const expired = party.pruneInvites(100);
+        assert.deepEqual(
+            expired.map(([id]) => id),
+            ["b"]
+        );
+        assert.equal(party.canInvite("a", "c", 100), undefined);
+    });
+
+    it("không có lời mời thì không vào được; đủ người thì từ chối", () => {
+        const party = model();
+        assert.equal(party.joinWithInvite("x", 0), "no_invite");
+        for (const id of ["b", "c"]) {
+            party.addInvite(id, { fromName: "a", snapshot: member(id), expiresAt: 1000 });
+            assert.equal(party.joinWithInvite(id, 0), undefined);
+        }
+        party.addInvite("d", { fromName: "a", snapshot: member("d"), expiresAt: 1000 });
+        assert.equal(party.joinWithInvite("d", 0), PartyError.PARTY_FULL);
+    });
+
+    it("chủ rời: chuyển cho người vào sớm nhất; người cuối rời thì party rỗng", () => {
+        const party = model();
+        for (const id of ["b", "c"]) {
+            party.addInvite(id, { fromName: "a", snapshot: member(id), expiresAt: 1000 });
+            party.joinWithInvite(id, 0);
+        }
+        assert.deepEqual(party.leave("a"), { empty: false, newLeaderId: "b" });
+        assert.equal(party.leaderId, "b");
+        assert.deepEqual(party.leave("c"), { empty: false });
+        assert.deepEqual(party.leave("b"), { empty: true });
+    });
+
+    it("kick / promote chỉ chủ làm được và phải nhắm đúng thành viên", () => {
+        const party = model();
+        party.addInvite("b", { fromName: "a", snapshot: member("b"), expiresAt: 1000 });
+        party.joinWithInvite("b", 0);
+        assert.equal(party.kick("b", "a"), PartyError.NOT_LEADER);
+        assert.equal(party.kick("a", "a"), PartyError.SELF_TARGET);
+        assert.equal(party.kick("a", "zzz"), PartyError.NOT_MEMBER);
+        assert.equal(party.promote("a", "b"), undefined);
+        assert.equal(party.leaderId, "b");
+        assert.equal(party.kick("b", "a"), undefined);
+        assert.equal(party.size, 1);
+    });
+
+    it("cập nhật thông tin thành viên và kiểm dungeon theo trạng thái mới nhất", () => {
+        const party = model();
+        party.addInvite("b", { fromName: "a", snapshot: member("b"), expiresAt: 1000 });
+        party.joinWithInvite("b", 0);
+        assert.deepEqual(party.checkDungeon(10, 4), []);
+        party.patch("b", { level: 3 });
+        assert.deepEqual(
+            party.checkDungeon(10, 4).map((f) => [f.playerId, f.reason]),
+            [["b", PartyDungeonDenyReason.LEVEL_TOO_LOW]]
+        );
+        party.patch("b", { inWorld: false });
+        assert.equal(party.checkDungeon(10, 4)[0].reason, PartyDungeonDenyReason.OFFLINE);
     });
 });

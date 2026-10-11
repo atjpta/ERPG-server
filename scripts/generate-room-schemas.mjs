@@ -61,7 +61,8 @@ function findRoomSchemaFiles(directory) {
         if (!existsSync(schemaDirectory)) return [];
 
         return readdirSync(schemaDirectory, { withFileTypes: true }).flatMap((schemaEntry) => {
-            if (!schemaEntry.isFile() || !/\.(state|input)\.ts$/.test(schemaEntry.name)) return [];
+            if (!schemaEntry.isFile() || !/\.(state|input|message)\.ts$/.test(schemaEntry.name))
+                return [];
             return [join(schemaDirectory, schemaEntry.name)];
         });
     });
