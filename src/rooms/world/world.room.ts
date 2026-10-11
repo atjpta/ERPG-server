@@ -34,6 +34,13 @@ import {
     QuestPreviewWorldCommand,
 } from "@/rooms/world/commands/content.world.command.js";
 import type { MoveBounds } from "@/rooms/world/simulation/movement.step.js";
+import {
+    PartyCreateWorldCommand,
+    PartyDeclineWorldCommand,
+} from "@/rooms/world/commands/party.world.command.js";
+import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
+import type { PartyInviteReceivedMessage } from "@/rooms/world/world.message.js";
+import type { PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
 import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.service.js";
 import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
@@ -117,6 +124,12 @@ export class WorldRoom extends BasePlayerRoom<{
         [WorldClientMessage.QUEST_ABANDON]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new QuestAbandonWorldCommand(), { client, payload });
         },
+        [WorldClientMessage.PARTY_CREATE]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new PartyCreateWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.PARTY_DECLINE]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new PartyDeclineWorldCommand(), { client, payload });
+        },
         [WorldClientMessage.DUNGEON_LEAVE]: (client: PlayerClient) => {
             if (this.dungeon) void dungeonWorldService.leaveByClient(this, client);
         },
@@ -157,6 +170,7 @@ export class WorldRoom extends BasePlayerRoom<{
         const player = this.state.players.get(client.sessionId);
         if (player) {
             if (this.dungeon) dungeonWorldService.onPlayerJoined(this, player);
+            await partyWorldService.onJoin(this, player);
             inventoryWorldService.send(client, player);
             attributeWorldService.send(client, player);
             questWorldService.sendInitial(this, client, player);
@@ -176,6 +190,8 @@ export class WorldRoom extends BasePlayerRoom<{
     async onLeave(client: PlayerClient) {
         this.leavingSessions.add(client.sessionId);
         dialogueWorldService.drop(this, client.sessionId);
+        const leaving = this.state.players.get(client.sessionId);
+        if (leaving) await partyWorldService.onLeave(this, leaving);
         await this.unregisterOnlinePlayer(client);
         await worldService.waitForCheckpoint(this);
         await this.dispatcher.dispatch(new LeavePlayerWorldCommand(), {
@@ -192,6 +208,19 @@ export class WorldRoom extends BasePlayerRoom<{
             )
         );
         this.dispatcher.stop();
+    }
+
+    // ---- Gọi từ xa bởi party room (matchMaker.remoteRoomCall) ----------------------------------
+
+    partySetPlayerParty(playerId: string, partyRoomId: string | null): void {
+        partyWorldService.setPlayerParty(this, playerId, partyRoomId);
+    }
+
+    partyDeliverInvite(
+        playerId: string,
+        payload: PartyInviteReceivedMessage
+    ): PartyMemberInfo | null {
+        return partyWorldService.deliverInvite(this, playerId, payload);
     }
 
     isLeavingSession(sessionId: string): boolean {

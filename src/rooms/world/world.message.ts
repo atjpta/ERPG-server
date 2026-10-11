@@ -49,6 +49,10 @@ export enum WorldClientMessage {
     QUEST_PREVIEW = "questPreview",
     /** Rời dungeon, về chỗ đứng trước khi vào. */
     DUNGEON_LEAVE = "dungeonLeave",
+    /** Tạo party (chưa có thì server tạo mới) — trả `party { roomId }` để client `joinById`. */
+    PARTY_CREATE = "partyCreate",
+    /** `{ partyRoomId }` — từ chối lời mời party. */
+    PARTY_DECLINE = "partyDecline",
 }
 
 /** Message server → client của room world (ngoài state). */
@@ -93,6 +97,10 @@ export enum WorldMessage {
     QUEST_TARGETS = "questTargets",
     /** Trả lời `questPreview`: quest kèm mục tiêu và phần thưởng. */
     QUEST_PREVIEW = "questPreview",
+    /** Room party của người chơi: client `joinById(roomId)` (sau `partyCreate`, hoặc khi chấp nhận lời mời thì dùng `partyRoomId` của lời mời). */
+    PARTY = "party",
+    /** Lời mời vào party. Chấp nhận = `joinById(partyRoomId)` trong hạn; từ chối = `partyDecline`. */
+    PARTY_INVITE_RECEIVED = "partyInviteReceived",
     /** Chức năng đã mở khoá (quest hero) — gửi lúc vào room và khi mở thêm. */
     FEATURES = "features",
     /** Chamber vừa dọn xong — cổng exit mở. */
@@ -421,6 +429,16 @@ export interface DungeonChamberClearMessage {
 export interface DungeonClearMessage {
     /** Giây nữa người chơi bị đưa ra ngoài. */
     leaveInSec: number;
+}
+
+export interface PartyRoomMessage {
+    roomId: string;
+}
+
+export interface PartyInviteReceivedMessage {
+    partyRoomId: string;
+    fromName: string;
+    expiresInSec: number;
 }
 
 export interface FeaturesMessage {

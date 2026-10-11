@@ -119,11 +119,12 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
     // ---- Gọi từ world room qua matchMaker.remoteRoomCall --------------------------------------
 
     /** World room mới báo thành viên đã vào (đổi map / vào dungeon). */
-    attachWorld(playerId: string, worldRoomId: string, info?: Partial<PartyMemberInfo>) {
-        if (!this.model?.has(playerId)) return;
+    attachWorld(playerId: string, worldRoomId: string, info?: Partial<PartyMemberInfo>): boolean {
+        if (!this.model?.has(playerId)) return false;
         this.worldRoomOf.set(playerId, worldRoomId);
         this.model.patch(playerId, { ...info, inWorld: true });
         this.syncState();
+        return true;
     }
 
     /** World room cũ báo thành viên đã rời; chỉ tính khi room đó còn là room hiện tại của họ. */

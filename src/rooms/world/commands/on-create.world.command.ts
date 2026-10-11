@@ -10,6 +10,11 @@ import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { monsterWorldService } from "@/rooms/world/services/monster.world.service.js";
 import { playerWorldService } from "@/rooms/world/services/player.world.service.js";
 import { skillDeliveryWorldService } from "@/rooms/world/services/skill-delivery.world.service.js";
+import {
+    PARTY_HEARTBEAT_MS,
+    PARTY_REPORT_MS,
+    partyWorldService,
+} from "@/rooms/world/services/party.world.service.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 
 export interface WorldRoomOptions {
@@ -71,5 +76,11 @@ export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
         this.room.clock.setInterval((): void => {
             void worldService.checkpointPlayers(this.room);
         }, CHECKPOINT_INTERVAL_MS);
+        this.room.clock.setInterval((): void => {
+            void partyWorldService.heartbeat(this.room);
+        }, PARTY_HEARTBEAT_MS);
+        this.room.clock.setInterval((): void => {
+            partyWorldService.report(this.room);
+        }, PARTY_REPORT_MS);
     }
 }

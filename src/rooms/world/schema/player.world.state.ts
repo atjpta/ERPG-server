@@ -88,6 +88,8 @@ export class PlayerWorldState extends Schema {
     dailyQuests: PlayerDailyQuests | null = null;
     /** Map đích khi đã bước vào portal/teleport và đang đợi client vào room mới. */
     pendingMapCode?: string;
+    /** Room party đang tham gia (server-only) — dùng chia exp / quest cho thành viên cùng room. */
+    partyRoomId: string | null = null;
     /** Làng gần nhất đã đến (server-only) — chết trong dungeon thì hồi sinh ở đây. */
     lastTownMapCode: string | null = null;
     /** Lượt dungeon đang diễn ra (từ lúc bước vào portal dungeon tới khi thoát ra). */
