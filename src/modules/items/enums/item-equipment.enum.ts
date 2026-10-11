@@ -76,5 +76,5 @@ export const EQUIPMENT_GROUP_BY_TYPE: Record<ItemEquipmentType, EquipmentGroup> 
     [ItemEquipmentType.BACK]: EquipmentGroup.ACCESSORY,
 };
 
-/** Level của đồ tân thủ (đồ biome có level theo mốc trong `equipment_drop_config.levelTiers`). */
+/** Level của đồ tân thủ (đồ biome có level cố định theo biome trong `equipment_drop_config.levelByBiome`). */
 export const STARTER_EQUIPMENT_LEVEL = 1;

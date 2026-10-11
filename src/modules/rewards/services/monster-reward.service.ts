@@ -2,7 +2,7 @@ import { equipmentConfigService } from "@/modules/equipment/services/equipment-c
 import { equipmentFactoryService } from "@/modules/equipment/services/equipment-factory.service.js";
 import {
     pickWeighted,
-    rollDropLevel,
+    dropLevelOf,
     type Rng,
 } from "@/modules/equipment/utils/equipment-roll.util.js";
 import { itemService } from "@/modules/items/services/item.service.js";
@@ -43,7 +43,7 @@ export class MonsterRewardService {
             rng,
             scale: combineRewardScale(monsterScales(monster, scaleConfig)),
             rollEquipment: (drop) => {
-                const level = rollDropLevel(monster.level, equipmentConfigService.drop, rng);
+                const level = dropLevelOf(monster.biome, equipmentConfigService.drop);
                 const templates = itemService.listEquipmentsByBiome(monster.biome);
                 const item = pickWeighted(templates, () => 1, rng);
                 if (level === undefined || !item) return undefined;

@@ -35,9 +35,9 @@ const BASE_EQUIPMENT_DROP_RATE = 0.08;
 /** Đá cường hoá rơi theo biome (bậc tăng dần theo độ khó). */
 const STONE_TIER_BY_BIOME: Record<Biome, number> = {
     [Biome.STARTER]: 1,
-    [Biome.ORC]: 1,
-    [Biome.SKELETON]: 2,
-    [Biome.SHAPESHIFTER]: 3,
+    [Biome.SLIME]: 1,
+    [Biome.WEREWOLF]: 2,
+    [Biome.WEREBEAR]: 3,
 };
 
 /** Loại monster cấu hình theo spawn của map → bảng rơi chung, elite/boss nhân qua scale config. */
@@ -71,7 +71,7 @@ function toSeed(monster: MonsterDefinition) {
         [StatKey.PHYSICAL_ATTACK]: 5,
         [StatKey.ACCURACY]: 1,
         [StatKey.EVASION]: 1,
-        ...(monster.biome === Biome.SKELETON ? { [StatKey.PHYSICAL_DEFENSE]: 1 } : {}),
+        ...(monster.biome === Biome.WEREBEAR ? { [StatKey.PHYSICAL_DEFENSE]: 1 } : {}),
     };
     // 20 × lv × (1 + lv/10): lv1 = 22, lv10 = 400, lv30 = 2400.
     const exp = floorBig(big(20).times(monster.level).times(big(monster.level).div(10).plus(1)));
@@ -101,6 +101,7 @@ function toSeed(monster: MonsterDefinition) {
 
 /** Code monster cũ không còn dùng (placeholder trước khi có prefab). */
 const LEGACY_MONSTER_CODES = ["shapeshifter"];
+// Orc/skeleton/lancer đã bị bỏ — DB được reset ở Phase 7 nên không cần vô hiệu hoá thêm.
 
 /** Chạy sau SkillSeed và ItemSeed (tham chiếu skill/item theo id). */
 export const MonsterSeed = async () => {

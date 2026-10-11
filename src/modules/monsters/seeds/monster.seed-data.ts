@@ -4,7 +4,7 @@
  * offset → offsetX/offsetY, đơn vị tile, Y dương hướng lên — `worldUnitsPerTile` = 1). Server gửi
  * các giá trị này xuống và client ghi đè collider của prefab, nên sửa prefab phải sửa ở đây.
  *
- * `attackClipMs` = độ dài clip `Attack1` (12 fps; Orc: `Orc_Attack01`, 10 fps) — thời lượng đòn đánh.
+ * `attackClipMs` = độ dài clip `Attack1` (12 fps) — thời lượng đòn đánh.
  * Dùng chung cho SkillSeed (skill `{code}_attack`) và MonsterSeed.
  */
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
@@ -36,121 +36,39 @@ const box = (width: number, height: number, offsetX: number, offsetY: number) =>
     offsetY,
 });
 
+/**
+ * `level` = level gốc (mốc scale chỉ số/thưởng); level thật do `monsterLevel` của map/dungeon quyết định.
+ * Bat thuộc biome slime (rơi set slime); tinh anh/boss là `type` của spawn, không phải monster riêng.
+ */
 export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
-    // ---- Orc (lv 1–9)
-    {
-        code: "orc",
-        biome: Biome.ORC,
-        level: 1,
-        hitbox: box(0.4, 0.5, 0, 0.35),
-        collider: box(0.3, 0.1, 0, 0.1),
-        attackClipMs: 600,
-        attackSkillCode: "orc_slash",
-    },
-    {
-        code: "armored_orc",
-        biome: Biome.ORC,
-        level: 5,
-        hitbox: box(0.4, 0.6, 0, 0.35),
-        collider: box(0.4, 0.1, 0, 0.1),
-        attackClipMs: 583,
-    },
-    {
-        code: "elite_orc",
-        biome: Biome.ORC,
-        level: 7,
-        hitbox: box(0.4, 0.6, 0, 0.35),
-        collider: box(0.3, 0.1, 0, 0.1),
-        attackClipMs: 583,
-    },
-    {
-        code: "orc_rider",
-        biome: Biome.ORC,
-        level: 9,
-        hitbox: box(0.7, 0.9, 0, 0.5),
-        collider: box(0.6, 0.1, 0, 0.1),
-        attackClipMs: 667,
-    },
-    // ---- Skeleton (lv 10–19)
-    {
-        code: "skeleton",
-        biome: Biome.SKELETON,
-        level: 10,
-        hitbox: box(0.4, 0.6, 0, 0.35),
-        collider: box(0.3, 0.1, 0, 0.1),
-        attackClipMs: 500,
-    },
-    {
-        code: "skeleton_archer",
-        biome: Biome.SKELETON,
-        level: 12,
-        hitbox: box(0.4, 0.6, 0.05, 0.35),
-        collider: box(0.3, 0.1, 0.05, 0.1),
-        attackClipMs: 750,
-        ranged: true,
-    },
-    {
-        code: "armored_skeleton",
-        biome: Biome.SKELETON,
-        level: 15,
-        hitbox: box(0.5, 0.6, 0.05, 0.35),
-        collider: box(0.4, 0.1, 0.05, 0.1),
-        attackClipMs: 667,
-    },
-    {
-        code: "greatsword_skeleton",
-        biome: Biome.SKELETON,
-        level: 17,
-        hitbox: box(0.5, 0.6, 0.05, 0.35),
-        collider: box(0.4, 0.1, 0.05, 0.1),
-        attackClipMs: 750,
-    },
-    {
-        code: "necromancer",
-        biome: Biome.SKELETON,
-        level: 19,
-        hitbox: box(0.6, 0.9, 0, 0.5),
-        collider: box(0.5, 0.1, 0, 0.1),
-        attackClipMs: 750,
-        ranged: true,
-    },
-    // ---- ShapeShifter (lv 20–30)
     {
         code: "bat",
-        biome: Biome.SHAPESHIFTER,
-        level: 20,
+        biome: Biome.SLIME,
+        level: 1,
         hitbox: box(0.4, 0.6, 0, 0.35),
         collider: box(0.3, 0.1, 0, 0.1),
         attackClipMs: 500,
     },
     {
         code: "slime",
-        biome: Biome.SHAPESHIFTER,
-        level: 22,
+        biome: Biome.SLIME,
+        level: 1,
         hitbox: box(0.7, 0.4, 0, 0.3),
         collider: box(0.7, 0.1, 0, 0.1),
         attackClipMs: 500,
     },
     {
-        code: "lancer",
-        biome: Biome.SHAPESHIFTER,
-        level: 24,
-        hitbox: box(0.9, 0.9, 0.13, 0.5),
-        collider: box(0.6, 0.1, 0, 0.1),
-        attackClipMs: 500,
-    },
-    {
         code: "werebear",
-        biome: Biome.SHAPESHIFTER,
-        level: 27,
+        biome: Biome.WEREBEAR,
+        level: 20,
         hitbox: box(0.6, 0.6, 0, 0.35),
         collider: box(0.6, 0.1, 0, 0.1),
         attackClipMs: 750,
     },
     {
         code: "werewolf",
-        biome: Biome.SHAPESHIFTER,
-        level: 30,
+        biome: Biome.WEREWOLF,
+        level: 10,
         hitbox: box(0.4, 0.6, 0, 0.35),
         collider: box(0.3, 0.1, 0, 0.1),
         attackClipMs: 750,

@@ -210,38 +210,10 @@ const CLASS_SKILLS: NewSkill[] = [
     },
 ];
 
-/** Đòn đánh thường của Orc, chỉnh tay (monster khác sinh theo hitbox — `monsterAttackSkill`). */
-const ORC_SLASH: NewSkill = {
-    code: "orc_slash",
-    skillType: SkillType.MELEE,
-    targetType: TargetType.DIRECTION,
-    castRange: 1,
-    castTimeMs: 350,
-    cooldownMs: 2000,
-    manaCost: 0,
-    staminaCost: 0,
-    maxLevel: 1,
-    basicAttack: true,
-    levelConfig: [level(1, 2, 0.25)],
-    skillHitEvents: [
-        hitEvent({
-            eventIndex: 0,
-            triggerTicks: 3,
-            shape: HitShape.RECT,
-            range: 1.08,
-            width: 0.84,
-            offsetX: -0.33,
-            offsetY: 0.33,
-            damageScaling: 1.25,
-        }),
-    ],
-};
-
 const round2 = (value: ReturnType<typeof big>) => bigToNumber(value.decimalPlaces(2));
 
 /**
- * Đòn đánh thường của monster, vùng RECT ước theo hitbox của nó (cùng công thức cho ra đúng
- * `orc_slash` với hitbox Orc 0.4 × 0.5): bắt đầu sau lưng 0.13 ô, vươn trước mặt
+ * Đòn đánh thường của monster, vùng RECT ước theo hitbox của nó (hitbox 0.4 × 0.5 cho vùng 1.08 × 0.84): bắt đầu sau lưng 0.13 ô, vươn trước mặt
  * 0.55 × √(hitbox.width / 0.4) ô; cao 1.4 × hitbox.height + 0.14, tâm ở giữa thân. Monster đánh xa
  * dùng vùng dài 4 ô trước mặt. Trúng đòn ở ~60% clip Attack1. Chỉnh tay bằng WorldColliderDebugView.
  */
@@ -287,7 +259,7 @@ const MONSTER_SKILLS: NewSkill[] = MONSTER_DEFINITIONS.filter(
 ).map(monsterAttackSkill);
 
 export const SkillSeed = async () => {
-    for (const skill of [...CLASS_SKILLS, ORC_SLASH, ...MONSTER_SKILLS]) {
+    for (const skill of [...CLASS_SKILLS, ...MONSTER_SKILLS]) {
         await SkillRepo.upsert({
             data: skill,
             target: Skills.code,

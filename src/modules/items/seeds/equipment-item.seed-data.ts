@@ -12,9 +12,9 @@ import type { EquipmentMetadata } from "@/modules/items/schemas/item-metadata.sc
 
 const BIOME_NAMES: Record<Biome, string> = {
     [Biome.STARTER]: "Novice",
-    [Biome.ORC]: "Orc",
-    [Biome.SKELETON]: "Skeleton",
-    [Biome.SHAPESHIFTER]: "Shapeshifter",
+    [Biome.SLIME]: "Slime",
+    [Biome.WEREWOLF]: "Werewolf",
+    [Biome.WEREBEAR]: "Werebear",
 };
 
 const CLASS_NAMES: Record<string, string> = {
@@ -98,9 +98,9 @@ export const STARTER_EQUIPMENT_ITEMS: NewItem[] = [
 
 /** Đồ biome: mỗi biome 1 bộ đủ 12 loại cho từng class. */
 export const BIOME_EQUIPMENT_ITEMS: NewItem[] = [
-    Biome.ORC,
-    Biome.SKELETON,
-    Biome.SHAPESHIFTER,
+    Biome.SLIME,
+    Biome.WEREWOLF,
+    Biome.WEREBEAR,
 ].flatMap((biome) =>
     STARTER_CLASS_CODES.flatMap((classCode) =>
         ALL_TYPES.map((type) => equipment(biome, classCode, type))

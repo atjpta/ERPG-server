@@ -1,4 +1,5 @@
 import { Big, big, bigToNumber } from "@/core/utils/big-number.util.js";
+import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import type {
     EquipmentDropConfig,
     EquipmentStatEntry,
@@ -91,18 +92,7 @@ export function rollEquipmentInstance(params: {
     };
 }
 
-/**
- * Chọn mốc level đồ rơi từ quái level `monsterLevel`: trọng số mỗi mốc =
- * max(0, 1 − |monsterLevel − mốc| / levelRange). Không mốc nào đủ gần → `undefined` (không rơi).
- */
-export function rollDropLevel(
-    monsterLevel: number,
-    config: EquipmentDropConfig,
-    rng: Rng
-): number | undefined {
-    return pickWeighted(
-        config.levelTiers,
-        (tier) => big(1).minus(big(monsterLevel).minus(tier).abs().div(config.levelRange)),
-        rng
-    );
+/** Level đồ rơi từ quái của `biome`; biome không có trong config (vd. starter) → `undefined` (không rơi). */
+export function dropLevelOf(biome: Biome, config: EquipmentDropConfig): number | undefined {
+    return config.levelByBiome[biome];
 }

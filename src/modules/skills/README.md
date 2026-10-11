@@ -12,7 +12,7 @@ Hiện dữ liệu được quản lý bằng seed. `SkillSeed` tạo đòn đá
 | Archer    | `archer_basic_attack` (PROJECTILE)                                | Mũi tên rời cung ở 500 ms, bay 12 ô/s, tối đa 6 ô, trúng con đầu tiên (DESTROY) |
 | Cleric    | `cleric_basic_attack` (GROUND, sát thương phép theo MAGIC_ATTACK) | Vùng tròn bán kính 0.6 đặt ở chân mục tiêu lúc 350 ms, nổ sau 150 ms            |
 
-Cùng với `orc_slash` và `{monster}_attack` của monster. Mỗi class chỉ có 1 đòn đánh thường (clip anim tên `basic_attack`); đòn thêm sẽ bổ sung sau. Skill cũ (`swordsman_slash_*`, `swordsman_attack_*`, `swordman_slash`, `archer_attack`, `cleric_attack`) bị xoá khi seed chạy.
+Cùng với `{monster}_attack` của monster. Mỗi class chỉ có 1 đòn đánh thường (clip anim tên `basic_attack`); đòn thêm sẽ bổ sung sau. Skill cũ (`swordsman_slash_*`, `swordsman_attack_*`, `swordman_slash`, `archer_attack`, `cleric_attack`) bị xoá khi seed chạy.
 
 ### Cách gây damage của hit event (`delivery`)
 

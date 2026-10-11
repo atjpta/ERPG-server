@@ -3,7 +3,7 @@
  * lại qua admin (`PUT /admin/master-data/:key`). Seed chạy lại sẽ ghi đè giá trị đang có.
  */
 import { Big, big, bigToNumber } from "@/core/utils/big-number.util.js";
-import { Biome } from "@/modules/biomes/enums/biome.enum.js";
+import { BIOME_EQUIPMENT_LEVEL, Biome } from "@/modules/biomes/enums/biome.enum.js";
 import {
     STARTER_CLASS_CODES,
     type StarterClassCode,
@@ -31,8 +31,11 @@ import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
 import type { StatBonus } from "@/modules/player/schemas/stat.schema.js";
 
-export const EQUIPMENT_LEVEL_TIERS = [10, 20, 30, 40, 50];
-const SET_BIOMES = [Biome.ORC, Biome.SKELETON, Biome.SHAPESHIFTER];
+/** Mỗi biome chỉ có 1 bộ ở level riêng (slime 10, werewolf 20, werebear 30). */
+export const EQUIPMENT_LEVEL_TIERS = Object.values(BIOME_EQUIPMENT_LEVEL);
+export const SET_BIOMES = Object.keys(
+    BIOME_EQUIPMENT_LEVEL
+) as (keyof typeof BIOME_EQUIPMENT_LEVEL)[];
 
 const round4 = (value: Big | number) => bigToNumber(big(value));
 
@@ -254,17 +257,17 @@ export const DEFAULT_EQUIPMENT_STAT_CONFIG: EquipmentStatConfig = {
 /** Dòng đặc trưng của set từng biome (mốc cao nhất của nhóm). */
 const BIOME_SET_SIGNATURE: Record<Biome, (atk: StatKey) => StatBonus[]> = {
     [Biome.STARTER]: () => [],
-    [Biome.ORC]: (atk) => [
-        { stat: atk, type: StatType.PERCENT, value: 0.08 },
-        { stat: StatKey.MAX_HP, type: StatType.PERCENT, value: 0.05 },
+    [Biome.SLIME]: () => [
+        { stat: StatKey.MAX_HP, type: StatType.PERCENT, value: 0.08 },
+        { stat: StatKey.PHYSICAL_DEFENSE, type: StatType.PERCENT, value: 0.05 },
     ],
-    [Biome.SKELETON]: () => [
+    [Biome.WEREWOLF]: (atk) => [
+        { stat: atk, type: StatType.PERCENT, value: 0.08 },
+        { stat: StatKey.CRITICAL_DAMAGE, type: StatType.FLAT, value: 0.1 },
+    ],
+    [Biome.WEREBEAR]: () => [
         { stat: StatKey.PHYSICAL_DEFENSE, type: StatType.PERCENT, value: 0.08 },
         { stat: StatKey.DAMAGE_TO_BOSSES, type: StatType.FLAT, value: 0.05 },
-    ],
-    [Biome.SHAPESHIFTER]: () => [
-        { stat: StatKey.EVASION, type: StatType.PERCENT, value: 0.08 },
-        { stat: StatKey.CRITICAL_DAMAGE, type: StatType.FLAT, value: 0.1 },
     ],
 };
 
@@ -312,7 +315,7 @@ export const DEFAULT_EQUIPMENT_SET_CONFIG: EquipmentSetConfig = {
     entries: SET_BIOMES.flatMap((biome) =>
         STARTER_CLASS_CODES.flatMap((classCode) =>
             Object.values(EquipmentGroup).flatMap((group) =>
-                EQUIPMENT_LEVEL_TIERS.map((level) => setEntry(biome, classCode, group, level))
+                setEntry(biome, classCode, group, BIOME_EQUIPMENT_LEVEL[biome])
             )
         )
     ),
@@ -323,8 +326,6 @@ const LEVEL_COST_SCALE: Record<string, number> = {
     10: 1,
     20: 2,
     30: 3.5,
-    40: 5.5,
-    50: 8,
 };
 
 const DUST_CODE_BY_GROUP: Record<EquipmentGroup, string> = {
@@ -393,6 +394,5 @@ export const DEFAULT_EQUIPMENT_DISASSEMBLE_CONFIG: EquipmentDisassembleConfig = 
 };
 
 export const DEFAULT_EQUIPMENT_DROP_CONFIG: EquipmentDropConfig = {
-    levelTiers: EQUIPMENT_LEVEL_TIERS,
-    levelRange: 15,
+    levelByBiome: BIOME_EQUIPMENT_LEVEL,
 };

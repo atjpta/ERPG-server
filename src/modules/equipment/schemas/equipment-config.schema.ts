@@ -156,13 +156,8 @@ export const EquipmentDisassembleConfigSchema = z.object({
 });
 
 export const EquipmentDropConfigSchema = z.object({
-    /** Các mốc level đồ biome có thể rơi. */
-    levelTiers: z.array(positiveInt).min(1),
-    /**
-     * Trọng số mốc = max(0, 1 − |level quái − mốc| / levelRange): mốc càng gần level quái càng dễ
-     * ra (quái lv 11, range 15: lv10 ≈ 0.93, lv20 = 0.4).
-     */
-    levelRange: z.number().positive(),
+    /** Level đồ rơi cố định theo biome của quái (slime 10, werewolf 20, werebear 30). */
+    levelByBiome: z.partialRecord(z.enum(Biome), positiveInt),
 });
 
 export type StatRange = z.infer<typeof StatRangeSchema>;

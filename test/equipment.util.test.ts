@@ -18,7 +18,7 @@ import {
     type EquipmentStatEntry,
 } from "@/modules/equipment/schemas/equipment-config.schema.js";
 import {
-    rollDropLevel,
+    dropLevelOf,
     rollEquipmentInstance,
     type Rng,
 } from "@/modules/equipment/utils/equipment-roll.util.js";
@@ -118,15 +118,12 @@ describe("equipment-roll.util", () => {
         });
     });
 
-    it("quái lv 11 ra đồ lv10 nhiều hơn lv20, không ra mốc quá xa", () => {
-        const counts = new Map<number, number>();
-        for (let i = 0; i < 1000; i++) {
-            const level = rollDropLevel(11, DEFAULT_EQUIPMENT_DROP_CONFIG, () => i / 1000);
-            counts.set(level ?? 0, (counts.get(level ?? 0) ?? 0) + 1);
-        }
-        assert.ok((counts.get(10) ?? 0) > (counts.get(20) ?? 0));
-        assert.ok((counts.get(20) ?? 0) > 0);
-        assert.equal(counts.get(30) ?? 0, 0);
+    it("level đồ rơi cố định theo biome: slime 10, werewolf 20, werebear 30, starter không rơi", () => {
+        const drop = DEFAULT_EQUIPMENT_DROP_CONFIG;
+        assert.equal(dropLevelOf(Biome.SLIME, drop), 10);
+        assert.equal(dropLevelOf(Biome.WEREWOLF, drop), 20);
+        assert.equal(dropLevelOf(Biome.WEREBEAR, drop), 30);
+        assert.equal(dropLevelOf(Biome.STARTER, drop), undefined);
     });
 });
 
@@ -148,7 +145,7 @@ describe("equipment-stat.util", () => {
 
     it("set chỉ đếm các món cùng level", () => {
         const entry: EquipmentSetEntry = {
-            biome: Biome.ORC,
+            biome: Biome.SLIME,
             classCode: "swordsman",
             group: EquipmentGroup.ARMOR,
             level: 10,
@@ -158,7 +155,7 @@ describe("equipment-stat.util", () => {
             },
         };
         const piece = (level: number) => ({
-            biome: Biome.ORC,
+            biome: Biome.SLIME,
             classCode: "swordsman",
             group: EquipmentGroup.ARMOR,
             level,

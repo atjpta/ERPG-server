@@ -27,7 +27,7 @@ export const Monsters = pgTable("monsters", {
     /** Skill của monster theo thứ tự; skill MELEE đầu tiên là đòn đánh thường. */
     skills: jsonb("skills").$type<OwnedSkill[]>().notNull().default([]),
     /** Vùng của monster — quyết định bộ trang bị biome rơi ra (`drops.equipment`). */
-    biome: biomeEnum("biome").notNull().default(Biome.ORC),
+    biome: biomeEnum("biome").notNull().default(Biome.SLIME),
     /**
      * Chỉ số gốc ở mốc level 1 (cùng bộ StatKey với player). Tăng theo level bằng tỉ lệ dùng chung ở
      * master data `monster_level_config` (computeMonsterStats).
