@@ -13,7 +13,12 @@ import {
 import { validateDialogueGraph } from "@/modules/dialogues/utils/dialogue-graph.util.js";
 import { selectDialogueCode } from "@/modules/dialogues/utils/dialogue-rule.util.js";
 import { DIALOGUES } from "@/modules/dialogues/seeds/dialogue.seed-data.js";
-import { loadMapFiles } from "@/modules/maps/seeds/game-map.seed.js";
+import { loadMapFiles, loadMapPlaceholders } from "@/modules/maps/seeds/game-map.seed.js";
+import { MapType } from "@/modules/maps/enums/map.enum.js";
+import { MAP_REGISTRY } from "@/modules/maps/seeds/map-registry.js";
+import { MONSTER_DEFINITIONS } from "@/modules/monsters/seeds/monster.seed-data.js";
+import { QuestCategory } from "@/modules/quests/enums/quest.enum.js";
+import { unlockedFeatures, unlockFlagKey } from "@/modules/quests/utils/unlock.util.js";
 import { parseMapFile, validateMapFileRefs } from "@/modules/maps/utils/map-file.util.js";
 import { NPCS } from "@/modules/npcs/seeds/npc.seed-data.js";
 import { QuestObjectiveType, QuestRepeat, QuestState } from "@/modules/quests/enums/quest.enum.js";
@@ -231,6 +236,77 @@ describe("quest progress", () => {
     });
 });
 
+describe("hero / side quests", () => {
+    const hero = QUESTS.filter((quest) => quest.category === QuestCategory.HERO);
+
+    it("hero là một chuỗi tuyến tính: mỗi quest sau đòi quest ngay trước", () => {
+        assert.equal(hero.length, 8);
+        hero.forEach((quest, index) => {
+            const expected = index === 0 ? [] : [hero[index - 1].code];
+            assert.deepEqual(quest.prerequisiteQuestCodes, expected, quest.code);
+            assert.ok((quest.requiredLevel ?? 1) >= (hero[index - 1]?.requiredLevel ?? 1));
+        });
+    });
+
+    it("sortOrder tăng dần và chỉ hero mở khoá chức năng", () => {
+        const orders = QUESTS.map((quest) => quest.sortOrder ?? 0);
+        assert.deepEqual(
+            orders,
+            [...orders].sort((a, b) => a - b)
+        );
+        for (const quest of QUESTS) {
+            if (quest.category !== QuestCategory.HERO) {
+                assert.deepEqual(quest.unlockFeatures ?? [], [], quest.code);
+            }
+        }
+    });
+
+    it("mỗi quest có đủ thoại nhận / làm / trả và NPC có rule cho chúng", () => {
+        const dialogues = new Set(DIALOGUES.map((dialogue) => dialogue.code));
+        for (const quest of QUESTS) {
+            for (const kind of ["offer", "progress", "done"]) {
+                assert.ok(dialogues.has(`${quest.code}_${kind}`), `${quest.code}_${kind}`);
+            }
+            const giver = NPCS.find((npc) => npc.code === quest.giverNpcCode);
+            const turnIn = NPCS.find((npc) => npc.code === quest.turnInNpcCode);
+            const rules = (npc?: (typeof NPCS)[number]) =>
+                (npc?.dialogueRules ?? []).map((rule) => rule.dialogueCode);
+            assert.ok(rules(giver).includes(`${quest.code}_offer`), quest.code);
+            assert.ok(rules(turnIn).includes(`${quest.code}_done`), quest.code);
+        }
+    });
+
+    it("unlock flag: ghi theo tiền tố, đọc lại đúng danh sách", () => {
+        const flags = {
+            [unlockFlagKey("guild")]: true,
+            [unlockFlagKey("dungeon")]: true,
+            [unlockFlagKey("off")]: false,
+            other: true,
+        };
+        assert.deepEqual(unlockedFeatures(flags), ["dungeon", "guild"]);
+    });
+});
+
+describe("map registry", () => {
+    it("mọi map đã khai báo có file Unity hoặc là placeholder, không trùng code", () => {
+        const codes = MAP_REGISTRY.map((map) => map.code);
+        assert.equal(new Set(codes).size, codes.length);
+        const files = new Set(loadMapFiles().map((map) => map.code));
+        const placeholders = loadMapPlaceholders().map((map) => map.code);
+        for (const code of codes) assert.ok(files.has(code) || placeholders.includes(code), code);
+    });
+
+    it("dungeon phải khai báo level cap, field có level tối thiểu tăng dần theo cốt truyện", () => {
+        for (const map of MAP_REGISTRY.filter((m) => m.type === MapType.DUNGEON)) {
+            assert.ok((map.dungeonMaxLevel ?? 0) > 0, map.code);
+        }
+        const minLevel = (code: string) => MAP_REGISTRY.find((m) => m.code === code)?.minLevel;
+        assert.equal(minLevel("greenfield_plains"), 1);
+        assert.equal(minLevel("whispering_forest"), 10);
+        assert.equal(minLevel("deep_evergrowth"), 20);
+    });
+});
+
 describe("content data", () => {
     it("quest seed hợp lệ theo schema", () => {
         for (const quest of QUESTS) QuestDefinitionSchema.parse(quest);
@@ -256,8 +332,9 @@ describe("content data", () => {
                 conditions: q.conditions ?? [],
             })),
             itemCodes: new Set(["hp_potion_small"]),
-            monsterCodes: new Set(
-                loadMapFiles().flatMap((m) => m.monsterSpawns.map((s) => s.monsterCode))
+            monsterCodes: new Set(MONSTER_DEFINITIONS.map((monster) => monster.code)),
+            dungeonMapCodes: new Set(
+                MAP_REGISTRY.filter((map) => map.type === MapType.DUNGEON).map((map) => map.code)
             ),
         });
         assert.deepEqual(errors, []);
@@ -271,6 +348,7 @@ describe("content data", () => {
             quests: [],
             itemCodes: new Set(),
             monsterCodes: new Set(),
+            dungeonMapCodes: new Set(),
         });
         assert.equal(errors.length, 1);
     });

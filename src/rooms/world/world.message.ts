@@ -87,6 +87,8 @@ export enum WorldMessage {
     QUEST_UPDATE = "questUpdate",
     /** Dấu `!` / `?` trên đầu NPC của riêng player này — cũng dùng cho minimap. */
     NPC_MARKERS = "npcMarkers",
+    /** Chức năng đã mở khoá (quest hero) — gửi lúc vào room và khi mở thêm. */
+    FEATURES = "features",
     /** Chamber vừa dọn xong — cổng exit mở. */
     DUNGEON_CHAMBER_CLEAR = "dungeonChamberClear",
     /** Hạ boss, clear dungeon — sắp bị đưa ra ngoài. */
@@ -406,6 +408,11 @@ export interface DungeonChamberClearMessage {
 export interface DungeonClearMessage {
     /** Giây nữa người chơi bị đưa ra ngoài. */
     leaveInSec: number;
+}
+
+export interface FeaturesMessage {
+    /** Mã chức năng đã mở khoá, vd `guild`, `quest_board`, `daily_quest`, `dungeon`, `next_phase`. */
+    features: string[];
 }
 
 export interface QuestObjectiveMessage {

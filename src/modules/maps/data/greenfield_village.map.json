@@ -367,7 +367,7 @@
             "direction": "right"
         },
         {
-            "npcCode": "cleric_sister",
+            "npcCode": "cleric_trainer",
             "x": 25.33,
             "y": 7.88,
             "direction": "right"
@@ -419,6 +419,18 @@
             "x": 17.01,
             "y": 1.94,
             "direction": "right"
+        },
+        {
+            "npcCode": "researcher",
+            "x": 12.0,
+            "y": 4.9,
+            "direction": "right"
+        },
+        {
+            "npcCode": "alchemist",
+            "x": 29.9,
+            "y": 4.8,
+            "direction": "left"
         }
     ],
     "interactables": [

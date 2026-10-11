@@ -11,7 +11,11 @@ type QuestRules = Pick<Quest, "objectives">;
 
 /** Sự kiện gameplay có thể đẩy tiến độ quest. */
 export interface QuestEvent {
-    type: QuestObjectiveType.KILL | QuestObjectiveType.TALK | QuestObjectiveType.INTERACT;
+    type:
+        | QuestObjectiveType.KILL
+        | QuestObjectiveType.TALK
+        | QuestObjectiveType.INTERACT
+        | QuestObjectiveType.CLEAR_DUNGEON;
     targetCode: string;
     amount?: number;
 }

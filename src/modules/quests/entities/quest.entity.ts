@@ -1,11 +1,12 @@
 import { integer, jsonb, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { Condition } from "@/modules/dialogues/schemas/condition.schema.js";
-import { QuestRepeat } from "@/modules/quests/enums/quest.enum.js";
+import { QuestCategory, QuestRepeat } from "@/modules/quests/enums/quest.enum.js";
 import type { QuestObjective } from "@/modules/quests/schemas/quest.schema.js";
 import type { RewardSpec } from "@/modules/rewards/schemas/reward-spec.schema.js";
 
 export const questRepeatEnum = pgEnum("quest_repeat", QuestRepeat);
+export const questCategoryEnum = pgEnum("quest_category", QuestCategory);
 
 /**
  * Định nghĩa quest. Tên / mô tả / mục tiêu hiển thị tra locale theo `quest.{code}.name|desc` và
@@ -13,6 +14,13 @@ export const questRepeatEnum = pgEnum("quest_repeat", QuestRepeat);
  */
 export const Quests = pgTable("quests", {
     ...baseWithCodeColumns(),
+    category: questCategoryEnum("category").notNull().default(QuestCategory.SIDE),
+    /** Thứ tự trong cùng loại (hero: thứ tự cốt truyện). */
+    sortOrder: integer("sort_order").notNull().default(0),
+    /** Chương cốt truyện (hero). */
+    chapter: integer("chapter").notNull().default(0),
+    /** Chức năng mở khoá khi hoàn thành (ghi flag `unlock.<feature>`). */
+    unlockFeatures: jsonb("unlock_features").$type<string[]>().notNull().default([]),
     requiredLevel: integer("required_level").notNull().default(1),
     prerequisiteQuestCodes: jsonb("prerequisite_quest_codes")
         .$type<string[]>()

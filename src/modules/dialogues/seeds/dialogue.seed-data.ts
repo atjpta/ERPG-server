@@ -1,4 +1,5 @@
 import type { NewDialogue } from "@/modules/dialogues/entities/dialogue.entity.js";
+import { STORY_DIALOGUES } from "@/modules/quests/seeds/quest-content.js";
 
 /**
  * Thoại mẫu. Text không nằm ở đây: client tra locale theo `dialogue.{code}.{nodeId}.text` và
@@ -8,81 +9,6 @@ export const DIALOGUES: NewDialogue[] = [
     {
         code: "elder_default",
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
-    },
-    {
-        code: "elder_slime_offer",
-        nodes: [
-            {
-                id: "start",
-                options: [
-                    {
-                        id: "accept",
-                        hideIfFail: false,
-                        next: "accepted",
-                        actions: [{ type: "start_quest", questCode: "slime_hunt" }],
-                    },
-                    { id: "decline", hideIfFail: false, next: "declined" },
-                ],
-            },
-            { id: "accepted" },
-            { id: "declined" },
-        ],
-    },
-    {
-        code: "elder_quest_progress",
-        nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
-    },
-    {
-        code: "elder_slime_done",
-        nodes: [
-            {
-                id: "start",
-                options: [
-                    {
-                        id: "claim",
-                        hideIfFail: false,
-                        next: "thanks",
-                        actions: [{ type: "complete_quest", questCode: "slime_hunt" }],
-                    },
-                ],
-            },
-            { id: "thanks" },
-        ],
-    },
-    {
-        code: "elder_blacksmith_offer",
-        nodes: [
-            {
-                id: "start",
-                options: [
-                    {
-                        id: "accept",
-                        hideIfFail: false,
-                        next: "accepted",
-                        actions: [{ type: "start_quest", questCode: "meet_blacksmith" }],
-                    },
-                    { id: "decline", hideIfFail: false },
-                ],
-            },
-            { id: "accepted" },
-        ],
-    },
-    {
-        code: "elder_blacksmith_done",
-        nodes: [
-            {
-                id: "start",
-                options: [
-                    {
-                        id: "claim",
-                        hideIfFail: false,
-                        next: "thanks",
-                        actions: [{ type: "complete_quest", questCode: "meet_blacksmith" }],
-                    },
-                ],
-            },
-            { id: "thanks" },
-        ],
     },
     {
         code: "blacksmith_default",
@@ -95,11 +21,6 @@ export const DIALOGUES: NewDialogue[] = [
                         id: "enhance",
                         hideIfFail: false,
                         actions: [{ type: "open_function", function: "enhance" }],
-                    },
-                    {
-                        id: "refine",
-                        hideIfFail: false,
-                        actions: [{ type: "open_function", function: "refine" }],
                     },
                     { id: "bye", hideIfFail: false },
                 ],
@@ -136,12 +57,18 @@ export const DIALOGUES: NewDialogue[] = [
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
-        code: "cleric_sister_default",
+        code: "cleric_trainer_default",
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
         code: "guard_captain_default",
-        nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
+        nodes: [
+            {
+                id: "start",
+                actions: [{ type: "talk" }],
+                options: [{ id: "bye", hideIfFail: false }],
+            },
+        ],
     },
     {
         code: "herbalist_default",
@@ -209,42 +136,25 @@ export const DIALOGUES: NewDialogue[] = [
         nodes: [{ id: "start" }],
     },
     {
-        code: "garrick_offer",
-        nodes: [
-            {
-                id: "start",
-                options: [
-                    {
-                        id: "accept",
-                        hideIfFail: false,
-                        next: "accepted",
-                        actions: [{ type: "start_quest", questCode: "garrick_hunt" }],
-                    },
-                    { id: "decline", hideIfFail: false },
-                ],
-            },
-            { id: "accepted" },
-        ],
-    },
-    {
-        code: "garrick_progress",
+        code: "researcher_default",
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
-        code: "garrick_done",
+        code: "alchemist_default",
         nodes: [
             {
                 id: "start",
                 options: [
                     {
-                        id: "claim",
-                        hideIfFail: false,
-                        next: "thanks",
-                        actions: [{ type: "complete_quest", questCode: "garrick_hunt" }],
+                        id: "refine",
+                        hideIfFail: true,
+                        conditions: [{ type: "flag", key: "unlock.alchemy" }],
+                        actions: [{ type: "open_function", function: "refine" }],
                     },
+                    { id: "bye", hideIfFail: false },
                 ],
             },
-            { id: "thanks" },
         ],
     },
+    ...STORY_DIALOGUES,
 ];

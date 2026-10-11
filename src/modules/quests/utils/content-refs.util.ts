@@ -21,6 +21,8 @@ export interface ContentData {
     >[];
     itemCodes: ReadonlySet<string>;
     monsterCodes: ReadonlySet<string>;
+    /** Code map dungeon (kể cả map placeholder chưa có file Unity) — mục tiêu `clear_dungeon` trỏ vào đây. */
+    dungeonMapCodes: ReadonlySet<string>;
 }
 
 /**
@@ -135,6 +137,9 @@ export const findContentRefErrors = (data: ContentData): string[] => {
                     break;
                 case QuestObjectiveType.INTERACT:
                     need(interactableIds, objective.targetCode, where, "interactable");
+                    break;
+                case QuestObjectiveType.CLEAR_DUNGEON:
+                    need(data.dungeonMapCodes, objective.targetCode, where, "dungeon map");
                     break;
             }
         }

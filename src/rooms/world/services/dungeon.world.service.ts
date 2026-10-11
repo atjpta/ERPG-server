@@ -22,6 +22,8 @@ import type { MonsterWorldState } from "@/rooms/world/schema/monster.world.state
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import { contentWorldService } from "@/rooms/world/services/content.world.service.js";
 import { monsterWorldService } from "@/rooms/world/services/monster.world.service.js";
+import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
+import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
 import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 import {
@@ -360,6 +362,12 @@ export class DungeonWorldService {
         runtime.cleared = true;
         state.cleared = true;
         this.grantToAll(room, runtime.config.clearReward);
+        for (const [sessionId, player] of room.state.players) {
+            questWorldService.onEvent(room, sessionId, player, {
+                type: QuestObjectiveType.CLEAR_DUNGEON,
+                targetCode: room.map.code,
+            });
+        }
         const clear: DungeonClearMessage = { leaveInSec: DUNGEON_LEAVE_DELAY_SEC };
         room.broadcast(WorldMessage.DUNGEON_CLEAR, clear);
         room.clock.setTimeout(() => {

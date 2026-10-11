@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { ConditionSchema } from "@/modules/dialogues/schemas/condition.schema.js";
-import { QuestObjectiveType, QuestRepeat } from "@/modules/quests/enums/quest.enum.js";
+import {
+    QuestCategory,
+    QuestObjectiveType,
+    QuestRepeat,
+} from "@/modules/quests/enums/quest.enum.js";
 import { RewardSpecSchema } from "@/modules/rewards/schemas/reward-spec.schema.js";
 
 const idSchema = z.string().regex(/^[a-z0-9_]+$/);
@@ -23,6 +27,11 @@ export const QuestObjectivesSchema = z
     });
 
 export const QuestDefinitionSchema = z.object({
+    category: z.enum(QuestCategory).default(QuestCategory.SIDE),
+    sortOrder: z.number().int().nonnegative().default(0),
+    chapter: z.number().int().nonnegative().default(0),
+    /** Chức năng mở khoá khi hoàn thành, vd `guild`, `quest_board`, `next_phase`. */
+    unlockFeatures: z.array(z.string().regex(/^[a-z0-9_]+$/)).default([]),
     requiredLevel: z.number().int().positive().default(1),
     prerequisiteQuestCodes: z.array(z.string()).default([]),
     /** Rỗng = mọi class. */

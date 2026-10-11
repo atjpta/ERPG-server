@@ -17,10 +17,12 @@ import { contentWorldService } from "@/rooms/world/services/content.world.servic
 import { inventoryWorldService } from "@/rooms/world/services/inventory.world.service.js";
 import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
+import { unlockedFeatures, unlockFlagKey } from "@/modules/quests/utils/unlock.util.js";
 import { worldEvents } from "@/rooms/world/utils/world-events.js";
 import {
     NpcMarker,
     WorldMessage,
+    type FeaturesMessage,
     type NpcMarkersMessage,
     type QuestListMessage,
     type QuestMessage,
@@ -100,8 +102,15 @@ export class QuestWorldService {
         client.send(WorldMessage.NPC_MARKERS, message);
     }
 
+    /** Chức năng đã mở khoá (từ quest hero) — client bật/tắt menu tương ứng. */
+    sendFeatures(client: PlayerClient, player: PlayerWorldState) {
+        const message: FeaturesMessage = { features: unlockedFeatures(player.flags) };
+        client.send(WorldMessage.FEATURES, message);
+    }
+
     /** Vào room: gửi quest đang làm + dấu NPC. */
     sendInitial(room: WorldRoom, client: PlayerClient, player: PlayerWorldState) {
+        this.sendFeatures(client, player);
         this.sendList(client, player);
         this.sendMarkers(room, client, player);
     }
@@ -154,10 +163,12 @@ export class QuestWorldService {
         }
         entry.status = "completed";
         entry.completedAt = DateTime.now().toISO()!;
+        for (const feature of quest.unlockFeatures) player.flags[unlockFlagKey(feature)] = true;
         rewardWorldService.grant(room, client.sessionId, player, reward);
 
         this.sendUpdate(client, player, quest);
         this.sendMarkers(room, client, player);
+        if (quest.unlockFeatures.length > 0) this.sendFeatures(client, player);
         inventoryWorldService.send(client, player);
         void worldService.savePlayer(room, client.sessionId);
         return undefined;

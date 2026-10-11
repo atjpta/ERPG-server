@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
-import {
-    MonsterType,
-    RANDOM_MONSTER_TYPE,
-} from "@/modules/monsters/enums/monster-type.enum.js";
+import { MonsterType, RANDOM_MONSTER_TYPE } from "@/modules/monsters/enums/monster-type.enum.js";
 import { DEFAULT_MONSTER_SPAWN_CONFIG } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { MonsterSpawnConfigSchema } from "@/modules/monsters/schemas/monster-spawn-config.schema.js";
 import {
@@ -74,7 +71,10 @@ describe("monster-spawn.util — scaleDropsToLevel", () => {
 
     it("level thấp hơn → exp và tiền giảm theo tỉ lệ", () => {
         const scaled = scaleDropsToLevel(drops, 10, 5);
-        assert.equal(scaled.exp, Math.floor(drops.exp * (monsterExpAtLevel(5) / monsterExpAtLevel(10))));
+        assert.equal(
+            scaled.exp,
+            Math.floor(drops.exp * (monsterExpAtLevel(5) / monsterExpAtLevel(10)))
+        );
         assert.deepEqual(scaled.currency[0], { code: "gold", min: 5, max: 50 });
     });
 });
