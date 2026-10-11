@@ -11,7 +11,7 @@ Mọi nội dung là **data** — thêm mới không sửa code. Server chỉ g�
 | Thoại                   | `dialogue.{code}.{nodeId}.text`, `dialogue.{code}.{nodeId}.opt.{optionId}` |
 
 Node/option có `textKey` riêng thì dùng key đó. `yarn config:export` xuất `locale-keys.json` (mọi key cần dịch),
-`content.json` (NPC, thoại, quest) và `skills.json` sang `Resources/Config` của Unity.
+`content.json` (NPC, thoại, quest) sang `Assets/ERPG/ServerData` (chỉ Editor dùng, không vào build) và `skills.json` sang `Resources/Config` của Unity.
 
 ## Thêm map
 
