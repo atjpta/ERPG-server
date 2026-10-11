@@ -1,5 +1,5 @@
 {
-    "id": "250b240b-31fd-499c-b4d0-7b27267c67ca",
+    "id": "eab2fa8f-791a-49a2-86e9-c9061689163a",
     "prevId": "00000000-0000-0000-0000-000000000000",
     "version": "7",
     "dialect": "postgresql",
@@ -229,6 +229,13 @@
                     "primaryKey": false,
                     "notNull": true
                 },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
                 "name": {
                     "name": "name",
                     "type": "text",
@@ -319,57 +326,6 @@
                     "primaryKey": false,
                     "notNull": true,
                     "default": "'active'"
-                },
-                "level": {
-                    "name": "level",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "default": 1
-                },
-                "exp": {
-                    "name": "exp",
-                    "type": "bigint",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "default": 0
-                },
-                "hp": {
-                    "name": "hp",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true
-                },
-                "mp": {
-                    "name": "mp",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true
-                },
-                "map_code": {
-                    "name": "map_code",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true
-                },
-                "x": {
-                    "name": "x",
-                    "type": "real",
-                    "primaryKey": false,
-                    "notNull": true
-                },
-                "y": {
-                    "name": "y",
-                    "type": "real",
-                    "primaryKey": false,
-                    "notNull": true
-                },
-                "direction": {
-                    "name": "direction",
-                    "type": "direction",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "default": "'down'"
                 },
                 "ban_reason": {
                     "name": "ban_reason",
@@ -694,6 +650,276 @@
             "checkConstraints": {},
             "isRLSEnabled": false
         },
+        "public.classes": {
+            "name": "classes",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "tier": {
+                    "name": "tier",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 1
+                },
+                "next_class_codes": {
+                    "name": "next_class_codes",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "next_class_required_level": {
+                    "name": "next_class_required_level",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "base_attributes": {
+                    "name": "base_attributes",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "base_stats": {
+                    "name": "base_stats",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{}'::jsonb"
+                },
+                "stat_bonuses": {
+                    "name": "stat_bonuses",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "skills": {
+                    "name": "skills",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "classes_code_unique": {
+                    "name": "classes_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.dialogues": {
+            "name": "dialogues",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "nodes": {
+                    "name": "nodes",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "dialogues_code_unique": {
+                    "name": "dialogues_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.items": {
+            "name": "items",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "type": {
+                    "name": "type",
+                    "type": "item_type",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "rarity": {
+                    "name": "rarity",
+                    "type": "item_rarity",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'common'"
+                },
+                "required_level": {
+                    "name": "required_level",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 1
+                },
+                "stackable": {
+                    "name": "stackable",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": false
+                },
+                "max_stack": {
+                    "name": "max_stack",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 1
+                },
+                "sell_price": {
+                    "name": "sell_price",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "metadata": {
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{}'::jsonb"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "items_code_unique": {
+                    "name": "items_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
         "public.game_maps": {
             "name": "game_maps",
             "schema": "",
@@ -723,6 +949,13 @@
                     "type": "text",
                     "primaryKey": false,
                     "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
                 },
                 "name": {
                     "name": "name",
@@ -788,6 +1021,68 @@
                     "primaryKey": false,
                     "notNull": true,
                     "default": false
+                },
+                "min_level": {
+                    "name": "min_level",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 1
+                },
+                "layout_ready": {
+                    "name": "layout_ready",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "dungeon": {
+                    "name": "dungeon",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "monster_spawns": {
+                    "name": "monster_spawns",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "spawn_points": {
+                    "name": "spawn_points",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "colliders": {
+                    "name": "colliders",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "content_hash": {
+                    "name": "content_hash",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "''"
+                },
+                "npcs": {
+                    "name": "npcs",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "interactables": {
+                    "name": "interactables",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
                 }
             },
             "indexes": {},
@@ -861,6 +1156,701 @@
             "policies": {},
             "checkConstraints": {},
             "isRLSEnabled": false
+        },
+        "public.monsters": {
+            "name": "monsters",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "level": {
+                    "name": "level",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 1
+                },
+                "attack_cooldown_ms": {
+                    "name": "attack_cooldown_ms",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "hitbox": {
+                    "name": "hitbox",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"width\":0.47,\"height\":0.56,\"offsetX\":0,\"offsetY\":-0.3}'::jsonb"
+                },
+                "collider": {
+                    "name": "collider",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"width\":0.31,\"height\":0.12,\"offsetX\":0,\"offsetY\":-0.08}'::jsonb"
+                },
+                "skills": {
+                    "name": "skills",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "biome": {
+                    "name": "biome",
+                    "type": "biome",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'slime'"
+                },
+                "stats": {
+                    "name": "stats",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{}'::jsonb"
+                },
+                "drops": {
+                    "name": "drops",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"currency\":[],\"items\":[],\"exp\":0}'::jsonb"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "monsters_code_unique": {
+                    "name": "monsters_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.npcs": {
+            "name": "npcs",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "collider_width": {
+                    "name": "collider_width",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0.8
+                },
+                "collider_height": {
+                    "name": "collider_height",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0.4
+                },
+                "interact_radius": {
+                    "name": "interact_radius",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 2
+                },
+                "default_dialogue_code": {
+                    "name": "default_dialogue_code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "dialogue_rules": {
+                    "name": "dialogue_rules",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "functions": {
+                    "name": "functions",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "npcs_code_unique": {
+                    "name": "npcs_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.player_states": {
+            "name": "player_states",
+            "schema": "",
+            "columns": {
+                "player_id": {
+                    "name": "player_id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "class_id": {
+                    "name": "class_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "level": {
+                    "name": "level",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 1
+                },
+                "exp": {
+                    "name": "exp",
+                    "type": "bigint",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "map_code": {
+                    "name": "map_code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "x": {
+                    "name": "x",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "y": {
+                    "name": "y",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "direction": {
+                    "name": "direction",
+                    "type": "direction",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'down'"
+                },
+                "hp": {
+                    "name": "hp",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "mp": {
+                    "name": "mp",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "hitbox": {
+                    "name": "hitbox",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"width\":0.44,\"height\":0.63,\"offsetX\":0,\"offsetY\":-0.34}'::jsonb"
+                },
+                "collider": {
+                    "name": "collider",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"width\":0.34,\"height\":0.12,\"offsetX\":0,\"offsetY\":-0.08}'::jsonb"
+                },
+                "skills": {
+                    "name": "skills",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "wallet": {
+                    "name": "wallet",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"gold\":{\"balance\":0,\"totalEarned\":0,\"totalSpent\":0},\"gem\":{\"balance\":0,\"totalEarned\":0,\"totalSpent\":0}}'::jsonb"
+                },
+                "equipment_inventory": {
+                    "name": "equipment_inventory",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "consumable_inventory": {
+                    "name": "consumable_inventory",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "material_inventory": {
+                    "name": "material_inventory",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "equipments": {
+                    "name": "equipments",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"main_hand\":null,\"off_hand\":null,\"head\":null,\"armor\":null,\"shoulder\":null,\"gloves\":null,\"boots\":null,\"belt\":null,\"necklace\":null,\"earring_1\":null,\"earring_2\":null,\"ring_1\":null,\"ring_2\":null,\"back\":null}'::jsonb"
+                },
+                "attribute_points": {
+                    "name": "attribute_points",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "skill_points": {
+                    "name": "skill_points",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "allocated_attributes": {
+                    "name": "allocated_attributes",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{\"strength\":0,\"dexterity\":0,\"intelligence\":0,\"vitality\":0,\"luck\":0}'::jsonb"
+                },
+                "flags": {
+                    "name": "flags",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{}'::jsonb"
+                },
+                "quests": {
+                    "name": "quests",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{}'::jsonb"
+                },
+                "daily_quests": {
+                    "name": "daily_quests",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "last_town_map_code": {
+                    "name": "last_town_map_code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "dungeon_session": {
+                    "name": "dungeon_session",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "revision": {
+                    "name": "revision",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "player_states_player_id_players_id_fk": {
+                    "name": "player_states_player_id_players_id_fk",
+                    "tableFrom": "player_states",
+                    "tableTo": "players",
+                    "columnsFrom": ["player_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "player_states_class_id_classes_id_fk": {
+                    "name": "player_states_class_id_classes_id_fk",
+                    "tableFrom": "player_states",
+                    "tableTo": "classes",
+                    "columnsFrom": ["class_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "restrict",
+                    "onUpdate": "no action"
+                },
+                "player_states_map_code_game_maps_code_fk": {
+                    "name": "player_states_map_code_game_maps_code_fk",
+                    "tableFrom": "player_states",
+                    "tableTo": "game_maps",
+                    "columnsFrom": ["map_code"],
+                    "columnsTo": ["code"],
+                    "onDelete": "restrict",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.quests": {
+            "name": "quests",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "category": {
+                    "name": "category",
+                    "type": "quest_category",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'side'"
+                },
+                "sort_order": {
+                    "name": "sort_order",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "chapter": {
+                    "name": "chapter",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "unlock_features": {
+                    "name": "unlock_features",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "required_level": {
+                    "name": "required_level",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 1
+                },
+                "prerequisite_quest_codes": {
+                    "name": "prerequisite_quest_codes",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "class_codes": {
+                    "name": "class_codes",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "giver_npc_code": {
+                    "name": "giver_npc_code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "turn_in_npc_code": {
+                    "name": "turn_in_npc_code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "repeat": {
+                    "name": "repeat",
+                    "type": "quest_repeat",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'none'"
+                },
+                "objectives": {
+                    "name": "objectives",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "rewards": {
+                    "name": "rewards",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "conditions": {
+                    "name": "conditions",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "quests_code_unique": {
+                    "name": "quests_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.skills": {
+            "name": "skills",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "enabled": {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": true
+                },
+                "skill_type": {
+                    "name": "skill_type",
+                    "type": "skill_type",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "target_type": {
+                    "name": "target_type",
+                    "type": "target_type",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'NONE'"
+                },
+                "cast_range": {
+                    "name": "cast_range",
+                    "type": "real",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "cast_time_ms": {
+                    "name": "cast_time_ms",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "cooldown_ms": {
+                    "name": "cooldown_ms",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "mana_cost": {
+                    "name": "mana_cost",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "stamina_cost": {
+                    "name": "stamina_cost",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 0
+                },
+                "max_level": {
+                    "name": "max_level",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": 10
+                },
+                "basic_attack": {
+                    "name": "basic_attack",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": false
+                },
+                "level_config": {
+                    "name": "level_config",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                },
+                "skill_hit_events": {
+                    "name": "skill_hit_events",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'[]'::jsonb"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "skills_code_unique": {
+                    "name": "skills_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
         }
     },
     "enums": {
@@ -889,11 +1879,6 @@
             "schema": "public",
             "values": ["online", "maintenance", "full", "offline", "hidden"]
         },
-        "public.direction": {
-            "name": "direction",
-            "schema": "public",
-            "values": ["up", "down", "left", "right"]
-        },
         "public.player_status": {
             "name": "player_status",
             "schema": "public",
@@ -914,6 +1899,16 @@
             "schema": "public",
             "values": ["active", "inactive", "banned", "deleted"]
         },
+        "public.item_rarity": {
+            "name": "item_rarity",
+            "schema": "public",
+            "values": ["common", "good", "rare", "epic", "legendary"]
+        },
+        "public.item_type": {
+            "name": "item_type",
+            "schema": "public",
+            "values": ["equipment", "consumable", "material"]
+        },
         "public.map_status": {
             "name": "map_status",
             "schema": "public",
@@ -927,7 +1922,67 @@
         "public.master_data_key": {
             "name": "master_data_key",
             "schema": "public",
-            "values": ["auth_session_config", "player_config"]
+            "values": [
+                "auth_session_config",
+                "player_config",
+                "level_config",
+                "equipment_stat_config",
+                "equipment_set_config",
+                "equipment_enhance_config",
+                "equipment_refine_config",
+                "equipment_disassemble_config",
+                "equipment_drop_config",
+                "monster_scale_config",
+                "monster_level_config",
+                "monster_spawn_config",
+                "daily_quest_config"
+            ]
+        },
+        "public.biome": {
+            "name": "biome",
+            "schema": "public",
+            "values": ["starter", "slime", "werewolf", "werebear"]
+        },
+        "public.direction": {
+            "name": "direction",
+            "schema": "public",
+            "values": ["up", "down", "left", "right"]
+        },
+        "public.quest_category": {
+            "name": "quest_category",
+            "schema": "public",
+            "values": ["hero", "side", "daily"]
+        },
+        "public.quest_repeat": {
+            "name": "quest_repeat",
+            "schema": "public",
+            "values": ["none", "daily", "infinite"]
+        },
+        "public.skill_owner_type": {
+            "name": "skill_owner_type",
+            "schema": "public",
+            "values": ["MONSTER", "CLASS"]
+        },
+        "public.skill_type": {
+            "name": "skill_type",
+            "schema": "public",
+            "values": [
+                "MELEE",
+                "PROJECTILE",
+                "GROUND",
+                "AOE",
+                "BUFF",
+                "DEBUFF",
+                "HEAL",
+                "SUMMON",
+                "DASH",
+                "PASSIVE"
+            ]
+        },
+        "public.target_type": {
+            "name": "target_type",
+            "schema": "public",
+            "values": ["NONE", "SELF", "TARGET", "POSITION", "DIRECTION", "ALLY", "ENEMY"]
         }
     },
     "schemas": {},

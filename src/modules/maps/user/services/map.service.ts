@@ -10,7 +10,8 @@ export class MapService {
     async listActive() {
         const maps = await GameMapRepo.findActive();
         return maps.map(
-            ({ colliders, npcs, interactables, spawnPoints, monsterSpawns, ...summary }) => summary
+            ({ colliders, npcs, interactables, spawnPoints, monsterSpawns, dungeon, ...summary }) =>
+                summary
         );
     }
 
@@ -25,6 +26,7 @@ export class MapService {
             width: map.width,
             height: map.height,
             tileSize: map.tileSize,
+            minLevel: map.minLevel,
             contentHash: map.contentHash,
             spawnPoints: map.spawnPoints,
             colliders: map.colliders,

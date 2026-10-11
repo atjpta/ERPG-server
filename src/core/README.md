@@ -131,6 +131,10 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
 - `world` room — 1 room = 1 kênh của 1 map (`filterBy(["mapCode"])`), reconnect 20s khi rớt mạng,
   checkpoint state mỗi 30 giây và lưu lần cuối khi rời. Save dùng optimistic check qua `player_states.revision`
   để checkpoint cũ không ghi đè admin edit hoặc state mới hơn.
+- `dungeon` room — cùng class `WorldRoom`, `filterBy(["instanceId"])`: mỗi lượt vào dungeon là 1 instance riêng.
+  `DungeonWorldService` chạy chuỗi chamber (phase quái theo giây, bộ đếm quái, cổng exit khoá, boss ở chamber cuối);
+  vào dungeon lưu `player_states.dungeon_session` (chỗ đứng cũ + `instanceId`), thoát về đúng chỗ cũ, chết thì
+  hồi sinh ở `last_town_map_code`. Không có hồi sinh quái trong dungeon.
 - `auth.players` giữ identity, server, tên, trạng thái ban và lần chơi cuối; module `player` sở hữu
   `player_states` (level/exp, HP/MP, map, tọa độ, hướng). Tạo hai bản ghi trong cùng transaction,
   ghép lại trong `PlayerService` để giữ response hiện có; migration backfill dữ liệu cũ.

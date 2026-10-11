@@ -1,1 +1,0 @@
-ALTER TABLE "monsters" DROP COLUMN "name";

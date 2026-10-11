@@ -56,14 +56,30 @@ Server giữ phiên thoại; client chỉ gửi `optionId` và server **kiểm l
 `modules/quests/seeds/quest.seed-data.ts` (hoặc `POST /admin/quests`): `giverNpcCode`, `turnInNpcCode`, `requiredLevel`,
 `prerequisiteQuestCodes`, `repeat` (`none|daily|infinite`), `objectives` (`kill|collect|talk|interact`), `rewards` (item theo code).
 
+Phân loại: `category` = `hero` (đỏ, cốt truyện, `chapter`, `unlockFeatures`) / `side` (vàng) / `daily` (xanh lá, sinh động).
+Mục tiêu `clear_dungeon` (`targetCode` = code map dungeon) tính khi hạ boss chamber cuối. Hoàn thành quest có `unlockFeatures`
+thì ghi flag `unlock.<feature>` (dùng điều kiện `flag` trong thoại/portal) và gửi message `features`.
+
+Quest hero/side viết gọn trong `modules/quests/seeds/quest-content.ts` (1 dòng/quest): từ đó sinh quest + 3 thoại
+`{code}_offer|progress|done` + rule thoại của NPC (`questDialogueRules(npcCode)`). Chuỗi hero hiện tại:
+`adventurer_registration → first_hunt → strange_mana → shadows_of_the_forest → werewolf_den → into_the_evergrowth →
+sanctuary_of_life → road_to_the_city`.
+
+**Quest hằng ngày** (`daily_kill`, `daily_dungeon`, `daily_collect`): không nằm trong bảng `quests`. Lần đầu vào room trong ngày
+(sau khi mở khoá `daily_quest` bằng quest đăng ký mạo hiểm giả) server xoá bộ cũ và sinh bộ mới theo level hiện tại từ master data
+`daily_quest_config` (bậc level, giờ reset, thưởng/level), lưu ở `player_states.daily_quests`. Nhận thưởng tại `guild_officer`
+(thoại `daily_claim`).
+
 Nhận/trả quest không có code riêng: viết dialogue có action `start_quest` / `complete_quest` và rule ở NPC
 (thứ tự ưu tiên thường là: trả > đang làm > nhận). Tiến độ lưu ở `player_states.quests` cùng checkpoint với túi đồ;
 trả quest cần còn chỗ túi cho thưởng (không thì báo lỗi, quest giữ nguyên).
 
 ## Message realtime (room `world`)
 
-Client → server: `interact {id}`, `interactNpc {npcCode}`, `dialogueChoose {optionId}` (rỗng = tiếp tục), `dialogueClose`, `questList`, `questAbandon {questCode}`.
-Server → client: `interactResult`, `dialogue`, `dialogueEnd`, `npcFunctionOpen`, `mapChange`, `questList`, `questUpdate`, `npcMarkers` (dấu `!`/`?` + minimap).
+Client → server: `interact {id}`, `interactNpc {npcCode}`, `dialogueChoose {optionId}` (rỗng = tiếp tục), `dialogueClose`, `questList`, `questPreview {questCode}`, `questAbandon {questCode}`, `dungeonLeave`.
+Server → client: `interactResult` (lỗi chuyển map: `level_too_low`, `map_not_open`, `exit_locked`), `dialogue` (kèm `offerQuestCodes`), `dialogueEnd`, `npcFunctionOpen`,
+`mapChange {mapCode, spawnId, roomName, instanceId?}` (`roomName = "dungeon"` thì join room `dungeon` với option `{mapCode, instanceId}`), `questList`, `questUpdate`, `questPreview`,
+`npcMarkers` (dấu `!`/`?` + `category` + minimap), `questTargets` (chữ Q), `features`, `dungeonChamberClear`, `dungeonClear`; state `dungeon` (HUD chamber/phase/bộ đếm quái).
 
 ## Minimap
 
