@@ -332,7 +332,7 @@ describe("content data", () => {
                 rewards: q.rewards,
                 conditions: q.conditions ?? [],
             })),
-            itemCodes: new Set(["hp_potion_small"]),
+            itemCodes: new Set(["hp_potion_small", "spirit"]),
             monsterCodes: new Set(MONSTER_DEFINITIONS.map((monster) => monster.code)),
             dungeonDrops: DEFAULT_DUNGEON_DROP_CONFIG,
             dungeonMapCodes: new Set(

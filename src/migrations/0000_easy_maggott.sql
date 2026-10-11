@@ -11,7 +11,7 @@ CREATE TYPE "public"."item_rarity" AS ENUM('common', 'good', 'rare', 'epic', 'le
 CREATE TYPE "public"."item_type" AS ENUM('equipment', 'consumable', 'material');--> statement-breakpoint
 CREATE TYPE "public"."map_status" AS ENUM('active', 'inactive');--> statement-breakpoint
 CREATE TYPE "public"."map_type" AS ENUM('town', 'field', 'dungeon');--> statement-breakpoint
-CREATE TYPE "public"."master_data_key" AS ENUM('auth_session_config', 'player_config', 'level_config', 'equipment_stat_config', 'equipment_set_config', 'equipment_enhance_config', 'equipment_refine_config', 'equipment_disassemble_config', 'equipment_drop_config', 'monster_scale_config', 'monster_level_config', 'monster_spawn_config', 'daily_quest_config');--> statement-breakpoint
+CREATE TYPE "public"."master_data_key" AS ENUM('auth_session_config', 'player_config', 'level_config', 'equipment_stat_config', 'equipment_set_config', 'equipment_enhance_config', 'equipment_refine_config', 'equipment_disassemble_config', 'equipment_drop_config', 'monster_scale_config', 'monster_level_config', 'monster_spawn_config', 'daily_quest_config', 'dungeon_drop_config');--> statement-breakpoint
 CREATE TYPE "public"."biome" AS ENUM('starter', 'slime', 'werewolf', 'werebear');--> statement-breakpoint
 CREATE TYPE "public"."direction" AS ENUM('up', 'down', 'left', 'right');--> statement-breakpoint
 CREATE TYPE "public"."quest_category" AS ENUM('hero', 'side', 'daily');--> statement-breakpoint

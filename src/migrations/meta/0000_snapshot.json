@@ -1,5 +1,5 @@
 {
-    "id": "eab2fa8f-791a-49a2-86e9-c9061689163a",
+    "id": "bad697b4-4e65-41ff-a4f0-db64357a0e70",
     "prevId": "00000000-0000-0000-0000-000000000000",
     "version": "7",
     "dialect": "postgresql",
@@ -1935,7 +1935,8 @@
                 "monster_scale_config",
                 "monster_level_config",
                 "monster_spawn_config",
-                "daily_quest_config"
+                "daily_quest_config",
+                "dungeon_drop_config"
             ]
         },
         "public.biome": {
