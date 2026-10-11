@@ -319,6 +319,21 @@ export class DungeonWorldService {
         state.phaseIndex = 0;
         state.exitOpen = false;
         state.monsterLevel = runtime.monsterLevel;
+        this.refreshGates(room);
+    }
+
+    /** Cổng chắn của chamber hiện tại chặn đường tới khi dọn xong; chamber khác / đã dọn thì không có cổng nào. */
+    private refreshGates(room: WorldRoom): void {
+        const runtime = room.dungeon!;
+        const chamber = runtime.config.chambers[runtime.chamberIndex];
+        const gates = runtime.chamberCleared
+            ? []
+            : [chamber.entryGate, chamber.exitGate].filter((gate) => gate !== undefined);
+        room.dungeonBounds = {
+            width: room.map.width,
+            height: room.map.height,
+            colliders: [...room.map.colliders, ...gates],
+        };
     }
 
     private async spawnPhase(room: WorldRoom, chamber: DungeonChamber): Promise<void> {
@@ -348,6 +363,7 @@ export class DungeonWorldService {
         const state = room.state.dungeon!;
         runtime.chamberCleared = true;
         state.exitOpen = true;
+        this.refreshGates(room);
         this.grantToAll(room, chamber.clearReward);
         const exit = room.state.interactables.find((it) => it.id === exitId(chamber));
         if (exit) exit.active = true;

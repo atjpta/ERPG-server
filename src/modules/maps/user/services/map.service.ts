@@ -30,6 +30,13 @@ export class MapService {
             contentHash: map.contentHash,
             spawnPoints: map.spawnPoints,
             colliders: map.colliders,
+            /** Dungeon: cổng chắn của từng chamber (client vẽ prefab và dự đoán va chạm cùng dữ liệu). */
+            gateCode: map.dungeon?.gateCode ?? "",
+            chambers: (map.dungeon?.chambers ?? []).map((chamber) => ({
+                id: chamber.id,
+                ...(chamber.entryGate ? { entryGate: chamber.entryGate } : {}),
+                ...(chamber.exitGate ? { exitGate: chamber.exitGate } : {}),
+            })),
             /** Monster có thể xuất hiện trong map — client tải trước prefab của chúng. */
             monsterCodes: [...new Set(map.monsterSpawns.map((spawn) => spawn.monsterCode))],
             npcs: map.npcs.map((placement) => {
@@ -45,6 +52,7 @@ export class MapService {
                 id: it.id,
                 type: it.type,
                 code: it.code,
+                direction: it.direction,
                 x: it.x,
                 y: it.y,
                 radius: it.radius,

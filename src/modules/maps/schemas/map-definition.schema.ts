@@ -3,6 +3,7 @@ import { ConditionSchema } from "@/modules/dialogues/schemas/condition.schema.js
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MapSpawnKind } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
+import { GateCode } from "@/modules/maps/enums/gate-code.enum.js";
 import { InteractableCode } from "@/modules/maps/enums/interactable-code.enum.js";
 import { MonsterType, RANDOM_MONSTER_TYPE } from "@/modules/monsters/enums/monster-type.enum.js";
 import { RewardSpecSchema } from "@/modules/rewards/schemas/reward-spec.schema.js";
@@ -48,7 +49,6 @@ const NpcSlotSchema = z.object({
     /** Id slot trong map (Unity đặt vị trí theo id này). */
     id: idSchema,
     npcCode: z.string().min(1),
-    direction: z.enum(["left", "right"]).default("right"),
 });
 
 const interactableBase = {
@@ -99,6 +99,8 @@ export const DungeonDefSchema = z
         maxLevel: level,
         timeLimitSec: z.number().int().positive().optional(),
         clearReward: RewardSpecSchema.optional(),
+        /** Diện mạo cổng chắn mỗi chamber (client chọn prefab theo code). Bỏ trống = không có cổng. */
+        gateCode: z.enum(GateCode).optional(),
         chambers: z.array(DungeonChamberDefSchema).min(1),
     })
     .superRefine((dungeon, ctx) => {

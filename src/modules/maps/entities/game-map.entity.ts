@@ -72,8 +72,11 @@ export interface DungeonPhase {
 export interface DungeonChamber {
     id: string;
     bounds: DungeonRect;
-    /** Chỗ đặt player khi vào chamber (chamber đầu = nơi vào dungeon). */
+    /** Chỗ đặt player khi vào chamber (chamber đầu = spawn `default` của dungeon, không cần khai trong layout). */
     entry: { x: number; y: number };
+    /** Cổng chắn sau lưng chỗ vào và trước lối ra: chặn đường tới khi chamber dọn xong. */
+    entryGate?: DungeonRect;
+    exitGate?: DungeonRect;
     phases: DungeonPhase[];
     /** Cổng sang chamber kế — khoá tới khi chamber hoàn thành; chamber boss không có. */
     exit?: { x: number; y: number; radius: number };
@@ -85,6 +88,8 @@ export interface DungeonConfig {
     /** Level quái = ceil(trung bình level người trong instance), tối đa giá trị này. */
     maxLevel: number;
     timeLimitSec?: number;
+    /** Diện mạo cổng chắn (client chọn prefab). */
+    gateCode?: string;
     chambers: DungeonChamber[];
     /** Thưởng khi clear chamber boss. */
     clearReward?: RewardSpec;
@@ -118,6 +123,8 @@ interface MapInteractableBase {
     radius: number;
     /** Diện mạo (client map sang prefab); bỏ trống = vẽ mặc định. */
     code?: InteractableCode;
+    /** Hướng mũi tên của portal (layout Unity chọn). */
+    direction?: "up" | "down" | "left" | "right";
     conditions?: Condition[];
 }
 

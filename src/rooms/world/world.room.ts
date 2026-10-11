@@ -33,6 +33,7 @@ import {
     QuestListWorldCommand,
     QuestPreviewWorldCommand,
 } from "@/rooms/world/commands/content.world.command.js";
+import type { MoveBounds } from "@/rooms/world/simulation/movement.step.js";
 import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.service.js";
 import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
@@ -130,6 +131,13 @@ export class WorldRoom extends BasePlayerRoom<{
     map!: GameMap;
     /** Chỉ có ở room dungeon. */
     dungeon?: DungeonRuntime;
+    /** Dungeon: map + cổng chắn của chamber đang chơi (đổi khi vào / dọn xong chamber). */
+    dungeonBounds?: MoveBounds;
+
+    /** Vùng chặn hiệu lực để di chuyển: địa hình của map, cộng cổng chắn khi đang ở dungeon. */
+    get moveBounds(): MoveBounds {
+        return this.dungeonBounds ?? this.map;
+    }
     rewind!: Rewind;
     private readonly leavingSessions = new Set<string>();
 

@@ -153,7 +153,7 @@ export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
                     ? getAttackApproachMove(room, state)
                     : undefined;
             if (approach) {
-                applyWorldMove(state, approach, room.map, dt, 1, 4);
+                applyWorldMove(state, approach, room.moveBounds, dt, 1, 4);
                 context.approachingAttack = true;
                 return WorldChainResult.CONTINUE;
             }
@@ -161,7 +161,7 @@ export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
             state.moving = false;
             return WorldChainResult.CONTINUE;
         }
-        applyWorldMove(state, move, room.map, dt, state.dashing ? 2 : 1, 4);
+        applyWorldMove(state, move, room.moveBounds, dt, state.dashing ? 2 : 1, 4);
         return WorldChainResult.CONTINUE;
     }
 }

@@ -1,8 +1,3 @@
-# TODO phía Unity client
-
-Server đã xong phần dưới; client chưa làm gì trong file này. Mỗi mục ghi **dữ liệu/message server cung cấp** và **việc client phải làm**.
-Sau khi pull server: `yarn schema:generate` (C# schema/message mới), `yarn config:export` (content.json, locale-keys.json, monster/class/interactable codes).
-
 ## 0. Việc chung đầu tiên
 
 - [ ] Chạy `yarn schema:generate` rồi sửa lỗi compile do đổi tên/thêm kiểu:

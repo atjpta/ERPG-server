@@ -5,6 +5,15 @@ const tile = z.number().min(0);
 const point = { x: tile, y: tile };
 
 const PositionedSchema = z.object({ id: idSchema, ...point });
+/** Vật thể tương tác: vị trí + hướng mũi tên của portal (Unity chọn ở marker; bỏ trống = client tự suy ra). */
+const InteractablePlacementSchema = PositionedSchema.extend({
+    direction: z.enum(["up", "down", "left", "right"]).optional(),
+});
+const GateRectSchema = z.object({ ...point, w: z.number().positive(), h: z.number().positive() });
+/** NPC: vị trí + hướng nhìn — hướng do Unity chọn ở marker slot, không nằm trong định nghĩa. */
+const NpcPlacementSchema = PositionedSchema.extend({
+    direction: z.enum(["left", "right"]).default("right"),
+});
 
 /**
  * File `<mapCode>.map.json` do Unity export — **chỉ vị trí và hình học**: kích thước map, vị trí các marker
@@ -25,9 +34,9 @@ export const MapLayoutSchema = z
             .default([]),
         /** Vị trí marker nhóm quái (id = `markerId` của nhóm trong định nghĩa). */
         monsters: z.array(PositionedSchema).default([]),
-        /** Vị trí slot NPC (id = id slot trong định nghĩa). */
-        npcs: z.array(PositionedSchema).default([]),
-        interactables: z.array(PositionedSchema).default([]),
+        /** Vị trí và hướng nhìn của slot NPC (id = id slot trong định nghĩa). */
+        npcs: z.array(NpcPlacementSchema).default([]),
+        interactables: z.array(InteractablePlacementSchema).default([]),
         /** Dungeon: hình học từng chamber. */
         chambers: z
             .array(
@@ -38,7 +47,11 @@ export const MapLayoutSchema = z
                         w: z.number().positive(),
                         h: z.number().positive(),
                     }),
-                    entry: z.object(point),
+                    /** Chamber đầu không cần: người chơi vào ở spawn `default` của dungeon. */
+                    entry: z.object(point).optional(),
+                    /** Cổng chắn phía sau chỗ vào / phía trước lối ra: khoá (chặn đường) tới khi dọn hết quái. */
+                    entryGate: GateRectSchema.optional(),
+                    exitGate: GateRectSchema.optional(),
                     exit: z.object(point).optional(),
                 })
             )

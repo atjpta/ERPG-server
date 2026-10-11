@@ -29,8 +29,8 @@ Toạ độ theo **tile**, gốc trên-trái, y hướng xuống (server). Unity
     "spawnPoints": [{ "id": "default", "x": 16.5, "y": 4 }],
     "colliders": [{ "x": 0, "y": 0, "w": 56, "h": 1 }],
     "monsters": [{ "id": "g01", "x": 7.43, "y": 13.99 }],
-    "npcs": [{ "id": "npc_blacksmith", "x": 32.5, "y": 7.9 }],
-    "interactables": [{ "id": "to_village", "x": 16.5, "y": 2 }],
+    "npcs": [{ "id": "npc_blacksmith", "x": 32.5, "y": 7.9, "direction": "left" }],
+    "interactables": [{ "id": "to_village", "x": 16.5, "y": 2, "direction": "up" }],
     "chambers": [
         {
             "id": "c1",
@@ -44,7 +44,7 @@ Toạ độ theo **tile**, gốc trên-trái, y hướng xuống (server). Unity
 
 - `spawnPoints` / `monsters` / `npcs` / `interactables`: `{id, x, y}` theo id server liệt kê. `kind` của spawn (`default`/`respawn`/`arrival`) là config của server.
 - `colliders`: rect `{x,y,w,h}` chặn đường. Server chặn trong `applyMove` bằng `collider` của entity; client phải dùng **cùng** danh sách này để dự đoán.
-- `chambers` (chỉ dungeon): hình học từng chamber — `bounds`, `entry` (chỗ đặt player khi vào chamber), `exit` (cổng sang chamber kế; chamber nào `hasExit = false` thì không cần).
+- `chambers` (chỉ dungeon): hình học từng chamber — `bounds`, `entry` (chỗ đặt player khi vào chamber; **chamber đầu bỏ trống** — người chơi vào ở spawn `default` của dungeon), `exit` (cổng sang chamber kế; chamber nào `hasExit = false` thì không cần).
 - `contentHash` (sha1 của layout đã chuẩn hoá) lưu ở `game_maps.content_hash` — client so với hash của file trong build.
 - Tên hiển thị không nằm trong file: client tra locale theo `map.{code}.name`.
 
@@ -63,7 +63,7 @@ Toạ độ theo **tile**, gốc trên-trái, y hướng xuống (server). Unity
             { monsterCode: "bat", count: 1, type: "random" },
         ] },
     ],
-    npcs: [{ id: "npc_hunter", npcCode: "hunter_garrick", direction: "left" }],
+    npcs: [{ id: "npc_hunter", npcCode: "hunter_garrick" }], // hướng nhìn do Unity chọn ở marker (layout `direction`)
     interactables: [{ id: "forest_to_village", type: "portal", targetMapCode: "greenfield_village", targetSpawnId: "from_field" }],
 }
 ```

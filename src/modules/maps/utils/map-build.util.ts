@@ -161,7 +161,7 @@ export const buildMapRow = (
             missing.push(`npc:${slot.id}`);
             return [];
         }
-        return [{ npcCode: slot.npcCode, x: at.x, y: at.y, direction: slot.direction }];
+        return [{ npcCode: slot.npcCode, x: at.x, y: at.y, direction: at.direction }];
     });
 
     const interactables = def.interactables.flatMap((item: InteractableDef) => {
@@ -170,7 +170,9 @@ export const buildMapRow = (
             missing.push(`interactable:${item.id}`);
             return [];
         }
-        return [{ ...item, x: at.x, y: at.y } as MapInteractable];
+        return [
+            { ...item, x: at.x, y: at.y, ...(at.direction ? { direction: at.direction } : {}) },
+        ] as MapInteractable[];
     });
 
     const monsterSpawns = expand(def.monsterGroups);
@@ -213,16 +215,23 @@ const buildDungeon = (
 ): DungeonConfig => {
     const dungeon = def.dungeon!;
     const geometry = byId(layout.chambers);
+    // Chamber đầu bắt đầu ngay chỗ vào dungeon (spawn default); các chamber sau cần `entry` trong layout.
+    const defaultSpawnId = def.spawnPoints.find((s) => s.kind === MapSpawnKind.DEFAULT)?.id;
+    const entrance = layout.spawnPoints.find((p) => p.id === defaultSpawnId);
     const before = missing.length;
     const chambers = dungeon.chambers.map((chamber, index) => {
         const shape = geometry.get(chamber.id);
         if (!shape) missing.push(`chamber:${chamber.id}`);
+        const entry =
+            shape?.entry ??
+            (index === 0 && entrance ? { x: entrance.x, y: entrance.y } : undefined);
+        if (shape && !entry) missing.push(`chamber:${chamber.id}.entry`);
         const hasExit = chamber.hasExit ?? index < dungeon.chambers.length - 1;
         if (shape && hasExit && !shape.exit) missing.push(`chamber:${chamber.id}.exit`);
         return {
             id: chamber.id,
             bounds: shape?.bounds ?? { x: 0, y: 0, w: 1, h: 1 },
-            entry: shape?.entry ?? { x: 0, y: 0 },
+            entry: entry ?? { x: 0, y: 0 },
             phases: chamber.phases.map((phase) => ({
                 id: phase.id,
                 delaySec: phase.delaySec,
@@ -231,6 +240,8 @@ const buildDungeon = (
             ...(hasExit && shape?.exit
                 ? { exit: { x: shape.exit.x, y: shape.exit.y, radius: chamber.exitRadius } }
                 : {}),
+            ...(shape?.entryGate ? { entryGate: shape.entryGate } : {}),
+            ...(shape?.exitGate && hasExit ? { exitGate: shape.exitGate } : {}),
             ...(chamber.isBoss ? { isBoss: true } : {}),
             ...(chamber.clearReward ? { clearReward: chamber.clearReward } : {}),
         };
@@ -239,6 +250,7 @@ const buildDungeon = (
     return {
         maxLevel: dungeon.maxLevel,
         ...(dungeon.timeLimitSec ? { timeLimitSec: dungeon.timeLimitSec } : {}),
+        ...(dungeon.gateCode ? { gateCode: dungeon.gateCode } : {}),
         ...(dungeon.clearReward ? { clearReward: dungeon.clearReward } : {}),
         chambers: complete ? chambers : [],
     };
@@ -314,7 +326,6 @@ export const mapMarkerList = (def: MapDefinition) => ({
     npcs: def.npcs.map((slot) => ({
         id: slot.id,
         npcCode: slot.npcCode,
-        direction: slot.direction,
     })),
     interactables: def.interactables.map((item) => ({
         id: item.id,

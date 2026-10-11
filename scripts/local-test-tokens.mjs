@@ -7,6 +7,32 @@ const password = process.env.TEST_USER_PASSWORD ?? "123456";
 const emails = ["test1@erpg.local", "test2@erpg.local"];
 const outputFile = join(process.cwd(), "generated", "local-test-tokens.json");
 
+const startClassCode = process.env.TEST_CLASS_CODE ?? "swordsman";
+
+/** Tài khoản mới chưa có nhân vật (`player`/`playerToken` = null): tạo 1 nhân vật bằng user token. */
+async function ensurePlayer(email, value) {
+    if (value?.player && value?.playerToken) return value;
+    const headers = { "content-type": "application/json", authorization: `Bearer ${value.token}` };
+    const nameResponse = await fetch(`${serverUrl}/players/random-name`, {
+        headers,
+        signal: AbortSignal.timeout(15_000),
+    });
+    const name = (await nameResponse.json())?.data?.name;
+    const response = await fetch(`${serverUrl}/players`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ name, classCode: startClassCode }),
+        signal: AbortSignal.timeout(15_000),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+        throw new Error(
+            `${email}: POST /players -> ${response.status} ${payload?.code ?? ""} ${payload?.message ?? response.statusText}`
+        );
+    }
+    return { ...value, ...payload.data };
+}
+
 function parseAuthResult(value, email) {
     if (!value || typeof value !== "object") {
         throw new Error(`${email}: server response has no data object`);
@@ -59,7 +85,7 @@ async function authenticate(email) {
                     `${payload?.code ?? ""} ${payload?.message ?? response.statusText}`
             );
         }
-        return parseAuthResult(payload?.data, email);
+        return parseAuthResult(await ensurePlayer(email, payload?.data), email);
     }
     throw new Error(`Could not authenticate ${email}`);
 }
@@ -68,7 +94,11 @@ try {
     const users = [];
     for (const email of emails) users.push(await authenticate(email));
 
-    const json = JSON.stringify({ serverUrl, generatedAt: new Date().toISOString(), users }, null, 2);
+    const json = JSON.stringify(
+        { serverUrl, generatedAt: new Date().toISOString(), users },
+        null,
+        2
+    );
     await mkdir(join(process.cwd(), "generated"), { recursive: true });
     await writeFile(outputFile, `${json}\n`, { mode: 0o600 });
     console.info(json);

@@ -175,7 +175,7 @@ export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
     ): void {
         const moveX = Math.abs(dx) > 0.1 ? Math.sign(dx) : 0;
         const moveY = Math.abs(dy) > 0.1 ? Math.sign(dy) : 0;
-        applyWorldMove(monster, { moveX, moveY }, room.map, dt);
+        applyWorldMove(monster, { moveX, moveY }, room.moveBounds, dt);
     }
 
     private getRoamTarget(room: WorldRoom, monster: MonsterWorldState): RoamTarget {
