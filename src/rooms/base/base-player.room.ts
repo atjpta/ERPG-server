@@ -40,7 +40,10 @@ export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extend
         return playerAuthService.verifyToken(token);
     }
 
-    protected async registerOnlinePlayer(client: PlayerClient) {
+    protected async registerOnlinePlayer(
+        client: PlayerClient,
+        options: { kickDuplicateLogins?: boolean } = {}
+    ) {
         const { userId, playerId } = client.auth;
         this.onlinePlayers.set(client.sessionId, client.auth);
 
@@ -50,6 +53,8 @@ export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extend
             await this.presence.subscribe(userKickTopic(userId), handler);
         }
 
+        // Room phụ (party) không được đá: kết nối world của cùng player là hợp lệ.
+        if (options.kickDuplicateLogins === false) return;
         // Đá kết nối cũ của cùng player (kể cả trong chính room này), trừ kết nối vừa vào.
         playerKickService.kickUser(userId, KickReason.DUPLICATE_LOGIN, {
             playerId,

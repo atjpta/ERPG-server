@@ -13,4 +13,5 @@ export enum MasterDataKey {
     MONSTER_SPAWN_CONFIG = "monster_spawn_config",
     DAILY_QUEST_CONFIG = "daily_quest_config",
     DUNGEON_DROP_CONFIG = "dungeon_drop_config",
+    PARTY_CONFIG = "party_config",
 }

@@ -90,6 +90,10 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
         value: DEFAULT_DUNGEON_DROP_CONFIG,
         note: "Chỉnh drop quái trong dungeon theo map (hệ số exp/vàng/tỉ lệ, trang bị, item rơi thêm)",
     },
+    [MasterDataKey.PARTY_CONFIG]: {
+        value: { maxMembers: 4, inviteTtlSec: 30, expBonusPerExtraMember: 0.1 },
+        note: "Party: số thành viên tối đa, hạn lời mời, bonus exp mỗi thành viên thêm",
+    },
     [MasterDataKey.DAILY_QUEST_CONFIG]: {
         value: DEFAULT_DAILY_QUEST_CONFIG,
         note: "Quest hằng ngày: giờ reset, bậc level, thưởng theo level",

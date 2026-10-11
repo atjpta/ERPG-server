@@ -74,9 +74,13 @@ describe("map definitions + layout", () => {
     });
 
     it("map chưa có file Unity thành placeholder inactive, vẫn giữ config", () => {
-        const pending = definitionsWithoutLayout().map((def) => def.code);
-        assert.ok(pending.includes("whispering_forest"));
-        const row = buildAllMapRows().find((r) => r.code === "slime_hollow")!;
+        const layouts = loadMapLayouts();
+        for (const def of definitionsWithoutLayout(layouts)) {
+            assert.ok(!layouts.some((layoutFile) => layoutFile.code === def.code));
+            assert.equal(buildAllMapRows().find((r) => r.code === def.code)?.layoutReady, false);
+        }
+        const dungeon = loadMapDefinitions().find((def) => def.code === "slime_hollow")!;
+        const row = buildPlaceholderRow(dungeon);
         assert.equal(row.layoutReady, false);
         assert.equal(row.status, "inactive");
         assert.equal(row.minLevel, 1);
