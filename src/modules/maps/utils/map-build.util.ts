@@ -299,19 +299,6 @@ export const validateDefinitionRefs = (defs: readonly MapDefinition[]): string[]
             const target = byCode.get(item.targetMapCode);
             if (!target) {
                 errors.push(`${def.code}.${item.id}: unknown map "${item.targetMapCode}"`);
-            } else if (item.targetPortalId !== undefined) {
-                // Dịch chuyển giữa 2 cổng: cổng đích phải có thật, và không phải đường vào dungeon.
-                if (target.type === MapType.DUNGEON) {
-                    errors.push(`${def.code}.${item.id}: cổng vào dungeon phải dùng targetSpawnId`);
-                } else if (
-                    !target.interactables.some(
-                        (it) => it.type === "portal" && it.id === item.targetPortalId
-                    )
-                ) {
-                    errors.push(
-                        `${def.code}.${item.id}: unknown portal "${item.targetMapCode}.${item.targetPortalId}"`
-                    );
-                }
             } else if (!target.spawnPoints.some((p) => p.id === item.targetSpawnId)) {
                 errors.push(
                     `${def.code}.${item.id}: unknown spawn "${item.targetMapCode}.${item.targetSpawnId}"`
@@ -346,11 +333,7 @@ export const mapMarkerList = (def: MapDefinition) => ({
         code: item.code,
         radius: item.radius,
         ...(item.type === "portal"
-            ? {
-                  targetMapCode: item.targetMapCode,
-                  targetSpawnId: item.targetSpawnId,
-                  targetPortalId: item.targetPortalId,
-              }
+            ? { targetMapCode: item.targetMapCode, targetSpawnId: item.targetSpawnId }
             : {}),
     })),
     chambers:

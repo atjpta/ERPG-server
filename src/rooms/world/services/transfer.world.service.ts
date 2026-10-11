@@ -1,4 +1,4 @@
-import type { GameMap, MapPortal } from "@/modules/maps/entities/game-map.entity.js";
+import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
 import { mapService } from "@/modules/maps/user/services/map.service.js";
@@ -21,9 +21,7 @@ export class TransferWorldService {
         client: PlayerClient,
         player: PlayerWorldState,
         mapCode: string,
-        spawnId: string,
-        /** Đặt player đúng toạ độ này thay vì tra spawn point (dịch chuyển giữa 2 cổng). */
-        point?: { x: number; y: number }
+        spawnId: string
     ): Promise<string | undefined> {
         if (player.pendingMapCode) return "Already changing map";
         const sameMap = mapCode === room.map.code;
@@ -42,7 +40,7 @@ export class TransferWorldService {
             }
             return partyWorldService.startDungeon(room, client, player, target, spawnId);
         }
-        const spawn = point ?? target.spawnPoints.find((p) => p.id === spawnId);
+        const spawn = target.spawnPoints.find((point) => point.id === spawnId);
         if (!spawn) return "Spawn point not found";
 
         player.x = spawn.x;
@@ -58,39 +56,6 @@ export class TransferWorldService {
         client.send(WorldMessage.MAP_CHANGE, message);
         await worldService.savePlayer(room, client.sessionId);
         return undefined;
-    }
-
-    /**
-     * Dùng một cổng. Đích là spawn point của map đích, hoặc **vị trí của cổng khác** (`targetPortalId`,
-     * cùng map thì dịch chuyển tức thì, khác map thì đổi room). Cổng đích chưa được Unity đặt vị trí
-     * thì chưa dùng được (`map_not_open`).
-     */
-    async viaPortal(
-        room: WorldRoom,
-        client: PlayerClient,
-        player: PlayerWorldState,
-        portal: MapPortal
-    ): Promise<string | undefined> {
-        if (portal.targetPortalId === undefined) {
-            return this.transfer(room, client, player, portal.targetMapCode, portal.targetSpawnId!);
-        }
-        let target: GameMap;
-        try {
-            target =
-                portal.targetMapCode === room.map.code
-                    ? room.map
-                    : await mapService.getActiveByCodeOrFail(portal.targetMapCode);
-        } catch {
-            return MapTransferError.MAP_NOT_OPEN;
-        }
-        const exit = target.interactables.find(
-            (it) => it.type === "portal" && it.id === portal.targetPortalId
-        );
-        if (!exit) return MapTransferError.MAP_NOT_OPEN;
-        return this.transfer(room, client, player, portal.targetMapCode, exit.id, {
-            x: exit.x,
-            y: exit.y,
-        });
     }
 }
 

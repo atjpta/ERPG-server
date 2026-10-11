@@ -57,11 +57,7 @@ export class MapService {
                 y: it.y,
                 radius: it.radius,
                 ...(it.type === "portal"
-                    ? {
-                          targetMapCode: it.targetMapCode,
-                          targetSpawnId: it.targetSpawnId,
-                          targetPortalId: it.targetPortalId,
-                      }
+                    ? { targetMapCode: it.targetMapCode, targetSpawnId: it.targetSpawnId }
                     : {}),
             })),
         };

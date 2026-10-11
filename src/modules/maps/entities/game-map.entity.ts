@@ -131,10 +131,7 @@ interface MapInteractableBase {
 export interface MapPortal extends MapInteractableBase {
     type: "portal";
     targetMapCode: string;
-    /** Đích là spawn point của map đích. */
-    targetSpawnId?: string;
-    /** Đích là vị trí của cổng khác (cùng map hoặc map khác). */
-    targetPortalId?: string;
+    targetSpawnId: string;
 }
 
 export interface MapGatherable extends MapInteractableBase {
