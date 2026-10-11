@@ -11,6 +11,7 @@ import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { MonsterLevelConfigSchema } from "@/modules/monsters/schemas/monster-level-config.schema.js";
 import { MonsterSpawnConfigSchema } from "@/modules/monsters/schemas/monster-spawn-config.schema.js";
 import { MonsterScaleConfigSchema } from "@/modules/monsters/schemas/monster-scale-config.schema.js";
+import { DailyQuestConfigSchema } from "@/modules/quests/schemas/daily-quest.schema.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 
 /** Bật `singleSessionPerUser` để mỗi lần login mới tự revoke các session cũ (chặn đăng nhập nhiều máy). */
@@ -60,6 +61,7 @@ export const MasterDataValueSchemas = {
     [MasterDataKey.MONSTER_SCALE_CONFIG]: MonsterScaleConfigSchema,
     [MasterDataKey.MONSTER_LEVEL_CONFIG]: MonsterLevelConfigSchema,
     [MasterDataKey.MONSTER_SPAWN_CONFIG]: MonsterSpawnConfigSchema,
+    [MasterDataKey.DAILY_QUEST_CONFIG]: DailyQuestConfigSchema,
 } satisfies Record<MasterDataKey, z.ZodType>;
 
 export type AuthSessionConfigValue = z.infer<typeof AuthSessionConfigSchema>;

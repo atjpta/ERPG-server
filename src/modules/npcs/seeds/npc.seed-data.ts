@@ -1,5 +1,7 @@
 import type { NewNpc } from "@/modules/npcs/entities/npc.entity.js";
 import { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
+import { QuestState } from "@/modules/quests/enums/quest.enum.js";
+import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
 import { questDialogueRules } from "@/modules/quests/seeds/quest-content.js";
 
 /** NPC — vị trí đặt trong file map, 1 NPC có thể có mặt ở nhiều map. Rule thoại quest sinh từ `quest-content`. */
@@ -15,7 +17,15 @@ export const NPCS: NewNpc[] = [
     {
         code: "guild_officer",
         defaultDialogueCode: "guild_officer_default",
-        dialogueRules: questDialogueRules("guild_officer"),
+        dialogueRules: [
+            ...questDialogueRules("guild_officer"),
+            // Có quest hằng ngày xong → thoại nhận thưởng (thắng quest cốt truyện đang làm dở).
+            ...DAILY_QUEST_CODES.map((questCode) => ({
+                priority: 5000,
+                conditions: [{ type: "quest_state" as const, questCode, state: QuestState.READY }],
+                dialogueCode: "daily_claim",
+            })),
+        ],
         functions: [{ id: "quest_board", type: NpcFunctionType.QUEST_BOARD, config: {} }],
     },
     { code: "swordsman_trainer", defaultDialogueCode: "swordsman_trainer_default" },

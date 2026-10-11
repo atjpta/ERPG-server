@@ -1,4 +1,6 @@
 import type { NewDialogue } from "@/modules/dialogues/entities/dialogue.entity.js";
+import { QuestState } from "@/modules/quests/enums/quest.enum.js";
+import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
 import { STORY_DIALOGUES } from "@/modules/quests/seeds/quest-content.js";
 
 /**
@@ -154,6 +156,31 @@ export const DIALOGUES: NewDialogue[] = [
                     { id: "bye", hideIfFail: false },
                 ],
             },
+        ],
+    },
+    {
+        code: "daily_claim",
+        nodes: [
+            {
+                id: "start",
+                options: [
+                    ...DAILY_QUEST_CODES.map((questCode) => ({
+                        id: `claim_${questCode.replace("daily_", "")}`,
+                        hideIfFail: true,
+                        next: "thanks",
+                        conditions: [
+                            {
+                                type: "quest_state" as const,
+                                questCode,
+                                state: QuestState.READY,
+                            },
+                        ],
+                        actions: [{ type: "complete_quest" as const, questCode }],
+                    })),
+                    { id: "bye", hideIfFail: false },
+                ],
+            },
+            { id: "thanks" },
         ],
     },
     ...STORY_DIALOGUES,

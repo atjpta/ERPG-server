@@ -8,6 +8,7 @@ import {
 } from "@/modules/player/user/services/player-stat.service.js";
 import type { DungeonSession } from "@/modules/maps/entities/game-map.entity.js";
 import type { FlagValue } from "@/modules/dialogues/schemas/condition.schema.js";
+import type { PlayerDailyQuests } from "@/modules/quests/schemas/daily-quest.schema.js";
 import type { PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
 import type { PlayerSnapshot } from "@/modules/player/user/services/player.service.js";
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
@@ -83,6 +84,8 @@ export class PlayerWorldState extends Schema {
     /** Cờ cốt truyện và quest (server-only) — xem `player_states.flags/quests`. */
     flags: Record<string, FlagValue>;
     quests: PlayerQuests;
+    /** Quest hằng ngày đã sinh cho hôm nay (server-only). */
+    dailyQuests: PlayerDailyQuests | null = null;
     /** Map đích khi đã bước vào portal/teleport và đang đợi client vào room mới. */
     pendingMapCode?: string;
     /** Làng gần nhất đã đến (server-only) — chết trong dungeon thì hồi sinh ở đây. */
@@ -139,6 +142,7 @@ export class PlayerWorldState extends Schema {
         this.flags = { ...player.flags };
         this.quests = structuredClone(player.quests);
         this.lastTownMapCode = player.lastTownMapCode;
+        this.dailyQuests = player.dailyQuests ? structuredClone(player.dailyQuests) : null;
     }
 
     setLevelProgress(level: number, exp: number) {
@@ -262,6 +266,7 @@ export class PlayerWorldState extends Schema {
         | "quests"
         | "lastTownMapCode"
         | "dungeonSession"
+        | "dailyQuests"
     > {
         // Trong dungeon (hoặc đang bước vào): lưu chỗ quay về — mất kết nối thì đăng nhập lại ở ngoài dungeon.
         const session = this.dungeonSession;
@@ -271,6 +276,7 @@ export class PlayerWorldState extends Schema {
             x: session?.returnX ?? this.x,
             y: session?.returnY ?? this.y,
             lastTownMapCode: this.lastTownMapCode,
+            dailyQuests: this.dailyQuests ? structuredClone(this.dailyQuests) : null,
             dungeonSession: session ? { ...session } : null,
             direction: this.direction as PlayerState["direction"],
             hp: this.hp,

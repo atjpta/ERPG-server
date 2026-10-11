@@ -1,10 +1,7 @@
 import { pickWeighted, type Rng } from "@/modules/equipment/utils/equipment-roll.util.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import type { MonsterSpawn } from "@/modules/maps/entities/game-map.entity.js";
-import {
-    MonsterType,
-    RANDOM_MONSTER_TYPE,
-} from "@/modules/monsters/enums/monster-type.enum.js";
+import { MonsterType, RANDOM_MONSTER_TYPE } from "@/modules/monsters/enums/monster-type.enum.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import type { MonsterSpawnConfig } from "@/modules/monsters/schemas/monster-spawn-config.schema.js";
 import type { MonsterVariant } from "@/modules/monsters/utils/monster-stat.util.js";
@@ -30,7 +27,9 @@ export function rollMonsterVariant(
     }
     const weights = Object.entries(config.rarityWeights[type] ?? {}) as [ItemRarity, number][];
     const rarity =
-        spawn.rarity ?? pickWeighted(weights, ([, weight]) => weight, rng)?.[0] ?? ItemRarity.COMMON;
+        spawn.rarity ??
+        pickWeighted(weights, ([, weight]) => weight, rng)?.[0] ??
+        ItemRarity.COMMON;
     return { type, rarity };
 }
 

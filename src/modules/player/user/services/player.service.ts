@@ -273,6 +273,7 @@ export class PlayerService extends BaseService<typeof Players> {
                     | "quests"
                     | "lastTownMapCode"
                     | "dungeonSession"
+                    | "dailyQuests"
                 >
             >,
         expectedRevision?: number

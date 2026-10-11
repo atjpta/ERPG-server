@@ -3,6 +3,7 @@ import type { MapFile } from "@/modules/maps/schemas/map-file.schema.js";
 import type { Npc } from "@/modules/npcs/entities/npc.entity.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
+import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
 import type { Action, Condition } from "@/modules/dialogues/schemas/condition.schema.js";
 
 export interface ContentData {
@@ -33,7 +34,7 @@ export const findContentRefErrors = (data: ContentData): string[] => {
     const errors: string[] = [];
     const npcs = new Map(data.npcs.map((npc) => [npc.code, npc]));
     const dialogues = new Set(data.dialogues.map((d) => d.code));
-    const quests = new Set(data.quests.map((q) => q.code));
+    const quests = new Set([...data.quests.map((q) => q.code), ...DAILY_QUEST_CODES]);
     const interactableIds = new Set(data.maps.flatMap((m) => m.interactables.map((i) => i.id)));
     const need = (set: ReadonlySet<string>, code: string, where: string, kind: string) => {
         if (!set.has(code)) errors.push(`${where}: unknown ${kind} "${code}"`);

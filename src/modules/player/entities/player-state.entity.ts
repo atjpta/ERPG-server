@@ -14,6 +14,7 @@ import { GameMaps, type DungeonSession } from "@/modules/maps/entities/game-map.
 import { Players } from "@/modules/auth/entities/player.entity.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import type { FlagValue } from "@/modules/dialogues/schemas/condition.schema.js";
+import type { PlayerDailyQuests } from "@/modules/quests/schemas/daily-quest.schema.js";
 import type { PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
 import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js";
@@ -81,6 +82,8 @@ export const PlayerStates = pgTable("player_states", {
     flags: jsonb("flags").$type<Record<string, FlagValue>>().notNull().default({}),
     /** Quest của player theo quest code — lưu cùng checkpoint với túi đồ nên nhận thưởng và hoàn thành quest luôn khớp nhau. */
     quests: jsonb("quests").$type<PlayerQuests>().notNull().default({}),
+    /** Bộ 3 quest hằng ngày của ngày hiện tại (null = chưa sinh); tiến độ nằm ở `quests` với code `daily_*`. */
+    dailyQuests: jsonb("daily_quests").$type<PlayerDailyQuests>(),
     /** Làng gần nhất đã đến — chết trong dungeon thì hồi sinh ở đây. */
     lastTownMapCode: text("last_town_map_code"),
     /** Đang trong một lượt dungeon (null = không). `map_code/x/y` luôn là chỗ quay về, không phải trong dungeon. */

@@ -11,4 +11,5 @@ export enum MasterDataKey {
     MONSTER_SCALE_CONFIG = "monster_scale_config",
     MONSTER_LEVEL_CONFIG = "monster_level_config",
     MONSTER_SPAWN_CONFIG = "monster_spawn_config",
+    DAILY_QUEST_CONFIG = "daily_quest_config",
 }
