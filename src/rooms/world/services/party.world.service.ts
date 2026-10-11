@@ -5,6 +5,9 @@ import { masterDataCacheService } from "@/modules/master-data/user/services/mast
 import { splitPartyExp } from "@/modules/party/utils/party-exp.util.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { Reward } from "@/modules/rewards/types/reward.type.js";
+import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
+import { mapService } from "@/modules/maps/user/services/map.service.js";
+import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { PartyRoomOptions } from "@/rooms/party/party.room.js";
@@ -12,6 +15,7 @@ import { questWorldService } from "@/rooms/world/services/quest.world.service.js
 import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import {
+    MapTransferError,
     WorldMessage,
     type PartyInviteReceivedMessage,
     type PartyRoomMessage,
@@ -178,6 +182,68 @@ export class PartyWorldService {
         const message: PartyRoomMessage = { roomId: partyRoomId };
         client.send(WorldMessage.PARTY, message);
         return partyRoomId;
+    }
+
+    /**
+     * Vào dungeon luôn đi qua party: chưa có thì tự tạo party 1 người. Chủ yêu cầu party room kiểm cả
+     * nhóm; đạt hết thì party room ra lệnh cho world room của từng thành viên (kể cả chủ). Thành viên
+     * không phải chủ → `party_not_leader`; có người không đạt → `party_denied` (cả party đã được báo).
+     */
+    async startDungeon(
+        room: WorldRoom,
+        client: PlayerClient,
+        player: PlayerWorldState,
+        dungeon: GameMap,
+        spawnId: string
+    ): Promise<string | undefined> {
+        const partyRoomId = await this.ensureParty(room, client, player);
+        if (!partyRoomId) return MapTransferError.MAP_NOT_OPEN;
+        const result = await callParty<{ ok: boolean; error?: string } | null>(
+            partyRoomId,
+            "requestDungeon",
+            [
+                player.id,
+                {
+                    code: dungeon.code,
+                    minLevel: dungeon.minLevel,
+                    capacity: dungeon.maxPlayersPerChannel,
+                    spawnId,
+                },
+            ],
+            null
+        );
+        if (!result) return MapTransferError.MAP_NOT_OPEN;
+        if (result.ok) return undefined;
+        return result.error === "not_leader"
+            ? MapTransferError.PARTY_NOT_LEADER
+            : MapTransferError.PARTY_DENIED;
+    }
+
+    /**
+     * Party room ra lệnh: đưa `playerId` (đang ở room này) vào instance dungeon của party. Kiểm lại điều
+     * kiện ở đây (nguồn sự thật); trả mã lỗi hoặc `undefined` khi đã gửi `mapChange`.
+     */
+    async enterDungeon(
+        room: WorldRoom,
+        playerId: string,
+        dungeonCode: string,
+        instanceId: string,
+        spawnId: string
+    ): Promise<string | undefined> {
+        const found = this.findPlayer(room, playerId);
+        if (!found) return "offline";
+        const { client, player } = found;
+        if (room.dungeon) return "in_dungeon";
+        if (player.hp <= 0) return "dead";
+        if (player.pendingMapCode) return "offline";
+        let dungeon: GameMap;
+        try {
+            dungeon = await mapService.getActiveByCodeOrFail(dungeonCode);
+        } catch {
+            return MapTransferError.MAP_NOT_OPEN;
+        }
+        if (player.level < dungeon.minLevel) return MapTransferError.LEVEL_TOO_LOW;
+        return dungeonWorldService.enter(room, client, player, dungeon, spawnId, instanceId);
     }
 
     /** Party room gọi (qua world room): đã gắn / bỏ party cho player đang đứng ở room này. */

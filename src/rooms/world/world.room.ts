@@ -216,6 +216,15 @@ export class WorldRoom extends BasePlayerRoom<{
         partyWorldService.setPlayerParty(this, playerId, partyRoomId);
     }
 
+    partyEnterDungeon(
+        playerId: string,
+        dungeonCode: string,
+        instanceId: string,
+        spawnId: string
+    ): Promise<string | undefined> {
+        return partyWorldService.enterDungeon(this, playerId, dungeonCode, instanceId, spawnId);
+    }
+
     partyDeliverInvite(
         playerId: string,
         payload: PartyInviteReceivedMessage

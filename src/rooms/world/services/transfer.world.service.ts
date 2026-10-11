@@ -1,6 +1,6 @@
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
-import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
+import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
 import { mapService } from "@/modules/maps/user/services/map.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
@@ -38,7 +38,7 @@ export class TransferWorldService {
             if (!target.spawnPoints.some((point) => point.id === spawnId)) {
                 return "Spawn point not found";
             }
-            return dungeonWorldService.enter(room, client, player, target, spawnId);
+            return partyWorldService.startDungeon(room, client, player, target, spawnId);
         }
         const spawn = target.spawnPoints.find((point) => point.id === spawnId);
         if (!spawn) return "Spawn point not found";

@@ -120,6 +120,10 @@ export enum MapTransferError {
     LEVEL_TOO_LOW = "level_too_low",
     MAP_NOT_OPEN = "map_not_open",
     EXIT_LOCKED = "exit_locked",
+    /** Vào dungeon theo party: chỉ chủ party được bấm. */
+    PARTY_NOT_LEADER = "party_not_leader",
+    /** Vào dungeon theo party: có thành viên không đủ điều kiện (cả party nhận `dungeonDenied`). */
+    PARTY_DENIED = "party_denied",
 }
 
 /**

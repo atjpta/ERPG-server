@@ -40,6 +40,8 @@ import type { WorldRoom } from "@/rooms/world/world.room.js";
 export const DUNGEON_EXIT_PREFIX = "exit_";
 /** Sau khi hạ boss, ở lại tối đa chừng này giây trước khi bị đưa ra ngoài. */
 export const DUNGEON_LEAVE_DELAY_SEC = 60;
+/** Chờ thành viên party vào đủ trước khi bắt đầu chamber đầu tiên. */
+export const DUNGEON_JOIN_GRACE_MS = 15_000;
 
 /** Tiến độ 1 instance dungeon (server-only; phần HUD cần thấy nằm ở `DungeonWorldState`). */
 export interface DungeonRuntime {
@@ -47,6 +49,11 @@ export interface DungeonRuntime {
     instanceId: string;
     started: boolean;
     startedAt: number;
+    /** Người được party kỳ vọng vào instance (rỗng = bắt đầu ngay khi người đầu tiên vào). */
+    expected: string[];
+    joined: Set<string>;
+    /** `elapsedTime` lúc người đầu tiên vào; chờ đủ người tối đa `DUNGEON_JOIN_GRACE_MS`. */
+    firstJoinAt: number | null;
     chamberIndex: number;
     chamberStartedAt: number;
     /** Số phase của chamber hiện tại đã spawn. */
@@ -72,7 +79,7 @@ const exitId = (chamber: DungeonChamber) => `${DUNGEON_EXIT_PREFIX}${chamber.id}
  */
 export class DungeonWorldService {
     /** Dựng runtime + state HUD + cổng exit lúc tạo room dungeon. */
-    setup(room: WorldRoom, instanceId: string): void {
+    setup(room: WorldRoom, instanceId: string, expected: string[] = []): void {
         const config = room.map.dungeon;
         if (room.map.type !== MapType.DUNGEON || !config || config.chambers.length === 0) {
             throw new Error(`Map "${room.map.code}" is not a playable dungeon`);
@@ -82,6 +89,9 @@ export class DungeonWorldService {
             instanceId,
             started: false,
             startedAt: 0,
+            expected,
+            joined: new Set(),
+            firstJoinAt: null,
             chamberIndex: 0,
             chamberStartedAt: 0,
             spawnedPhases: 0,
@@ -111,10 +121,11 @@ export class DungeonWorldService {
     /** Player vừa vào room dungeon: đặt ở chamber hiện tại; người đầu tiên khởi động chamber 0. */
     onPlayerJoined(room: WorldRoom, player: PlayerWorldState): void {
         const runtime = room.dungeon!;
-        if (!runtime.started) {
-            runtime.started = true;
-            runtime.startedAt = room.clock.elapsedTime;
-            this.startChamber(room, 0);
+        runtime.joined.add(player.id);
+        runtime.firstJoinAt ??= room.clock.elapsedTime;
+        // Chờ đủ người của party để level quái tính trên cả nhóm (tối đa DUNGEON_JOIN_GRACE_MS).
+        if (!runtime.started && runtime.expected.every((id) => runtime.joined.has(id))) {
+            this.begin(room);
         }
         const entry = runtime.config.chambers[runtime.chamberIndex].entry;
         this.place(player, entry.x, entry.y);
@@ -124,8 +135,17 @@ export class DungeonWorldService {
     tick(room: WorldRoom): void {
         const runtime = room.dungeon;
         const state = room.state.dungeon;
-        if (!runtime || !state || !runtime.started) return;
+        if (!runtime || !state) return;
         const now = room.clock.elapsedTime;
+        if (!runtime.started) {
+            if (
+                runtime.firstJoinAt !== null &&
+                now - runtime.firstJoinAt >= DUNGEON_JOIN_GRACE_MS
+            ) {
+                this.begin(room);
+            }
+            return;
+        }
 
         if (runtime.config.timeLimitSec) {
             const left = Math.max(
@@ -199,7 +219,8 @@ export class DungeonWorldService {
         client: PlayerClient,
         player: PlayerWorldState,
         dungeon: GameMap,
-        spawnId: string
+        spawnId: string,
+        instanceId: string = randomUUID()
     ): Promise<string | undefined> {
         if (player.level < dungeon.minLevel) return MapTransferError.LEVEL_TOO_LOW;
         if (!dungeon.dungeon || dungeon.dungeon.chambers.length === 0) {
@@ -207,7 +228,7 @@ export class DungeonWorldService {
         }
         const session: DungeonSession = {
             dungeonCode: dungeon.code,
-            instanceId: randomUUID(),
+            instanceId,
             returnMapCode: room.map.code,
             returnX: player.x,
             returnY: player.y,
@@ -297,6 +318,15 @@ export class DungeonWorldService {
                 await this.leave(room, client as PlayerClient, player, "return");
             }
         }
+    }
+
+    /** Khởi động chamber đầu tiên (đủ người hoặc hết thời gian chờ). */
+    private begin(room: WorldRoom): void {
+        const runtime = room.dungeon!;
+        runtime.started = true;
+        runtime.startedAt = room.clock.elapsedTime;
+        this.startChamber(room, 0);
+        // Người đã vào trong lúc chờ đứng ở chamber đầu — không cần làm gì thêm.
     }
 
     private startChamber(room: WorldRoom, index: number): void {
