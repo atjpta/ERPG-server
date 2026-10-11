@@ -77,6 +77,8 @@ trả quest cần còn chỗ túi cho thưởng (không thì báo lỗi, quest g
 
 ## Message realtime (room `world`)
 
+**Party** (room riêng `party`, mỗi party một room): xem mục "Party" dưới. Thêm vào room `world`: client → `partyCreate`, `partyDecline {partyRoomId}`; server → `party {roomId}`, `partyInviteReceived {partyRoomId, fromName, expiresInSec}`; lỗi `interactResult` khi vào dungeon: `party_not_leader`, `party_denied`.
+
 Client → server: `interact {id}`, `interactNpc {npcCode}`, `dialogueChoose {optionId}` (rỗng = tiếp tục), `dialogueClose`, `questList`, `questPreview {questCode}`, `questAbandon {questCode}`, `dungeonLeave`.
 Server → client: `interactResult` (lỗi chuyển map: `level_too_low`, `map_not_open`, `exit_locked`), `dialogue` (kèm `offerQuestCodes`), `dialogueEnd`, `npcFunctionOpen`,
 `mapChange {mapCode, spawnId, roomName, instanceId?}` (`roomName = "dungeon"` thì join room `dungeon` với option `{mapCode, instanceId}`), `questList`, `questUpdate`, `questPreview`,
@@ -109,3 +111,15 @@ Mọi object art nằm ở layer `MapArt`; minimap chụp đúng layer đó (m�
 - `Tools/ERPG/Check Map Collision`: đi thử một "chân người chơi" trên toàn map đúng như bước di chuyển chặn, báo NPC / portal / điểm spawn nào **không tới được** từ điểm spawn mặc định hoặc đang kẹt trong tường.
 - `Export Map` chạy kiểm tra này trước và **từ chối xuất** nếu có lỗi — chỉ khi client ổn mới ghi `greenfield_village.map.json` cho server.
 - Khi chơi trong Editor, nhấn **F12** để vẽ viền đỏ các khối chặn (collider map) lên map, đối chiếu bằng mắt với hình.
+
+## Party
+
+Mỗi party là một Colyseus room `party` (state Schema: `leaderPlayerId`, `members{playerId, name, level, hp, maxHp, mapCode, inWorld, inDungeon}`). Client giữ **hai kết nối**: world room + party room, và giữ nguyên kết nối party khi đổi map.
+
+- Tạo: `partyCreate` ở world room → server trả `party {roomId}` → client `joinById(roomId)`. Vào dungeon mà chưa có party thì server tự tạo party 1 người.
+- Chủ gửi vào party room: `invite {playerName}`, `kick {playerId}`, `promote {playerId}`, `disband`; mọi người: `leave`. Người được mời nhận `partyInviteReceived` ở world room: chấp nhận = `joinById(partyRoomId)` trong hạn (`party_config.inviteTtlSec`), từ chối = `partyDecline`.
+- Server → party room: `notice {code, playerName?}` (invite_sent, invite_declined, invite_expired, member_joined, member_left, kicked, leader_changed, disbanded và các lỗi `not_leader`, `party_full`, `target_offline`, `target_not_found`, `target_in_party`, `self_target`, `already_member`, `not_member`, `invite_limit`), `dungeonDenied {dungeonCode, failures[{playerId, name, reason}]}`.
+- **Rời là rời ngay:** tự rời, bị kick, mất kết nối, thoát game → ra khỏi party (không giữ chỗ, không reconnect); hết người thì room tự đóng; chủ rời thì chủ chuyển cho người vào sớm nhất. Đăng nhập lại thì phải mời lại. Đổi map / vào dungeon **không** rời party.
+- **Chia thưởng:** hạ quái → người kết liễu nhận vàng + item; **exp** chia đều cho thành viên party đang còn sống **trong cùng room (cùng map)**, tổng exp × (1 + `expBonusPerExtraMember` × (n − 1)); mọi thành viên đó nhận tiến độ quest kill. Clear dungeon: cả instance nhận event.
+- **Vào dungeon:** chỉ chủ bấm cổng; party room kiểm từng người (`level ≥ minLevel`, còn sống, đang trong world, chưa ở dungeon, đủ chỗ). Có ai không đạt → không ai vào, cả party nhận `dungeonDenied`. Đạt hết → mọi thành viên (ở bất kỳ map nào) nhận `mapChange` vào cùng instance; dungeon chờ đủ người tối đa 15 giây rồi mới bắt đầu để level quái tính trên cả nhóm.
+- Config `party_config` (master data): `maxMembers`, `inviteTtlSec`, `expBonusPerExtraMember`.

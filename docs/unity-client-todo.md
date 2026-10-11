@@ -114,3 +114,27 @@ Server: join room `dungeon` (khác `world`), instance riêng mỗi lượt; chi 
 - [ ] Làm hết chuỗi hero, kiểm tra màu dấu, Q, preview thưởng, mở khoá chức năng.
 - [ ] Vào từng dungeon: phase spawn theo giây, bộ đếm quái, cổng khoá/mở, boss, clear, thoát về đúng chỗ cũ; chết → về làng.
 - [ ] Đăng nhập 2 ngày liên tiếp (đổi giờ máy/server) → 3 daily mới theo level.
+
+## 7. Party
+
+Server: room `party` riêng cho mỗi party (xem `docs/content-authoring.md`, mục Party). Client giữ **2 kết nối**: world room + party room.
+
+- [ ] `yarn schema:generate` để có `PartyState`, `PartyMemberState`, `PartyClientMessage`, `PartyMessage`, `PartyNoticeCode`, `PartyNoticeMessage`, `PartyDungeonDeniedMessage`, `PartyDungeonDenyReason`, `PartyRoomMessage`, `PartyInviteReceivedMessage`.
+- [ ] Tạo party: gửi `partyCreate` (world room) → nhận `party {roomId}` → `client.JoinById(roomId)`; giữ kết nối party mở xuyên suốt, **không rời khi đổi map / vào-ra dungeon**.
+- [ ] Mời người chơi (nhập tên) → `invite {playerName}` gửi vào **party room** (chỉ chủ). Hiện thông báo theo `notice.code` (`invite_sent`, `target_offline`, `target_in_party`, `party_full`, `invite_limit`...).
+- [ ] Nhận lời mời: message `partyInviteReceived` ở world room → popup Chấp nhận / Từ chối kèm đếm ngược `expiresInSec`. Chấp nhận = `JoinById(partyRoomId)` (thất bại nếu hết hạn/đầy); Từ chối = gửi `partyDecline {partyRoomId}` ở world room.
+- [ ] Khung thành viên từ `PartyState.members`: tên, level, thanh HP (`hp/maxHp`), map đang đứng (`mapCode`), dấu chủ (`leaderPlayerId`), mờ khi `inWorld = false` (đang chuyển map). Cập nhật theo OnChange của state.
+- [ ] Menu thành viên (chỉ chủ): Kick (`kick {playerId}`), Nhường chủ (`promote {playerId}`), Giải tán (`disband`); mọi người: Rời party (`leave`).
+- [ ] Xử lý `notice` từ party room (member_joined / member_left / kicked / leader_changed / disbanded...) và bị đá khỏi party room (socket đóng) → xoá UI party.
+- [ ] **Rời là rời ngay:** rớt mạng hay thoát game = ra khỏi party, đăng nhập lại không còn party → người chơi phải mời lại. Không cần logic reconnect party room.
+- [ ] Vào dungeon: chỉ chủ bấm cổng (thành viên khác nhận lỗi `interactResult.error = party_not_leader`). Có người không đạt: nhận `dungeonDenied {dungeonCode, failures[]}` ở party room → popup liệt kê tên + lý do (`level_too_low`, `offline`, `dead`, `in_dungeon`, `party_too_large`); `interactResult.error = party_denied` ở chủ. Đạt hết: **mọi thành viên** (kể cả đang ở map khác) nhận `mapChange` với `roomName = "dungeon"` và `instanceId` — tự chuyển, không cần thao tác.
+- [ ] Chưa có party mà bấm cổng dungeon: server tự tạo party 1 người và gửi `party {roomId}` → client phải `JoinById` như trên (xử lý message `party` bất cứ lúc nào, không chỉ sau `partyCreate`).
+- [ ] Exp chia: thành viên cùng map nhận `reward` (chỉ exp) khi đồng đội hạ quái; tiến độ quest kill cập nhật cho cả nhóm. Hiển thị chữ nổi "+exp" như thường.
+
+## Backlog (chưa làm)
+
+- Chat party (thêm message broadcast trong `PartyRoom`).
+- Giới hạn chênh level khi chia exp; chia vàng/loot theo luật.
+- Vào dungeon 2 pha (hiện kiểm lại ở từng world room, ai thất bại sau khi người khác đã vào thì những người đó vẫn ở trong).
+- Gộp / giảm tần suất báo HP thành viên khi số party rất lớn.
+- Tên cụ thể của quái / item trong thông điệp daily quest.

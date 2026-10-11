@@ -135,6 +135,11 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
   `DungeonWorldService` chạy chuỗi chamber (phase quái theo giây, bộ đếm quái, cổng exit khoá, boss ở chamber cuối);
   vào dungeon lưu `player_states.dungeon_session` (chỗ đứng cũ + `instanceId`), thoát về đúng chỗ cũ, chết thì
   hồi sinh ở `last_town_map_code`. Không có hồi sinh quái trong dungeon.
+- `party` room — mỗi party một room (`PartyRoom`, luật nằm ở `PartyModel` thuần): thành viên = kết nối party đang mở,
+  rời/mất kết nối là ra ngay, hết người thì room đóng. World room nói chuyện với party room qua
+  `matchMaker.remoteRoomCall` (`attachWorld`/`detachWorld`/`removeMember`/`report`/`requestDungeon`...) và tìm nhau
+  bằng cache: `party:of:{playerId}`, `online:player:{playerId}`, `dungeon:expect:{instanceId}`
+  (`PartyDirectoryService`, Redis khi có `REDIS_URI`). Đổi map chỉ đổi world room, party giữ nguyên.
 - `auth.players` giữ identity, server, tên, trạng thái ban và lần chơi cuối; module `player` sở hữu
   `player_states` (level/exp, HP/MP, map, tọa độ, hướng). Tạo hai bản ghi trong cùng transaction,
   ghép lại trong `PlayerService` để giữ response hiện có; migration backfill dữ liệu cũ.

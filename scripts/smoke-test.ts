@@ -122,7 +122,7 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
     const updated = waitFor<{ quest: { code: string; state: string } }>("questUpdate");
     room.send("dialogueChoose", { optionId: "accept" });
     const { quest } = await updated;
-    if (quest.code !== "slime_hunt" || quest.state !== "active") {
+    if (quest.code !== "adventurer_registration" || quest.state !== "active") {
         throw new Error(`quest not accepted: ${JSON.stringify(quest)}`);
     }
     console.info("✅ quest accepted via dialogue");
@@ -132,6 +132,80 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
     room.send("dialogueChoose", { optionId: "does_not_exist" });
     if (!(await ended).error) throw new Error("unknown dialogue option must be rejected");
     console.info("✅ unknown dialogue option rejected");
+}
+
+// ---- Party: tạo, mời, vào, rời, offline là rời ---------------------------------------------------
+{
+    const until = async (check: () => boolean, label: string, ms = 4000) => {
+        const end = Date.now() + ms;
+        while (Date.now() < end) {
+            if (check()) return;
+            await sleep(50);
+        }
+        throw new Error(`timeout waiting for ${label}`);
+    };
+    const once = <T>(target: any, type: string) =>
+        new Promise<T>((resolve, reject) => {
+            const timer = setTimeout(
+                () => reject(new Error(`timeout waiting for "${type}"`)),
+                4000
+            );
+            target.onMessage(type, (message: T) => {
+                clearTimeout(timer);
+                resolve(message);
+            });
+        });
+
+    // Người chơi thứ hai: tài khoản + nhân vật + world room cùng map.
+    const email2 = `smoke2_${Date.now()}@erpg.local`;
+    const reg2 = await api("POST", "/auth/register", {
+        email: email2,
+        password: "123456",
+        ...client,
+    });
+    const name2 = `Smk${Date.now() % 100000}`;
+    const created2 = await api(
+        "POST",
+        "/players",
+        { name: name2, classCode: starterClasses[0].code },
+        reg2.token
+    );
+    const sdk2 = new Client(SERVER_URL);
+    sdk2.auth.token = created2.playerToken;
+    const world2 = await sdk2.joinOrCreate("world", { mapCode: created2.player.mapCode });
+    await sleep(500);
+
+    // Người 1 tạo party rồi join party room.
+    const created = once<{ roomId: string }>(room, "party");
+    room.send("partyCreate");
+    const { roomId: partyId } = await created;
+    const party1 = await sdk.joinById(partyId);
+    await until(() => (party1.state as any).members?.size === 1, "party with 1 member");
+    console.info("✅ party created, leader joined the party room");
+
+    // Mời người 2: nhận lời mời ở world room, chấp nhận bằng joinById.
+    const invited = once<{ partyRoomId: string }>(world2, "partyInviteReceived");
+    party1.send("invite", { playerName: name2 });
+    const invite = await invited;
+    const party2 = await sdk2.joinById(invite.partyRoomId);
+    await until(() => (party1.state as any).members.size === 2, "2 members");
+    console.info("✅ invite accepted, party has 2 members");
+
+    // Người 2 tự rời → còn 1 người.
+    party2.send("leave");
+    await until(() => (party1.state as any).members.size === 1, "member left");
+    console.info("✅ member left the party");
+
+    // Mời lại, vào lại; rồi người 2 thoát game (rời world room) → bị loại khỏi party ngay.
+    const invitedAgain = once<{ partyRoomId: string }>(world2, "partyInviteReceived");
+    party1.send("invite", { playerName: name2 });
+    const second = await invitedAgain;
+    await sdk2.joinById(second.partyRoomId);
+    await until(() => (party1.state as any).members.size === 2, "2 members again");
+    await world2.leave();
+    await until(() => (party1.state as any).members.size === 1, "offline member removed");
+    console.info("✅ going offline leaves the party immediately");
+    await party1.leave();
 }
 
 await room.leave();
