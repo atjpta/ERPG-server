@@ -40,7 +40,7 @@ import {
 } from "@/rooms/world/commands/party.world.command.js";
 import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
 import type { PartyInviteReceivedMessage } from "@/rooms/world/world.message.js";
-import type { PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
+import type { PartyLootMode, PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
 import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.service.js";
 import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
@@ -212,8 +212,12 @@ export class WorldRoom extends BasePlayerRoom<{
 
     // ---- Gọi từ xa bởi party room (matchMaker.remoteRoomCall) ----------------------------------
 
-    partySetPlayerParty(playerId: string, partyRoomId: string | null): void {
-        partyWorldService.setPlayerParty(this, playerId, partyRoomId);
+    partySetPlayerParty(
+        playerId: string,
+        partyRoomId: string | null,
+        lootMode?: PartyLootMode
+    ): void {
+        partyWorldService.setPlayerParty(this, playerId, partyRoomId, lootMode);
     }
 
     partyEnterDungeon(

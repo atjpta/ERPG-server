@@ -6,6 +6,7 @@ import {
     PlayerStatService,
     playerStatService,
 } from "@/modules/player/user/services/player-stat.service.js";
+import { PartyLootMode } from "@/modules/party/schemas/party.schema.js";
 import type { DungeonSession } from "@/modules/maps/entities/game-map.entity.js";
 import type { FlagValue } from "@/modules/dialogues/schemas/condition.schema.js";
 import type { PlayerDailyQuests } from "@/modules/quests/schemas/daily-quest.schema.js";
@@ -90,6 +91,8 @@ export class PlayerWorldState extends Schema {
     pendingMapCode?: string;
     /** Room party đang tham gia (server-only) — dùng chia exp / quest cho thành viên cùng room. */
     partyRoomId: string | null = null;
+    /** Cách chia item của party hiện tại (do chủ chọn; party room đẩy xuống). */
+    partyLootMode: PartyLootMode = PartyLootMode.ROUND_ROBIN;
     /** Làng gần nhất đã đến (server-only) — chết trong dungeon thì hồi sinh ở đây. */
     lastTownMapCode: string | null = null;
     /** Lượt dungeon đang diễn ra (từ lúc bước vào portal dungeon tới khi thoát ra). */

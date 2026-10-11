@@ -1,4 +1,8 @@
-import { type PartyConfig, type PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
+import {
+    type PartyConfig,
+    type PartyLootMode,
+    type PartyMemberInfo,
+} from "@/modules/party/schemas/party.schema.js";
 import {
     checkPartyDungeonEntry,
     nextLeader,
@@ -35,6 +39,7 @@ export interface LeaveResult {
 export class PartyModel {
     readonly members = new Map<string, PartyMemberInfo>();
     leaderId: string;
+    lootMode: PartyLootMode;
     private readonly invites = new Map<string, PartyInvite>();
 
     constructor(
@@ -43,6 +48,7 @@ export class PartyModel {
     ) {
         this.members.set(leader.playerId, leader);
         this.leaderId = leader.playerId;
+        this.lootMode = config.lootMode;
     }
 
     get size() {
@@ -131,6 +137,12 @@ export class PartyModel {
         if (byId === targetId) return PartyError.SELF_TARGET;
         if (!this.has(targetId)) return PartyError.NOT_MEMBER;
         this.leaderId = targetId;
+        return undefined;
+    }
+
+    setLootMode(byId: string, mode: PartyLootMode): PartyError | undefined {
+        if (!this.isLeader(byId)) return PartyError.NOT_LEADER;
+        this.lootMode = mode;
         return undefined;
     }
 

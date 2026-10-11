@@ -17,6 +17,10 @@ export enum PartyClientMessage {
     LEAVE = "leave",
     /** Chủ giải tán party. */
     DISBAND = "disband",
+    /** `{ mode }` — chủ đổi cách chia item (`PartyLootMode`). */
+    SET_LOOT = "setLoot",
+    /** `{ text }` — chat trong party. */
+    CHAT = "chat",
 }
 
 /** Message server → client của party room (ngoài state). */
@@ -25,6 +29,8 @@ export enum PartyMessage {
     NOTICE = "notice",
     /** Chủ bấm vào dungeon nhưng có người không đủ điều kiện — không ai vào. */
     DUNGEON_DENIED = "dungeonDenied",
+    /** Tin nhắn chat của thành viên (gửi cho cả party, kể cả người gửi). */
+    CHAT = "chat",
 }
 
 export enum PartyNoticeCode {
@@ -45,12 +51,20 @@ export enum PartyNoticeCode {
     ALREADY_MEMBER = "already_member",
     NOT_MEMBER = "not_member",
     INVITE_LIMIT = "invite_limit",
+    /** Chat quá nhanh. */
+    CHAT_LIMIT = "chat_limit",
 }
 
 export interface PartyNoticeMessage {
     code: PartyNoticeCode;
     /** Người liên quan (được mời, rời, bị kick, chủ mới...). */
     playerName?: string;
+}
+
+export interface PartyChatMessage {
+    playerId: string;
+    name: string;
+    text: string;
 }
 
 export interface PartyDungeonFailureMessage {

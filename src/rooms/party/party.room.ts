@@ -5,7 +5,7 @@ import { playerService } from "@/modules/player/user/services/player.service.js"
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import { PartyError, PartyModel } from "@/modules/party/party.model.js";
-import type { PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
+import type { PartyLootMode, PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
 import { BasePlayerRoom, type PlayerClient } from "@/rooms/base/base-player.room.js";
 import { worldRemote } from "@/rooms/party/party-remote.util.js";
@@ -13,11 +13,18 @@ import {
     PartyClientMessage,
     PartyMessage,
     PartyNoticeCode,
+    type PartyChatMessage,
     type PartyDungeonDeniedMessage,
     type PartyNoticeMessage,
 } from "@/rooms/party/schema/party.message.js";
 import { PartyMemberState, PartyState } from "@/rooms/party/schema/party.state.js";
-import { PartyInviteSchema, PartyTargetSchema } from "@/rooms/party/validators/party.validator.js";
+import { cacheService } from "@/core/cache/cache.service.js";
+import {
+    PartyChatSchema,
+    PartyInviteSchema,
+    PartyLootSchema,
+    PartyTargetSchema,
+} from "@/rooms/party/validators/party.validator.js";
 
 export interface PartyRoomOptions {
     /** Chủ lúc tạo (snapshot từ world room). */
@@ -64,6 +71,12 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
         [PartyClientMessage.DISBAND]: (client: PlayerClient) => {
             void this.handleDisband(client);
         },
+        [PartyClientMessage.SET_LOOT]: (client: PlayerClient, payload: unknown) => {
+            this.handleSetLoot(client, payload);
+        },
+        [PartyClientMessage.CHAT]: (client: PlayerClient, payload: unknown) => {
+            void this.handleChat(client, payload);
+        },
     };
 
     async onCreate(options: PartyRoomOptions) {
@@ -100,7 +113,12 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
             (await partyDirectoryService.getWorldRoomId(playerId));
         if (worldRoomId) {
             this.worldRoomOf.set(playerId, worldRoomId);
-            void worldRemote.setPlayerParty(worldRoomId, playerId, this.roomId);
+            void worldRemote.setPlayerParty(
+                worldRoomId,
+                playerId,
+                this.roomId,
+                this.model.lootMode
+            );
         }
         this.syncState();
         if (!isFounder) {
@@ -119,12 +137,16 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
     // ---- Gọi từ world room qua matchMaker.remoteRoomCall --------------------------------------
 
     /** World room mới báo thành viên đã vào (đổi map / vào dungeon). */
-    attachWorld(playerId: string, worldRoomId: string, info?: Partial<PartyMemberInfo>): boolean {
-        if (!this.model?.has(playerId)) return false;
+    attachWorld(
+        playerId: string,
+        worldRoomId: string,
+        info?: Partial<PartyMemberInfo>
+    ): PartyLootMode | null {
+        if (!this.model?.has(playerId)) return null;
         this.worldRoomOf.set(playerId, worldRoomId);
         this.model.patch(playerId, { ...info, inWorld: true });
         this.syncState();
-        return true;
+        return this.model.lootMode;
     }
 
     /** World room cũ báo thành viên đã rời; chỉ tính khi room đó còn là room hiện tại của họ. */
@@ -266,6 +288,39 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
         this.broadcastNotice(PartyNoticeCode.LEADER_CHANGED, this.nameOf(parsed.data.playerId));
     }
 
+    private handleSetLoot(client: PlayerClient, payload: unknown) {
+        const parsed = PartyLootSchema.safeParse(payload);
+        if (!parsed.success) return;
+        const error = this.model.setLootMode(client.auth.playerId, parsed.data.mode);
+        if (error) return this.notice(client, NOTICE_BY_ERROR[error]);
+        this.syncState();
+        // World room của từng thành viên cần biết cách chia mới để chia item lúc hạ quái.
+        for (const [playerId, worldRoomId] of this.worldRoomOf) {
+            void worldRemote.setPlayerParty(
+                worldRoomId,
+                playerId,
+                this.roomId,
+                this.model.lootMode
+            );
+        }
+    }
+
+    private async handleChat(client: PlayerClient, payload: unknown) {
+        const parsed = PartyChatSchema.safeParse(payload);
+        if (!parsed.success) return;
+        const { playerId } = client.auth;
+        // 8 tin / 10 giây / người.
+        if ((await cacheService.incr(`party:chat:${playerId}`, 10)) > 8) {
+            return this.notice(client, PartyNoticeCode.CHAT_LIMIT);
+        }
+        const message: PartyChatMessage = {
+            playerId,
+            name: this.nameOf(playerId),
+            text: parsed.data.text,
+        };
+        this.broadcast(PartyMessage.CHAT, message);
+    }
+
     private async handleDisband(client: PlayerClient) {
         if (!this.model.isLeader(client.auth.playerId)) {
             return this.notice(client, PartyNoticeCode.NOT_LEADER);
@@ -362,6 +417,7 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
             member.inDungeon = info.inDungeon;
         }
         this.state.leaderPlayerId = this.model.leaderId;
+        this.state.lootMode = this.model.lootMode;
     }
 
     private notice(client: PlayerClient, code: PartyNoticeCode, playerName?: string) {

@@ -1,5 +1,5 @@
 import { matchMaker, type Room } from "colyseus";
-import type { PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
+import type { PartyLootMode, PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
 
 /**
  * Gọi method của world room từ party room qua `matchMaker.remoteRoomCall` (chạy được cả khi world room ở
@@ -31,8 +31,18 @@ export const worldRemote = {
     deliverInvite: (worldRoomId: string, playerId: string, payload: InvitePayload) =>
         call<PartyMemberInfo | null>(worldRoomId, "partyDeliverInvite", [playerId, payload], null),
     /** Gán / bỏ party cho `playerId` ở world room. */
-    setPlayerParty: (worldRoomId: string, playerId: string, partyRoomId: string | null) =>
-        call<void>(worldRoomId, "partySetPlayerParty", [playerId, partyRoomId], undefined),
+    setPlayerParty: (
+        worldRoomId: string,
+        playerId: string,
+        partyRoomId: string | null,
+        lootMode?: PartyLootMode
+    ) =>
+        call<void>(
+            worldRoomId,
+            "partySetPlayerParty",
+            [playerId, partyRoomId, lootMode],
+            undefined
+        ),
     /** Lệnh vào dungeon theo party: trả mã lỗi (`undefined` = đã gửi mapChange). */
     enterDungeon: (
         worldRoomId: string,

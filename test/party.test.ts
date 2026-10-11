@@ -3,10 +3,14 @@ import { describe, it } from "node:test";
 import {
     PartyConfigSchema,
     PartyDungeonDenyReason,
+    PartyLootMode,
     type PartyMemberInfo,
 } from "@/modules/party/schemas/party.schema.js";
+import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
+import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import { PartyError, PartyModel } from "@/modules/party/party.model.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
+import { shareKillReward, withinLevelGap } from "@/modules/party/utils/party-loot.util.js";
 import { splitPartyExp } from "@/modules/party/utils/party-exp.util.js";
 import { checkPartyDungeonEntry, nextLeader } from "@/modules/party/utils/party-rules.util.js";
 
@@ -91,6 +95,25 @@ describe("checkPartyDungeonEntry", () => {
     });
 });
 
+describe("PartyModel loot mode", () => {
+    const config = {
+        maxMembers: 3,
+        inviteTtlSec: 30,
+        expBonusPerExtraMember: 0.1,
+        maxLevelGap: 10,
+        shareGold: true,
+        lootMode: PartyLootMode.ROUND_ROBIN,
+    };
+
+    it("mặc định theo config, chỉ chủ đổi được", () => {
+        const party = new PartyModel(config, member("a"));
+        assert.equal(party.lootMode, PartyLootMode.ROUND_ROBIN);
+        assert.equal(party.setLootMode("b", PartyLootMode.KILLER), PartyError.NOT_LEADER);
+        assert.equal(party.setLootMode("a", PartyLootMode.KILLER), undefined);
+        assert.equal(party.lootMode, PartyLootMode.KILLER);
+    });
+});
+
 describe("party config", () => {
     it("schema nhận giá trị mặc định và từ chối giá trị sai", () => {
         const value = { maxMembers: 4, inviteTtlSec: 30, expBonusPerExtraMember: 0.1 };
@@ -140,7 +163,14 @@ describe("party directory (memory cache)", () => {
 });
 
 describe("PartyModel", () => {
-    const config = { maxMembers: 3, inviteTtlSec: 30, expBonusPerExtraMember: 0.1 };
+    const config = {
+        maxMembers: 3,
+        inviteTtlSec: 30,
+        expBonusPerExtraMember: 0.1,
+        maxLevelGap: 10,
+        shareGold: true,
+        lootMode: PartyLootMode.ROUND_ROBIN,
+    };
     const model = () => new PartyModel(config, member("a"));
 
     it("tạo party với chủ là người đầu tiên", () => {
@@ -229,5 +259,120 @@ describe("PartyModel", () => {
         );
         party.patch("b", { inWorld: false });
         assert.equal(party.checkDungeon(10, 4)[0].reason, PartyDungeonDenyReason.OFFLINE);
+    });
+});
+
+describe("withinLevelGap", () => {
+    it("trong khoảng cho phép, 0 là không giới hạn", () => {
+        assert.ok(withinLevelGap(15, 10, 10));
+        assert.ok(withinLevelGap(5, 15, 10));
+        assert.ok(!withinLevelGap(30, 10, 10));
+        assert.ok(!withinLevelGap(1, 20, 10));
+        assert.ok(withinLevelGap(1, 99, 0));
+    });
+});
+
+describe("shareKillReward", () => {
+    const item = (id: string) => ({ itemId: id, quantity: 1 });
+    const reward = () => ({
+        exp: 100,
+        currency: [{ code: CurrencyCode.GOLD, amount: 10 }],
+        items: [item("i1"), item("i2"), item("i3")],
+        source: ItemSource.DROP,
+    });
+    const people = [
+        { id: "a", level: 10 },
+        { id: "b", level: 10 },
+        { id: "c", level: 10 },
+    ];
+    const options = {
+        expBonusPerExtraMember: 0.1,
+        maxLevelGap: 10,
+        shareGold: true,
+        lootMode: PartyLootMode.ROUND_ROBIN,
+        cursor: 0,
+    };
+
+    it("một mình hoặc chỉ người kết liễu đủ điều kiện: nhận hết, không đổi con trỏ", () => {
+        const solo = shareKillReward(reward(), "a", [people[0]], 10, options);
+        assert.equal(solo.rewards.get("a")?.exp, 100);
+        assert.equal(solo.rewards.get("a")?.items.length, 3);
+        assert.equal(solo.nextCursor, 0);
+        const far = shareKillReward(
+            reward(),
+            "a",
+            [people[0], { id: "x", level: 60 }],
+            10,
+            options
+        );
+        assert.equal(far.rewards.size, 1);
+        assert.equal(far.rewards.get("a")?.exp, 100);
+    });
+
+    it("exp chia có bonus; vàng chia đều, phần dư về người kết liễu", () => {
+        const { rewards } = shareKillReward(reward(), "b", people, 10, options);
+        // 100 × (1 + 0.1 × 2) / 3 = 40
+        assert.deepEqual(
+            [...rewards.values()].map((r) => r.exp),
+            [40, 40, 40]
+        );
+        const gold = (id: string) => rewards.get(id)?.currency[0]?.amount ?? 0;
+        // 10 / 3 = 3 dư 1 → người kết liễu (b) nhận 4
+        assert.deepEqual([gold("a"), gold("b"), gold("c")], [3, 4, 3]);
+    });
+
+    it("tắt chia vàng: người kết liễu giữ hết", () => {
+        const { rewards } = shareKillReward(reward(), "a", people, 10, {
+            ...options,
+            shareGold: false,
+        });
+        assert.equal(rewards.get("a")?.currency[0].amount, 10);
+        assert.equal(rewards.get("b")?.currency.length, 0);
+    });
+
+    it("luân phiên: mỗi item một người, con trỏ tiếp tục ở lần sau", () => {
+        const first = shareKillReward(reward(), "a", people, 10, options);
+        const owners = (r: typeof first) =>
+            [...r.rewards].map(([id, rw]) => [id, rw.items.map((i) => i.itemId)]);
+        assert.deepEqual(owners(first), [
+            ["a", ["i1"]],
+            ["b", ["i2"]],
+            ["c", ["i3"]],
+        ]);
+        assert.equal(first.nextCursor, 3);
+        const second = shareKillReward({ ...reward(), items: [item("i4")] }, "a", people, 10, {
+            ...options,
+            cursor: first.nextCursor,
+        });
+        assert.deepEqual(owners(second), [
+            ["a", ["i4"]],
+            ["b", []],
+            ["c", []],
+        ]);
+    });
+
+    it("killer: người kết liễu giữ item; random: người nhận nằm trong nhóm đủ điều kiện", () => {
+        const killer = shareKillReward(reward(), "b", people, 10, {
+            ...options,
+            lootMode: PartyLootMode.KILLER,
+        });
+        assert.equal(killer.rewards.get("b")?.items.length, 3);
+        const random = shareKillReward(reward(), "a", people, 10, {
+            ...options,
+            lootMode: PartyLootMode.RANDOM,
+            rng: () => 0.99,
+        });
+        assert.equal(random.rewards.get("c")?.items.length, 3);
+    });
+
+    it("thành viên chênh level quá lớn không được chia, người còn lại chia nhau", () => {
+        const mixed = [...people.slice(0, 2), { id: "boost", level: 50 }];
+        const { rewards } = shareKillReward(reward(), "a", mixed, 10, options);
+        assert.deepEqual([...rewards.keys()], ["a", "b"]);
+        // 100 × 1.1 / 2 = 55
+        assert.equal(rewards.get("a")?.exp, 55);
+        // maxLevelGap = 0 thì không giới hạn
+        const all = shareKillReward(reward(), "a", mixed, 10, { ...options, maxLevelGap: 0 });
+        assert.equal(all.rewards.size, 3);
     });
 });

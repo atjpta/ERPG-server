@@ -36,5 +36,7 @@ export class PartyMemberState extends Schema {
 
 export class PartyState extends Schema {
     @type("string") leaderPlayerId = "";
+    /** Cách chia item (`PartyLootMode`). */
+    @type("string") lootMode = "";
     @type({ map: PartyMemberState }) members = new MapSchema<PartyMemberState>();
 }

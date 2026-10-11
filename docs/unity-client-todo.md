@@ -129,12 +129,12 @@ Server: room `party` riêng cho mỗi party (xem `docs/content-authoring.md`, m�
 - [ ] **Rời là rời ngay:** rớt mạng hay thoát game = ra khỏi party, đăng nhập lại không còn party → người chơi phải mời lại. Không cần logic reconnect party room.
 - [ ] Vào dungeon: chỉ chủ bấm cổng (thành viên khác nhận lỗi `interactResult.error = party_not_leader`). Có người không đạt: nhận `dungeonDenied {dungeonCode, failures[]}` ở party room → popup liệt kê tên + lý do (`level_too_low`, `offline`, `dead`, `in_dungeon`, `party_too_large`); `interactResult.error = party_denied` ở chủ. Đạt hết: **mọi thành viên** (kể cả đang ở map khác) nhận `mapChange` với `roomName = "dungeon"` và `instanceId` — tự chuyển, không cần thao tác.
 - [ ] Chưa có party mà bấm cổng dungeon: server tự tạo party 1 người và gửi `party {roomId}` → client phải `JoinById` như trên (xử lý message `party` bất cứ lúc nào, không chỉ sau `partyCreate`).
-- [ ] Exp chia: thành viên cùng map nhận `reward` (chỉ exp) khi đồng đội hạ quái; tiến độ quest kill cập nhật cho cả nhóm. Hiển thị chữ nổi "+exp" như thường.
+- [ ] Chia thưởng: thành viên cùng map nhận `reward` (exp, vàng, item được chia) khi đồng đội hạ quái; tiến độ quest kill cập nhật cho cả nhóm. Người chênh level với quái quá `maxLevelGap` (mặc định 10) không được chia — nên có gợi ý trên UI.
+- [ ] **Cách chia item**: hiện `PartyState.lootMode` (`killer` / `round_robin` / `random`); chủ có menu chọn → gửi `setLoot {mode}` vào party room.
+- [ ] **Chat party**: ô chat trong khung party; gửi `chat {text}` vào party room (≤ 200 ký tự), hiển thị tin nhận từ `chat {playerId, name, text}`; xử lý `notice chat_limit`.
 
 ## Backlog (chưa làm)
 
-- Chat party (thêm message broadcast trong `PartyRoom`).
-- Giới hạn chênh level khi chia exp; chia vàng/loot theo luật.
 - Vào dungeon 2 pha (hiện kiểm lại ở từng world room, ai thất bại sau khi người khác đã vào thì những người đó vẫn ở trong).
 - Gộp / giảm tần suất báo HP thành viên khi số party rất lớn.
 - Tên cụ thể của quái / item trong thông điệp daily quest.

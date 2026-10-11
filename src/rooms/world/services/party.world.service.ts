@@ -2,7 +2,8 @@ import { matchMaker, type Room } from "colyseus";
 import type { PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
-import { splitPartyExp } from "@/modules/party/utils/party-exp.util.js";
+import type { PartyLootMode } from "@/modules/party/schemas/party.schema.js";
+import { shareKillReward } from "@/modules/party/utils/party-loot.util.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { Reward } from "@/modules/rewards/types/reward.type.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
@@ -42,6 +43,8 @@ const callParty = async <T>(partyRoomId: string, method: string, args: unknown[]
  */
 export class PartyWorldService {
     private readonly lastReport = new WeakMap<PlayerWorldState, string>();
+    /** Con trỏ chia item luân phiên theo party (trong process này). */
+    private readonly lootCursor = new Map<string, number>();
     private readonly creating = new Map<string, Promise<string | undefined>>();
 
     toMemberInfo(room: WorldRoom, player: PlayerWorldState): PartyMemberInfo {
@@ -65,18 +68,19 @@ export class PartyWorldService {
         await partyDirectoryService.setWorldRoomId(player.id, room.roomId);
         const partyRoomId = await partyDirectoryService.getPartyRoomId(player.id);
         if (!partyRoomId) return;
-        const attached = await callParty<boolean>(
+        const lootMode = await callParty<PartyLootMode | null>(
             partyRoomId,
             "attachWorld",
             [player.id, room.roomId, this.toMemberInfo(room, player)],
-            false
+            null
         );
         // Party room không còn, hoặc đã bỏ người này: dọn con trỏ chết.
-        if (!attached) {
+        if (!lootMode) {
             await partyDirectoryService.clearPartyRoomId(player.id);
             return;
         }
         player.partyRoomId = partyRoomId;
+        player.partyLootMode = lootMode;
     }
 
     /**
@@ -177,6 +181,7 @@ export class PartyWorldService {
                 return undefined;
             }
             player.partyRoomId = partyRoomId;
+            player.partyLootMode = masterDataCacheService.get(MasterDataKey.PARTY_CONFIG).lootMode;
             await partyDirectoryService.setPartyRoomId(player.id, partyRoomId);
         }
         const message: PartyRoomMessage = { roomId: partyRoomId };
@@ -247,10 +252,16 @@ export class PartyWorldService {
     }
 
     /** Party room gọi (qua world room): đã gắn / bỏ party cho player đang đứng ở room này. */
-    setPlayerParty(room: WorldRoom, playerId: string, partyRoomId: string | null): void {
+    setPlayerParty(
+        room: WorldRoom,
+        playerId: string,
+        partyRoomId: string | null,
+        lootMode?: PartyLootMode
+    ): void {
         const player = this.findPlayer(room, playerId)?.player;
         if (!player) return;
         player.partyRoomId = partyRoomId;
+        if (lootMode) player.partyLootMode = lootMode;
         this.lastReport.delete(player);
     }
 
@@ -291,8 +302,9 @@ export class PartyWorldService {
     }
 
     /**
-     * Phần thưởng khi hạ quái: người kết liễu nhận nguyên vàng + item; **exp** chia đều cho thành viên
-     * party cùng room (có bonus theo số người, `party_config`). Mỗi thành viên đủ điều kiện nhận tiến độ
+     * Phần thưởng khi hạ quái cho party cùng room (`shareKillReward`): exp chia đều có bonus, vàng chia
+     * đều, item chia theo cách chủ party chọn; thành viên chênh level với quái quá `maxLevelGap` không
+     * được chia (người kết liễu luôn được tính). Mọi thành viên còn sống trong room đều nhận tiến độ
      * quest kill như người kết liễu.
      */
     grantKill(
@@ -300,7 +312,7 @@ export class PartyWorldService {
         attackerSessionId: string,
         attacker: PlayerWorldState,
         reward: Reward,
-        targetCode: string
+        target: { code: string; level: number }
     ): void {
         const participants = this.killParticipants(room, attackerSessionId, attacker);
         if (participants.length <= 1) {
@@ -308,21 +320,28 @@ export class PartyWorldService {
             return;
         }
         const config = masterDataCacheService.get(MasterDataKey.PARTY_CONFIG);
-        const exp = splitPartyExp(reward.exp, participants.length, config.expBonusPerExtraMember);
-        for (const { sessionId, player } of participants) {
-            if (player === attacker) {
-                rewardWorldService.grant(room, sessionId, player, { ...reward, exp });
-                continue;
+        const partyRoomId = attacker.partyRoomId!;
+        const { rewards, nextCursor } = shareKillReward(
+            reward,
+            attacker.id,
+            participants.map(({ player }) => ({ id: player.id, level: player.level })),
+            target.level,
+            {
+                expBonusPerExtraMember: config.expBonusPerExtraMember,
+                maxLevelGap: config.maxLevelGap,
+                shareGold: config.shareGold,
+                lootMode: attacker.partyLootMode,
+                cursor: this.lootCursor.get(partyRoomId) ?? 0,
             }
-            rewardWorldService.grant(room, sessionId, player, {
-                currency: [],
-                items: [],
-                source: reward.source,
-                exp,
-            });
+        );
+        this.lootCursor.set(partyRoomId, nextCursor);
+        for (const { sessionId, player } of participants) {
+            const share = rewards.get(player.id);
+            if (share) rewardWorldService.grant(room, sessionId, player, share);
+            if (player === attacker) continue;
             questWorldService.onEvent(room, sessionId, player, {
                 type: QuestObjectiveType.KILL,
-                targetCode,
+                targetCode: target.code,
             });
         }
     }

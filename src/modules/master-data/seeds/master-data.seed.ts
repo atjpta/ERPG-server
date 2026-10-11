@@ -13,6 +13,7 @@ import {
     DEFAULT_MONSTER_SPAWN_CONFIG,
 } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { DEFAULT_DAILY_QUEST_CONFIG } from "@/modules/quests/seeds/daily-quest-config.seed-data.js";
+import { PartyLootMode } from "@/modules/party/schemas/party.schema.js";
 import { DEFAULT_DUNGEON_DROP_CONFIG } from "@/modules/maps/seeds/dungeon-drop-config.seed-data.js";
 import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
@@ -91,8 +92,15 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
         note: "Chỉnh drop quái trong dungeon theo map (hệ số exp/vàng/tỉ lệ, trang bị, item rơi thêm)",
     },
     [MasterDataKey.PARTY_CONFIG]: {
-        value: { maxMembers: 4, inviteTtlSec: 30, expBonusPerExtraMember: 0.1 },
-        note: "Party: số thành viên tối đa, hạn lời mời, bonus exp mỗi thành viên thêm",
+        value: {
+            maxMembers: 4,
+            inviteTtlSec: 30,
+            expBonusPerExtraMember: 0.1,
+            maxLevelGap: 10,
+            shareGold: true,
+            lootMode: PartyLootMode.ROUND_ROBIN,
+        },
+        note: "Party: số thành viên tối đa, hạn lời mời, bonus exp, giới hạn chênh level, chia vàng, cách chia item",
     },
     [MasterDataKey.DAILY_QUEST_CONFIG]: {
         value: DEFAULT_DAILY_QUEST_CONFIG,

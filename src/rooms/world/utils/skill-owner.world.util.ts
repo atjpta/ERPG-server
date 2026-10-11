@@ -150,7 +150,7 @@ export function applySkillHit(
                       ]
                     : undefined
             ),
-            target.code
+            { code: target.code, level: target.level }
         );
     }
     return true;
