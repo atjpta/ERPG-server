@@ -13,14 +13,11 @@ import {
     PartyClientMessage,
     PartyMessage,
     PartyNoticeCode,
-    type PartyChatMessage,
     type PartyDungeonDeniedMessage,
     type PartyNoticeMessage,
 } from "@/rooms/party/schema/party.message.js";
 import { PartyMemberState, PartyState } from "@/rooms/party/schema/party.state.js";
-import { cacheService } from "@/core/cache/cache.service.js";
 import {
-    PartyChatSchema,
     PartyInviteSchema,
     PartyLootSchema,
     PartyTargetSchema,
@@ -73,9 +70,6 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
         },
         [PartyClientMessage.SET_LOOT]: (client: PlayerClient, payload: unknown) => {
             this.handleSetLoot(client, payload);
-        },
-        [PartyClientMessage.CHAT]: (client: PlayerClient, payload: unknown) => {
-            void this.handleChat(client, payload);
         },
     };
 
@@ -303,22 +297,6 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
                 this.model.lootMode
             );
         }
-    }
-
-    private async handleChat(client: PlayerClient, payload: unknown) {
-        const parsed = PartyChatSchema.safeParse(payload);
-        if (!parsed.success) return;
-        const { playerId } = client.auth;
-        // 8 tin / 10 giây / người.
-        if ((await cacheService.incr(`party:chat:${playerId}`, 10)) > 8) {
-            return this.notice(client, PartyNoticeCode.CHAT_LIMIT);
-        }
-        const message: PartyChatMessage = {
-            playerId,
-            name: this.nameOf(playerId),
-            text: parsed.data.text,
-        };
-        this.broadcast(PartyMessage.CHAT, message);
     }
 
     private async handleDisband(client: PlayerClient) {

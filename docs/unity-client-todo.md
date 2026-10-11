@@ -131,10 +131,10 @@ Server: room `party` riêng cho mỗi party (xem `docs/content-authoring.md`, m�
 - [ ] Chưa có party mà bấm cổng dungeon: server tự tạo party 1 người và gửi `party {roomId}` → client phải `JoinById` như trên (xử lý message `party` bất cứ lúc nào, không chỉ sau `partyCreate`).
 - [ ] Chia thưởng: thành viên cùng map nhận `reward` (exp, vàng, item được chia) khi đồng đội hạ quái; tiến độ quest kill cập nhật cho cả nhóm. Người chênh level với quái quá `maxLevelGap` (mặc định 10) không được chia — nên có gợi ý trên UI.
 - [ ] **Cách chia item**: hiện `PartyState.lootMode` (`killer` / `round_robin` / `random`); chủ có menu chọn → gửi `setLoot {mode}` vào party room.
-- [ ] **Chat party**: ô chat trong khung party; gửi `chat {text}` vào party room (≤ 200 ký tự), hiển thị tin nhận từ `chat {playerId, name, text}`; xử lý `notice chat_limit`.
 
 ## Backlog (chưa làm)
 
+- Chat party (thêm message broadcast + giới hạn tốc độ trong `PartyRoom`).
 - Vào dungeon 2 pha (hiện kiểm lại ở từng world room, ai thất bại sau khi người khác đã vào thì những người đó vẫn ở trong).
 - Gộp / giảm tần suất báo HP thành viên khi số party rất lớn.
 - Tên cụ thể của quái / item trong thông điệp daily quest.
