@@ -73,6 +73,8 @@ export class InteractWorldService {
                     def.targetMapCode,
                     def.targetSpawnId
                 );
+            case "teleport":
+                return transferWorldService.teleport(room, player, def);
             case "gather":
                 return this.gather(room, client, player, def, state);
             case "sign": {

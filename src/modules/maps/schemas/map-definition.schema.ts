@@ -73,6 +73,12 @@ export const InteractableDefSchema = z.discriminatedUnion("type", [
         respawnSec: z.number().int().positive(),
     }),
     z.object({ ...interactableBase, type: z.literal("sign"), dialogueCode: z.string().min(1) }),
+    /** Bệ dịch chuyển trong cùng map: dùng thì tới ngay vị trí của bệ `targetTeleportId` (khai cả hai chiều để đi lại). */
+    z.object({
+        ...interactableBase,
+        type: z.literal("teleport"),
+        targetTeleportId: idSchema,
+    }),
 ]);
 export type InteractableDef = z.infer<typeof InteractableDefSchema>;
 
@@ -213,6 +219,17 @@ export const MapDefinitionSchema = z
         map.interactables.forEach((it, i) => {
             if (interactableIds.has(it.id)) duplicate(["interactables", i, "id"]);
             interactableIds.add(it.id);
+        });
+        map.interactables.forEach((it, i) => {
+            if (it.type !== "teleport") return;
+            const target = map.interactables.find((other) => other.id === it.targetTeleportId);
+            if (it.targetTeleportId === it.id || target?.type !== "teleport") {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["interactables", i, "targetTeleportId"],
+                    message: "targetTeleportId must be another teleport in the same map",
+                });
+            }
         });
     });
 

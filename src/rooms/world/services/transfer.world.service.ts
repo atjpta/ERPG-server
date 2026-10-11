@@ -1,4 +1,4 @@
-import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
+import type { GameMap, MapTeleport } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
 import { mapService } from "@/modules/maps/user/services/map.service.js";
@@ -55,6 +55,23 @@ export class TransferWorldService {
         const message: MapChangeMessage = { mapCode, spawnId, roomName: WorldRoomName.WORLD };
         client.send(WorldMessage.MAP_CHANGE, message);
         await worldService.savePlayer(room, client.sessionId);
+        return undefined;
+    }
+
+    /**
+     * Bệ dịch chuyển trong map: đặt player ngay tại bệ đích (không đổi room, không `mapChange` — client
+     * nhận vị trí mới từ server). Bệ đích chưa được Unity đặt vị trí thì chưa dùng được.
+     */
+    teleport(room: WorldRoom, player: PlayerWorldState, teleport: MapTeleport): string | undefined {
+        const target = room.map.interactables.find(
+            (it) => it.type === "teleport" && it.id === teleport.targetTeleportId
+        );
+        if (!target) return "Not available";
+        player.x = target.x;
+        player.y = target.y;
+        player.moving = false;
+        player.targetId = "";
+        player.targetLocked = false;
         return undefined;
     }
 }
