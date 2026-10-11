@@ -20,7 +20,12 @@ import {
     validateDefinitionRefs,
     validateLayoutAgainstDefinition,
 } from "@/modules/maps/utils/map-build.util.js";
-import { listTeleportDestinations } from "@/modules/maps/utils/teleport.util.js";
+import {
+    hasVisited,
+    listTeleportDestinations,
+    teleportStatus,
+    visitedFlagKey,
+} from "@/modules/maps/utils/teleport.util.js";
 import { hashMapLayout, parseMapLayout } from "@/modules/maps/utils/map-file.util.js";
 
 const definition = (extra: Partial<MapDefinitionInput> = {}) =>
@@ -313,10 +318,10 @@ describe("teleport (dịch chuyển nhanh)", () => {
             ...extra,
         ] as Parameters<typeof listTeleportDestinations>[0];
 
-    it("điểm đến = map có bệ teleport, trừ dungeon và map hiện tại, sắp theo level", () => {
+    it("điểm đến = mọi map trừ dungeon và map hiện tại, sắp theo level", () => {
         assert.deepEqual(
             listTeleportDestinations(maps(), "village").map((d) => d.mapCode),
-            ["forest"]
+            ["plains", "forest"]
         );
         assert.deepEqual(
             listTeleportDestinations(maps(), "plains").map((d) => d.mapCode),
@@ -325,15 +330,35 @@ describe("teleport (dịch chuyển nhanh)", () => {
     });
 
     it("trả về bệ và vị trí để đặt player", () => {
-        const [forest] = listTeleportDestinations(maps(), "village");
+        const forest = listTeleportDestinations(maps(), "village").find(
+            (d) => d.mapCode === "forest"
+        )!;
         assert.deepEqual(
             [forest.teleportId, forest.x, forest.y, forest.minLevel],
             ["tp_f", 1, 2, 10]
         );
     });
 
-    it("map chỉ có portal (không có teleport) không phải điểm đến", () => {
-        assert.ok(!listTeleportDestinations(maps()).some((d) => d.mapCode === "plains"));
+    it("map chưa có bệ teleport vẫn có trong danh sách nhưng chưa mở", () => {
+        const plains = listTeleportDestinations(maps()).find((d) => d.mapCode === "plains");
+        assert.equal(plains?.open, false);
+        assert.equal(plains?.teleportId, undefined);
+    });
+
+    it("map có bệ nhưng chưa active cũng chưa mở", () => {
+        const inactive = maps([
+            {
+                code: "ruins",
+                type: "field",
+                minLevel: 5,
+                status: "inactive",
+                interactables: [{ id: "tp_r", type: "teleport", x: 1, y: 1 }],
+            },
+        ]);
+        assert.equal(
+            listTeleportDestinations(inactive).find((d) => d.mapCode === "ruins")?.open,
+            false
+        );
     });
 
     it("định nghĩa teleport không cần đích; row giữ vị trí bệ", () => {
@@ -359,5 +384,43 @@ describe("teleport (dịch chuyển nhanh)", () => {
             const has = def.interactables.some((it) => it.type === "teleport");
             assert.equal(has, def.type !== MapType.DUNGEON, def.code);
         }
+    });
+});
+
+describe("teleport: phải đến map đó trước", () => {
+    const destination = { mapCode: "whispering_forest", minLevel: 10 };
+
+    it("đánh dấu theo flag visited.<map>", () => {
+        assert.equal(visitedFlagKey("whispering_forest"), "visited.whispering_forest");
+        assert.equal(hasVisited({}, "whispering_forest"), false);
+        assert.equal(hasVisited({ "visited.whispering_forest": true }, "whispering_forest"), true);
+        assert.equal(hasVisited({ "visited.other": true }, "whispering_forest"), false);
+    });
+
+    it("chưa đến thì không teleport được dù đủ level", () => {
+        assert.deepEqual(teleportStatus(destination, 50, {}), {
+            discovered: false,
+            levelOk: true,
+            available: false,
+        });
+    });
+
+    it("đã đến nhưng thiếu level cũng chưa được", () => {
+        const flags = { "visited.whispering_forest": true };
+        assert.deepEqual(teleportStatus(destination, 5, flags), {
+            discovered: true,
+            levelOk: false,
+            available: false,
+        });
+    });
+
+    it("chưa mở (không có bệ) thì không teleport được dù đã đến và đủ level", () => {
+        const flags = { "visited.whispering_forest": true };
+        assert.equal(teleportStatus({ ...destination, open: false }, 50, flags).available, false);
+    });
+
+    it("đã đến và đủ level thì teleport được", () => {
+        const flags = { "visited.whispering_forest": true };
+        assert.equal(teleportStatus(destination, 10, flags).available, true);
     });
 });

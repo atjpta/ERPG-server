@@ -42,6 +42,7 @@ import {
 import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
 import type { PartyInviteReceivedMessage } from "@/rooms/world/world.message.js";
 import type { PartyLootMode, PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
+import { visitedFlagKey } from "@/modules/maps/utils/teleport.util.js";
 import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.service.js";
 import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
@@ -173,6 +174,8 @@ export class WorldRoom extends BasePlayerRoom<{
 
         const player = this.state.players.get(client.sessionId);
         if (player) {
+            // Đã đến map này → về sau teleport tới được.
+            player.flags[visitedFlagKey(this.map.code)] = true;
             if (this.dungeon) dungeonWorldService.onPlayerJoined(this, player);
             await partyWorldService.onJoin(this, player);
             inventoryWorldService.send(client, player);

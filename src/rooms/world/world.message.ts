@@ -128,6 +128,8 @@ export enum MapTransferError {
     NOT_AT_TELEPORT = "not_at_teleport",
     /** `teleportTo` tới map không có bệ teleport (hoặc không mở). */
     NO_DESTINATION = "no_destination",
+    /** `teleportTo` tới map người chơi chưa từng đến. */
+    MAP_NOT_DISCOVERED = "map_not_discovered",
     /** Vào dungeon theo party: chỉ chủ party được bấm. */
     PARTY_NOT_LEADER = "party_not_leader",
     /** Vào dungeon theo party: có thành viên không đủ điều kiện (cả party nhận `dungeonDenied`). */
@@ -456,7 +458,11 @@ export interface PartyInviteReceivedMessage {
 export interface TeleportDestinationMessage {
     mapCode: string;
     minLevel: number;
-    /** Player đủ level để tới map này. */
+    /** Map có bệ teleport đã đặt và đang mở — `false` thì hiện mờ, không chọn được. */
+    open: boolean;
+    /** Đã từng đến map này — chưa đến thì chưa teleport tới được. */
+    discovered: boolean;
+    /** Teleport tới được ngay: đã đến map này và đủ level. */
     available: boolean;
 }
 

@@ -64,9 +64,9 @@ export class MapService {
         };
     }
 
-    /** Điểm đến teleport từ map `currentMapCode` (map active có bệ teleport, trừ dungeon và map hiện tại). */
+    /** Điểm đến teleport từ map `currentMapCode`: mọi map trừ dungeon và map hiện tại (map chưa đi được có `open = false`). */
     async listTeleportDestinations(currentMapCode: string) {
-        return listTeleportDestinations(await GameMapRepo.findActive(), currentMapCode);
+        return listTeleportDestinations(await GameMapRepo.findMany(), currentMapCode);
     }
 
     async getActiveByCodeOrFail(code: string, dbOrTx?: Queryable) {

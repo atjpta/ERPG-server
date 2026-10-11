@@ -1,102 +1,83 @@
 {
-    "code": "whispering_forest",
-    "width": 37,
-    "height": 18,
-    "tileSize": 16,
-    "spawnPoints": [
-        {
-            "id": "default",
-            "x": 2.0,
-            "y": 2.0
-        },
-        {
-            "id": "from_village",
-            "x": 6.0,
-            "y": 2.0
-        },
-        {
-            "id": "from_evergrowth",
-            "x": 10.0,
-            "y": 2.0
-        },
-        {
-            "id": "respawn",
-            "x": 14.0,
-            "y": 2.0
-        }
-    ],
-    "colliders": [],
-    "monsters": [
-        {
-            "id": "f01",
-            "x": 18.0,
-            "y": 2.0
-        },
-        {
-            "id": "f02",
-            "x": 22.0,
-            "y": 2.0
-        },
-        {
-            "id": "f03",
-            "x": 26.0,
-            "y": 2.0
-        },
-        {
-            "id": "f04",
-            "x": 30.0,
-            "y": 2.0
-        },
-        {
-            "id": "f05",
-            "x": 2.0,
-            "y": 6.0
-        },
-        {
-            "id": "f06",
-            "x": 6.0,
-            "y": 6.0
-        },
-        {
-            "id": "f07",
-            "x": 10.0,
-            "y": 6.0
-        },
-        {
-            "id": "f08",
-            "x": 14.0,
-            "y": 6.0
-        },
-        {
-            "id": "f09",
-            "x": 18.0,
-            "y": 6.0
-        },
-        {
-            "id": "f10",
-            "x": 22.0,
-            "y": 6.0
-        }
-    ],
-    "npcs": [],
-    "interactables": [
-        {
-            "id": "forest_to_village",
-            "x": 26.0,
-            "y": 6.0,
-            "direction": "right"
-        },
-        {
-            "id": "forest_to_evergrowth",
-            "x": 30.0,
-            "y": 6.0,
-            "direction": "right"
-        },
-        {
-            "id": "forest_to_werewolf_den",
-            "x": 2.0,
-            "y": 10.0,
-            "direction": "left"
-        }
-    ]
+  "code": "whispering_forest",
+  "width": 37,
+  "height": 18,
+  "tileSize": 16,
+  "spawnPoints": [
+    {
+      "id": "default",
+      "x": 2.0,
+      "y": 2.0
+    },
+    {
+      "id": "from_village",
+      "x": 6.0,
+      "y": 2.0
+    },
+    {
+      "id": "from_evergrowth",
+      "x": 10.0,
+      "y": 2.0
+    },
+    {
+      "id": "respawn",
+      "x": 14.0,
+      "y": 2.0
+    }
+  ],
+  "colliders": [],
+  "monsters": [
+    {
+      "id": "f01",
+      "x": 18.0,
+      "y": 2.0
+    },
+    {
+      "id": "f02",
+      "x": 22.0,
+      "y": 2.0
+    },
+    {
+      "id": "f03",
+      "x": 26.0,
+      "y": 2.0
+    },
+    {
+      "id": "f04",
+      "x": 30.0,
+      "y": 2.0
+    },
+    {
+      "id": "f05",
+      "x": 2.0,
+      "y": 6.0
+    },
+    {
+      "id": "f06",
+      "x": 6.0,
+      "y": 6.0
+    },
+    {
+      "id": "f07",
+      "x": 10.0,
+      "y": 6.0
+    },
+    {
+      "id": "f08",
+      "x": 14.0,
+      "y": 6.0
+    },
+    {
+      "id": "f09",
+      "x": 18.0,
+      "y": 6.0
+    },
+    {
+      "id": "f10",
+      "x": 22.0,
+      "y": 6.0
+    }
+  ],
+  "npcs": [],
+  "interactables": []
 }

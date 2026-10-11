@@ -1,3 +1,4 @@
+import { teleportStatus, type TeleportStatus } from "@/modules/maps/utils/teleport.util.js";
 import { mapService } from "@/modules/maps/user/services/map.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
@@ -13,8 +14,10 @@ import type { WorldRoom } from "@/rooms/world/world.room.js";
 /**
  * Teleport = dịch chuyển nhanh: dùng bệ teleport (`interact`) thì nhận danh sách map có bệ teleport, rồi
  * chọn (`teleportTo`) để tới ngay bệ teleport của map đó. Server kiểm lại mọi lần: đang đứng gần một bệ
- * teleport của map hiện tại, còn sống, không ở dungeon, đủ level vào map đích.
+ * teleport của map hiện tại, còn sống, không ở dungeon, **đã từng đến map đích**, đủ level vào map đích.
  */
+const pickStatus = ({ discovered, available }: TeleportStatus) => ({ discovered, available });
+
 export class TeleportWorldService {
     /** Dùng bệ teleport: gửi danh sách điểm đến cho client. */
     async open(room: WorldRoom, client: PlayerClient, player: PlayerWorldState): Promise<void> {
@@ -23,7 +26,8 @@ export class TeleportWorldService {
             destinations: destinations.map((destination) => ({
                 mapCode: destination.mapCode,
                 minLevel: destination.minLevel,
-                available: player.level >= destination.minLevel,
+                open: destination.open,
+                ...pickStatus(teleportStatus(destination, player.level, player.flags)),
             })),
         };
         client.send(WorldMessage.TELEPORT_LIST, message);
@@ -45,15 +49,17 @@ export class TeleportWorldService {
 
         const destinations = await mapService.listTeleportDestinations(room.map.code);
         const destination = destinations.find((d) => d.mapCode === mapCode);
-        if (!destination) return MapTransferError.NO_DESTINATION;
-        if (player.level < destination.minLevel) return MapTransferError.LEVEL_TOO_LOW;
+        if (!destination?.open) return MapTransferError.NO_DESTINATION;
+        const status = teleportStatus(destination, player.level, player.flags);
+        if (!status.discovered) return MapTransferError.MAP_NOT_DISCOVERED;
+        if (!status.levelOk) return MapTransferError.LEVEL_TOO_LOW;
         return transferWorldService.transfer(
             room,
             client,
             player,
             destination.mapCode,
-            destination.teleportId,
-            { x: destination.x, y: destination.y }
+            destination.teleportId!,
+            { x: destination.x!, y: destination.y! }
         );
     }
 }
