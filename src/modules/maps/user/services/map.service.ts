@@ -40,6 +40,7 @@ export class MapService {
             interactables: map.interactables.map((it) => ({
                 id: it.id,
                 type: it.type,
+                code: it.code,
                 x: it.x,
                 y: it.y,
                 radius: it.radius,

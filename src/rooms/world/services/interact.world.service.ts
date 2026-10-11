@@ -20,7 +20,14 @@ export class InteractWorldService {
     /** Dựng state từ `game_maps.interactables` lúc tạo room. */
     build(room: WorldRoom): InteractableWorldState[] {
         return room.map.interactables.map(
-            (it) => new InteractableWorldState({ id: it.id, kind: it.type, x: it.x, y: it.y })
+            (it) =>
+                new InteractableWorldState({
+                    id: it.id,
+                    kind: it.type,
+                    x: it.x,
+                    y: it.y,
+                    code: it.code,
+                })
         );
     }
 

@@ -3,6 +3,7 @@ import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { Condition } from "@/modules/dialogues/schemas/condition.schema.js";
 import type { RewardSpec } from "@/modules/rewards/schemas/reward-spec.schema.js";
 import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
+import type { InteractableCode } from "@/modules/maps/enums/interactable-code.enum.js";
 import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
 import type { MonsterSpawnType } from "@/modules/monsters/enums/monster-type.enum.js";
 
@@ -28,6 +29,15 @@ export const GameMaps = pgTable("game_maps", {
     /** Số người tối đa trong 1 instance (room) của map — đầy thì Colyseus tự tạo instance mới (kênh). */
     maxPlayersPerChannel: integer("max_players_per_channel").notNull().default(100),
     pvpEnabled: boolean("pvp_enabled").notNull().default(false),
+    /** Level tối thiểu để vào map — hiển thị "Lv X+" ở client, server chặn khi chuyển map. */
+    minLevel: integer("min_level").notNull().default(1),
+    /**
+     * `false` = chưa có file `<code>.map.json` từ Unity, row chỉ là placeholder (inactive, không
+     * layout) — server log cảnh báo lúc khởi động cho tới khi file được thêm và `yarn seed`.
+     */
+    layoutReady: boolean("layout_ready").notNull().default(true),
+    /** Chỉ map `dungeon`: các chamber tuần tự, phase quái, level cap. */
+    dungeon: jsonb("dungeon").$type<DungeonConfig>(),
     /** Monster sinh ra trong mỗi instance của map (theo `monsters.code`). */
     monsterSpawns: jsonb("monster_spawns").$type<MonsterSpawn[]>().notNull().default([]),
     /** Điểm đặt player theo id ổn định (spawn mặc định, hồi sinh, điểm đến của portal...). */
@@ -41,6 +51,42 @@ export const GameMaps = pgTable("game_maps", {
     /** Vật thể tương tác được: portal, thu thập, biển báo. */
     interactables: jsonb("interactables").$type<MapInteractable[]>().notNull().default([]),
 });
+
+export interface DungeonRect {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
+export interface DungeonPhase {
+    id: string;
+    /** Giây kể từ lúc chamber bắt đầu thì phase này spawn (phase đầu = 0). */
+    delaySec: number;
+    monsterSpawns: MonsterSpawn[];
+}
+
+/** "Chamber" = phòng trong dungeon (khác Colyseus room): đánh hết quái mọi phase mới qua phòng kế. */
+export interface DungeonChamber {
+    id: string;
+    bounds: DungeonRect;
+    /** Chỗ đặt player khi vào chamber (chamber đầu = nơi vào dungeon). */
+    entry: { x: number; y: number };
+    phases: DungeonPhase[];
+    /** Cổng sang chamber kế — khoá tới khi chamber hoàn thành; chamber boss không có. */
+    exit?: { x: number; y: number; radius: number };
+    isBoss?: boolean;
+    clearReward?: RewardSpec;
+}
+
+export interface DungeonConfig {
+    /** Level quái = ceil(trung bình level người trong instance), tối đa giá trị này. */
+    maxLevel: number;
+    timeLimitSec?: number;
+    chambers: DungeonChamber[];
+    /** Thưởng khi clear chamber boss. */
+    clearReward?: RewardSpec;
+}
 
 export interface MapNpc {
     npcCode: string;
@@ -56,6 +102,8 @@ interface MapInteractableBase {
     y: number;
     /** Khoảng cách tối đa (tile) để tương tác. */
     radius: number;
+    /** Diện mạo (client map sang prefab); bỏ trống = vẽ mặc định. */
+    code?: InteractableCode;
     conditions?: Condition[];
 }
 

@@ -14,6 +14,16 @@ export class GameMapRepository extends BaseRepository<typeof GameMaps> {
         return this.findOne({ where: eq(GameMaps.code, code), dbOrTx });
     }
 
+    async findCodesWithoutLayout(params: { dbOrTx?: Queryable } = {}) {
+        const { dbOrTx = db } = params;
+        const rows = await dbOrTx
+            .select({ code: GameMaps.code })
+            .from(GameMaps)
+            .where(eq(GameMaps.layoutReady, false))
+            .orderBy(asc(GameMaps.code));
+        return rows.map((row) => row.code);
+    }
+
     async findActive(params: { dbOrTx?: Queryable } = {}) {
         const { dbOrTx = db } = params;
         return dbOrTx

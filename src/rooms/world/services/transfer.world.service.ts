@@ -5,6 +5,12 @@ import { worldService } from "@/rooms/world/services/world.service.js";
 import { WorldMessage, type MapChangeMessage } from "@/rooms/world/world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
+/** Mã lỗi chuyển map — client dịch sang thông báo (`interactResult.error`). */
+export const TransferError = {
+    LEVEL_TOO_LOW: "level_too_low",
+    MAP_NOT_OPEN: "map_not_open",
+} as const;
+
 /** Đưa player tới điểm spawn `spawnId` của map `mapCode` (portal, teleport trong thoại). */
 export class TransferWorldService {
     /** Trả lỗi (chuỗi) hoặc `undefined` khi thành công. */
@@ -17,12 +23,16 @@ export class TransferWorldService {
     ): Promise<string | undefined> {
         if (player.pendingMapCode) return "Already changing map";
         const sameMap = mapCode === room.map.code;
-        let target: { spawnPoints: readonly { id: string; x: number; y: number }[] };
+        let target: {
+            minLevel: number;
+            spawnPoints: readonly { id: string; x: number; y: number }[];
+        };
         try {
             target = sameMap ? room.map : await mapService.getActiveByCodeOrFail(mapCode);
         } catch {
-            return "Map not available";
+            return TransferError.MAP_NOT_OPEN;
         }
+        if (!sameMap && player.level < target.minLevel) return TransferError.LEVEL_TOO_LOW;
         const spawn = target.spawnPoints.find((point) => point.id === spawnId);
         if (!spawn) return "Spawn point not found";
 

@@ -7,11 +7,14 @@ export class InteractableWorldState extends Schema {
     @type("float32") x: number;
     @type("float32") y: number;
     @type("boolean") active = true;
+    /** Diện mạo (`InteractableCode`); rỗng = client vẽ mặc định. */
+    @type("string") code = "";
 
-    constructor(props: { id: string; kind: string; x: number; y: number }) {
+    constructor(props: { id: string; kind: string; x: number; y: number; code?: string }) {
         super();
         this.id = props.id;
         this.kind = props.kind;
+        this.code = props.code ?? "";
         this.x = props.x;
         this.y = props.y;
     }
