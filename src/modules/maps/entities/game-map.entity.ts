@@ -146,13 +146,7 @@ export interface MapSign extends MapInteractableBase {
     dialogueCode: string;
 }
 
-/** Bệ dịch chuyển trong cùng map: tới ngay vị trí của bệ `targetTeleportId`. */
-export interface MapTeleport extends MapInteractableBase {
-    type: "teleport";
-    targetTeleportId: string;
-}
-
-export type MapInteractable = MapPortal | MapGatherable | MapSign | MapTeleport;
+export type MapInteractable = MapPortal | MapGatherable | MapSign;
 
 export enum MapSpawnKind {
     /** Chỗ vào map mặc định (spawn của `spawnX/spawnY`). */

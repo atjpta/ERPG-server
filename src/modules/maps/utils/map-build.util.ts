@@ -332,7 +332,6 @@ export const mapMarkerList = (def: MapDefinition) => ({
         type: item.type,
         code: item.code,
         radius: item.radius,
-        ...(item.type === "teleport" ? { targetTeleportId: item.targetTeleportId } : {}),
         ...(item.type === "portal"
             ? { targetMapCode: item.targetMapCode, targetSpawnId: item.targetSpawnId }
             : {}),

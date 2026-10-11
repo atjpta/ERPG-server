@@ -56,7 +56,6 @@ export class MapService {
                 x: it.x,
                 y: it.y,
                 radius: it.radius,
-                ...(it.type === "teleport" ? { targetTeleportId: it.targetTeleportId } : {}),
                 ...(it.type === "portal"
                     ? { targetMapCode: it.targetMapCode, targetSpawnId: it.targetSpawnId }
                     : {}),
