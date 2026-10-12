@@ -58,6 +58,13 @@ export interface MoveBounds {
  */
 export const TERRAIN_EPSILON = 1e-4;
 
+/**
+ * Đi thẳng vào mép một khối chặn mà chỉ lấn nó chừng này (tile) thì được đẩy trượt sang bên cho vòng qua góc,
+ * thay vì đứng khựng. Lấn nhiều hơn (đâm giữa tường, kẹt giữa hai khối) thì đứng yên như cũ.
+ * Client C# (WorldCollision) phải dùng cùng giá trị.
+ */
+export const SLIDE_REACH = 1;
+
 /** Hệ số chuẩn hoá khi đi chéo (1/√2) — hằng số để C# port khớp tuyệt đối. */
 export const DIAGONAL_FACTOR = 0.7071067811865476;
 
@@ -89,7 +96,10 @@ export function applyMove(
     state.x = clamp(state.x + moveX * step, 0, bounds.width);
     state.y = clamp(state.y + moveY * step, 0, bounds.height);
     if (footprint && bounds.colliders?.length) {
+        const wantX = state.x;
+        const wantY = state.y;
         resolveTerrain(state, prevX, prevY, bounds.colliders, footprint);
+        slideAroundCorner(state, { wantX, wantY, moveX, moveY, step }, bounds, footprint);
     }
     if (moveX < 0) state.direction = Direction.LEFT;
     else if (moveX > 0) state.direction = Direction.RIGHT;
@@ -155,6 +165,101 @@ function resolveTerrain(
             y = r.y + r.h + halfH + offY;
     }
     state.y = y;
+}
+
+interface SlideInput {
+    /** Vị trí muốn tới trước khi bị chặn. */
+    wantX: number;
+    wantY: number;
+    moveX: number;
+    moveY: number;
+    /** Quãng đường tối đa của một bước. */
+    step: number;
+}
+
+/**
+ * Đi thẳng theo một trục mà bị mép một khối chặn lấn ít (≤ SLIDE_REACH) thì trượt sang trục kia cho tới khi
+ * qua hết góc. Đi chéo đã tự trượt dọc tường (resolveTerrain tách trục). Không có chỗ trượt (vị trí mới lại
+ * đâm vào khối khác, hoặc lấn quá nhiều) thì thôi: đứng yên.
+ */
+function slideAroundCorner(
+    state: MovableState,
+    input: SlideInput,
+    bounds: MoveBounds,
+    footprint: MoveFootprint
+): void {
+    const colliders = bounds.colliders;
+    if (!colliders?.length) return;
+    const { wantX, wantY, moveX, moveY, step } = input;
+    const halfW = footprint.width / 2;
+    const halfH = footprint.height / 2;
+    const offX = footprint.offsetX ?? 0;
+    const offY = footprint.offsetY ?? 0;
+
+    if (moveY === 0 && moveX !== 0 && state.x !== wantX) {
+        // Đẩy ngang bị chặn: các khối mà vị trí muốn tới đâm vào, tính phải dời lên / xuống bao nhiêu để qua hết.
+        const cy = state.y - offY;
+        const left = wantX + offX - halfW;
+        const right = wantX + offX + halfW;
+        let up = 0;
+        let down = 0;
+        for (const r of colliders) {
+            if (right <= r.x || left >= r.x + r.w) continue;
+            if (cy + halfH <= r.y || cy - halfH >= r.y + r.h) continue;
+            up = Math.max(up, cy + halfH - r.y);
+            down = Math.max(down, r.y + r.h - (cy - halfH));
+        }
+        const need = Math.min(up, down);
+        if (need <= 0 || need > SLIDE_REACH) return;
+        const nextY = clamp(
+            state.y + (up <= down ? -1 : 1) * Math.min(need, step),
+            0,
+            bounds.height
+        );
+        if (!overlapsTerrain(state.x, nextY, colliders, footprint)) state.y = nextY;
+    } else if (moveX === 0 && moveY !== 0 && state.y !== wantY) {
+        const cy = wantY - offY;
+        const top = cy - halfH;
+        const bottom = cy + halfH;
+        const cx = state.x + offX;
+        let toLeft = 0;
+        let toRight = 0;
+        for (const r of colliders) {
+            if (bottom <= r.y || top >= r.y + r.h) continue;
+            if (cx + halfW <= r.x || cx - halfW >= r.x + r.w) continue;
+            toLeft = Math.max(toLeft, cx + halfW - r.x);
+            toRight = Math.max(toRight, r.x + r.w - (cx - halfW));
+        }
+        const need = Math.min(toLeft, toRight);
+        if (need <= 0 || need > SLIDE_REACH) return;
+        const nextX = clamp(
+            state.x + (toLeft <= toRight ? -1 : 1) * Math.min(need, step),
+            0,
+            bounds.width
+        );
+        if (!overlapsTerrain(nextX, state.y, colliders, footprint)) state.x = nextX;
+    }
+}
+
+/** Chân entity ở (x, y) có lấn vào khối chặn nào không (chạm mép thì không tính). */
+function overlapsTerrain(
+    x: number,
+    y: number,
+    colliders: readonly BlockRect[],
+    footprint: MoveFootprint
+): boolean {
+    const halfW = footprint.width / 2;
+    const halfH = footprint.height / 2;
+    const cx = x + (footprint.offsetX ?? 0);
+    const cy = y - (footprint.offsetY ?? 0);
+    for (const r of colliders) {
+        if (cx + halfW <= r.x + TERRAIN_EPSILON || cx - halfW >= r.x + r.w - TERRAIN_EPSILON)
+            continue;
+        if (cy + halfH <= r.y + TERRAIN_EPSILON || cy - halfH >= r.y + r.h - TERRAIN_EPSILON)
+            continue;
+        return true;
+    }
+    return false;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);

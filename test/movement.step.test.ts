@@ -118,3 +118,51 @@ describe("movement.step — đứng sát tường (float32 từ server)", () => 
         assert.ok(state.x <= 11.5 + 1e-5, `x=${state.x}`);
     });
 });
+
+describe("movement.step — trượt vòng qua góc", () => {
+    const footprint = { width: 1, height: 1 };
+
+    it("đi thẳng vào mép khối chặn, lấn ít thì trượt sang bên để qua góc", () => {
+        // Khối cao từ y=10.8 trở xuống; chân (cao 1) ở y=10 phủ [9.5, 10.5] -> chưa chạm; ở y=10.3 phủ tới 10.8.
+        const terrain = { ...bounds, colliders: [{ x: 12, y: 10.8, w: 4, h: 20 }] };
+        const state = createState(11.4, 10.6); // chân phủ [10.1, 11.1], lấn khối 0.3 khi tới sát
+        const startY = state.y;
+        for (let i = 0; i < 30; i++)
+            applyMove(state, { moveX: 1, moveY: 0 }, terrain, SPEED, DT, footprint);
+        assert.ok(state.y < startY, `đã trượt lên: y=${state.y}`);
+        assert.ok(state.x > 16, `đã vượt qua khối: x=${state.x}`);
+    });
+
+    it("đâm vào giữa tường (lấn nhiều) thì đứng yên, không trượt", () => {
+        const terrain = { ...bounds, colliders: [{ x: 12, y: 0, w: 2, h: 64 }] };
+        const state = createState(11, 10);
+        for (let i = 0; i < 30; i++)
+            applyMove(state, { moveX: 1, moveY: 0 }, terrain, SPEED, DT, footprint);
+        assert.equal(state.y, 10);
+        assert.ok(state.x <= 11.5 + 1e-6, `x=${state.x}`);
+    });
+
+    it("kẹt giữa hai khối (khe hẹp hơn chân) thì đứng yên", () => {
+        const terrain = {
+            ...bounds,
+            colliders: [
+                { x: 12, y: 0, w: 4, h: 9.7 },
+                { x: 12, y: 10.5, w: 4, h: 20 },
+            ],
+        };
+        const state = createState(11, 10);
+        for (let i = 0; i < 30; i++)
+            applyMove(state, { moveX: 1, moveY: 0 }, terrain, SPEED, DT, footprint);
+        assert.ok(state.x <= 11.5 + 1e-6, `x=${state.x}`);
+    });
+
+    it("đi dọc cũng trượt qua góc theo chiều ngang", () => {
+        const terrain = { ...bounds, colliders: [{ x: 10.7, y: 12, w: 20, h: 4 }] };
+        const state = createState(10.4, 11);
+        const startX = state.x;
+        for (let i = 0; i < 30; i++)
+            applyMove(state, { moveX: 0, moveY: 1 }, terrain, SPEED, DT, footprint);
+        assert.ok(state.x < startX, `đã trượt sang trái: x=${state.x}`);
+        assert.ok(state.y > 16, `đã vượt qua khối: y=${state.y}`);
+    });
+});
