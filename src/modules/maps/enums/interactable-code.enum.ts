@@ -4,6 +4,7 @@
  * Thêm code ở đây → `yarn config:export` → Unity thấy trong dropdown của marker và bảng prefab.
  */
 export enum InteractableCode {
+    ENTRY_DUNGEON = "entry_dungeon",
     NOTICE_BOARD = "notice_board",
     PORTAL = "portal",
     TELEPORT = "teleport",

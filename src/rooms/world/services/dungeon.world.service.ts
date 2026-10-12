@@ -42,6 +42,8 @@ export const DUNGEON_EXIT_PREFIX = "exit_";
 export const DUNGEON_LEAVE_DELAY_SEC = 60;
 /** Chờ thành viên party vào đủ trước khi bắt đầu chamber đầu tiên. */
 export const DUNGEON_JOIN_GRACE_MS = 15_000;
+/** Dọn xong chamber (không phải cuối) thì chừng này ms sau tự đưa cả nhóm sang chamber kế. */
+export const DUNGEON_AUTO_ADVANCE_MS = 2_000;
 
 /** Tiến độ 1 instance dungeon (server-only; phần HUD cần thấy nằm ở `DungeonWorldState`). */
 export interface DungeonRuntime {
@@ -404,7 +406,10 @@ export class DungeonWorldService {
         };
         room.broadcast(WorldMessage.DUNGEON_CHAMBER_CLEAR, message);
 
-        if (!chamber.isBoss) return;
+        if (!chamber.isBoss) {
+            this.scheduleAdvance(room, runtime.chamberIndex);
+            return;
+        }
         runtime.cleared = true;
         state.cleared = true;
         this.grantToAll(room, runtime.config.clearReward);
@@ -419,6 +424,20 @@ export class DungeonWorldService {
         room.clock.setTimeout(() => {
             void this.leaveAll(room);
         }, DUNGEON_LEAVE_DELAY_SEC * 1000);
+    }
+
+    /** Tự sang chamber kế sau một nhịp (kịp hiện banner); người đã tự đi qua cổng exit trước đó thì thôi. */
+    private scheduleAdvance(room: WorldRoom, index: number): void {
+        room.clock.setTimeout(() => {
+            const runtime = room.dungeon;
+            if (!runtime || runtime.cleared || runtime.chamberIndex !== index) return;
+            const next = runtime.config.chambers[index + 1];
+            if (!next) return;
+            this.startChamber(room, index + 1);
+            for (const player of room.state.players.values()) {
+                this.place(player, next.entry.x, next.entry.y);
+            }
+        }, DUNGEON_AUTO_ADVANCE_MS);
     }
 
     private grantToAll(room: WorldRoom, spec: RewardSpec | undefined): void {
