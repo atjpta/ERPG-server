@@ -15,6 +15,9 @@ export const MoveItemSchema = z
     .object({ type: z.enum(ItemType), fromSlot: slotIndex, toSlot: slotIndex })
     .strict();
 
+/** Dùng 1 bình (consumable) trong túi. */
+export const UseItemSchema = z.object({ instanceId: z.uuid() }).strict();
+
 export const LockItemSchema = z.object({ instanceId: z.uuid(), locked: z.boolean() }).strict();
 
 /** Cường hoá / tinh hoá 1 món. */

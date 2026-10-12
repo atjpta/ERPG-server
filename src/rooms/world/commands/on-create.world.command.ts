@@ -7,6 +7,7 @@ import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
+import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.service.js";
 import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { mapService } from "@/modules/maps/user/services/map.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
@@ -87,6 +88,7 @@ export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
             // Đạn bay / vùng chờ nổ — sau player và monster để thấy vị trí mới nhất của tick này.
             skillDeliveryWorldService.chain(this.room, ctx.dt);
             dungeonWorldService.tick(this.room);
+            dialogueWorldService.tick(this.room);
         }, this.room.tickRate);
         this.room.clock.setInterval((): void => {
             void worldService.checkpointPlayers(this.room);

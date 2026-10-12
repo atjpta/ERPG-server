@@ -18,6 +18,7 @@ import {
     EnhanceEquipmentWorldCommand,
     EquipItemWorldCommand,
     LockItemWorldCommand,
+    UseItemWorldCommand,
     MoveItemWorldCommand,
     PreviewDisassembleWorldCommand,
     PreviewUpgradeWorldCommand,
@@ -92,6 +93,9 @@ export class WorldRoom extends BasePlayerRoom<{
         },
         [WorldClientMessage.LOCK_ITEM]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new LockItemWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.USE_ITEM]: (client: PlayerClient, payload: unknown) => {
+            void this.dispatcher.dispatch(new UseItemWorldCommand(), { client, payload });
         },
         [WorldClientMessage.ENHANCE_EQUIPMENT]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new EnhanceEquipmentWorldCommand(), { client, payload });

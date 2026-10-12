@@ -16,11 +16,13 @@ import {
     PreviewUpgradeSchema,
     UnequipItemSchema,
     UpgradeEquipmentSchema,
+    UseItemSchema,
 } from "@/rooms/world/validators/inventory.world.validator.js";
 import {
     EquipmentUpgradeAction,
     WorldMessage,
     type EquipmentUpgradeMessage,
+    type PotionUsedMessage,
 } from "@/rooms/world/world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
@@ -112,6 +114,27 @@ export class LockItemWorldCommand extends InventoryWorldCommand<typeof LockItemS
         { instanceId, locked }: z.infer<typeof LockItemSchema>
     ) {
         return inventoryWorldService.lock(player, instanceId, locked);
+    }
+}
+
+/** Dùng bình: HP/MP đổi theo state của player (vitals tự đồng bộ), túi gửi lại như mọi thao tác túi đồ. */
+export class UseItemWorldCommand extends InventoryWorldCommand<
+    typeof UseItemSchema,
+    { hp: number; mp: number }
+> {
+    protected readonly schema = UseItemSchema;
+    protected run(player: PlayerWorldState, { instanceId }: z.infer<typeof UseItemSchema>) {
+        return inventoryWorldService.useConsumable(player, instanceId, this.room.clock.elapsedTime);
+    }
+
+    /** Báo cả room số HP / MP vừa hồi để hiện "+N" trên đầu người uống. */
+    protected override onSuccess(client: PlayerClient, gained: { hp: number; mp: number }) {
+        const message: PotionUsedMessage = {
+            sessionId: client.sessionId,
+            hp: gained.hp,
+            mp: gained.mp,
+        };
+        this.room.broadcast(WorldMessage.POTION_USED, message);
     }
 }
 

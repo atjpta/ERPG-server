@@ -98,6 +98,12 @@ export class PlayerWorldState extends Schema {
     /** Lượt dungeon đang diễn ra (từ lúc bước vào portal dungeon tới khi thoát ra). */
     dungeonSession?: DungeonSession;
     attributePoints: number;
+    /** `elapsedTime` (ms) của room tới lúc được dùng bình HP / MP tiếp theo (mỗi loại bình một hồi chiêu). */
+    hpPotionReadyAt = 0;
+    mpPotionReadyAt = 0;
+    /** Giây còn lại của hồi chiêu bình HP / MP (0 = dùng được) — để client hiện đếm ngược. */
+    @type("uint8") hpPotionCooldownSec = 0;
+    @type("uint8") mpPotionCooldownSec = 0;
     classId: string;
     allocatedAttributes: Attributes;
     equipments: Equipments;
@@ -238,6 +244,14 @@ export class PlayerWorldState extends Schema {
         this.mpRegenCarry = this.mpRegenCarry.minus(mpGain);
         if (hpGain > 0 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + hpGain);
         if (mpGain > 0 && this.mp < this.maxMp) this.mp = Math.min(this.maxMp, this.mp + mpGain);
+    }
+
+    /** Cập nhật số giây còn lại của hồi chiêu bình (chỉ ghi khi đổi, để không đẩy state mỗi tick). */
+    syncPotionCooldowns(now: number) {
+        const hp = Math.min(255, Math.max(0, Math.ceil((this.hpPotionReadyAt - now) / 1000)));
+        const mp = Math.min(255, Math.max(0, Math.ceil((this.mpPotionReadyAt - now) / 1000)));
+        if (hp !== this.hpPotionCooldownSec) this.hpPotionCooldownSec = hp;
+        if (mp !== this.mpPotionCooldownSec) this.mpPotionCooldownSec = mp;
     }
 
     /** Hồi đầy HP/MP (lên level). */

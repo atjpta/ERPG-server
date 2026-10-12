@@ -23,6 +23,8 @@ export enum WorldClientMessage {
     MOVE_ITEM = "moveItem",
     /** `{ instanceId, locked }` — khoá món (không phân rã được). */
     LOCK_ITEM = "lockItem",
+    /** `{ instanceId }` — dùng 1 bình hồi HP / MP trong túi. */
+    USE_ITEM = "useItem",
     /** `{ instanceId }` — cường hoá (trong túi hoặc đang mặc). */
     ENHANCE_EQUIPMENT = "enhanceEquipment",
     /** `{ instanceId }` — tinh hoá lên rarity kế tiếp. */
@@ -115,6 +117,8 @@ export enum WorldMessage {
     DUNGEON_CLEAR = "dungeonClear",
     /** Trả lời `dungeonRetry`: `{ ok: false, error }` khi không đi lại được (xem `DungeonRetryResultMessage`). */
     DUNGEON_RETRY_RESULT = "dungeonRetryResult",
+    /** Có người vừa uống bình: số HP / MP thực sự hồi được (client hiện "+N" trên đầu người đó). */
+    POTION_USED = "potionUsed",
 }
 
 /** Room mà client phải join sau `mapChange`. */
@@ -195,6 +199,17 @@ export interface InventoryEntryMessage {
     source: ItemSource;
     isLocked: boolean;
     metadata?: EquipmentInstanceMessage;
+    /** Bình hồi máu / mana: lượng hồi mỗi lần dùng (để mô tả item cho đúng). */
+    heal?: number;
+    mana?: number;
+}
+
+export interface PotionUsedMessage {
+    /** Session của người uống — khoá của nhân vật bên client. */
+    sessionId: string;
+    /** HP / MP thực sự hồi được (đã trừ phần vượt trần). */
+    hp: number;
+    mp: number;
 }
 
 /** 3 túi theo ItemType. */

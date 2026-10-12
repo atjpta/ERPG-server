@@ -55,6 +55,17 @@ const ITEMS: NewItem[] = [
         sellPrice: 2,
         metadata: { heal: 50 },
     },
+    {
+        code: "mp_potion_small",
+        name: "Small MP Potion",
+        type: ItemType.CONSUMABLE,
+        rarity: ItemRarity.COMMON,
+        requiredLevel: 1,
+        stackable: true,
+        maxStack: 99,
+        sellPrice: 2,
+        metadata: { mana: 30 },
+    },
 ];
 
 export const ItemSeed = async () => {

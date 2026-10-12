@@ -106,13 +106,30 @@ export class DialogueWorldService {
         return undefined;
     }
 
+    /**
+     * Mỗi tick: ai đang mở thoại mà đã đứng quá xa nơi nói chuyện thì đóng thoại luôn (client chỉ ẩn hộp thoại,
+     * không có thông báo lỗi).
+     */
+    tick(room: WorldRoom): void {
+        const sessions = this.sessionsOf(room);
+        if (sessions.size === 0) return;
+        for (const [sessionId, session] of sessions) {
+            const player = room.state.players.get(sessionId);
+            const client = room.clients.getById(sessionId) as PlayerClient | undefined;
+            if (!player || !client) continue;
+            if (contentWorldService.isNear(player, session.x, session.y, session.radius + RANGE_MARGIN))
+                continue;
+            this.end(room, client, session.sourceCode);
+        }
+    }
+
     /** Chọn option (hoặc "Tiếp tục" khi `optionId` rỗng). */
     choose(room: WorldRoom, client: PlayerClient, player: PlayerWorldState, optionId: string) {
         const session = this.sessionsOf(room).get(client.sessionId);
         if (!session) return;
         const range = session.radius + RANGE_MARGIN;
         if (!contentWorldService.isNear(player, session.x, session.y, range)) {
-            this.end(room, client, session.sourceCode, "Too far");
+            this.end(room, client, session.sourceCode); // quá xa thì đóng thoại, không báo lỗi
             return;
         }
         const node = dialogueService.getNode(session.dialogueCode, session.nodeId);

@@ -83,6 +83,15 @@ const toInstanceMessage = (metadata: ItemEquipmentInstanceMetadata): EquipmentIn
 };
 
 /** Ô túi → message; metadata chỉ gửi với trang bị (item khác để trống). */
+/** Lượng hồi của bình (`metadata.heal` / `metadata.mana`) — chỉ gồm vế nào > 0. */
+const potionAmounts = (metadata: unknown): { heal?: number; mana?: number } => {
+    const { heal, mana } = (metadata ?? {}) as { heal?: unknown; mana?: unknown };
+    return {
+        ...(typeof heal === "number" && heal > 0 ? { heal } : {}),
+        ...(typeof mana === "number" && mana > 0 ? { mana } : {}),
+    };
+};
+
 const toEntryMessage = (entry: InventoryItem): InventoryEntryMessage => {
     const item = itemService.getById(entry.itemId);
     const isEquipment = item?.type === ItemType.EQUIPMENT;
@@ -99,6 +108,7 @@ const toEntryMessage = (entry: InventoryItem): InventoryEntryMessage => {
         ...(isEquipment
             ? { metadata: toInstanceMessage(entry.metadata as ItemEquipmentInstanceMetadata) }
             : {}),
+        ...potionAmounts(item?.metadata),
     };
 };
 
@@ -134,6 +144,9 @@ interface OwnedEquipment {
     metadata: ItemEquipmentInstanceMetadata;
     equippedSlot?: ItemEquipmentSlotType;
 }
+
+/** Hồi chiêu của bình HP và của bình MP (tính riêng từng loại). */
+const POTION_COOLDOWN_MS = 10_000;
 
 /**
  * Thao tác túi đồ / trang bị của player đang online. Chỉ đổi state trong room (lưu DB ở checkpoint,
@@ -312,6 +325,41 @@ export class InventoryWorldService {
             toSlot
         );
         return error ? fail(error) : done(undefined);
+    }
+
+    /**
+     * Dùng 1 bình: `metadata.heal` hồi HP, `metadata.mana` hồi MP. Không dùng được khi thứ bình hồi đã đầy
+     * (không tốn bình), khi đang chờ hồi chiêu bình, hoặc item không phải bình.
+     */
+    useConsumable(
+        player: PlayerWorldState,
+        instanceId: string,
+        now: number
+    ): InventoryResult<{ hp: number; mp: number }> {
+        const bag = player.inventories[ItemType.CONSUMABLE];
+        const entry = bag.find((candidate) => candidate.id === instanceId);
+        if (!entry) return fail("Item not found");
+        const item = itemService.getById(entry.itemId);
+        const metadata = (item?.metadata ?? {}) as { heal?: unknown; mana?: unknown };
+        const heal = typeof metadata.heal === "number" ? metadata.heal : 0;
+        const mana = typeof metadata.mana === "number" ? metadata.mana : 0;
+        if (!item || (heal <= 0 && mana <= 0)) return fail("Item not usable");
+        const usefulHp = heal > 0 && player.hp < player.maxHp;
+        const usefulMp = mana > 0 && player.mp < player.maxMp;
+        if (!usefulHp && !usefulMp) return fail("Already full");
+        if ((heal > 0 && now < player.hpPotionReadyAt) || (mana > 0 && now < player.mpPotionReadyAt)) {
+            return fail("Potion cooldown");
+        }
+
+        if (!removeFromInventory(bag, item.id, 1)) return fail("Item not found");
+        if (heal > 0) player.hpPotionReadyAt = now + POTION_COOLDOWN_MS;
+        if (mana > 0) player.mpPotionReadyAt = now + POTION_COOLDOWN_MS;
+        player.syncPotionCooldowns(now);
+        const hpBefore = player.hp;
+        const mpBefore = player.mp;
+        if (usefulHp) player.hp = Math.min(player.maxHp, player.hp + heal);
+        if (usefulMp) player.mp = Math.min(player.maxMp, player.mp + mana);
+        return done({ hp: player.hp - hpBefore, mp: player.mp - mpBefore });
     }
 
     lock(player: PlayerWorldState, instanceId: string, locked: boolean): InventoryResult {
