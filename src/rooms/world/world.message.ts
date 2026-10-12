@@ -25,6 +25,10 @@ export enum WorldClientMessage {
     LOCK_ITEM = "lockItem",
     /** `{ instanceId }` — dùng 1 bình hồi HP / MP trong túi. */
     USE_ITEM = "useItem",
+    /** `{ playerId }` — xin xem thông tin (trang bị + chỉ số) của người chơi khác cùng map; trả `playerView`. */
+    VIEW_PLAYER = "viewPlayer",
+    /** `{ playerId }` — xin vào party của người đó (chủ party nhận được `partyJoinRequest`). */
+    PARTY_REQUEST_JOIN = "partyRequestJoin",
     /** `{ instanceId }` — cường hoá (trong túi hoặc đang mặc). */
     ENHANCE_EQUIPMENT = "enhanceEquipment",
     /** `{ instanceId }` — tinh hoá lên rarity kế tiếp. */
@@ -119,6 +123,12 @@ export enum WorldMessage {
     DUNGEON_RETRY_RESULT = "dungeonRetryResult",
     /** Có người vừa uống bình: số HP / MP thực sự hồi được (client hiện "+N" trên đầu người đó). */
     POTION_USED = "potionUsed",
+    /** Thông tin xem được của một người chơi khác (trả lời `viewPlayer`). */
+    PLAYER_VIEW = "playerView",
+    /** Có người xin vào party của bạn (bạn là chủ): chấp nhận = mời họ, họ vào luôn. */
+    PARTY_JOIN_REQUEST = "partyJoinRequest",
+    /** Thông báo party do world room gửi (cùng dạng `notice` của party room). */
+    PARTY_NOTICE = "partyNotice",
 }
 
 /** Room mà client phải join sau `mapChange`. */
@@ -202,6 +212,28 @@ export interface InventoryEntryMessage {
     /** Bình hồi máu / mana: lượng hồi mỗi lần dùng (để mô tả item cho đúng). */
     heal?: number;
     mana?: number;
+}
+
+export interface PlayerViewMessage {
+    ok: boolean;
+    /** `not_here` — người đó không ở cùng map. */
+    error?: string;
+    playerId: string;
+    name: string;
+    level: number;
+    classCode: string;
+    baseClassCode: string;
+    equipments: EquipmentsMessage;
+    /** Attribute cuối cùng (class + đã cộng + trang bị). */
+    attributes: AttributeValuesMessage;
+    /** StatKey → giá trị (chỉ có stat khác 0). */
+    stats: Record<string, number>;
+}
+
+export interface PartyJoinRequestMessage {
+    partyRoomId: string;
+    fromName: string;
+    expiresInSec: number;
 }
 
 export interface PotionUsedMessage {
@@ -490,6 +522,8 @@ export interface PartyRoomMessage {
 }
 
 export interface PartyInviteReceivedMessage {
+    /** Lời mời sinh ra từ một yêu cầu xin vào: người nhận vào luôn, không cần bấm đồng ý. */
+    autoAccept?: boolean;
     partyRoomId: string;
     fromName: string;
     expiresInSec: number;

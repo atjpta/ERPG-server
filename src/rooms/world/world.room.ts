@@ -41,7 +41,12 @@ import {
     PartyDeclineWorldCommand,
 } from "@/rooms/world/commands/party.world.command.js";
 import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
-import type { PartyInviteReceivedMessage } from "@/rooms/world/world.message.js";
+import type {
+    PartyInviteReceivedMessage,
+    PartyJoinRequestMessage,
+} from "@/rooms/world/world.message.js";
+import { playerViewWorldService } from "@/rooms/world/services/player-view.world.service.js";
+import { PlayerTargetSchema } from "@/rooms/world/validators/inventory.world.validator.js";
 import type { PartyLootMode, PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
 import { visitedFlagKey } from "@/modules/maps/utils/teleport.util.js";
 import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
@@ -93,6 +98,17 @@ export class WorldRoom extends BasePlayerRoom<{
         },
         [WorldClientMessage.LOCK_ITEM]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new LockItemWorldCommand(), { client, payload });
+        },
+        [WorldClientMessage.VIEW_PLAYER]: (client: PlayerClient, payload: unknown) => {
+            const parsed = PlayerTargetSchema.safeParse(payload);
+            if (parsed.success) playerViewWorldService.view(this, client, parsed.data.playerId);
+        },
+        [WorldClientMessage.PARTY_REQUEST_JOIN]: (client: PlayerClient, payload: unknown) => {
+            const parsed = PlayerTargetSchema.safeParse(payload);
+            const player = this.state.players.get(client.sessionId);
+            if (parsed.success && player) {
+                void partyWorldService.requestJoin(this, client, player, parsed.data.playerId);
+            }
         },
         [WorldClientMessage.USE_ITEM]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new UseItemWorldCommand(), { client, payload });
@@ -250,6 +266,10 @@ export class WorldRoom extends BasePlayerRoom<{
             spawnId,
             retry
         );
+    }
+
+    partyDeliverJoinRequest(playerId: string, payload: PartyJoinRequestMessage): boolean {
+        return partyWorldService.deliverJoinRequest(this, playerId, payload);
     }
 
     partyDeliverInvite(

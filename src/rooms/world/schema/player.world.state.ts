@@ -89,8 +89,15 @@ export class PlayerWorldState extends Schema {
     dailyQuests: PlayerDailyQuests | null = null;
     /** Map đích khi đã bước vào portal/teleport và đang đợi client vào room mới. */
     pendingMapCode?: string;
-    /** Room party đang tham gia (server-only) — dùng chia exp / quest cho thành viên cùng room. */
-    partyRoomId: string | null = null;
+    private _partyRoomId: string | null = null;
+    /** Room party đang tham gia (server-only) — dùng chia exp / quest cho thành viên cùng room. Gán là cập nhật luôn `inParty`. */
+    get partyRoomId(): string | null {
+        return this._partyRoomId;
+    }
+    set partyRoomId(value: string | null) {
+        this._partyRoomId = value;
+        this.inParty = !!value;
+    }
     /** Cách chia item của party hiện tại (do chủ chọn; party room đẩy xuống). */
     partyLootMode: PartyLootMode = PartyLootMode.ROUND_ROBIN;
     /** Làng gần nhất đã đến (server-only) — chết trong dungeon thì hồi sinh ở đây. */
@@ -104,6 +111,8 @@ export class PlayerWorldState extends Schema {
     /** Giây còn lại của hồi chiêu bình HP / MP (0 = dùng được) — để client hiện đếm ngược. */
     @type("uint8") hpPotionCooldownSec = 0;
     @type("uint8") mpPotionCooldownSec = 0;
+    /** Đang trong party hay không — client dùng để chọn "mời" hay "xin vào party" ở menu người chơi (id room party vẫn server-only). */
+    @type("boolean") inParty = false;
     classId: string;
     allocatedAttributes: Attributes;
     equipments: Equipments;

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { matchMaker } from "colyseus";
+import { KickReason } from "@/modules/auth/enums/kick-reason.enum.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { playerService } from "@/modules/player/user/services/player.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
@@ -42,6 +43,14 @@ const NOTICE_BY_ERROR: Record<PartyError, PartyNoticeCode> = {
  * party ngay (không giữ chỗ). Hết người thì room tự đóng. Luật nằm ở `PartyModel`, room chỉ nối I/O.
  */
 export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: PlayerClient }> {
+    /**
+     * Vào world room mới (đổi map) đá "kết nối cũ của cùng player ở mọi room" — không được đá party room, nếu không
+     * người đổi map bị loại khỏi party. Đăng nhập trùng thật vẫn ra khỏi party: world room cũ bị đá → `removeMember`.
+     */
+    protected override shouldKickFor(reason: KickReason): boolean {
+        return reason !== KickReason.DUPLICATE_LOGIN;
+    }
+
     state = new PartyState();
 
     private model!: PartyModel;
@@ -162,6 +171,28 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
         this.syncState();
     }
 
+    /**
+     * Có người (cùng map với một thành viên) xin vào party: kiểm tra chỗ rồi báo cho chủ. Trả mã thông báo
+     * cho người xin (gửi được / lý do không được).
+     */
+    async requestJoin(fromPlayerId: string, fromName: string): Promise<PartyNoticeCode> {
+        if (!this.model) return PartyNoticeCode.TARGET_NOT_IN_PARTY;
+        const error = this.model.canInvite(this.model.leaderId, fromPlayerId, this.clock.currentTime);
+        if (error) return NOTICE_BY_ERROR[error];
+        const leaderWorldRoomId = this.worldRoomOf.get(this.model.leaderId);
+        if (!leaderWorldRoomId) return PartyNoticeCode.TARGET_OFFLINE;
+        const delivered = await worldRemote.deliverJoinRequest(
+            leaderWorldRoomId,
+            this.model.leaderId,
+            {
+                partyRoomId: this.roomId,
+                fromName,
+                expiresInSec: this.model.config.inviteTtlSec,
+            }
+        );
+        return delivered ? PartyNoticeCode.JOIN_REQUEST_SENT : PartyNoticeCode.TARGET_OFFLINE;
+    }
+
     declineInvite(playerId: string) {
         const invite = this.model?.removeInvite(playerId);
         if (invite) this.notifyLeader(PartyNoticeCode.INVITE_DECLINED, invite.snapshot.name);
@@ -278,6 +309,7 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
             partyRoomId: this.roomId,
             fromName: this.nameOf(leaderId),
             expiresInSec: ttlSec,
+            ...(parsed.data.request ? { autoAccept: true } : {}),
         });
         if (!snapshot) return this.notice(client, PartyNoticeCode.TARGET_OFFLINE, target.name);
 

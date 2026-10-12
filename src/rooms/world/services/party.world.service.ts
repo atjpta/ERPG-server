@@ -11,6 +11,7 @@ import { mapService } from "@/modules/maps/user/services/map.service.js";
 import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
+import { PartyNoticeCode, type PartyNoticeMessage } from "@/rooms/party/schema/party.message.js";
 import type { PartyRoomOptions } from "@/rooms/party/party.room.js";
 import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
 import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
@@ -20,6 +21,7 @@ import {
     WorldMessage,
     type DungeonRetryResultMessage,
     type PartyInviteReceivedMessage,
+    type PartyJoinRequestMessage,
     type PartyRoomMessage,
 } from "@/rooms/world/world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
@@ -82,6 +84,13 @@ export class PartyWorldService {
         }
         player.partyRoomId = partyRoomId;
         player.partyLootMode = lootMode;
+        this.tellParty(room, player.id, partyRoomId); // đổi map / vào lại: client nối lại party room của nó
+    }
+
+    /** Báo client party room của nó (`""` = không còn trong party) để nó nối vào / rời khỏi room đó. */
+    private tellParty(room: WorldRoom, playerId: string, partyRoomId: string | null): void {
+        const message: PartyRoomMessage = { roomId: partyRoomId ?? "" };
+        this.findPlayer(room, playerId)?.client.send(WorldMessage.PARTY, message);
     }
 
     /**
@@ -294,7 +303,47 @@ export class PartyWorldService {
         if (!player) return;
         player.partyRoomId = partyRoomId;
         if (lootMode) player.partyLootMode = lootMode;
+        if (!partyRoomId) this.tellParty(room, playerId, null);
         this.lastReport.delete(player);
+    }
+
+    /**
+     * Xin vào party của `targetPlayerId` (đang cùng map): party room kiểm tra rồi báo cho chủ party. Mọi lý do
+     * không gửi được báo lại cho người xin bằng `partyNotice`.
+     */
+    async requestJoin(
+        room: WorldRoom,
+        client: PlayerClient,
+        player: PlayerWorldState,
+        targetPlayerId: string
+    ): Promise<void> {
+        const notice = (code: PartyNoticeCode) => {
+            const message: PartyNoticeMessage = { code };
+            client.send(WorldMessage.PARTY_NOTICE, message);
+        };
+        if (player.partyRoomId && (await this.isAlive(player.partyRoomId))) {
+            return notice(PartyNoticeCode.ALREADY_MEMBER);
+        }
+        const target = [...room.state.players.values()].find((other) => other.id === targetPlayerId);
+        if (!target) return notice(PartyNoticeCode.TARGET_NOT_HERE);
+        if (target.id === player.id) return notice(PartyNoticeCode.SELF_TARGET);
+        if (!target.partyRoomId) return notice(PartyNoticeCode.TARGET_NOT_IN_PARTY);
+
+        const result = await callParty<PartyNoticeCode | null>(
+            target.partyRoomId,
+            "requestJoin",
+            [player.id, player.name],
+            null
+        );
+        notice(result ?? PartyNoticeCode.TARGET_NOT_IN_PARTY);
+    }
+
+    /** Party room gọi: chuyển yêu cầu xin vào tới client của chủ party. */
+    deliverJoinRequest(room: WorldRoom, leaderId: string, payload: PartyJoinRequestMessage): boolean {
+        const found = this.findPlayer(room, leaderId);
+        if (!found) return false;
+        found.client.send(WorldMessage.PARTY_JOIN_REQUEST, payload);
+        return true;
     }
 
     /** Party room gọi: chuyển lời mời tới client và trả snapshot người được mời. */

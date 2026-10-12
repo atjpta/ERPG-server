@@ -23,6 +23,14 @@ export interface InvitePayload {
     partyRoomId: string;
     fromName: string;
     expiresInSec: number;
+    /** Lời mời từ yêu cầu xin vào: người nhận vào party luôn. */
+    autoAccept?: boolean;
+}
+
+export interface JoinRequestPayload {
+    partyRoomId: string;
+    fromName: string;
+    expiresInSec: number;
 }
 
 /** Các method `WorldRoom` mà party room gọi (cài đặt ở `world.room.ts` / `party.world.service.ts`). */
@@ -30,6 +38,9 @@ export const worldRemote = {
     /** Gửi lời mời tới client của `playerId`; trả snapshot người đó, `null` nếu không còn ở room này. */
     deliverInvite: (worldRoomId: string, playerId: string, payload: InvitePayload) =>
         call<PartyMemberInfo | null>(worldRoomId, "partyDeliverInvite", [playerId, payload], null),
+    /** Báo cho chủ party (client của `playerId`) có người xin vào party. */
+    deliverJoinRequest: (worldRoomId: string, playerId: string, payload: JoinRequestPayload) =>
+        call<boolean>(worldRoomId, "partyDeliverJoinRequest", [playerId, payload], false),
     /** Gán / bỏ party cho `playerId` ở world room. */
     setPlayerParty: (
         worldRoomId: string,

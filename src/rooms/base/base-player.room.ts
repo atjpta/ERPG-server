@@ -94,7 +94,16 @@ export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extend
         }
     }
 
+    /**
+     * Room có bị đá bởi `reason` không. Mặc định có; room phụ (party) bỏ qua `DUPLICATE_LOGIN` vì kết nối của nó
+     * luôn nằm cạnh một kết nối world của cùng player (world room mới vào lúc đổi map không được đá nó).
+     */
+    protected shouldKickFor(_reason: KickReason): boolean {
+        return true;
+    }
+
     private handleKick(userId: string, message: KickMessage) {
+        if (!this.shouldKickFor(message.reason)) return;
         for (const [sessionId, auth] of this.onlinePlayers) {
             if (auth.userId !== userId) continue;
             if (message.playerId && message.playerId !== auth.playerId) continue;

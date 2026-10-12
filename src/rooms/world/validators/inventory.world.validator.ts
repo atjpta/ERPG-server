@@ -41,3 +41,6 @@ export type LockItemPayload = z.infer<typeof LockItemSchema>;
 export type UpgradeEquipmentPayload = z.infer<typeof UpgradeEquipmentSchema>;
 export type PreviewUpgradePayload = z.infer<typeof PreviewUpgradeSchema>;
 export type DisassembleItemsPayload = z.infer<typeof DisassembleItemsSchema>;
+
+/** Một người chơi khác (theo player id): xem thông tin, xin vào party của họ. */
+export const PlayerTargetSchema = z.object({ playerId: z.string().min(1).max(64) }).strict();

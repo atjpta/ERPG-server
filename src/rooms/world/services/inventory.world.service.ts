@@ -124,7 +124,7 @@ const toEquippedMessage = (entry: EquippedItem): EquippedItemMessage => {
 };
 
 /** Đồ đang mặc kèm code/rarity; slot trống giữ `null`. */
-const toEquipmentsMessage = (equipments: Equipments): EquipmentsMessage =>
+export const toEquipmentsMessage = (equipments: Equipments): EquipmentsMessage =>
     Object.fromEntries(
         Object.entries(equipments).map(([slot, entry]) => [
             slot,

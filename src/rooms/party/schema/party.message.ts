@@ -47,6 +47,12 @@ export enum PartyNoticeCode {
     ALREADY_MEMBER = "already_member",
     NOT_MEMBER = "not_member",
     INVITE_LIMIT = "invite_limit",
+    /** Xin vào party: đã gửi tới chủ party. */
+    JOIN_REQUEST_SENT = "join_request_sent",
+    /** Xin vào party nhưng người kia không ở trong party nào. */
+    TARGET_NOT_IN_PARTY = "target_not_in_party",
+    /** Người kia không ở cùng map (không xem được thông tin). */
+    TARGET_NOT_HERE = "target_not_here",
 }
 
 export interface PartyNoticeMessage {
