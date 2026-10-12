@@ -13,7 +13,8 @@ import {
 import { WorldChain } from "@/rooms/world/chains/world.chain.js";
 import { MoveCommand } from "@/rooms/world/simulation/movement.step.js";
 import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
-import { respawnPointOf } from "@/modules/maps/utils/map-file.util.js";
+import { transferWorldService } from "@/rooms/world/services/transfer.world.service.js";
+import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import { StepContext } from "colyseus";
 const PLAYER_RESPAWN_MS = 5_000;
 /** Tối đa bao nhiêu input của 1 player được xử lý trong 1 tick khi đang đuổi theo input bị dồn. */
@@ -182,12 +183,25 @@ export class PlayerWorldService {
                 return;
             }
             // Đã bước qua portal sang map khác thì không kéo về điểm hồi sinh của map cũ.
-            if (!player.pendingMapCode) {
-                const point = respawnPointOf(room.map);
-                player.setSpawns(point.x, point.y);
+            const client = player.pendingMapCode ? undefined : this.clientOf(room, player);
+            if (!client) {
+                this.respawningPlayers.delete(player);
+                return;
             }
-            this.respawningPlayers.delete(player);
+            // Hồi sinh ở town gần nhất đã đến (lưu trong player_states), không phải điểm respawn của map.
+            void transferWorldService
+                .respawnAtTown(room, client, player)
+                .catch((error) => console.error("[WorldRoom] respawnAtTown failed", error))
+                .finally(() => this.respawningPlayers.delete(player));
         }, PLAYER_RESPAWN_MS);
+    }
+
+    private clientOf(room: WorldRoom, player: PlayerWorldState): PlayerClient | undefined {
+        for (const [sessionId, state] of room.state.players) {
+            if (state === player)
+                return room.clients.getById(sessionId) as PlayerClient | undefined;
+        }
+        return undefined;
     }
 }
 

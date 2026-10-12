@@ -8,11 +8,6 @@
       "id": "from_plains",
       "x": 1.5,
       "y": 9.5
-    },
-    {
-      "id": "default",
-      "x": 2.0,
-      "y": 10.0
     }
   ],
   "colliders": [],

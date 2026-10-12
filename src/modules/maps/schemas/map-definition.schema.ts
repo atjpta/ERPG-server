@@ -179,11 +179,16 @@ export const MapDefinitionSchema = z
             if (spawnIds.has(point.id)) duplicate(["spawnPoints", i, "id"]);
             spawnIds.add(point.id);
         });
-        if (map.spawnPoints.filter((p) => p.kind === MapSpawnKind.DEFAULT).length !== 1) {
+        // Dungeon không cần `default` (vào bằng spawn đến từ cổng); map thường cần đúng 1.
+        const defaults = map.spawnPoints.filter((p) => p.kind === MapSpawnKind.DEFAULT).length;
+        if (map.type === MapType.DUNGEON ? defaults > 1 : defaults !== 1) {
             ctx.addIssue({
                 code: "custom",
                 path: ["spawnPoints"],
-                message: "exactly one spawn point with kind=default is required",
+                message:
+                    map.type === MapType.DUNGEON
+                        ? "at most one spawn point with kind=default is allowed"
+                        : "exactly one spawn point with kind=default is required",
             });
         }
         if ((map.type === MapType.DUNGEON) !== (map.dungeon !== undefined)) {

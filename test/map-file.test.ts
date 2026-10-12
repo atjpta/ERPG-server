@@ -214,7 +214,7 @@ describe("dungeon từ định nghĩa", () => {
                 code: def.code,
                 width: 50,
                 height: 50,
-                spawnPoints: [{ id: "default", x: 1, y: 1 }],
+                spawnPoints: [{ id: "from_forest", x: 1, y: 1 }],
             }),
             "h"
         );

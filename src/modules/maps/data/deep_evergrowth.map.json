@@ -13,11 +13,6 @@
       "id": "from_forest",
       "x": 6.0,
       "y": 2.0
-    },
-    {
-      "id": "respawn",
-      "x": 10.0,
-      "y": 2.0
     }
   ],
   "colliders": [],

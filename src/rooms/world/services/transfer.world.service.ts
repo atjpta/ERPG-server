@@ -1,5 +1,8 @@
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
+import { respawnPointOf } from "@/modules/maps/utils/map-file.util.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
 import { mapService } from "@/modules/maps/user/services/map.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
@@ -58,6 +61,41 @@ export class TransferWorldService {
         client.send(WorldMessage.MAP_CHANGE, message);
         await worldService.savePlayer(room, client.sessionId);
         return undefined;
+    }
+
+    /**
+     * Chết ngoài dungeon: hồi đầy máu tại điểm hồi sinh của town gần nhất đã đến
+     * (`player_states.last_town_map_code`, chưa có thì map khởi đầu). Town không mở → map khởi đầu.
+     */
+    async respawnAtTown(
+        room: WorldRoom,
+        client: PlayerClient,
+        player: PlayerWorldState
+    ): Promise<void> {
+        const config = masterDataCacheService.get(MasterDataKey.PLAYER_CONFIG);
+        let mapCode = player.lastTownMapCode ?? config.startMapCode;
+        let target: GameMap;
+        try {
+            target =
+                mapCode === room.map.code
+                    ? room.map
+                    : await mapService.getActiveByCodeOrFail(mapCode);
+        } catch {
+            mapCode = config.startMapCode;
+            target = await mapService.getActiveByCodeOrFail(mapCode);
+        }
+        const spawn = respawnPointOf(target);
+        player.setSpawns(spawn.x, spawn.y);
+        if (mapCode === room.map.code) return;
+
+        player.pendingMapCode = mapCode;
+        const message: MapChangeMessage = {
+            mapCode,
+            spawnId: "default",
+            roomName: WorldRoomName.WORLD,
+        };
+        client.send(WorldMessage.MAP_CHANGE, message);
+        await worldService.savePlayer(room, client.sessionId);
     }
 }
 

@@ -13,11 +13,6 @@
       "id": "from_village",
       "x": 16.5,
       "y": 4.0
-    },
-    {
-      "id": "respawn",
-      "x": 16.5,
-      "y": 4.0
     }
   ],
   "colliders": [

@@ -81,7 +81,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
         spawnPoints: [
             { id: "default", kind: MapSpawnKind.DEFAULT },
             { id: "from_village", kind: MapSpawnKind.ARRIVAL },
-            { id: "respawn", kind: MapSpawnKind.RESPAWN },
         ],
         monsterGroups: [
             { markerId: "g01", members: [{ monsterCode: "slime", count: 3, type: "random" }] },
@@ -130,55 +129,83 @@ const DEFINITIONS: MapDefinitionInput[] = [
             { id: "default", kind: MapSpawnKind.DEFAULT },
             { id: "from_village", kind: MapSpawnKind.ARRIVAL },
             { id: "from_evergrowth", kind: MapSpawnKind.ARRIVAL },
-            { id: "respawn", kind: MapSpawnKind.RESPAWN },
         ],
         monsterGroups: [
             {
-                markerId: "f01",
+                markerId: "g01",
+                members: [{ monsterCode: "werewolf", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g02",
+                members: [{ monsterCode: "werewolf", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g03",
+                members: [{ monsterCode: "werewolf", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g04",
+                members: [{ monsterCode: "werewolf", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g05",
+                members: [{ monsterCode: "werewolf", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g06",
+                members: [{ monsterCode: "bat", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g07",
+                members: [{ monsterCode: "bat", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g08",
+                members: [{ monsterCode: "bat", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g09",
+                members: [{ monsterCode: "bat", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g10",
+                members: [{ monsterCode: "bat", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g11",
                 members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
                     { monsterCode: "bat", count: 1, type: "random" },
+                    { monsterCode: "werewolf", count: 2, type: "random" },
                 ],
             },
             {
-                markerId: "f02",
+                markerId: "g12",
                 members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
                     { monsterCode: "bat", count: 1, type: "random" },
+                    { monsterCode: "werewolf", count: 2, type: "random" },
                 ],
             },
             {
-                markerId: "f03",
+                markerId: "g13",
                 members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
                     { monsterCode: "bat", count: 1, type: "random" },
+                    { monsterCode: "werewolf", count: 2, type: "random" },
                 ],
             },
             {
-                markerId: "f04",
+                markerId: "g14",
                 members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
                     { monsterCode: "bat", count: 1, type: "random" },
+                    { monsterCode: "werewolf", count: 2, type: "random" },
                 ],
             },
             {
-                markerId: "f05",
+                markerId: "g15",
                 members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
                     { monsterCode: "bat", count: 1, type: "random" },
+                    { monsterCode: "werewolf", count: 2, type: "random" },
                 ],
             },
-            {
-                markerId: "f06",
-                members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
-                    { monsterCode: "bat", count: 1, type: "random" },
-                ],
-            },
-            { markerId: "f07", members: [{ monsterCode: "bat", count: 3, type: "random" }] },
-            { markerId: "f08", members: [{ monsterCode: "bat", count: 3, type: "random" }] },
-            { markerId: "f09", members: [{ monsterCode: "bat", count: 3, type: "random" }] },
-            { markerId: "f10", members: [{ monsterCode: "bat", count: 3, type: "random" }] },
         ],
         interactables: [
             { id: "teleport_forest", type: "teleport", code: InteractableCode.TELEPORT },
@@ -216,7 +243,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
         spawnPoints: [
             { id: "default", kind: MapSpawnKind.DEFAULT },
             { id: "from_forest", kind: MapSpawnKind.ARRIVAL },
-            { id: "respawn", kind: MapSpawnKind.RESPAWN },
         ],
         monsterGroups: [
             {
@@ -291,10 +317,7 @@ const DEFINITIONS: MapDefinitionInput[] = [
         code: "slime_hollow",
         type: MapType.DUNGEON,
         minLevel: 1,
-        spawnPoints: [
-            { id: "default", kind: MapSpawnKind.DEFAULT },
-            { id: "from_plains", kind: MapSpawnKind.ARRIVAL },
-        ],
+        spawnPoints: [{ id: "from_plains", kind: MapSpawnKind.ARRIVAL }],
         dungeon: {
             gateCode: GateCode.SLIME_GATE,
             maxLevel: 10,
@@ -389,10 +412,7 @@ const DEFINITIONS: MapDefinitionInput[] = [
         code: "werewolf_den",
         type: MapType.DUNGEON,
         minLevel: 10,
-        spawnPoints: [
-            { id: "default", kind: MapSpawnKind.DEFAULT },
-            { id: "from_forest", kind: MapSpawnKind.ARRIVAL },
-        ],
+        spawnPoints: [{ id: "from_forest", kind: MapSpawnKind.ARRIVAL }],
         dungeon: {
             gateCode: GateCode.WEREWOLF_GATE,
             maxLevel: 20,
@@ -510,10 +530,7 @@ const DEFINITIONS: MapDefinitionInput[] = [
         code: "sanctuary_of_life",
         type: MapType.DUNGEON,
         minLevel: 20,
-        spawnPoints: [
-            { id: "default", kind: MapSpawnKind.DEFAULT },
-            { id: "from_evergrowth", kind: MapSpawnKind.ARRIVAL },
-        ],
+        spawnPoints: [{ id: "from_evergrowth", kind: MapSpawnKind.ARRIVAL }],
         dungeon: {
             gateCode: GateCode.SANCTUARY_GATE,
             maxLevel: 30,

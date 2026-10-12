@@ -50,6 +50,11 @@ export const expandMonsterGroup = (
     });
 };
 
+/** Chỗ vào mặc định của map: spawn `default`; dungeon không có `default` thì lấy spawn đầu tiên. */
+const entranceSpawnId = (def: MapDefinition): string | undefined =>
+    def.spawnPoints.find((s) => s.kind === MapSpawnKind.DEFAULT)?.id ??
+    (def.type === MapType.DUNGEON ? def.spawnPoints[0]?.id : undefined);
+
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
 const byId = <T extends { id: string }>(items: readonly T[]) =>
@@ -103,11 +108,7 @@ export const validateLayoutAgainstDefinition = (
         layout.chambers.map((c) => c.id),
         def.dungeon?.chambers.map((c) => c.id) ?? []
     );
-    if (
-        !layout.spawnPoints.some(
-            (p) => p.id === def.spawnPoints.find((s) => s.kind === MapSpawnKind.DEFAULT)?.id
-        )
-    ) {
+    if (!layout.spawnPoints.some((p) => p.id === entranceSpawnId(def))) {
         errors.push(`${def.code}: thiếu vị trí spawn point mặc định`);
     }
     return errors;
@@ -139,7 +140,7 @@ export const buildMapRow = (
         }
         return [{ id: point.id, x: at.x, y: at.y, kind: point.kind }];
     });
-    const defaultSpawn = spawnPoints.find((point) => point.kind === MapSpawnKind.DEFAULT);
+    const defaultSpawn = spawnPoints.find((point) => point.id === entranceSpawnId(def));
     if (!defaultSpawn) throw new Error(`${def.code}: thiếu vị trí spawn point mặc định`);
 
     const expand = (groups: readonly MonsterGroup[], mapLevel = def.monsterLevel) =>
@@ -216,8 +217,7 @@ const buildDungeon = (
     const dungeon = def.dungeon!;
     const geometry = byId(layout.chambers);
     // Chamber đầu bắt đầu ngay chỗ vào dungeon (spawn default); các chamber sau cần `entry` trong layout.
-    const defaultSpawnId = def.spawnPoints.find((s) => s.kind === MapSpawnKind.DEFAULT)?.id;
-    const entrance = layout.spawnPoints.find((p) => p.id === defaultSpawnId);
+    const entrance = layout.spawnPoints.find((p) => p.id === entranceSpawnId(def));
     const before = missing.length;
     const chambers = dungeon.chambers.map((chamber, index) => {
         const shape = geometry.get(chamber.id);
