@@ -243,7 +243,6 @@ const buildDungeon = (
             ...(shape?.entryGate ? { entryGate: shape.entryGate } : {}),
             ...(shape?.exitGate && hasExit ? { exitGate: shape.exitGate } : {}),
             ...(chamber.isBoss ? { isBoss: true } : {}),
-            ...(chamber.clearReward ? { clearReward: chamber.clearReward } : {}),
         };
     });
     const complete = missing.length === before;

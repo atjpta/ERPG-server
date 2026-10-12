@@ -2,6 +2,7 @@ import { boolean, integer, jsonb, pgEnum, pgTable, real, text } from "drizzle-or
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { Condition } from "@/modules/dialogues/schemas/condition.schema.js";
 import type { RewardSpec } from "@/modules/rewards/schemas/reward-spec.schema.js";
+import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import type { InteractableCode } from "@/modules/maps/enums/interactable-code.enum.js";
 import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
@@ -81,7 +82,6 @@ export interface DungeonChamber {
     /** Cổng sang chamber kế — khoá tới khi chamber hoàn thành; chamber boss không có. */
     exit?: { x: number; y: number; radius: number };
     isBoss?: boolean;
-    clearReward?: RewardSpec;
 }
 
 export interface DungeonConfig {
@@ -91,8 +91,14 @@ export interface DungeonConfig {
     /** Diện mạo cổng chắn (client chọn prefab). */
     gateCode?: string;
     chambers: DungeonChamber[];
-    /** Thưởng khi clear chamber boss. */
-    clearReward?: RewardSpec;
+    /** Thưởng khi clear chamber boss: phần cố định + item rơi thêm + trang bị biome chia nhau `slots`. */
+    clearReward?: DungeonClearReward;
+}
+
+export interface DungeonClearReward extends RewardSpec {
+    slots?: number;
+    dropItems: { itemCode: string; min: number; max: number; rate: number }[];
+    equipment?: { biome: Biome; rarity: Partial<Record<ItemRarity, number>> };
 }
 
 /**

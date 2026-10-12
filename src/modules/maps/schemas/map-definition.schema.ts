@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ConditionSchema } from "@/modules/dialogues/schemas/condition.schema.js";
+import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MapSpawnKind } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
@@ -94,16 +95,50 @@ const DungeonChamberDefSchema = z.object({
     /** Có cổng exit (sang chamber kế; chamber boss: cổng thoát). Mặc định: có, trừ chamber boss. */
     hasExit: z.boolean().optional(),
     exitRadius: z.number().positive().default(1.5),
-    clearReward: RewardSpecSchema.optional(),
     phases: z.array(DungeonPhaseDefSchema).min(1),
 });
+
+/**
+ * Thưởng khi clear dungeon (hạ boss) cho mỗi người chơi. `exp` / `currency` / `items` là phần cố định; thêm
+ * `slots`: mỗi item cố định chiếm 1 slot, mỗi item trong `dropItems` trúng tỉ lệ chiếm thêm 1 slot, `equipment`
+ * lấp các slot còn lại (mỗi món roll riêng món + rarity).
+ */
+export const DungeonClearRewardSchema = RewardSpecSchema.extend({
+    slots: z.number().int().positive().optional(),
+    /** Item rơi thêm: trúng `rate` thì nhận `min`–`max` cái. */
+    dropItems: z
+        .array(
+            z
+                .object({
+                    itemCode: z.string().min(1),
+                    min: z.number().int().positive(),
+                    max: z.number().int().positive(),
+                    rate: z.number().min(0).max(1),
+                })
+                .refine((drop) => drop.min <= drop.max, { message: "min must be <= max" })
+        )
+        .default([]),
+    equipment: z
+        .object({
+            biome: z.enum(Biome),
+            /** Trọng số rarity (không cần tổng = 1); trống = common. */
+            rarity: z.partialRecord(z.enum(ItemRarity), z.number().nonnegative()).default({}),
+        })
+        .optional(),
+}).refine(
+    (reward) => reward.slots !== undefined || (!reward.equipment && reward.dropItems.length === 0),
+    {
+        path: ["slots"],
+        message: "slots is required with equipment / dropItems",
+    }
+);
 
 export const DungeonDefSchema = z
     .object({
         /** Level quái = ceil(trung bình level người trong instance), tối đa giá trị này. */
         maxLevel: level,
         timeLimitSec: z.number().int().positive().optional(),
-        clearReward: RewardSpecSchema.optional(),
+        clearReward: DungeonClearRewardSchema.optional(),
         /** Diện mạo cổng chắn mỗi chamber (client chọn prefab theo code). Bỏ trống = không có cổng. */
         gateCode: z.enum(GateCode).optional(),
         chambers: z.array(DungeonChamberDefSchema).min(1),

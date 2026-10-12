@@ -1,22 +1,12 @@
-import { big, floorBig } from "@/core/utils/big-number.util.js";
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
-import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { ItemRepo } from "@/modules/items/repositories/item.repository.js";
 import { Monsters, type NewMonster } from "@/modules/monsters/entities/monster.entity.js";
 import { MonsterRepo } from "@/modules/monsters/repositories/monster.repository.js";
-import {
-    MonsterDropsSchema,
-    type CurrencyDrop,
-    type EquipmentDrop,
-} from "@/modules/monsters/schemas/monster-drop.schema.js";
-import {
-    MONSTER_DEFINITIONS,
-    monsterAttackSkillCode,
-    type MonsterDefinition,
-} from "@/modules/monsters/seeds/monster.seed-data.js";
+import { MonsterDropsSchema } from "@/modules/monsters/schemas/monster-drop.schema.js";
+import { MONSTER_DEFINITIONS } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
-import type { Stats } from "@/modules/player/schemas/stat.schema.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
+import type { Stats } from "@/modules/player/schemas/stat.schema.js";
 import { toOwnedSkills } from "@/modules/skills/seeds/owned-skills.seed.util.js";
 
 interface ItemDropSeed {
@@ -26,90 +16,142 @@ interface ItemDropSeed {
     rate: number;
 }
 
-/**
- * Chỉ số + thưởng ở đây là mức NORMAL / common — nhân theo loại × độ hiếm lúc chạy bằng master data
- * `monster_scale_config` (máu, công, exp, vàng, tỉ lệ rơi).
- */
-const BASE_EQUIPMENT_DROP_RATE = 0.08;
-
-/** Đá cường hoá rơi theo biome (bậc tăng dần theo độ khó). */
-const STONE_TIER_BY_BIOME: Record<Biome, number> = {
-    [Biome.STARTER]: 1,
-    [Biome.SLIME]: 1,
-    [Biome.WEREWOLF]: 2,
-    [Biome.WEREBEAR]: 3,
-};
-
-/** Loại monster cấu hình theo spawn của map → bảng rơi chung, elite/boss nhân qua scale config. */
-const EQUIPMENT_DROP: EquipmentDrop = {
-    rate: BASE_EQUIPMENT_DROP_RATE,
-    rarity: {
-        [ItemRarity.COMMON]: 60,
-        [ItemRarity.GOOD]: 25,
-        [ItemRarity.RARE]: 10,
-        [ItemRarity.EPIC]: 4,
-        [ItemRarity.LEGENDARY]: 1,
-    },
-};
-
-const materialDrops = (stoneTier: number): ItemDropSeed[] => [
-    { itemCode: `enhance_stone_${stoneTier}`, min: 1, max: 2, rate: 0.25 },
-    { itemCode: "dust_weapon", min: 1, max: 3, rate: 0.15 },
-    { itemCode: "dust_armor", min: 1, max: 3, rate: 0.15 },
-    { itemCode: "dust_accessory", min: 1, max: 3, rate: 0.15 },
-    { itemCode: "spirit", min: 1, max: 2, rate: 0.05 },
-    { itemCode: "hp_potion_small", min: 1, max: 1, rate: 0.1 },
-];
-
-/** Tạm: chỉ số gốc (mốc level 1) / thưởng sinh theo level — cân bằng lại sau. */
-function toSeed(monster: MonsterDefinition) {
-    // Tăng theo level bằng master data `monster_level_config`.
-    const stats: Stats = {
-        [StatKey.MOVE_SPEED]: 2,
-        [StatKey.CRITICAL_DAMAGE]: 1.5,
-        [StatKey.MAX_HP]: 50,
-        [StatKey.PHYSICAL_ATTACK]: 5,
-        [StatKey.ACCURACY]: 1,
-        [StatKey.EVASION]: 1,
-        ...(monster.biome === Biome.WEREBEAR ? { [StatKey.PHYSICAL_DEFENSE]: 1 } : {}),
-    };
-    // 20 × lv × (1 + lv/10): lv1 = 22, lv10 = 400, lv30 = 2400.
-    const exp = floorBig(big(20).times(monster.level).times(big(monster.level).div(10).plus(1)));
-    const gold: CurrencyDrop = {
-        code: CurrencyCode.GOLD,
-        min: monster.level,
-        max: monster.level * 10,
-    };
-    return {
-        code: monster.code,
-        level: monster.level,
-        biome: monster.biome,
-        // Đòn đánh + nghỉ 1.2 s giữa 2 đòn.
-        attackCooldownMs: monster.attackClipMs + 1200,
-        hitbox: monster.hitbox,
-        collider: monster.collider,
-        stats,
-        skillCodes: [monsterAttackSkillCode(monster)],
-        drops: {
-            currency: [gold],
-            items: materialDrops(STONE_TIER_BY_BIOME[monster.biome]),
-            equipment: EQUIPMENT_DROP,
-            exp,
-        },
+interface MonsterSeedEntry {
+    code: string;
+    level: number;
+    biome: Biome;
+    attackCooldownMs: number;
+    /** Chỉ số gốc ở mốc level 1; tăng theo level bằng master data `monster_level_config`. */
+    stats: Stats;
+    skillCodes: string[];
+    /**
+     * Mức NORMAL / common — nhân theo loại × độ hiếm lúc chạy bằng master data `monster_scale_config`.
+     * Quái thường (kể cả boss dungeon) chỉ rơi đá cường hoá + bình máu; trang bị biome là phần thưởng
+     * clear dungeon (`clearEquipment` trong định nghĩa map).
+     */
+    drops: {
+        gold: { min: number; max: number };
+        exp: number;
+        items: ItemDropSeed[];
     };
 }
 
-/** Code monster cũ không còn dùng (placeholder trước khi có prefab). */
-const LEGACY_MONSTER_CODES = ["shapeshifter"];
-// Orc/skeleton/lancer đã bị bỏ — DB được reset ở Phase 7 nên không cần vô hiệu hoá thêm.
+/** Hitbox / collider lấy từ prefab Unity — khai báo một chỗ ở `MONSTER_DEFINITIONS` (skill seed cũng dùng). */
+const prefabOf = (code: string) => {
+    const definition = MONSTER_DEFINITIONS.find((monster) => monster.code === code);
+    if (!definition) throw new Error(`Monster "${code}" is missing from MONSTER_DEFINITIONS`);
+    return { hitbox: definition.hitbox, collider: definition.collider };
+};
+
+/** Mỗi monster viết đủ chỉ số + thưởng của riêng nó; exp mẫu: 20 × lv × (1 + lv/10). */
+const MONSTER_SEEDS: MonsterSeedEntry[] = [
+    {
+        code: "bat",
+        level: 1,
+        biome: Biome.SLIME,
+        attackCooldownMs: 1700,
+        stats: {
+            [StatKey.MOVE_SPEED]: 2,
+            [StatKey.CRITICAL_DAMAGE]: 1.5,
+            [StatKey.MAX_HP]: 50,
+            [StatKey.PHYSICAL_ATTACK]: 5,
+            [StatKey.ACCURACY]: 1,
+            [StatKey.EVASION]: 1,
+        },
+        skillCodes: ["bat_attack"],
+        drops: {
+            gold: { min: 1, max: 10 },
+            exp: 22,
+            items: [
+                { itemCode: "enhance_stone_1", min: 1, max: 1, rate: 0.1 },
+                { itemCode: "hp_potion_small", min: 1, max: 1, rate: 0.1 },
+            ],
+        },
+    },
+    {
+        code: "slime",
+        level: 1,
+        biome: Biome.SLIME,
+        attackCooldownMs: 1700,
+        stats: {
+            [StatKey.MOVE_SPEED]: 2,
+            [StatKey.CRITICAL_DAMAGE]: 1.5,
+            [StatKey.MAX_HP]: 50,
+            [StatKey.PHYSICAL_ATTACK]: 5,
+            [StatKey.ACCURACY]: 1,
+            [StatKey.EVASION]: 1,
+        },
+        skillCodes: ["slime_attack"],
+        drops: {
+            gold: { min: 1, max: 10 },
+            exp: 22,
+            items: [
+                { itemCode: "enhance_stone_1", min: 1, max: 1, rate: 0.1 },
+                { itemCode: "hp_potion_small", min: 1, max: 1, rate: 0.1 },
+            ],
+        },
+    },
+    {
+        code: "werewolf",
+        level: 10,
+        biome: Biome.WEREWOLF,
+        attackCooldownMs: 1950,
+        stats: {
+            [StatKey.MOVE_SPEED]: 2,
+            [StatKey.CRITICAL_DAMAGE]: 1.5,
+            [StatKey.MAX_HP]: 50,
+            [StatKey.PHYSICAL_ATTACK]: 5,
+            [StatKey.ACCURACY]: 1,
+            [StatKey.EVASION]: 1,
+        },
+        skillCodes: ["werewolf_attack"],
+        drops: {
+            gold: { min: 10, max: 100 },
+            exp: 400,
+            items: [
+                { itemCode: "enhance_stone_2", min: 1, max: 1, rate: 0.1 },
+                { itemCode: "hp_potion_small", min: 1, max: 1, rate: 0.1 },
+            ],
+        },
+    },
+    {
+        code: "werebear",
+        level: 20,
+        biome: Biome.WEREBEAR,
+        attackCooldownMs: 1950,
+        stats: {
+            [StatKey.MOVE_SPEED]: 2,
+            [StatKey.CRITICAL_DAMAGE]: 1.5,
+            [StatKey.MAX_HP]: 50,
+            [StatKey.PHYSICAL_ATTACK]: 5,
+            [StatKey.PHYSICAL_DEFENSE]: 1,
+            [StatKey.ACCURACY]: 1,
+            [StatKey.EVASION]: 1,
+        },
+        skillCodes: ["werebear_attack"],
+        drops: {
+            gold: { min: 20, max: 200 },
+            exp: 1200,
+            items: [
+                { itemCode: "enhance_stone_2", min: 1, max: 1, rate: 0.1 },
+                { itemCode: "hp_potion_small", min: 1, max: 1, rate: 0.1 },
+            ],
+        },
+    },
+];
 
 /** Chạy sau SkillSeed và ItemSeed (tham chiếu skill/item theo id). */
 export const MonsterSeed = async () => {
-    for (const { skillCodes, drops, ...rest } of MONSTER_DEFINITIONS.map(toSeed)) {
+    for (const { skillCodes, drops, ...entry } of MONSTER_SEEDS) {
         const monster: NewMonster = {
-            ...rest,
+            ...entry,
+            ...prefabOf(entry.code),
             skills: await toOwnedSkills(skillCodes),
-            drops: MonsterDropsSchema.parse({ ...drops, items: await toItemDrops(drops.items) }),
+            drops: MonsterDropsSchema.parse({
+                currency: [{ code: CurrencyCode.GOLD, ...drops.gold }],
+                items: await toItemDrops(drops.items),
+                exp: drops.exp,
+            }),
         };
         await MonsterRepo.upsert({
             data: monster,
@@ -117,12 +159,6 @@ export const MonsterSeed = async () => {
             matchValue: monster.code,
             updateData: monster,
         });
-    }
-    for (const code of LEGACY_MONSTER_CODES) {
-        const legacy = await MonsterRepo.findByCode({ code });
-        if (legacy?.enabled) {
-            await MonsterRepo.updateById({ id: legacy.id, data: { enabled: false } });
-        }
     }
     console.info("✅ [MonsterSeed] Done");
 };

@@ -15,7 +15,6 @@ import { selectDialogueCode } from "@/modules/dialogues/utils/dialogue-rule.util
 import { DIALOGUES } from "@/modules/dialogues/seeds/dialogue.seed-data.js";
 import { loadMapDefinitions } from "@/modules/maps/seeds/game-map.seed.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
-import { DEFAULT_DUNGEON_DROP_CONFIG } from "@/modules/maps/seeds/dungeon-drop-config.seed-data.js";
 import { MONSTER_DEFINITIONS } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { QuestCategory } from "@/modules/quests/enums/quest.enum.js";
 import { unlockedFeatures, unlockFlagKey } from "@/modules/quests/utils/unlock.util.js";
@@ -336,7 +335,6 @@ describe("content data", () => {
             })),
             itemCodes: new Set(["hp_potion_small", "spirit"]),
             monsterCodes: new Set(MONSTER_DEFINITIONS.map((monster) => monster.code)),
-            dungeonDrops: DEFAULT_DUNGEON_DROP_CONFIG,
             dungeonMapCodes: new Set(
                 loadMapDefinitions()
                     .filter((map) => map.type === MapType.DUNGEON)
@@ -355,7 +353,6 @@ describe("content data", () => {
             itemCodes: new Set(),
             monsterCodes: new Set(),
             dungeonMapCodes: new Set(),
-            dungeonDrops: { byMap: {} },
         });
         assert.equal(errors.length, 1);
     });

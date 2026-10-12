@@ -14,7 +14,6 @@ import {
 } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { DEFAULT_DAILY_QUEST_CONFIG } from "@/modules/quests/seeds/daily-quest-config.seed-data.js";
 import { PartyLootMode } from "@/modules/party/schemas/party.schema.js";
-import { DEFAULT_DUNGEON_DROP_CONFIG } from "@/modules/maps/seeds/dungeon-drop-config.seed-data.js";
 import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
@@ -86,10 +85,6 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
     [MasterDataKey.MONSTER_SPAWN_CONFIG]: {
         value: DEFAULT_MONSTER_SPAWN_CONFIG,
         note: "Roll loại (normal/elite) + độ hiếm của monster khi sinh / hồi sinh; giới hạn elite mỗi map",
-    },
-    [MasterDataKey.DUNGEON_DROP_CONFIG]: {
-        value: DEFAULT_DUNGEON_DROP_CONFIG,
-        note: "Chỉnh drop quái trong dungeon theo map (hệ số exp/vàng/tỉ lệ, trang bị, item rơi thêm)",
     },
     [MasterDataKey.PARTY_CONFIG]: {
         value: {

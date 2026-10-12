@@ -49,37 +49,18 @@ export class MapService {
                     interactRadius: npc?.interactRadius ?? 0,
                 };
             }),
-            interactables: [
-                ...map.interactables.map((it) => ({
-                    id: it.id,
-                    type: it.type,
-                    code: it.code,
-                    direction: it.direction,
-                    x: it.x,
-                    y: it.y,
-                    radius: it.radius,
-                    ...(it.type === "portal"
-                        ? { targetMapCode: it.targetMapCode, targetSpawnId: it.targetSpawnId }
-                        : {}),
-                })),
-                // Dungeon: cổng exit của chamber (id `exit_<chamberId>`, cùng id với interactable server dựng ở
-                // dungeon.world.service) — client cần vị trí để hiện nút tương tác và gửi interact.
-                ...(map.dungeon?.chambers ?? []).flatMap((chamber) =>
-                    chamber.exit
-                        ? [
-                              {
-                                  id: `exit_${chamber.id}`,
-                                  type: "portal",
-                                  code: "portal",
-                                  direction: "",
-                                  x: chamber.exit.x,
-                                  y: chamber.exit.y,
-                                  radius: chamber.exit.radius,
-                              },
-                          ]
-                        : []
-                ),
-            ],
+            interactables: map.interactables.map((it) => ({
+                id: it.id,
+                type: it.type,
+                code: it.code,
+                direction: it.direction,
+                x: it.x,
+                y: it.y,
+                radius: it.radius,
+                ...(it.type === "portal"
+                    ? { targetMapCode: it.targetMapCode, targetSpawnId: it.targetSpawnId }
+                    : {}),
+            })),
         };
     }
 

@@ -12,7 +12,6 @@ import { MonsterLevelConfigSchema } from "@/modules/monsters/schemas/monster-lev
 import { MonsterSpawnConfigSchema } from "@/modules/monsters/schemas/monster-spawn-config.schema.js";
 import { MonsterScaleConfigSchema } from "@/modules/monsters/schemas/monster-scale-config.schema.js";
 import { PartyConfigSchema } from "@/modules/party/schemas/party.schema.js";
-import { DungeonDropConfigSchema } from "@/modules/maps/schemas/dungeon-drop.schema.js";
 import { DailyQuestConfigSchema } from "@/modules/quests/schemas/daily-quest.schema.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 
@@ -64,7 +63,6 @@ export const MasterDataValueSchemas = {
     [MasterDataKey.MONSTER_LEVEL_CONFIG]: MonsterLevelConfigSchema,
     [MasterDataKey.MONSTER_SPAWN_CONFIG]: MonsterSpawnConfigSchema,
     [MasterDataKey.DAILY_QUEST_CONFIG]: DailyQuestConfigSchema,
-    [MasterDataKey.DUNGEON_DROP_CONFIG]: DungeonDropConfigSchema,
     [MasterDataKey.PARTY_CONFIG]: PartyConfigSchema,
 } satisfies Record<MasterDataKey, z.ZodType>;
 

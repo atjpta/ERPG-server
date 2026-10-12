@@ -5,13 +5,14 @@ import {
     dropLevelOf,
     type Rng,
 } from "@/modules/equipment/utils/equipment-roll.util.js";
-import type { DungeonDropTuning } from "@/modules/maps/schemas/dungeon-drop.schema.js";
-import { applyDungeonScale, tuneDungeonDrops } from "@/modules/maps/utils/dungeon-drop.util.js";
-import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import type { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import { scaleDropsToLevel } from "@/modules/monsters/utils/monster-spawn.util.js";
-import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
+import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
+import type {
+    EquipmentDrop,
+    MonsterDrops,
+} from "@/modules/monsters/schemas/monster-drop.schema.js";
 import {
     combineRewardScale,
     monsterScales,
@@ -19,7 +20,7 @@ import {
 } from "@/modules/monsters/utils/monster-stat.util.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
-import type { Reward } from "@/modules/rewards/types/reward.type.js";
+import type { ItemReward, Reward } from "@/modules/rewards/types/reward.type.js";
 import { rollDropRarity, rollMonsterReward } from "@/modules/rewards/utils/reward-roll.util.js";
 
 /**
@@ -34,9 +35,7 @@ export class MonsterRewardService {
                 /** Level của monster gốc (nơi `drops` được seed) — quái sinh ở level khác thì thưởng đổi theo. */
                 baseLevel?: number;
             },
-        rng: Rng = Math.random,
-        /** Chỉnh drop của dungeon (nếu quái chết trong dungeon). */
-        dungeonDrops?: DungeonDropTuning
+        rng: Rng = Math.random
     ): Reward {
         const scaleConfig = masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG);
         const scaled = scaleDropsToLevel(
@@ -44,37 +43,36 @@ export class MonsterRewardService {
             monster.baseLevel ?? monster.level,
             monster.level
         );
-        // Thưởng thêm của dungeon chỉ áp dụng khi hạ boss; quái thường rớt như bình thường.
-        const bossBonus = monster.type === MonsterType.BOSS ? dungeonDrops : undefined;
-        const drops = bossBonus
-            ? tuneDungeonDrops(scaled, bossBonus, {
-                  itemId: (code) => itemService.getByCode(code)?.id,
-              })
-            : scaled;
-        const baseScale = combineRewardScale(monsterScales(monster, scaleConfig));
-        return rollMonsterReward(drops, {
+        return rollMonsterReward(scaled, {
             rng,
-            scale: bossBonus ? applyDungeonScale(baseScale, bossBonus) : baseScale,
-            rollEquipment: (drop) => {
-                const level = dropLevelOf(monster.biome, equipmentConfigService.drop);
-                const templates = itemService.listEquipmentsByBiome(monster.biome);
-                const item = pickWeighted(templates, () => 1, rng);
-                if (level === undefined || !item) return undefined;
-                try {
-                    const metadata = equipmentFactoryService.createInstance({
-                        item,
-                        level,
-                        rarity: rollDropRarity(drop, rng),
-                        rng,
-                    });
-                    return { itemId: item.id, quantity: 1, metadata };
-                } catch (err) {
-                    // Thiếu bảng stat cho mốc level này → bỏ qua món đó, không làm hỏng lượt thưởng.
-                    console.error("[MonsterReward] Equipment drop skipped:", err);
-                    return undefined;
-                }
-            },
+            scale: combineRewardScale(monsterScales(monster, scaleConfig)),
+            rollEquipment: (drop) => this.rollEquipment(monster.biome, drop, rng),
         });
+    }
+
+    /** 1 món trang bị của biome: ngẫu nhiên class + loại, level theo `equipment_drop_config`, rarity theo trọng số. */
+    rollEquipment(
+        biome: Biome,
+        drop: EquipmentDrop,
+        rng: Rng = Math.random
+    ): ItemReward | undefined {
+        const level = dropLevelOf(biome, equipmentConfigService.drop);
+        const templates = itemService.listEquipmentsByBiome(biome);
+        const item = pickWeighted(templates, () => 1, rng);
+        if (level === undefined || !item) return undefined;
+        try {
+            const metadata = equipmentFactoryService.createInstance({
+                item,
+                level,
+                rarity: rollDropRarity(drop, rng),
+                rng,
+            });
+            return { itemId: item.id, quantity: 1, metadata };
+        } catch (err) {
+            // Thiếu bảng stat cho mốc level này → bỏ qua món đó, không làm hỏng lượt thưởng.
+            console.error("[MonsterReward] Equipment drop skipped:", err);
+            return undefined;
+        }
     }
 }
 

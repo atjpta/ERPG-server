@@ -1,9 +1,5 @@
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import type { MapInteractable } from "@/modules/maps/entities/game-map.entity.js";
-import {
-    DUNGEON_EXIT_PREFIX,
-    dungeonWorldService,
-} from "@/rooms/world/services/dungeon.world.service.js";
 import { evaluateConditions } from "@/modules/dialogues/utils/condition.util.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import { resolveRewardSpec } from "@/modules/rewards/utils/reward-spec.util.js";
@@ -54,9 +50,6 @@ export class InteractWorldService {
         id: string
     ): Promise<string | undefined> {
         if (player.hp <= 0) return "Player is dead";
-        if (room.dungeon && id.startsWith(DUNGEON_EXIT_PREFIX)) {
-            return dungeonWorldService.useExit(room, client, player, id);
-        }
         const def = room.map.interactables.find((it) => it.id === id);
         const state = room.state.interactables.find((it) => it.id === id);
         if (!def || !state) return "Not found";

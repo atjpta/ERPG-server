@@ -4,7 +4,6 @@ import { definitionMonsterCodes } from "@/modules/maps/utils/map-build.util.js";
 import type { Npc } from "@/modules/npcs/entities/npc.entity.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
-import type { DungeonDropConfig } from "@/modules/maps/schemas/dungeon-drop.schema.js";
 import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
 import type { Action, Condition } from "@/modules/dialogues/schemas/condition.schema.js";
 
@@ -26,8 +25,6 @@ export interface ContentData {
     monsterCodes: ReadonlySet<string>;
     /** Code map dungeon (kể cả map placeholder chưa có file Unity) — mục tiêu `clear_dungeon` trỏ vào đây. */
     dungeonMapCodes: ReadonlySet<string>;
-    /** Master data `dungeon_drop_config` — item code và map phải có thật. */
-    dungeonDrops: DungeonDropConfig;
 }
 
 /**
@@ -98,19 +95,16 @@ export const findContentRefErrors = (data: ContentData): string[] => {
         for (const monsterCode of definitionMonsterCodes(map)) {
             need(data.monsterCodes, monsterCode, `map ${map.code}`, "monster");
         }
-        for (const chamber of map.dungeon?.chambers ?? []) {
-            for (const item of chamber.clearReward?.items ?? []) {
-                need(data.itemCodes, item.itemCode, `map ${map.code}.${chamber.id}`, "item");
-            }
+        for (const item of map.dungeon?.clearReward?.dropItems ?? []) {
+            need(
+                data.itemCodes,
+                item.itemCode,
+                `map ${map.code} dungeon clearReward.dropItems`,
+                "item"
+            );
         }
         for (const item of map.dungeon?.clearReward?.items ?? []) {
             need(data.itemCodes, item.itemCode, `map ${map.code} dungeon`, "item");
-        }
-    }
-    for (const [mapCode, tuning] of Object.entries(data.dungeonDrops.byMap)) {
-        need(data.dungeonMapCodes, mapCode, "dungeon_drop_config", "dungeon map");
-        for (const item of tuning.extraItems ?? []) {
-            need(data.itemCodes, item.itemCode, `dungeon_drop_config ${mapCode}`, "item");
         }
     }
     for (const npc of data.npcs) {

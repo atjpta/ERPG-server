@@ -1,3 +1,5 @@
+import { ItemRarity } from "@/modules/items/enums/item.enum.js";
+import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import { MapSpawnKind } from "@/modules/maps/entities/game-map.entity.js";
 import { GateCode } from "@/modules/maps/enums/gate-code.enum.js";
@@ -113,7 +115,7 @@ const DEFINITIONS: MapDefinitionInput[] = [
             {
                 id: "to_slime_hollow",
                 type: "portal",
-                code: InteractableCode.PORTAL,
+                code: InteractableCode.ENTRY_DUNGEON,
                 radius: 1.5,
                 targetMapCode: "slime_hollow",
                 targetSpawnId: "from_plains",
@@ -228,7 +230,7 @@ const DEFINITIONS: MapDefinitionInput[] = [
             {
                 id: "forest_to_werewolf_den",
                 type: "portal",
-                code: InteractableCode.PORTAL,
+                code: InteractableCode.ENTRY_DUNGEON,
                 radius: 1.5,
                 targetMapCode: "werewolf_den",
                 targetSpawnId: "from_forest",
@@ -246,51 +248,45 @@ const DEFINITIONS: MapDefinitionInput[] = [
         ],
         monsterGroups: [
             {
-                markerId: "e01",
-                members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
-                    { monsterCode: "werebear", count: 1, type: "random" },
-                ],
+                markerId: "g01",
+                members: [{ monsterCode: "werewolf", count: 3, type: "random" }],
             },
             {
-                markerId: "e02",
-                members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
-                    { monsterCode: "werebear", count: 1, type: "random" },
-                ],
+                markerId: "g02",
+                members: [{ monsterCode: "werewolf", count: 3, type: "random" }],
             },
             {
-                markerId: "e03",
-                members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
-                    { monsterCode: "werebear", count: 1, type: "random" },
-                ],
+                markerId: "g03",
+                members: [{ monsterCode: "werewolf", count: 3, type: "random" }],
             },
             {
-                markerId: "e04",
-                members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
-                    { monsterCode: "werebear", count: 1, type: "random" },
-                ],
+                markerId: "g04",
+                members: [{ monsterCode: "werewolf", count: 3, type: "random" }],
             },
             {
-                markerId: "e05",
-                members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
-                    { monsterCode: "werebear", count: 1, type: "random" },
-                ],
+                markerId: "g05",
+                members: [{ monsterCode: "werewolf", count: 3, type: "random" }],
             },
             {
-                markerId: "e06",
-                members: [
-                    { monsterCode: "werewolf", count: 2, type: "random" },
-                    { monsterCode: "werebear", count: 1, type: "random" },
-                ],
+                markerId: "g06",
+                members: [{ monsterCode: "werebear", count: 3, type: "random" }],
             },
-            { markerId: "e07", members: [{ monsterCode: "werebear", count: 2, type: "random" }] },
-            { markerId: "e08", members: [{ monsterCode: "werebear", count: 2, type: "random" }] },
-            { markerId: "e09", members: [{ monsterCode: "werebear", count: 2, type: "random" }] },
-            { markerId: "e10", members: [{ monsterCode: "werebear", count: 2, type: "random" }] },
+            {
+                markerId: "g07",
+                members: [{ monsterCode: "werebear", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g08",
+                members: [{ monsterCode: "werebear", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g09",
+                members: [{ monsterCode: "werebear", count: 3, type: "random" }],
+            },
+            {
+                markerId: "g10",
+                members: [{ monsterCode: "werebear", count: 3, type: "random" }],
+            },
         ],
         interactables: [
             { id: "teleport_evergrowth", type: "teleport", code: InteractableCode.TELEPORT },
@@ -305,7 +301,7 @@ const DEFINITIONS: MapDefinitionInput[] = [
             {
                 id: "evergrowth_to_sanctuary",
                 type: "portal",
-                code: InteractableCode.PORTAL,
+                code: InteractableCode.ENTRY_DUNGEON,
                 radius: 1.5,
                 targetMapCode: "sanctuary_of_life",
                 targetSpawnId: "from_evergrowth",
@@ -325,16 +321,25 @@ const DEFINITIONS: MapDefinitionInput[] = [
             clearReward: {
                 exp: 600,
                 currency: [{ code: CurrencyCode.GOLD, amount: 300 }],
-                items: [{ itemCode: "hp_potion_small", quantity: 5 }],
+                slots: 4,
+                dropItems: [
+                    { itemCode: "hp_potion_small", min: 1, max: 5, rate: 0.1 },
+                    { itemCode: "enhance_stone_1", min: 1, max: 5, rate: 0.1 },
+                ],
+                equipment: {
+                    biome: Biome.SLIME,
+                    rarity: {
+                        [ItemRarity.COMMON]: 90,
+                        [ItemRarity.GOOD]: 8,
+                        [ItemRarity.RARE]: 1.5,
+                        [ItemRarity.EPIC]: 0.4,
+                        [ItemRarity.LEGENDARY]: 0.1,
+                    },
+                },
             },
             chambers: [
                 {
                     id: "c1",
-                    clearReward: {
-                        exp: 80,
-                        currency: [{ code: CurrencyCode.GOLD, amount: 40 }],
-                        items: [],
-                    },
                     phases: [
                         {
                             id: "p1",
@@ -362,11 +367,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
                 },
                 {
                     id: "c2",
-                    clearReward: {
-                        exp: 160,
-                        currency: [{ code: CurrencyCode.GOLD, amount: 80 }],
-                        items: [],
-                    },
                     phases: [
                         {
                             id: "p1",
@@ -421,36 +421,46 @@ const DEFINITIONS: MapDefinitionInput[] = [
                 exp: 3000,
                 currency: [{ code: CurrencyCode.GOLD, amount: 1200 }],
                 items: [{ itemCode: "hp_potion_small", quantity: 5 }],
+                slots: 4,
+                dropItems: [
+                    { itemCode: "hp_potion_small", min: 1, max: 5, rate: 0.05 },
+                    { itemCode: "enhance_stone_1", min: 1, max: 5, rate: 0.05 },
+                    { itemCode: "enhance_stone_2", min: 1, max: 5, rate: 0.05 },
+                ],
+                equipment: {
+                    biome: Biome.SLIME,
+                    rarity: {
+                        [ItemRarity.COMMON]: 90,
+                        [ItemRarity.GOOD]: 8,
+                        [ItemRarity.RARE]: 1.5,
+                        [ItemRarity.EPIC]: 0.4,
+                        [ItemRarity.LEGENDARY]: 0.1,
+                    },
+                },
             },
             chambers: [
                 {
                     id: "c1",
-                    clearReward: {
-                        exp: 400,
-                        currency: [{ code: CurrencyCode.GOLD, amount: 150 }],
-                        items: [],
-                    },
                     phases: [
                         {
                             id: "p1",
                             delaySec: 0,
                             groups: [
                                 {
-                                    markerId: "c1_p1",
+                                    markerId: "c1_p1_1",
+                                    members: [{ monsterCode: "bat", count: 3 }],
+                                },
+                                {
+                                    markerId: "c1_p1_2",
+                                    members: [{ monsterCode: "bat", count: 3 }],
+                                },
+                                {
+                                    markerId: "c1_p1_3",
                                     members: [{ monsterCode: "werewolf", count: 3 }],
                                 },
-                            ],
-                        },
-                        {
-                            id: "p2",
-                            delaySec: 20,
-                            groups: [
                                 {
-                                    markerId: "c1_p2",
-                                    members: [
-                                        { monsterCode: "werewolf", count: 2 },
-                                        { monsterCode: "bat", count: 2 },
-                                    ],
+                                    markerId: "c1_p1_4",
+                                    members: [{ monsterCode: "werewolf", count: 3 }],
                                 },
                             ],
                         },
@@ -458,11 +468,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
                 },
                 {
                     id: "c2",
-                    clearReward: {
-                        exp: 800,
-                        currency: [{ code: CurrencyCode.GOLD, amount: 300 }],
-                        items: [],
-                    },
                     phases: [
                         {
                             id: "p1",
@@ -472,18 +477,11 @@ const DEFINITIONS: MapDefinitionInput[] = [
                                     markerId: "c2_p1a",
                                     members: [{ monsterCode: "werewolf", count: 4 }],
                                 },
-                                { markerId: "c2_p1b", members: [{ monsterCode: "bat", count: 2 }] },
-                            ],
-                        },
-                        {
-                            id: "p2",
-                            delaySec: 25,
-                            groups: [
+                                { markerId: "c2_p1b", members: [{ monsterCode: "bat", count: 4 }] },
                                 {
                                     markerId: "c2_p2",
                                     members: [
                                         { monsterCode: "bat", count: 1, type: MonsterType.ELITE },
-                                        { monsterCode: "werewolf", count: 2 },
                                     ],
                                 },
                             ],
@@ -508,17 +506,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
                                         },
                                     ],
                                 },
-                                {
-                                    markerId: "c3_p1",
-                                    members: [{ monsterCode: "werewolf", count: 2 }],
-                                },
-                            ],
-                        },
-                        {
-                            id: "p2",
-                            delaySec: 30,
-                            groups: [
-                                { markerId: "c3_p2", members: [{ monsterCode: "bat", count: 3 }] },
                             ],
                         },
                     ],
@@ -539,36 +526,46 @@ const DEFINITIONS: MapDefinitionInput[] = [
                 exp: 9000,
                 currency: [{ code: CurrencyCode.GOLD, amount: 3500 }],
                 items: [{ itemCode: "hp_potion_small", quantity: 5 }],
+                slots: 4,
+                dropItems: [
+                    { itemCode: "hp_potion_small", min: 1, max: 5, rate: 0.05 },
+                    { itemCode: "enhance_stone_2", min: 1, max: 5, rate: 0.05 },
+                    { itemCode: "enhance_stone_3", min: 1, max: 5, rate: 0.05 },
+                ],
+                equipment: {
+                    biome: Biome.SLIME,
+                    rarity: {
+                        [ItemRarity.COMMON]: 90,
+                        [ItemRarity.GOOD]: 8,
+                        [ItemRarity.RARE]: 1.5,
+                        [ItemRarity.EPIC]: 0.4,
+                        [ItemRarity.LEGENDARY]: 0.1,
+                    },
+                },
             },
             chambers: [
                 {
                     id: "c1",
-                    clearReward: {
-                        exp: 1200,
-                        currency: [{ code: CurrencyCode.GOLD, amount: 400 }],
-                        items: [],
-                    },
                     phases: [
                         {
                             id: "p1",
                             delaySec: 0,
                             groups: [
                                 {
-                                    markerId: "c1_p1",
+                                    markerId: "c1_p1_1",
                                     members: [{ monsterCode: "werewolf", count: 3 }],
                                 },
-                            ],
-                        },
-                        {
-                            id: "p2",
-                            delaySec: 20,
-                            groups: [
                                 {
-                                    markerId: "c1_p2",
-                                    members: [
-                                        { monsterCode: "werewolf", count: 2 },
-                                        { monsterCode: "werebear", count: 2 },
-                                    ],
+                                    markerId: "c1_p1_2",
+                                    members: [{ monsterCode: "werewolf", count: 3 }],
+                                },
+                                {
+                                    markerId: "c1_p1_3",
+                                    members: [{ monsterCode: "werebear", count: 3 }],
+                                },
+                                {
+                                    markerId: "c1_p1_4",
+                                    members: [{ monsterCode: "werebear", count: 3 }],
                                 },
                             ],
                         },
@@ -576,11 +573,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
                 },
                 {
                     id: "c2",
-                    clearReward: {
-                        exp: 2400,
-                        currency: [{ code: CurrencyCode.GOLD, amount: 800 }],
-                        items: [],
-                    },
                     phases: [
                         {
                             id: "p1",
@@ -592,14 +584,8 @@ const DEFINITIONS: MapDefinitionInput[] = [
                                 },
                                 {
                                     markerId: "c2_p1b",
-                                    members: [{ monsterCode: "werebear", count: 2 }],
+                                    members: [{ monsterCode: "werebear", count: 4 }],
                                 },
-                            ],
-                        },
-                        {
-                            id: "p2",
-                            delaySec: 25,
-                            groups: [
                                 {
                                     markerId: "c2_p2",
                                     members: [
@@ -608,7 +594,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
                                             count: 1,
                                             type: MonsterType.ELITE,
                                         },
-                                        { monsterCode: "werewolf", count: 2 },
                                     ],
                                 },
                             ],
@@ -632,20 +617,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
                                             type: MonsterType.BOSS,
                                         },
                                     ],
-                                },
-                                {
-                                    markerId: "c3_p1",
-                                    members: [{ monsterCode: "werewolf", count: 2 }],
-                                },
-                            ],
-                        },
-                        {
-                            id: "p2",
-                            delaySec: 30,
-                            groups: [
-                                {
-                                    markerId: "c3_p2",
-                                    members: [{ monsterCode: "werebear", count: 3 }],
                                 },
                             ],
                         },
