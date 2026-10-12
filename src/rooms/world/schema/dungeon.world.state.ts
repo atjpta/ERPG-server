@@ -19,6 +19,8 @@ export class DungeonWorldState extends Schema {
     @type("boolean") cleared = false;
     /** Giây còn lại của dungeon (0 = không giới hạn). */
     @type("uint16") timeLeftSec = 0;
+    /** Tổng thời gian đã đi dungeon (giây), tính từ lúc bắt đầu; dừng lại khi hạ boss. */
+    @type("uint32") elapsedSec = 0;
     /** Level quái của chamber hiện tại. */
     @type("uint16") monsterLevel = 0;
 }

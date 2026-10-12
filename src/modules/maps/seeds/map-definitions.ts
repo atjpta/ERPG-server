@@ -420,7 +420,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
             clearReward: {
                 exp: 3000,
                 currency: [{ code: CurrencyCode.GOLD, amount: 1200 }],
-                items: [{ itemCode: "hp_potion_small", quantity: 5 }],
                 slots: 4,
                 dropItems: [
                     { itemCode: "hp_potion_small", min: 1, max: 5, rate: 0.05 },
@@ -525,7 +524,6 @@ const DEFINITIONS: MapDefinitionInput[] = [
             clearReward: {
                 exp: 9000,
                 currency: [{ code: CurrencyCode.GOLD, amount: 3500 }],
-                items: [{ itemCode: "hp_potion_small", quantity: 5 }],
                 slots: 4,
                 dropItems: [
                     { itemCode: "hp_potion_small", min: 1, max: 5, rate: 0.05 },

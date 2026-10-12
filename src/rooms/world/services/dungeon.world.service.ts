@@ -165,6 +165,7 @@ export class DungeonWorldService {
             }
         }
         if (runtime.cleared) return;
+        state.elapsedSec = Math.floor((now - runtime.startedAt) / 1000);
 
         const chamber = runtime.config.chambers[runtime.chamberIndex];
         const elapsedSec = (now - runtime.chamberStartedAt) / 1000;
