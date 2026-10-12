@@ -31,6 +31,11 @@ import { questWorldService } from "@/rooms/world/services/quest.world.service.js
 import { rewardWorldService } from "@/rooms/world/services/reward.world.service.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 import {
+    newTally,
+    toMemberMessage,
+    type DungeonRewardTally,
+} from "@/rooms/world/utils/dungeon-reward.world.util.js";
+import {
     MapTransferError,
     WorldMessage,
     WorldRoomName,
@@ -71,6 +76,10 @@ export interface DungeonRuntime {
     /** `elapsedTime` lúc người đầu tiên qua cổng vào chamber kế (chờ những người còn lại tới `DUNGEON_CROSS_GRACE_MS`). */
     crossedAt: number | null;
     cleared: boolean;
+    /** Những gì từng người nhận được trong lần đi này (key = playerId) — hiện ở bảng thưởng sau khi clear. */
+    rewards: Map<string, DungeonRewardTally>;
+    /** Chủ party lúc vào (nguồn: kỳ vọng của party room) — người duy nhất được bấm "đi lại". Rỗng nếu không rõ. */
+    leaderPlayerId: string;
 }
 
 const isDead = (monster: MonsterWorldState) =>
@@ -84,7 +93,7 @@ const isDead = (monster: MonsterWorldState) =>
  */
 export class DungeonWorldService {
     /** Dựng runtime + state HUD + cổng exit lúc tạo room dungeon. */
-    setup(room: WorldRoom, instanceId: string, expected: string[] = []): void {
+    setup(room: WorldRoom, instanceId: string, expected: string[] = [], leaderPlayerId = ""): void {
         const config = room.map.dungeon;
         if (room.map.type !== MapType.DUNGEON || !config || config.chambers.length === 0) {
             throw new Error(`Map "${room.map.code}" is not a playable dungeon`);
@@ -106,6 +115,8 @@ export class DungeonWorldService {
             chamberCleared: false,
             crossedAt: null,
             cleared: false,
+            rewards: new Map(),
+            leaderPlayerId,
         };
         const state = new DungeonWorldState();
         state.chamberCount = config.chambers.length;
@@ -116,6 +127,7 @@ export class DungeonWorldService {
     onPlayerJoined(room: WorldRoom, player: PlayerWorldState): void {
         const runtime = room.dungeon!;
         runtime.joined.add(player.id);
+        if (!runtime.rewards.has(player.id)) runtime.rewards.set(player.id, newTally(player));
         runtime.firstJoinAt ??= room.clock.elapsedTime;
         // Chờ đủ người của party để level quái tính trên cả nhóm (tối đa DUNGEON_JOIN_GRACE_MS).
         if (!runtime.started && runtime.expected.every((id) => runtime.joined.has(id))) {
@@ -231,12 +243,14 @@ export class DungeonWorldService {
         if (!dungeon.dungeon || dungeon.dungeon.chambers.length === 0) {
             return MapTransferError.MAP_NOT_OPEN;
         }
+        // Đi lại từ trong dungeon: chỗ trở về vẫn là chỗ đứng trước lần vào đầu tiên.
+        const previous = room.dungeon ? player.dungeonSession : undefined;
         const session: DungeonSession = {
             dungeonCode: dungeon.code,
             instanceId,
-            returnMapCode: room.map.code,
-            returnX: player.x,
-            returnY: player.y,
+            returnMapCode: previous?.returnMapCode ?? room.map.code,
+            returnX: previous?.returnX ?? player.x,
+            returnY: previous?.returnY ?? player.y,
         };
         player.dungeonSession = session;
         player.pendingMapCode = dungeon.code;
@@ -319,7 +333,7 @@ export class DungeonWorldService {
         runtime.cleared = true;
         for (const [sessionId, player] of room.state.players) {
             const client = room.clients.getById(sessionId);
-            if (client && player.dungeonSession) {
+            if (client && player.dungeonSession && !player.pendingMapCode) {
                 await this.leave(room, client as PlayerClient, player, "return");
             }
         }
@@ -418,7 +432,11 @@ export class DungeonWorldService {
                 targetCode: room.map.code,
             });
         }
-        const clear: DungeonClearMessage = { leaveInSec: DUNGEON_LEAVE_DELAY_SEC };
+        const clear: DungeonClearMessage = {
+            leaveInSec: DUNGEON_LEAVE_DELAY_SEC,
+            members: [...runtime.rewards.values()].map(toMemberMessage),
+            leaderPlayerId: runtime.leaderPlayerId,
+        };
         room.broadcast(WorldMessage.DUNGEON_CLEAR, clear);
         room.clock.setTimeout(() => {
             void this.leaveAll(room);
@@ -432,7 +450,8 @@ export class DungeonWorldService {
                 room,
                 sessionId,
                 player,
-                resolveRewardSpec(spec, ItemSource.SYSTEM)
+                resolveRewardSpec(spec, ItemSource.SYSTEM),
+                true
             );
         }
     }
@@ -460,12 +479,18 @@ export class DungeonWorldService {
                 if (piece) items.push(piece);
             }
             if (items.length === 0) continue;
-            rewardWorldService.grant(room, sessionId, player, {
-                exp: 0,
-                currency: [],
-                items,
-                source: ItemSource.DROP,
-            });
+            rewardWorldService.grant(
+                room,
+                sessionId,
+                player,
+                {
+                    exp: 0,
+                    currency: [],
+                    items,
+                    source: ItemSource.DROP,
+                },
+                true
+            );
         }
     }
 

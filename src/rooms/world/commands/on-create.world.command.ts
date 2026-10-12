@@ -64,7 +64,12 @@ export class OnCreateWorldCommand extends Command<WorldRoom, WorldRoomOptions> {
         this.room.state.interactables.push(...interactWorldService.build(this.room));
         if (instanceId !== undefined) {
             const expectation = await partyDirectoryService.getDungeonExpectation(instanceId);
-            dungeonWorldService.setup(this.room, instanceId, expectation?.expected ?? []);
+            dungeonWorldService.setup(
+                this.room,
+                instanceId,
+                expectation?.expected ?? [],
+                expectation?.leaderPlayerId ?? ""
+            );
         }
 
         const monsters = await monsterWorldService.createMonster(map);

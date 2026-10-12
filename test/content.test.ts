@@ -333,7 +333,13 @@ describe("content data", () => {
                 rewards: q.rewards,
                 conditions: q.conditions ?? [],
             })),
-            itemCodes: new Set(["hp_potion_small", "spirit"]),
+            itemCodes: new Set([
+                "hp_potion_small",
+                "spirit",
+                "enhance_stone_1",
+                "enhance_stone_2",
+                "enhance_stone_3",
+            ]),
             monsterCodes: new Set(MONSTER_DEFINITIONS.map((monster) => monster.code)),
             dungeonMapCodes: new Set(
                 loadMapDefinitions()

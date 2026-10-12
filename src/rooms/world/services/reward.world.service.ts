@@ -15,13 +15,24 @@ import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { attributeWorldService } from "@/rooms/world/services/attribute.world.service.js";
 import { inventoryWorldService } from "@/rooms/world/services/inventory.world.service.js";
 import { itemService } from "@/modules/items/services/item.service.js";
+import { recordReward } from "@/rooms/world/utils/dungeon-reward.world.util.js";
 
 /**
  * Cộng phần thưởng (tiền, item, exp → lên level) vào player đang online. Chỉ đổi state trong room;
  * checkpoint / lúc rời room lưu xuống DB (PlayerWorldState.toSavedState).
  */
 export class RewardWorldService {
-    grant(room: WorldRoom, sessionId: string, player: PlayerWorldState, reward: Reward): void {
+    /**
+     * `recordInDungeon`: ghi vào bảng thưởng dungeon (`DUNGEON_CLEAR`) — chỉ phần thưởng clear dungeon bật cờ
+     * này, drop quái dọc đường không vào bảng.
+     */
+    grant(
+        room: WorldRoom,
+        sessionId: string,
+        player: PlayerWorldState,
+        reward: Reward,
+        recordInDungeon = false
+    ): void {
         player.wallet = creditWallet(player.wallet, reward.currency);
 
         const progress = gainExp({ level: player.level, exp: player.exp }, reward.exp, (level) =>
@@ -50,6 +61,8 @@ export class RewardWorldService {
             level: progress.level,
             levelsGained: progress.levelsGained,
         };
+        const tally = recordInDungeon ? room.dungeon?.rewards.get(player.id) : undefined;
+        if (tally) recordReward(tally, message, progress.level);
         const client = room.clients.getById(sessionId);
         client?.send(WorldMessage.REWARD, message);
         if (reward.currency.some((currency) => currency.amount > 0)) {

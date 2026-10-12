@@ -18,6 +18,7 @@ import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.j
 import {
     MapTransferError,
     WorldMessage,
+    type DungeonRetryResultMessage,
     type PartyInviteReceivedMessage,
     type PartyRoomMessage,
 } from "@/rooms/world/world.message.js";
@@ -232,12 +233,15 @@ export class PartyWorldService {
         playerId: string,
         dungeonCode: string,
         instanceId: string,
-        spawnId: string
+        spawnId: string,
+        retry = false
     ): Promise<string | undefined> {
         const found = this.findPlayer(room, playerId);
         if (!found) return "offline";
         const { client, player } = found;
-        if (room.dungeon) return "in_dungeon";
+        // Đang trong dungeon thì chỉ được sang instance mới của chính dungeon này sau khi đã clear ("đi lại").
+        const canRetry = retry && room.dungeon?.cleared && room.map.code === dungeonCode;
+        if (room.dungeon && !canRetry) return "in_dungeon";
         if (player.hp <= 0) return "dead";
         if (player.pendingMapCode) return "offline";
         let dungeon: GameMap;
@@ -248,6 +252,35 @@ export class PartyWorldService {
         }
         if (player.level < dungeon.minLevel) return MapTransferError.LEVEL_TOO_LOW;
         return dungeonWorldService.enter(room, client, player, dungeon, spawnId, instanceId);
+    }
+
+    /**
+     * "Đi lại" sau khi clear dungeon: chỉ chủ party bấm được (solo = tự là chủ), và mọi thành viên phải
+     * còn ở dungeon này — có ai đã thoát thì không đi. Lỗi báo bằng `dungeonRetryResult`; thành công thì
+     * party room ra lệnh `mapChange` cho cả nhóm vào chung một instance mới.
+     */
+    async retryDungeon(
+        room: WorldRoom,
+        client: PlayerClient,
+        player: PlayerWorldState
+    ): Promise<void> {
+        const reply = (result: DungeonRetryResultMessage) =>
+            client.send(WorldMessage.DUNGEON_RETRY_RESULT, result);
+        if (!room.dungeon?.cleared || player.pendingMapCode) return;
+        const partyRoomId = await this.ensureParty(room, client, player);
+        if (!partyRoomId) return reply({ ok: false, error: "unavailable" });
+        // Người đã bấm thoát đang chờ chuyển map nên không còn tính là ở đây.
+        const present = [...room.state.players.values()]
+            .filter((other) => !other.pendingMapCode)
+            .map((other) => other.id);
+        const result = await callParty<{ ok: boolean; error?: string } | null>(
+            partyRoomId,
+            "requestDungeonRetry",
+            [player.id, { code: room.map.code, spawnId: "default" }, present],
+            null
+        );
+        if (!result) return reply({ ok: false, error: "unavailable" });
+        if (!result.ok) reply({ ok: false, error: result.error ?? "unavailable" });
     }
 
     /** Party room gọi (qua world room): đã gắn / bỏ party cho player đang đứng ở room này. */

@@ -181,6 +181,34 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
             this.broadcastDenied(dungeon.code, failures);
             return { ok: false, error: "denied" };
         }
+        return this.launchInstance(leaderPlayerId, dungeon.code, dungeon.spawnId, false);
+    }
+
+    /**
+     * Chủ muốn đi lại dungeon vừa clear. Chỉ chủ được bấm; mọi thành viên phải còn ở dungeon đó
+     * (`presentPlayerIds` = người còn trong room dungeon) — có ai đã thoát thì không đi lại.
+     */
+    async requestDungeonRetry(
+        leaderPlayerId: string,
+        dungeon: { code: string; spawnId: string },
+        presentPlayerIds: string[]
+    ): Promise<{ ok: boolean; error?: string }> {
+        if (!this.model.isLeader(leaderPlayerId)) return { ok: false, error: "not_leader" };
+        const together = this.model.joinOrder.every((playerId) =>
+            presentPlayerIds.includes(playerId)
+        );
+        if (!together) return { ok: false, error: "not_together" };
+        return this.launchInstance(leaderPlayerId, dungeon.code, dungeon.spawnId, true);
+    }
+
+    /** Tạo instance dungeon mới và ra lệnh cho world room của từng thành viên vào đó. */
+    private async launchInstance(
+        leaderPlayerId: string,
+        dungeonCode: string,
+        spawnId: string,
+        retry: boolean
+    ): Promise<{ ok: boolean; error?: string }> {
+        const dungeon = { code: dungeonCode, spawnId };
         const instanceId = randomUUID();
         const expected = this.model.joinOrder;
         await partyDirectoryService.setDungeonExpectation(instanceId, {
@@ -197,7 +225,8 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
                           playerId,
                           dungeon.code,
                           instanceId,
-                          dungeon.spawnId
+                          dungeon.spawnId,
+                          retry
                       )
                     : "offline";
                 return { playerId, error };

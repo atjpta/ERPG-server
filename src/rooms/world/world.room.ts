@@ -138,6 +138,10 @@ export class WorldRoom extends BasePlayerRoom<{
         [WorldClientMessage.DUNGEON_LEAVE]: (client: PlayerClient) => {
             if (this.dungeon) void dungeonWorldService.leaveByClient(this, client);
         },
+        [WorldClientMessage.DUNGEON_RETRY]: (client: PlayerClient) => {
+            const player = this.state.players.get(client.sessionId);
+            if (this.dungeon && player) void partyWorldService.retryDungeon(this, client, player);
+        },
         [WorldClientMessage.PREVIEW_DISASSEMBLE]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new PreviewDisassembleWorldCommand(), {
                 client,
@@ -231,9 +235,17 @@ export class WorldRoom extends BasePlayerRoom<{
         playerId: string,
         dungeonCode: string,
         instanceId: string,
-        spawnId: string
+        spawnId: string,
+        retry = false
     ): Promise<string | undefined> {
-        return partyWorldService.enterDungeon(this, playerId, dungeonCode, instanceId, spawnId);
+        return partyWorldService.enterDungeon(
+            this,
+            playerId,
+            dungeonCode,
+            instanceId,
+            spawnId,
+            retry
+        );
     }
 
     partyDeliverInvite(

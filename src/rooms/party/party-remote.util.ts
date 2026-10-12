@@ -49,12 +49,13 @@ export const worldRemote = {
         playerId: string,
         dungeonCode: string,
         instanceId: string,
-        spawnId: string
+        spawnId: string,
+        retry = false
     ) =>
         call<string | undefined>(
             worldRoomId,
             "partyEnterDungeon",
-            [playerId, dungeonCode, instanceId, spawnId],
+            [playerId, dungeonCode, instanceId, spawnId, retry],
             "offline"
         ),
 };

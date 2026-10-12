@@ -49,6 +49,8 @@ export enum WorldClientMessage {
     QUEST_PREVIEW = "questPreview",
     /** Rời dungeon, về chỗ đứng trước khi vào. */
     DUNGEON_LEAVE = "dungeonLeave",
+    /** Sau khi clear dungeon: đi lại dungeon này (cả nhóm bấm "đi lại" vào chung một instance mới). */
+    DUNGEON_RETRY = "dungeonRetry",
     /** `{ mapCode }` — dịch chuyển tới bệ teleport của map đó (phải đang đứng gần một bệ teleport). */
     TELEPORT_TO = "teleportTo",
     /** Tạo party (chưa có thì server tạo mới) — trả `party { roomId }` để client `joinById`. */
@@ -111,6 +113,8 @@ export enum WorldMessage {
     DUNGEON_CHAMBER_CLEAR = "dungeonChamberClear",
     /** Hạ boss, clear dungeon — sắp bị đưa ra ngoài. */
     DUNGEON_CLEAR = "dungeonClear",
+    /** Trả lời `dungeonRetry`: `{ ok: false, error }` khi không đi lại được (xem `DungeonRetryResultMessage`). */
+    DUNGEON_RETRY_RESULT = "dungeonRetryResult",
 }
 
 /** Room mà client phải join sau `mapChange`. */
@@ -440,9 +444,30 @@ export interface DungeonChamberClearMessage {
     chamberCount: number;
 }
 
+/** Những gì 1 người nhận được trong lần đi dungeon này (chamber, clear, quái rơi) — bảng thưởng sau khi clear. */
+export interface DungeonRewardMemberMessage {
+    playerId: string;
+    name: string;
+    classCode: string;
+    level: number;
+    exp: number;
+    currency: CurrencyRewardMessage[];
+    items: ItemRewardMessage[];
+}
+
 export interface DungeonClearMessage {
     /** Giây nữa người chơi bị đưa ra ngoài. */
     leaveInSec: number;
+    /** Phần thưởng của từng người trong nhóm (tối đa 4, theo thứ tự vào). */
+    members: DungeonRewardMemberMessage[];
+    /** Chủ nhóm — chỉ người này được bấm "đi lại" (rỗng = không rõ, ai cũng thử được và server quyết). */
+    leaderPlayerId: string;
+}
+
+export interface DungeonRetryResultMessage {
+    ok: boolean;
+    /** `not_leader`: không phải chủ party; `not_together`: có thành viên đã thoát / không còn ở dungeon này; `unavailable`. */
+    error?: string;
 }
 
 export interface PartyRoomMessage {
