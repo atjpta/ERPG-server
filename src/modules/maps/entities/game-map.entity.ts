@@ -155,6 +155,8 @@ export interface MapSign extends MapInteractableBase {
 /** Bệ teleport (dịch chuyển nhanh giữa các map có teleport). */
 export interface MapTeleport extends MapInteractableBase {
     type: "teleport";
+    /** Ai cũng teleport tới map này được: bỏ điều kiện "đã từng đến" (vẫn kiểm level). */
+    openToAll?: boolean;
 }
 
 export type MapInteractable = MapPortal | MapGatherable | MapSign | MapTeleport;
@@ -201,6 +203,8 @@ export interface MonsterSpawn {
     /** Khoảng level của quái sinh ra (map file đã điền sẵn từ `monsterLevel` của map); bỏ trống = level của monster. */
     minLevel?: number;
     maxLevel?: number;
+    /** Quá chừng này giây không nhận sát thương thì hồi đầy máu (bù nhìn phòng tập); bỏ trống = không hồi. */
+    healAfterIdleSec?: number;
 }
 
 export type GameMap = typeof GameMaps.$inferSelect;

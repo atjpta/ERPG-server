@@ -423,4 +423,37 @@ describe("teleport: phải đến map đó trước", () => {
         const flags = { "visited.whispering_forest": true };
         assert.equal(teleportStatus(destination, 10, flags).available, true);
     });
+
+    it("map openToAll: chưa từng đến vẫn teleport được, vẫn kiểm level", () => {
+        const open = { mapCode: "training_room", minLevel: 1, openToAll: true };
+        assert.deepEqual(teleportStatus(open, 1, {}), {
+            discovered: true,
+            levelOk: true,
+            available: true,
+        });
+        assert.equal(teleportStatus({ ...open, minLevel: 5 }, 1, {}).available, false);
+        assert.equal(teleportStatus({ ...open, open: false }, 1, {}).available, false);
+    });
+
+    it("bệ teleport khai openToAll thì điểm đến mang cờ đó", () => {
+        const list = listTeleportDestinations(
+            [
+                {
+                    code: "training_room",
+                    type: "field",
+                    minLevel: 1,
+                    interactables: [{ id: "tp_t", type: "teleport", x: 3, y: 4, openToAll: true }],
+                },
+                {
+                    code: "forest",
+                    type: "field",
+                    minLevel: 10,
+                    interactables: [{ id: "tp_f", type: "teleport", x: 1, y: 2 }],
+                },
+            ] as Parameters<typeof listTeleportDestinations>[0],
+            "village"
+        );
+        assert.equal(list.find((d) => d.mapCode === "training_room")?.openToAll, true);
+        assert.equal(list.find((d) => d.mapCode === "forest")?.openToAll, undefined);
+    });
 });

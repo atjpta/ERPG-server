@@ -173,6 +173,11 @@ export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
         dy: number,
         dt: number
     ): void {
+        // Quái tốc độ 0 (slime tập) đứng yên: không đặt `moving`, client không chạy animation đi.
+        if (monster.moveSpeed <= 0) {
+            monster.moving = false;
+            return;
+        }
         const moveX = Math.abs(dx) > 0.1 ? Math.sign(dx) : 0;
         const moveY = Math.abs(dy) > 0.1 ? Math.sign(dy) : 0;
         applyWorldMove(monster, { moveX, moveY }, room.moveBounds, dt);

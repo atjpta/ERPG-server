@@ -30,7 +30,8 @@ interface MonsterSeedEntry {
      * clear dungeon (`clearEquipment` trong định nghĩa map).
      */
     drops: {
-        gold: { min: number; max: number };
+        /** Bỏ trống = không rơi vàng. */
+        gold?: { min: number; max: number };
         exp: number;
         items: ItemDropSeed[];
     };
@@ -51,7 +52,7 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
         biome: Biome.SLIME,
         attackCooldownMs: 1700,
         stats: {
-            [StatKey.MOVE_SPEED]: 2,
+            [StatKey.MOVE_SPEED]: 1,
             [StatKey.CRITICAL_DAMAGE]: 1.5,
             [StatKey.MAX_HP]: 50,
             [StatKey.PHYSICAL_ATTACK]: 5,
@@ -74,7 +75,7 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
         biome: Biome.SLIME,
         attackCooldownMs: 1700,
         stats: {
-            [StatKey.MOVE_SPEED]: 2,
+            [StatKey.MOVE_SPEED]: 1,
             [StatKey.CRITICAL_DAMAGE]: 1.5,
             [StatKey.MAX_HP]: 50,
             [StatKey.PHYSICAL_ATTACK]: 5,
@@ -97,7 +98,7 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
         biome: Biome.WEREWOLF,
         attackCooldownMs: 1950,
         stats: {
-            [StatKey.MOVE_SPEED]: 2,
+            [StatKey.MOVE_SPEED]: 1,
             [StatKey.CRITICAL_DAMAGE]: 1.5,
             [StatKey.MAX_HP]: 50,
             [StatKey.PHYSICAL_ATTACK]: 5,
@@ -120,7 +121,7 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
         biome: Biome.WEREBEAR,
         attackCooldownMs: 1950,
         stats: {
-            [StatKey.MOVE_SPEED]: 2,
+            [StatKey.MOVE_SPEED]: 1,
             [StatKey.CRITICAL_DAMAGE]: 1.5,
             [StatKey.MAX_HP]: 50,
             [StatKey.PHYSICAL_ATTACK]: 5,
@@ -138,6 +139,26 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
             ],
         },
     },
+    // Slime tập ở phòng tập: 1 tỷ máu, mọi chỉ số khác 0 (không di chuyển, không đánh, né 0), không rơi gì, không cho exp.
+    {
+        code: "training_slime",
+        level: 1,
+        biome: Biome.SLIME,
+        attackCooldownMs: 1000,
+        stats: {
+            [StatKey.MAX_HP]: 1_000_000_000,
+            [StatKey.MOVE_SPEED]: 0,
+            [StatKey.CRITICAL_DAMAGE]: 0,
+            [StatKey.PHYSICAL_ATTACK]: 0,
+            [StatKey.MAGIC_ATTACK]: 0,
+            [StatKey.PHYSICAL_DEFENSE]: 0,
+            [StatKey.MAGIC_DEFENSE]: 0,
+            [StatKey.ACCURACY]: 0,
+            [StatKey.EVASION]: 0,
+        },
+        skillCodes: [],
+        drops: { exp: 0, items: [] },
+    },
 ];
 
 /** Chạy sau SkillSeed và ItemSeed (tham chiếu skill/item theo id). */
@@ -148,7 +169,7 @@ export const MonsterSeed = async () => {
             ...prefabOf(entry.code),
             skills: await toOwnedSkills(skillCodes),
             drops: MonsterDropsSchema.parse({
-                currency: [{ code: CurrencyCode.GOLD, ...drops.gold }],
+                currency: drops.gold ? [{ code: CurrencyCode.GOLD, ...drops.gold }] : [],
                 items: await toItemDrops(drops.items),
                 exp: drops.exp,
             }),

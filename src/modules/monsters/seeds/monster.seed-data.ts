@@ -27,6 +27,8 @@ export interface MonsterDefinition {
     ranged?: boolean;
     /** Skill đánh thường đã chỉnh tay (mặc định sinh `{code}_attack` theo hitbox). */
     attackSkillCode?: string;
+    /** Không đánh (quái tập): không sinh skill `{code}_attack`, monster không có skill nào. */
+    noAttack?: boolean;
 }
 
 const box = (width: number, height: number, offsetX: number, offsetY: number) => ({
@@ -72,6 +74,16 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
         hitbox: box(0.4, 0.6, 0, 0.35),
         collider: box(0.3, 0.1, 0, 0.1),
         attackClipMs: 750,
+    },
+    // Slime tập ở phòng tập (dùng prefab/hình của slime): đứng yên, không đánh, rất nhiều máu — để thử sát thương.
+    {
+        code: "training_slime",
+        biome: Biome.SLIME,
+        level: 1,
+        hitbox: box(0.7, 0.4, 0, 0.3),
+        collider: box(0.7, 0.1, 0, 0.1),
+        attackClipMs: 500,
+        noAttack: true,
     },
 ];
 

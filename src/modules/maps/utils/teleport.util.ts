@@ -9,6 +9,8 @@ export interface TeleportDestination {
     y?: number;
     /** Map có bệ teleport đã đặt vị trí và đang mở — `false` thì vẫn hiện trong danh sách nhưng chưa đi được. */
     open: boolean;
+    /** Bệ teleport của map khai `openToAll`: không cần đã từng đến map này. */
+    openToAll?: boolean;
 }
 
 interface TeleportMapLike {
@@ -17,7 +19,13 @@ interface TeleportMapLike {
     minLevel: number;
     /** Bỏ trống = coi như đang mở. */
     status?: string;
-    interactables: readonly { id: string; type: string; x: number; y: number }[];
+    interactables: readonly {
+        id: string;
+        type: string;
+        x: number;
+        y: number;
+        openToAll?: boolean;
+    }[];
 }
 
 /**
@@ -42,6 +50,7 @@ export const listTeleportDestinations = (
                       x: pad.x,
                       y: pad.y,
                       open: true,
+                      ...(pad.openToAll ? { openToAll: true } : {}),
                   }
                 : { mapCode: map.code, minLevel: map.minLevel, open: false };
         })
@@ -62,13 +71,19 @@ export interface TeleportStatus {
     available: boolean;
 }
 
-/** Trạng thái của một điểm đến đối với player: phải đã đến map đó và đủ level mới teleport được. */
+/**
+ * Trạng thái của một điểm đến đối với player: phải đã đến map đó (trừ map `openToAll`) và đủ level mới
+ * teleport được.
+ */
 export const teleportStatus = (
-    destination: Pick<TeleportDestination, "mapCode" | "minLevel"> & { open?: boolean },
+    destination: Pick<TeleportDestination, "mapCode" | "minLevel"> & {
+        open?: boolean;
+        openToAll?: boolean;
+    },
     level: number,
     flags: Record<string, unknown>
 ): TeleportStatus => {
-    const discovered = hasVisited(flags, destination.mapCode);
+    const discovered = destination.openToAll === true || hasVisited(flags, destination.mapCode);
     const levelOk = level >= destination.minLevel;
     return { discovered, levelOk, available: discovered && levelOk && destination.open !== false };
 };

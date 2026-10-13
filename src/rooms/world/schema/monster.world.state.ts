@@ -70,6 +70,8 @@ export class MonsterWorldState extends Schema {
     readonly spawn: MonsterSpawn;
     /** Tăng mỗi đòn đánh — một phần seed roll combat (`combatSeed`). */
     attackSerial = 0;
+    /** Số tick liên tiếp chưa nhận sát thương (về 0 khi bị đánh) — chain hồi máu dùng cho spawn có `healAfterIdleSec`. */
+    idleTicks = 0;
 
     constructor(props: {
         monster: Monster;
@@ -184,6 +186,7 @@ export class MonsterWorldState extends Schema {
 
     takeDamage(damage: number, attackRecoveryTicks: number) {
         this.hp = Math.max(0, this.hp - Math.max(0, damage));
+        this.idleTicks = 0;
         this.hitInterrupted = true;
         this.moving = false;
         this.attacking = false;

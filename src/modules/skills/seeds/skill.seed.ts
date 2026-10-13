@@ -255,7 +255,7 @@ const monsterAttackSkill = (monster: MonsterDefinition): NewSkill => {
 };
 
 const MONSTER_SKILLS: NewSkill[] = MONSTER_DEFINITIONS.filter(
-    (monster) => !monster.attackSkillCode
+    (monster) => !monster.attackSkillCode && !monster.noAttack
 ).map(monsterAttackSkill);
 
 export const SkillSeed = async () => {

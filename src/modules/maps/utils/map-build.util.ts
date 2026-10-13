@@ -44,6 +44,7 @@ export const expandMonsterGroup = (
             spawnY: round2(y + row * MONSTER_GROUP_SPACING),
             ...(member.type ? { type: member.type } : {}),
             ...(member.rarity ? { rarity: member.rarity } : {}),
+            ...(member.healAfterIdleSec ? { healAfterIdleSec: member.healAfterIdleSec } : {}),
             minLevel: member.minLevel ?? defaults.minLevel,
             maxLevel: member.maxLevel ?? defaults.maxLevel,
         };

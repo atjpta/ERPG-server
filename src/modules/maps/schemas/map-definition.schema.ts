@@ -28,6 +28,8 @@ export const MonsterMemberSchema = z
         /** Khoảng level riêng; bỏ trống = `monsterLevel` của map, rồi level gốc của monster. */
         minLevel: level.optional(),
         maxLevel: level.optional(),
+        /** Quá chừng này giây không nhận sát thương thì hồi đầy máu (bù nhìn phòng tập). */
+        healAfterIdleSec: z.number().positive().optional(),
     })
     .refine((member) => (member.minLevel ?? 0) <= (member.maxLevel ?? Infinity), {
         message: "minLevel must be <= maxLevel",
@@ -78,7 +80,12 @@ export const InteractableDefSchema = z.discriminatedUnion("type", [
      * Bệ teleport (dịch chuyển nhanh): dùng thì mở danh sách mọi map có bệ teleport, chọn map nào là tới
      * ngay bệ teleport của map đó. Không có đích cố định — map nào có teleport thì là điểm đến.
      */
-    z.object({ ...interactableBase, type: z.literal("teleport") }),
+    z.object({
+        ...interactableBase,
+        type: z.literal("teleport"),
+        /** Ai cũng teleport tới map này được, không cần từng đến (ví dụ phòng tập). Vẫn kiểm `minLevel`. */
+        openToAll: z.boolean().optional(),
+    }),
 ]);
 export type InteractableDef = z.infer<typeof InteractableDefSchema>;
 

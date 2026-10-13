@@ -17,6 +17,7 @@ import {
     MonsterFindTargetChain,
     MonsterMoveChain,
 } from "@/rooms/world/chains/monster.world.chain.js";
+import { MonsterIdleHealChain } from "@/rooms/world/chains/monster-idle-heal.world.chain.js";
 import { WorldChain } from "@/rooms/world/chains/world.chain.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
@@ -29,6 +30,7 @@ export class MonsterWorldService {
     private readonly attackChain = new MonsterAttackChain();
     private readonly chains = new WorldChain<MonsterChainContext>([
         new MonsterDeathChain(),
+        new MonsterIdleHealChain(),
         new MonsterFindTargetChain(),
         new MonsterMoveChain(this.attackChain),
         this.attackChain,

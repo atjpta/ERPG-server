@@ -74,6 +74,72 @@ const DEFINITIONS: MapDefinitionInput[] = [
             },
         ],
     },
+    // ---- Phòng tập: chỉ vào bằng teleport (ai cũng vào được), chỉ có slime tập đứng yên để thử sát thương.
+    {
+        code: "training_room",
+        type: MapType.FIELD,
+        minLevel: 1,
+        monsterLevel: { min: 1, max: 1 },
+        spawnPoints: [{ id: "default", kind: MapSpawnKind.DEFAULT }],
+        monsterGroups: [
+            {
+                markerId: "t01",
+                members: [
+                    {
+                        monsterCode: "training_slime",
+                        count: 1,
+                        type: MonsterType.NORMAL,
+                        rarity: ItemRarity.COMMON,
+                        healAfterIdleSec: 3,
+                    },
+                ],
+            },
+            {
+                markerId: "t02",
+                members: [
+                    {
+                        monsterCode: "training_slime",
+                        count: 1,
+                        type: MonsterType.NORMAL,
+                        rarity: ItemRarity.COMMON,
+                        healAfterIdleSec: 3,
+                    },
+                ],
+            },
+            {
+                markerId: "t03",
+                members: [
+                    {
+                        monsterCode: "training_slime",
+                        count: 1,
+                        type: MonsterType.NORMAL,
+                        rarity: ItemRarity.COMMON,
+                        healAfterIdleSec: 3,
+                    },
+                ],
+            },
+            {
+                markerId: "t04",
+                members: [
+                    {
+                        monsterCode: "training_slime",
+                        count: 1,
+                        type: MonsterType.NORMAL,
+                        rarity: ItemRarity.COMMON,
+                        healAfterIdleSec: 3,
+                    },
+                ],
+            },
+        ],
+        interactables: [
+            {
+                id: "teleport_training",
+                type: "teleport",
+                code: InteractableCode.TELEPORT,
+                openToAll: true,
+            },
+        ],
+    },
     // ---- Fields
     {
         code: "greenfield_plains",
