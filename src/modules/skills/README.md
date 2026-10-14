@@ -16,10 +16,10 @@ Cùng với `{monster}_attack` của monster. Mỗi class chỉ có 1 đòn đá
 
 ### Cách gây damage của hit event (`delivery`)
 
-- `HITBOX` (mặc định): vùng `shape`/`offset` quanh người đánh, gây damage ngay tại `triggerTicks`.
-- `PROJECTILE` + `projectile { speed, maxDistance, radius, hitBehavior, maxHits }`: tại `triggerTicks` sinh một viên đạn ở `offsetX/offsetY`, bay thẳng về giữa hitbox mục tiêu đang chọn (không có → theo hướng mặt). Mỗi tick đạn bay một đoạn (quét từng bước ≤ 0.1 ô), trúng khi thân đạn (tròn `radius`) chạm hitbox; DESTROY biến mất ở mục tiêu đầu tiên, PIERCE xuyên tới `maxHits` mục tiêu.
-- `AREA` + `area { delayMs, untargetedDistance }`: tại `triggerTicks` đặt vùng (`shape`/`radius` của event) ở tâm hitbox mục tiêu, kéo về trong `castRange`; không có mục tiêu → cách `untargetedDistance` ô trước mặt. Sau `delayMs` gây damage cho mọi mục tiêu chạm vùng. `offsetX` (theo hướng đánh) và `offsetY` (dương = lên) tính từ tâm hitbox mục tiêu (hoặc điểm trước mặt khi không có mục tiêu).
-- Hình `ELLIPSE` (mọi `delivery`): `width` = đường kính theo hướng đánh (X), `height` = đường kính theo trục dọc (Y), tâm tại `offsetX/offsetY` — dùng cho vùng dẹt kiểu top-down. Server tính ở `skill-hitbox.world.util.ts`, client ở `SkillHitboxWorldUtil.cs` (cùng công thức).
+- `HITBOX` (mặc định): vùng `shape` quanh người đánh (gốc đúng vị trí người đánh, không có offset), gây damage ngay tại `triggerTicks`.
+- `PROJECTILE` + `projectile { speed, maxDistance, radius, hitBehavior, maxHits }`: tại `triggerTicks` sinh một viên đạn ngay vị trí người đánh, bay thẳng về giữa hitbox mục tiêu đang chọn (không có → theo hướng mặt). Mỗi tick đạn bay một đoạn (quét từng bước ≤ 0.1 ô), trúng khi thân đạn (tròn `radius`) chạm hitbox; DESTROY biến mất ở mục tiêu đầu tiên, PIERCE xuyên tới `maxHits` mục tiêu.
+- `AREA` + `area { delayMs, untargetedDistance }`: tại `triggerTicks` đặt vùng (`shape`/`radius` của event) đúng vị trí (x, y) của mục tiêu, kéo về trong `castRange`; không có mục tiêu → cách `untargetedDistance` ô trước mặt. Sau `delayMs` gây damage cho mọi mục tiêu chạm vùng.
+- Hình `ELLIPSE` (mọi `delivery`): `width` = đường kính theo hướng đánh (X), `height` = đường kính theo trục dọc (Y), tâm đúng gốc của hit event — dùng cho vùng dẹt kiểu top-down. Server tính ở `skill-hitbox.world.util.ts`, client ở `SkillHitboxWorldUtil.cs` (cùng công thức).
 
 Room xử lý ở `src/rooms/world/services/skill-delivery.world.service.ts`; đạn và vùng nằm trong world state (`projectiles`, `areas`) để client vẽ, bị xoá khi hết. Player đánh monster luôn theo vị trí monster mà client đó đang vẽ (`rewind.lastSeenBy`), kể cả với đạn đang bay. Bên đánh là player hay monster đều dùng chung (`SkillOwner`), nên monster đánh xa có thể chuyển sang PROJECTILE/AREA chỉ bằng dữ liệu.
 

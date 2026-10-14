@@ -18,8 +18,7 @@ export function intersectsSkillHitEvent(
     const forwardX = origin.direction === "left" ? -1 : 1;
     const forwardY = 0;
     const lateralX = 0;
-    // Attack art is mirrored only on X. Positive local offsetY always points up on the client,
-    // which is negative Y in the server's world coordinates.
+    // Attack art is mirrored only on X; local up is negative Y in the server's world coordinates.
     const lateralY = -1;
 
     const targetCenterX = targetX + targetCollider.offsetX;
@@ -27,8 +26,8 @@ export function intersectsSkillHitEvent(
     const targetCenterY = targetY - targetCollider.offsetY;
     const targetDx = targetCenterX - origin.x;
     const targetDy = targetCenterY - origin.y;
-    const targetForward = targetDx * forwardX + targetDy * forwardY - event.offsetX;
-    const targetLateral = targetDx * lateralX + targetDy * lateralY - event.offsetY;
+    const targetForward = targetDx * forwardX + targetDy * forwardY;
+    const targetLateral = targetDx * lateralX + targetDy * lateralY;
 
     const targetForwardHalf =
         Math.abs(forwardX) > 0 ? targetCollider.width / 2 : targetCollider.height / 2;

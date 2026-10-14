@@ -38,7 +38,7 @@ export const SkillEffectSchema = z.object({
 });
 
 /**
- * Đạn của hit event PROJECTILE: sinh ra tại `offsetX/offsetY` của event (như HITBOX), bay thẳng về phía
+ * Đạn của hit event PROJECTILE: sinh ra tại vị trí người đánh, bay thẳng về phía
  * mục tiêu lúc bắn (không có mục tiêu → theo hướng mặt). Thân đạn là hình tròn `radius` ô.
  */
 export const SkillProjectileSchema = z.object({
@@ -55,8 +55,7 @@ export const SkillProjectileSchema = z.object({
 
 /**
  * Vùng của hit event AREA: tâm đặt tại mục tiêu lúc event nổ (trong `castRange` của skill; không có
- * mục tiêu → cách người đánh `untargetedDistance` ô theo hướng mặt), dùng `shape`/`radius` của event
- * (offset bỏ qua), gây damage sau `delayMs`.
+ * mục tiêu → cách người đánh `untargetedDistance` ô theo hướng mặt), dùng `shape`/`radius` của event, gây damage sau `delayMs`.
  */
 export const SkillAreaSchema = z.object({
     delayMs: z.number().int().nonnegative().default(0),
@@ -81,8 +80,6 @@ export const SkillHitEventSchema = z.object({
     triggerTicks: z.number().int().nonnegative().default(0),
     shape: z.enum(HitShape),
     range: nonNegative.default(0),
-    offsetX: z.number().default(0),
-    offsetY: z.number().default(0),
     width: nonNegative.default(0),
     height: nonNegative.default(0),
     radius: nonNegative.default(0),

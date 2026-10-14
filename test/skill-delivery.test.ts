@@ -31,8 +31,6 @@ const event = (overrides: Partial<SkillHitEvent>): SkillHitEvent => ({
     triggerTicks: 0,
     shape: HitShape.CIRCLE,
     range: 0,
-    offsetX: 0,
-    offsetY: 0,
     width: 0,
     height: 0,
     radius: 0,
@@ -102,8 +100,6 @@ describe("SkillDeliveryWorldService", () => {
     const arrow = skill([
         event({
             delivery: HitDelivery.PROJECTILE,
-            offsetX: 0.3,
-            offsetY: 0.3,
             projectile: {
                 movementType: ProjectileMovementType.STRAIGHT,
                 hitBehavior: ProjectileHitBehavior.DESTROY,
@@ -244,7 +240,7 @@ describe("skillReachesTarget", () => {
     });
 
     it("cận chiến: hitbox phải chạm mục tiêu", () => {
-        const melee = skill([event({ shape: HitShape.RECT, range: 1.2, width: 1, offsetY: 0.35 })]);
+        const melee = skill([event({ shape: HitShape.RECT, range: 1.2, width: 1 })]);
         assert.equal(skillReachesTarget(melee, origin, target), false);
         assert.equal(skillReachesTarget(melee, { ...origin, x: 3 }, target), true);
     });

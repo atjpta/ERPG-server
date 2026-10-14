@@ -84,10 +84,10 @@ export class SkillDeliveryWorldService {
             return;
         }
 
-        // Đầu đạn ở offset của event (x trước mặt, y hướng lên như HITBOX), bay về giữa hitbox mục tiêu.
+        // Đạn xuất phát đúng vị trí người đánh, bay về giữa hitbox mục tiêu.
         const forward = hit.direction === "left" ? -1 : 1;
-        const x = params.originX + forward * hit.event.offsetX;
-        const y = params.originY - hit.event.offsetY;
+        const x = params.originX;
+        const y = params.originY;
         let dirX = forward;
         let dirY = 0;
         if (aim) {
@@ -196,8 +196,8 @@ export class SkillDeliveryWorldService {
     }
 
     private resolveArea(room: WorldRoom, area: AreaWorldState): void {
-        // Vùng là shape của event đặt tại tâm vùng (offset bỏ qua, không phụ thuộc hướng).
-        const event: SkillHitEvent = { ...area.event, offsetX: 0, offsetY: 0 };
+        // Vùng là shape của event đặt tại tâm vùng (không phụ thuộc hướng).
+        const event: SkillHitEvent = area.event;
         const origin = { x: area.x, y: area.y, direction: "right" };
         for (const target of findSkillTargets(room, area.owner)) {
             if (intersectsSkillHitEvent(origin, target.x, target.y, target.hitbox, event)) {
@@ -218,8 +218,6 @@ const projectileBody = (projectile: ProjectileWorldState): SkillHitEvent => ({
     shape: HitShape.CIRCLE,
     range: 0,
     radius: projectile.radius,
-    offsetX: 0,
-    offsetY: 0,
 });
 
 export const skillDeliveryWorldService = new SkillDeliveryWorldService();

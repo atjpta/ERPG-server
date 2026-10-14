@@ -51,8 +51,6 @@ const hitEvent = (params: {
     height?: number;
     radius?: number;
     angle?: number;
-    offsetX?: number;
-    offsetY?: number;
     damageScaling: number;
     damageScalingType?: DamageScalingType;
     damageType?: DamageType;
@@ -64,8 +62,6 @@ const hitEvent = (params: {
     triggerTicks: params.triggerTicks,
     shape: params.shape,
     range: params.range,
-    offsetX: params.offsetX ?? 0,
-    offsetY: params.offsetY ?? 0,
     width: params.width ?? 0,
     height: params.height ?? 0,
     radius: params.radius ?? 0,
@@ -143,10 +139,8 @@ const CLASS_SKILLS: NewSkill[] = [
                 eventIndex: 0,
                 triggerTicks: 3,
                 shape: HitShape.RECT,
-                range: 1.2,
+                range: 0.87,
                 width: 0.56,
-                offsetX: -0.33,
-                offsetY: 0.26,
                 damageScaling: 1,
             }),
         ],
@@ -172,8 +166,6 @@ const CLASS_SKILLS: NewSkill[] = [
                 shape: HitShape.CIRCLE,
                 range: 0,
                 radius: 0.15,
-                offsetX: 0.3,
-                offsetY: 0.3,
                 damageScaling: 1,
                 delivery: HitDelivery.PROJECTILE,
                 projectile: {
@@ -243,8 +235,6 @@ const CLASS_SKILLS: NewSkill[] = [
                 shape: HitShape.RECT,
                 range: 1.6,
                 width: 2,
-                offsetX: 0,
-                offsetY: 0.25,
                 damageScaling: 0.8,
             }),
             hitEvent({
@@ -253,8 +243,6 @@ const CLASS_SKILLS: NewSkill[] = [
                 shape: HitShape.RECT,
                 range: 1.6,
                 width: 2,
-                offsetX: 0,
-                offsetY: 0.25,
                 damageScaling: 0.8,
             }),
         ],
@@ -278,10 +266,8 @@ const CLASS_SKILLS: NewSkill[] = [
                 eventIndex: 0,
                 triggerTicks: 2,
                 shape: HitShape.RECT,
-                range: 2.16,
+                range: 1.5,
                 width: 1.23,
-                offsetX: -0.66,
-                offsetY: 0.36,
                 damageScaling: 1.2,
             }),
         ],
@@ -306,8 +292,6 @@ const CLASS_SKILLS: NewSkill[] = [
                 shape: HitShape.CIRCLE,
                 range: 0,
                 radius: 0.6,
-                offsetX: 0,
-                offsetY: 0,
                 damageScaling: 1.5,
                 delivery: HitDelivery.PROJECTILE,
                 projectile: {
@@ -358,10 +342,8 @@ const monsterAttackSkill = (monster: MonsterDefinition): NewSkill => {
                 eventIndex: 0,
                 triggerTicks,
                 shape: HitShape.RECT,
-                range: round2(range),
+                range: round2(range.plus(offsetX)),
                 width: monster.ranged ? 0.5 : round2(big(hitbox.height).times(1.4).plus(0.14)),
-                offsetX: round2(offsetX),
-                offsetY: round2(big(hitbox.offsetY ?? 0).minus(monster.ranged ? 0 : 0.02)),
                 damageScaling: monster.ranged ? 1 : 1.25,
             }),
         ],

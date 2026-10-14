@@ -29,8 +29,6 @@ export const scaleSkillHitEvent = (event: SkillHitEvent, scale: number): SkillHi
         : {
               ...event,
               range: event.range * scale,
-              offsetX: event.offsetX * scale,
-              offsetY: event.offsetY * scale,
               width: event.width * scale,
               height: event.height * scale,
               radius: event.radius * scale,
