@@ -8,7 +8,7 @@ Hiện dữ liệu được quản lý bằng seed. `SkillSeed` tạo đòn đá
 
 | Class     | Skill                                                             | Cách gây damage                                                                 |
 | --------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Swordsman | `swordsman_basic_attack` (MELEE)                                  | HITBOX: 1 nhát chém ở frame 3, `castTimeMs` 300                                 |
+| Swordsman | `swordsman_basic_attack` (MELEE)                                  | HITBOX: 1 nhát chém ở frame 3, `animationMs` 300                                 |
 | Archer    | `archer_basic_attack` (PROJECTILE)                                | Mũi tên rời cung ở 500 ms, bay 12 ô/s, tối đa 6 ô, trúng con đầu tiên (DESTROY) |
 | Cleric    | `cleric_basic_attack` (GROUND, sát thương phép theo MAGIC_ATTACK) | Vùng tròn bán kính 0.6 đặt ở chân mục tiêu lúc 350 ms, nổ sau 150 ms            |
 
@@ -18,7 +18,8 @@ Cùng với `{monster}_attack` của monster. Mỗi class chỉ có 1 đòn đá
 
 - `HITBOX` (mặc định): vùng `shape`/`offset` quanh người đánh, gây damage ngay tại `triggerTicks`.
 - `PROJECTILE` + `projectile { speed, maxDistance, radius, hitBehavior, maxHits }`: tại `triggerTicks` sinh một viên đạn ở `offsetX/offsetY`, bay thẳng về giữa hitbox mục tiêu đang chọn (không có → theo hướng mặt). Mỗi tick đạn bay một đoạn (quét từng bước ≤ 0.1 ô), trúng khi thân đạn (tròn `radius`) chạm hitbox; DESTROY biến mất ở mục tiêu đầu tiên, PIERCE xuyên tới `maxHits` mục tiêu.
-- `AREA` + `area { delayMs, untargetedDistance }`: tại `triggerTicks` đặt vùng (`shape`/`radius` của event) ở chân mục tiêu, kéo về trong `castRange`; không có mục tiêu → cách `untargetedDistance` ô trước mặt. Sau `delayMs` gây damage cho mọi mục tiêu chạm vùng.
+- `AREA` + `area { delayMs, untargetedDistance }`: tại `triggerTicks` đặt vùng (`shape`/`radius` của event) ở tâm hitbox mục tiêu, kéo về trong `castRange`; không có mục tiêu → cách `untargetedDistance` ô trước mặt. Sau `delayMs` gây damage cho mọi mục tiêu chạm vùng. `offsetX` (theo hướng đánh) và `offsetY` (dương = lên) tính từ tâm hitbox mục tiêu (hoặc điểm trước mặt khi không có mục tiêu).
+- Hình `ELLIPSE` (mọi `delivery`): `width` = đường kính theo hướng đánh (X), `height` = đường kính theo trục dọc (Y), tâm tại `offsetX/offsetY` — dùng cho vùng dẹt kiểu top-down. Server tính ở `skill-hitbox.world.util.ts`, client ở `SkillHitboxWorldUtil.cs` (cùng công thức).
 
 Room xử lý ở `src/rooms/world/services/skill-delivery.world.service.ts`; đạn và vùng nằm trong world state (`projectiles`, `areas`) để client vẽ, bị xoá khi hết. Player đánh monster luôn theo vị trí monster mà client đó đang vẽ (`rewind.lastSeenBy`), kể cả với đạn đang bay. Bên đánh là player hay monster đều dùng chung (`SkillOwner`), nên monster đánh xa có thể chuyển sang PROJECTILE/AREA chỉ bằng dữ liệu.
 
@@ -28,7 +29,7 @@ Client không giữ bản copy tay nào của skill. `yarn seed` (bước cuối
 
 Sửa skill → `yarn seed --force` (hoặc sửa DB rồi `yarn config:export`) → commit `skills.json` bên client cùng lúc với server.
 
-Hit cuối phải nằm cách lúc kết thúc đòn ít nhất 150 ms (`HIT_CONFIRM_BUDGET_MS`): client chạy anim ngay lúc bấm, sát thương về sau khoảng 1 RTT, nên khoảng này giúp sát thương hiện ra trước khi anim xong mà không cần cho hit nổ sớm hơn frame chém. Với AREA tính tới lúc nổ (`triggerTicks` + `delayMs`); đạn còn phải bay nên không tính được. `SkillService` cảnh báo khi skill vi phạm. Dùng `yarn seed --force` để cập nhật mốc hit trong database hiện có.
+Hit cuối phải nằm cách lúc kết thúc đòn ít nhất 150 ms (`HIT_CONFIRM_BUDGET_MS`): client chạy anim ngay lúc bấm, sát thương về sau khoảng 1 RTT, nên khoảng này giúp sát thương hiện ra trước khi anim xong mà không cần cho hit nổ sớm hơn frame chém. Với AREA tính tới lúc nổ (`triggerTicks` + `delayMs`); đạn còn phải bay nên không tính được. `SkillService` cảnh báo khi skill vi phạm, trừ skill `TargetType.TARGET` (đạn bay / vùng chờ nổ nên trúng sau anim là bình thường). Dùng `yarn seed --force` để cập nhật mốc hit trong database hiện có.
 
 Chạy `yarn db:migrate` rồi `yarn seed` để tạo schema và thêm skill. Dùng `yarn seed --force` để ghi đè các giá trị seed hiện có.
 

@@ -18,6 +18,7 @@ import {
     PendingSkillHit,
     skillReachesTarget,
 } from "@/rooms/world/utils/skill-attack.world.util.js";
+import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import { monsterSkillOwner } from "@/rooms/world/utils/skill-owner.world.util.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
@@ -246,5 +247,30 @@ describe("skillReachesTarget", () => {
         const melee = skill([event({ shape: HitShape.RECT, range: 1.2, width: 1, offsetY: 0.35 })]);
         assert.equal(skillReachesTarget(melee, origin, target), false);
         assert.equal(skillReachesTarget(melee, { ...origin, x: 3 }, target), true);
+    });
+});
+
+describe("hình elip", () => {
+    const origin = { x: 0, y: 0, direction: "right" };
+    const point = { offsetX: 0, offsetY: 0, width: 0.2, height: 0.2 } as HitboxColliderState;
+    // Đường kính 4 theo hướng đánh, 1 theo trục dọc.
+    const ellipse = event({ shape: HitShape.ELLIPSE, width: 4, height: 1 });
+
+    it("dài theo hướng đánh, hẹp theo trục dọc", () => {
+        assert.equal(intersectsSkillHitEvent(origin, 1.8, 0, point, ellipse), true);
+        assert.equal(intersectsSkillHitEvent(origin, 0, -0.4, point, ellipse), true);
+        assert.equal(intersectsSkillHitEvent(origin, 0, -1, point, ellipse), false);
+        assert.equal(intersectsSkillHitEvent(origin, 2.5, 0, point, ellipse), false);
+    });
+
+    it("hai trục bằng nhau thì như hình tròn", () => {
+        const round = event({ shape: HitShape.ELLIPSE, width: 2, height: 2 });
+        const circle = event({ shape: HitShape.CIRCLE, radius: 1 });
+        for (const [x, y] of [[0.5, 0.5], [0.9, 0.9], [1.4, 0], [0, -1.2]]) {
+            assert.equal(
+                intersectsSkillHitEvent(origin, x, y, point, round),
+                intersectsSkillHitEvent(origin, x, y, point, circle)
+            );
+        }
     });
 });

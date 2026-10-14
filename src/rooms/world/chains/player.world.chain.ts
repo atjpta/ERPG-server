@@ -5,10 +5,17 @@ import { MoveCommand, applyWorldMove } from "@/rooms/world/simulation/movement.s
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
+import {
+    getApproachDeadzone,
+    getAutoTargetRange,
+    getFaceTargetRange,
+    getKeepTargetRange,
+} from "@/rooms/world/utils/player-target.world.util.js";
 import { skillDeliveryWorldService } from "@/rooms/world/services/skill-delivery.world.service.js";
 import {
     PendingSkillHit,
     buildPendingSkillHits,
+    getSkillCastTicks,
     getSkillDurationTicks,
     skillReachesTarget,
     tickPendingSkillHits,
@@ -19,14 +26,6 @@ import {
     playerSkillOwner,
 } from "@/rooms/world/utils/skill-owner.world.util.js";
 
-/** Không lock: mỗi step tự chọn monster gần nhất trong tầm này. */
-const PLAYER_AUTO_TARGET_RANGE = 4;
-/** Target đã lock bị mất khi ra xa quá tầm này (khớp KeepTargetRangeSquared bên client). */
-const PLAYER_KEEP_TARGET_RANGE = 6;
-/** Chỉ quay mặt về target khi nó ở gần (bấm đánh: trong tầm này hoặc `castRange` của đòn kế tiếp). */
-const PLAYER_FACE_TARGET_RANGE = 2;
-/** Lệch tối thiểu (ô) theo mỗi trục để còn đi về phía target khi tự áp sát — giống monster. */
-const PLAYER_APPROACH_DEADZONE = 0.1;
 export interface PlayerChainContext {
     room: WorldRoom;
     sessionId: string;
@@ -59,18 +58,16 @@ export class PlayerDeathChain implements WorldChainAction<PlayerChainContext> {
     }
 }
 
-export class PlayerHitInterruptChain implements WorldChainAction<PlayerChainContext> {
-    constructor(private readonly attackChain: PlayerAttackChain) {}
-
-    execute({ room, state }: PlayerChainContext): WorldChainResult {
-        if (!state.hitInterrupted) return WorldChainResult.CONTINUE;
-
-        state.hitInterrupted = false;
-        this.attackChain.interrupt(state);
-        // Bước này bị cắt nên PlayerDashChain không chạy: vẫn phải trừ thời gian lướt / hồi dash, như client (WorldMovementStep).
-        state.chainDash(false, room.tickRate);
-        return WorldChainResult.STOP;
-    }
+/**
+ * Đòn đang trong thời gian chờ `castTimeMs` (anim + hit event chưa bắt đầu). Khớp WorldMovementStep.cs.
+ * `attackCooldownTicks` đếm lùi từ tổng thời gian đòn, nên đã trôi `duration - attackCooldownTicks` tick.
+ */
+function isCasting(state: PlayerWorldState, tickRate: number) {
+    if (state.attackCooldownTicks <= 0 || state.attackCombo <= 0) return false;
+    const skill = skillService.getBasicAttackCombo(state.skills)[state.attackCombo - 1];
+    if (!skill) return false;
+    const elapsed = getSkillDurationTicks(skill, tickRate) - state.attackCooldownTicks;
+    return elapsed < getSkillCastTicks(skill, tickRate);
 }
 
 export class PlayerDashChain implements WorldChainAction<PlayerChainContext> {
@@ -80,9 +77,12 @@ export class PlayerDashChain implements WorldChainAction<PlayerChainContext> {
         const canStartDash =
             dashRequested && state.dashCooldownTicks === 0 && state.dashTicks === 0;
         if (canStartDash) {
-            // Dash huỷ đòn đánh đang dở, kể cả các hit chưa nổ.
+            // Dash huỷ đòn đánh đang dở, kể cả các hit chưa nổ. Đang cast (anim chưa chạy) thì cooldown
+            // của skill chưa bắt đầu tính → huỷ luôn cooldown.
+            const casting = isCasting(state, room.tickRate);
             state.attacking = false;
             state.cancelAttackLock();
+            if (casting) state.skillCooldownTicks = 0;
             this.attackChain.interrupt(state);
         }
 
@@ -107,7 +107,7 @@ export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
 
         // Lock: giữ target tới khi ra khỏi tầm giữ. Không lock: mỗi step chọn lại con gần nhất.
         let target = state.targetLocked
-            ? findTargetById(room, state, state.targetId, PLAYER_KEEP_TARGET_RANGE)
+            ? findTargetById(room, state, state.targetId, getKeepTargetRange())
             : undefined;
         if (state.targetLocked && !target) clearTarget(state);
 
@@ -120,15 +120,13 @@ export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
                 clearTarget(state);
             }
         } else if (!state.targetLocked) {
-            target = findTargetsInRange(room, state, PLAYER_AUTO_TARGET_RANGE)[0];
+            target = findTargetsInRange(room, state, getAutoRange(state))[0];
             state.targetId = target?.id ?? "";
         }
 
-        // Khớp WorldMovementStep.cs: quay mặt về target hiện tại khi nó trong tầm 2 ô — khi bấm đánh thì
-        // trong cả tầm của đòn kế tiếp (đánh xa: cung thủ quay về con đang ngắm).
-        const faceRange = attackRequested
-            ? Math.max(PLAYER_FACE_TARGET_RANGE, getNextBasicAttack(state)?.castRange ?? 0)
-            : PLAYER_FACE_TARGET_RANGE;
+        // Khớp WorldMovementStep.cs: quay mặt về target hiện tại khi nó trong tầm quay mặt của class
+        // (đánh xa: cung thủ quay về con đang ngắm).
+        const faceRange = getFaceRange(state);
         if (
             target &&
             !state.dashing &&
@@ -219,7 +217,11 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         );
         state.startAttack(
             getSkillDurationTicks(skill, room.tickRate),
-            skill.cooldownMs > 0 ? millisecondsToTicks(skill.cooldownMs, room.tickRate) : 0
+            // Cooldown của skill chỉ bắt đầu tính khi cast xong (anim bắt đầu).
+            skill.cooldownMs > 0
+                ? getSkillCastTicks(skill, room.tickRate) +
+                      millisecondsToTicks(skill.cooldownMs, room.tickRate)
+                : 0
         );
     }
 
@@ -259,13 +261,25 @@ function getNextBasicAttack(state: PlayerWorldState) {
 }
 
 /**
- * Hướng đi khi tự áp sát: target hiện tại trong tầm quay mặt (2 ô) nhưng đòn kế tiếp chưa với tới nó
+ * Tầm chọn / quay mặt theo class (master data `player_target_config`) và `castRange` của skill sắp xài —
+ * hiện chỉ có đánh thường nên skill sắp xài = đòn kế tiếp của combo.
+ */
+function getAutoRange(state: PlayerWorldState) {
+    return getAutoTargetRange(state.classCode, getNextBasicAttack(state)?.castRange ?? 0);
+}
+
+function getFaceRange(state: PlayerWorldState) {
+    return getFaceTargetRange(state.classCode, getNextBasicAttack(state)?.castRange ?? 0);
+}
+
+/**
+ * Hướng đi khi tự áp sát: target hiện tại trong tầm quay mặt của class nhưng đòn kế tiếp chưa với tới nó
  * (`skillReachesTarget`, quay mặt về target). `undefined` = đánh tại chỗ (không có target / đã trong tầm).
  * Khớp WorldMovementStep.TryGetAttackApproach bên client.
  */
 function getAttackApproachMove(room: WorldRoom, state: PlayerWorldState): MoveCommand | undefined {
     const target = state.targetId
-        ? findTargetById(room, state, state.targetId, PLAYER_FACE_TARGET_RANGE)
+        ? findTargetById(room, state, state.targetId, getFaceRange(state))
         : undefined;
     const skill = getNextBasicAttack(state);
     if (!target || !skill) return undefined;
@@ -275,8 +289,9 @@ function getAttackApproachMove(room: WorldRoom, state: PlayerWorldState): MoveCo
     const direction = dx < 0 ? "left" : dx > 0 ? "right" : state.direction;
     if (skillReachesTarget(skill, { x: state.x, y: state.y, direction }, target)) return undefined;
 
-    const moveX = Math.abs(dx) > PLAYER_APPROACH_DEADZONE ? Math.sign(dx) : 0;
-    const moveY = Math.abs(dy) > PLAYER_APPROACH_DEADZONE ? Math.sign(dy) : 0;
+    const deadzone = getApproachDeadzone();
+    const moveX = Math.abs(dx) > deadzone ? Math.sign(dx) : 0;
+    const moveY = Math.abs(dy) > deadzone ? Math.sign(dy) : 0;
     return moveX || moveY ? { moveX, moveY } : undefined;
 }
 
@@ -287,7 +302,7 @@ function clearTarget(player: PlayerWorldState) {
 
 /** Xoay vòng sang target kế tiếp (theo khoảng cách) trong tầm lock. */
 function findNextTarget(room: WorldRoom, player: PlayerWorldState) {
-    const targets = findTargetsInRange(room, player, PLAYER_KEEP_TARGET_RANGE);
+    const targets = findTargetsInRange(room, player, getKeepTargetRange());
     if (targets.length === 0) return undefined;
     const currentIndex = targets.findIndex((candidate) => candidate.id === player.targetId);
     return targets[(currentIndex + 1) % targets.length];

@@ -94,22 +94,28 @@ const basicAttackLevels = (scalingType = DamageScalingType.ATTACK) => [
     level(3, 0, 1.3, scalingType),
     level(4, 0, 1.4, scalingType),
     level(5, 0, 1.5, scalingType),
+    level(6, 0, 1.6, scalingType),
+    level(7, 0, 1.7, scalingType),
+    level(8, 0, 1.8, scalingType),
+    level(9, 0, 1.9, scalingType),
+    level(10, 0, 2, scalingType),
 ];
 
 /**
  * Đòn đánh thường (`basicAttack`) của 3 class khởi đầu, canh theo anim trong
  * `Assets/ERPG/Animation/PackCharacters/<Class>` (12 fps × speed của state trong controller).
- * `castTimeMs` = thời lượng cả đòn (khoá di chuyển), luôn ≥ lúc gây damage cuối + 150 ms.
+ * `castTimeMs` = chờ trước khi anim chạy (khoá di chuyển); `animationMs` = thời lượng anim (khoá di chuyển), luôn ≥ lúc gây damage cuối + 150 ms (hit event tính từ lúc anim bắt đầu).
  */
 const CLASS_SKILLS: NewSkill[] = [
     {
-        // Dash của mọi class: lướt `castTimeMs` (khoá di chuyển, huỷ đòn đang dở), rồi `cooldownMs` mới lướt lại.
+        // Dash của mọi class: lướt `animationMs` (khoá di chuyển, huỷ đòn đang dở), rồi `cooldownMs` mới lướt lại.
         // PlayerWorldState.chainDash và client (WorldMovementStep) đọc hai số này — đổi ở đây rồi `yarn seed --force` + `yarn config:export`.
         code: DASH_SKILL_CODE,
         skillType: SkillType.DASH,
         targetType: TargetType.DIRECTION,
         castRange: 0,
-        castTimeMs: 300,
+        castTimeMs: 0,
+        animationMs: 300,
         cooldownMs: 3000,
         manaCost: 0,
         staminaCost: 0,
@@ -124,7 +130,8 @@ const CLASS_SKILLS: NewSkill[] = [
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
         castRange: 1.4,
-        castTimeMs: 300,
+        castTimeMs: 0,
+        animationMs: 500,
         cooldownMs: 0,
         manaCost: 0,
         staminaCost: 0,
@@ -149,9 +156,10 @@ const CLASS_SKILLS: NewSkill[] = [
         code: "archer_basic_attack",
         skillType: SkillType.PROJECTILE,
         targetType: TargetType.TARGET,
-        castRange: 5,
-        castTimeMs: 600,
-        cooldownMs: 0,
+        castRange: 4,
+        castTimeMs: 0,
+        animationMs: 660,
+        cooldownMs: 1000,
         manaCost: 0,
         staminaCost: 0,
         maxLevel: 5,
@@ -160,7 +168,7 @@ const CLASS_SKILLS: NewSkill[] = [
         skillHitEvents: [
             hitEvent({
                 eventIndex: 0,
-                triggerTicks: 10,
+                triggerTicks: 6,
                 shape: HitShape.CIRCLE,
                 range: 0,
                 radius: 0.15,
@@ -172,7 +180,7 @@ const CLASS_SKILLS: NewSkill[] = [
                     movementType: ProjectileMovementType.STRAIGHT,
                     hitBehavior: ProjectileHitBehavior.DESTROY,
                     speed: 12,
-                    maxDistance: 6,
+                    maxDistance: 5,
                     radius: 0.15,
                     maxHits: 1,
                 },
@@ -185,9 +193,10 @@ const CLASS_SKILLS: NewSkill[] = [
         code: "cleric_basic_attack",
         skillType: SkillType.GROUND,
         targetType: TargetType.TARGET,
-        castRange: 4,
-        castTimeMs: 500,
-        cooldownMs: 0,
+        castRange: 3,
+        castTimeMs: 0,
+        animationMs: 500,
+        cooldownMs: 1000,
         manaCost: 0,
         staminaCost: 0,
         maxLevel: 5,
@@ -196,15 +205,16 @@ const CLASS_SKILLS: NewSkill[] = [
         skillHitEvents: [
             hitEvent({
                 eventIndex: 0,
-                triggerTicks: 7,
-                shape: HitShape.CIRCLE,
+                triggerTicks: 4,
+                shape: HitShape.ELLIPSE,
                 range: 0,
-                radius: 0.6,
-                damageScaling: 1.1,
+                width: 1,
+                height: 0.3,
+                damageScaling: 1,
                 damageScalingType: DamageScalingType.MAGIC_ATTACK,
                 damageType: DamageType.MAGICAL,
                 delivery: HitDelivery.AREA,
-                area: { delayMs: 150, untargetedDistance: 1.5 },
+                area: { delayMs: 300, untargetedDistance: 2 },
             }),
         ],
     },
@@ -232,7 +242,8 @@ const monsterAttackSkill = (monster: MonsterDefinition): NewSkill => {
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
         castRange: round2(range.plus(offsetX)),
-        castTimeMs: monster.attackClipMs,
+        castTimeMs: 0,
+        animationMs: monster.attackClipMs,
         cooldownMs: 0,
         manaCost: 0,
         staminaCost: 0,

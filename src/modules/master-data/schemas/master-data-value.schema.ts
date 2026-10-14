@@ -14,6 +14,7 @@ import { MonsterScaleConfigSchema } from "@/modules/monsters/schemas/monster-sca
 import { PartyConfigSchema } from "@/modules/party/schemas/party.schema.js";
 import { DailyQuestConfigSchema } from "@/modules/quests/schemas/daily-quest.schema.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { PlayerTargetConfigSchema } from "@/modules/master-data/schemas/player-target-config.schema.js";
 
 /** Bật `singleSessionPerUser` để mỗi lần login mới tự revoke các session cũ (chặn đăng nhập nhiều máy). */
 export const AuthSessionConfigSchema = z.object({
@@ -64,6 +65,7 @@ export const MasterDataValueSchemas = {
     [MasterDataKey.MONSTER_SPAWN_CONFIG]: MonsterSpawnConfigSchema,
     [MasterDataKey.DAILY_QUEST_CONFIG]: DailyQuestConfigSchema,
     [MasterDataKey.PARTY_CONFIG]: PartyConfigSchema,
+    [MasterDataKey.PLAYER_TARGET_CONFIG]: PlayerTargetConfigSchema,
 } satisfies Record<MasterDataKey, z.ZodType>;
 
 export type AuthSessionConfigValue = z.infer<typeof AuthSessionConfigSchema>;

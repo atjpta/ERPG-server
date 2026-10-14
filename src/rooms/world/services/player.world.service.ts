@@ -5,7 +5,6 @@ import {
     PlayerChainContext,
     PlayerDeathChain,
     PlayerDashChain,
-    PlayerHitInterruptChain,
     PlayerMoveChain,
     PlayerAttackChain,
     PlayerTargetChain,
@@ -63,7 +62,6 @@ export class PlayerWorldService {
     private readonly attackChain = new PlayerAttackChain();
     private readonly chains = new WorldChain<PlayerChainContext>([
         new PlayerDeathChain(this.attackChain),
-        new PlayerHitInterruptChain(this.attackChain),
         new PlayerDashChain(this.attackChain),
         new PlayerMoveChain(),
         new PlayerTargetChain(),

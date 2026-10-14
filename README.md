@@ -16,10 +16,11 @@ yarn dev                           # http://localhost:2567 — playground ở "/
 yarn smoke                         # test end-to-end (server phải đang chạy)
 ```
 
-## Token cho hai user test local
+## Token cho user test local (mỗi class một user)
 
 Khi server đang chạy và DB đã migrate/seed, chạy `yarn test:tokens`.
-Script tự tạo hoặc đăng nhập `test1@erpg.local` và `test2@erpg.local`, mật khẩu mặc định `123456`.
+Script tự tạo hoặc đăng nhập `test-swordsman@erpg.local`, `test-archer@erpg.local` và `test-cleric@erpg.local`
+(mỗi tài khoản một nhân vật đúng class), mật khẩu mặc định `123456`.
 Có thể đổi địa chỉ server bằng `SERVER_URL` và mật khẩu bằng `TEST_USER_PASSWORD`.
 
 Token được in ra terminal và lưu tại `generated/local-test-tokens.json` (đã được Git bỏ qua).

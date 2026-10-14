@@ -32,6 +32,8 @@ export enum HitShape {
     ARC = "ARC",
     CAPSULE = "CAPSULE",
     LINE = "LINE",
+    /** Elip tâm tại offset: `width` = đường kính theo hướng đánh (X), `height` = đường kính theo trục dọc (Y). */
+    ELLIPSE = "ELLIPSE",
 }
 
 /**

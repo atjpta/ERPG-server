@@ -1,5 +1,6 @@
 import { Schema, type } from "@colyseus/schema";
 
+import { HitShape } from "@/modules/skills/enums/skill.enum.js";
 import type { PendingSkillHit } from "@/rooms/world/utils/skill-attack.world.util.js";
 import type { SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
 import type { SkillOwner } from "@/rooms/world/utils/skill-owner.world.util.js";
@@ -42,7 +43,13 @@ export class AreaWorldState extends Schema {
         this.attackSerial = props.hit.attackSerial;
         this.x = props.x;
         this.y = props.y;
-        this.radius = this.event.radius > 0 ? this.event.radius : this.event.range;
+        // Elip: client lấy hai trục từ hit event (skills.json); `radius` ở đây là trục lớn.
+        this.radius =
+            this.event.shape === HitShape.ELLIPSE
+                ? Math.max(this.event.width, this.event.height) / 2
+                : this.event.radius > 0
+                  ? this.event.radius
+                  : this.event.range;
         this.ticksUntilImpact = props.ticksUntilImpact;
     }
 }

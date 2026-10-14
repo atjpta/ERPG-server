@@ -47,20 +47,30 @@ export function buildPendingSkillHits(
     tickRate: number,
     scale = 1
 ): PendingSkillHit[] {
+    const castTicks = getSkillCastTicks(skill, tickRate);
     return skill.skillHitEvents.map((event, eventIndex) => ({
         skill,
         event: scaleSkillHitEvent(event, scale),
         attackSerial,
         eventIndex,
-        ticksUntilHit: skillEventTicks(event.triggerTicks, tickRate),
+        // `triggerTicks` tính từ lúc anim bắt đầu, tức sau thời gian chờ `castTimeMs`.
+        ticksUntilHit: castTicks + skillEventTicks(event.triggerTicks, tickRate),
         direction,
     }));
 }
 
-/** Số tick tối thiểu của skill: đủ cast time và đủ để hit event cuối cùng nổ. */
+/** Số tick chờ từ lúc bấm đến lúc anim bắt đầu (`castTimeMs`; 0 = anim chạy ngay). */
+export const getSkillCastTicks = (skill: Skill, tickRate: number) =>
+    skill.castTimeMs > 0 ? millisecondsToTicks(skill.castTimeMs, tickRate) : 0;
+
+/**
+ * Tổng số tick khoá di chuyển của skill: thời gian chờ cộng thời gian anim (`animationMs`), anim tối thiểu
+ * đủ để hit event cuối cùng nổ.
+ */
 export const getSkillDurationTicks = (skill: Skill, tickRate: number) =>
+    getSkillCastTicks(skill, tickRate) +
     Math.max(
-        millisecondsToTicks(skill.castTimeMs, tickRate),
+        millisecondsToTicks(skill.animationMs, tickRate),
         ...skill.skillHitEvents.map((event) => skillEventTicks(event.triggerTicks, tickRate))
     );
 

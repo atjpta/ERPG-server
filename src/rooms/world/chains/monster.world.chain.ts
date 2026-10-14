@@ -113,12 +113,6 @@ export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
 
     execute(context: MonsterChainContext): WorldChainResult {
         const { room, monster, target, distance, dx, dy, dt } = context;
-        if (monster.hitInterrupted) {
-            monster.hitInterrupted = false;
-            monster.moving = false;
-            this.attackChain.cancelPendingAttack(monster);
-            return WorldChainResult.STOP;
-        }
         if (this.attackChain.hasPendingAttack(monster)) {
             monster.moving = false;
             return WorldChainResult.CONTINUE;

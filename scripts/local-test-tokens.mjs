@@ -4,13 +4,17 @@ import { join } from "node:path";
 
 const serverUrl = (process.env.SERVER_URL ?? "http://localhost:2567").replace(/\/$/, "");
 const password = process.env.TEST_USER_PASSWORD ?? "123456";
-const emails = ["test1@erpg.local", "test2@erpg.local"];
 const outputFile = join(process.cwd(), "generated", "local-test-tokens.json");
 
-const startClassCode = process.env.TEST_CLASS_CODE ?? "swordsman";
+/** Mỗi class khởi đầu một tài khoản: `test-<classCode>@erpg.local`. */
+const classCodes = ["swordsman", "archer", "cleric"];
+const accounts = classCodes.map((classCode) => ({
+    email: `test-${classCode}@erpg.local`,
+    classCode,
+}));
 
 /** Tài khoản mới chưa có nhân vật (`player`/`playerToken` = null): tạo 1 nhân vật bằng user token. */
-async function ensurePlayer(email, value) {
+async function ensurePlayer(email, classCode, value) {
     if (value?.player && value?.playerToken) return value;
     const headers = { "content-type": "application/json", authorization: `Bearer ${value.token}` };
     const nameResponse = await fetch(`${serverUrl}/players/random-name`, {
@@ -21,7 +25,7 @@ async function ensurePlayer(email, value) {
     const response = await fetch(`${serverUrl}/players`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ name, classCode: startClassCode }),
+        body: JSON.stringify({ name, classCode }),
         signal: AbortSignal.timeout(15_000),
     });
     const payload = await response.json();
@@ -33,7 +37,7 @@ async function ensurePlayer(email, value) {
     return { ...value, ...payload.data };
 }
 
-function parseAuthResult(value, email) {
+function parseAuthResult(value, email, classCode) {
     if (!value || typeof value !== "object") {
         throw new Error(`${email}: server response has no data object`);
     }
@@ -50,10 +54,10 @@ function parseAuthResult(value, email) {
     ) {
         throw new Error(`${email}: auth response is missing token or player data`);
     }
-    return { email, token, playerToken, userId, player };
+    return { email, classCode, token, playerToken, userId, player };
 }
 
-async function authenticate(email) {
+async function authenticate({ email, classCode }) {
     const body = JSON.stringify({
         email,
         password,
@@ -85,14 +89,18 @@ async function authenticate(email) {
                     `${payload?.code ?? ""} ${payload?.message ?? response.statusText}`
             );
         }
-        return parseAuthResult(await ensurePlayer(email, payload?.data), email);
+        return parseAuthResult(
+            await ensurePlayer(email, classCode, payload?.data),
+            email,
+            classCode
+        );
     }
     throw new Error(`Could not authenticate ${email}`);
 }
 
 try {
     const users = [];
-    for (const email of emails) users.push(await authenticate(email));
+    for (const account of accounts) users.push(await authenticate(account));
 
     const json = JSON.stringify(
         { serverUrl, generatedAt: new Date().toISOString(), users },

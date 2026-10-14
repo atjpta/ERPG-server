@@ -184,13 +184,10 @@ export class MonsterWorldState extends Schema {
         this.attacking = true;
     }
 
-    takeDamage(damage: number, attackRecoveryTicks: number) {
+    /** Trúng đòn chỉ trừ máu: không khựng, không huỷ đòn đang đánh hay di chuyển. */
+    takeDamage(damage: number) {
         this.hp = Math.max(0, this.hp - Math.max(0, damage));
         this.idleTicks = 0;
-        this.hitInterrupted = true;
-        this.moving = false;
-        this.attacking = false;
-        this.attackCooldownTicks = attackRecoveryTicks;
     }
 
     setAggroTarget(playerId: string) {

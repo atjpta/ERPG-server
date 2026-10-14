@@ -16,7 +16,10 @@ export const Skills = pgTable("skills", {
     skillType: skillTypeEnum("skill_type").notNull(),
     targetType: targetTypeEnum("target_type").notNull().default(TargetType.NONE),
     castRange: real("cast_range").notNull().default(0),
+    /** Chờ từ lúc bấm đến lúc anim + hit event bắt đầu (khoá di chuyển). */
     castTimeMs: integer("cast_time_ms").notNull().default(0),
+    /** Thời gian anim chạy (khoá di chuyển), hit event tính từ lúc anim bắt đầu. */
+    animationMs: integer("animation_ms").notNull().default(0),
     cooldownMs: integer("cooldown_ms").notNull().default(0),
     manaCost: integer("mana_cost").notNull().default(0),
     staminaCost: integer("stamina_cost").notNull().default(0),

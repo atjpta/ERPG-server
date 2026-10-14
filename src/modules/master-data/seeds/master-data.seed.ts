@@ -17,6 +17,7 @@ import { PartyLootMode } from "@/modules/party/schemas/party.schema.js";
 import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
+import { DEFAULT_PLAYER_TARGET_CONFIG } from "@/modules/master-data/schemas/player-target-config.schema.js";
 import type { MasterDataValueMap } from "@/modules/master-data/schemas/master-data-value.schema.js";
 
 const MAX_LEVEL = 100;
@@ -96,6 +97,10 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
             lootMode: PartyLootMode.ROUND_ROBIN,
         },
         note: "Party: số thành viên tối đa, hạn lời mời, bonus exp, giới hạn chênh level, chia vàng, cách chia item",
+    },
+    [MasterDataKey.PLAYER_TARGET_CONFIG]: {
+        value: DEFAULT_PLAYER_TARGET_CONFIG,
+        note: "Tầm chọn / giữ / quay mặt về target theo class + thông số auto battle (client đọc qua skills.json)",
     },
     [MasterDataKey.DAILY_QUEST_CONFIG]: {
         value: DEFAULT_DAILY_QUEST_CONFIG,

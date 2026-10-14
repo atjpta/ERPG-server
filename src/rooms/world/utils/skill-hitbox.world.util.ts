@@ -64,6 +64,17 @@ export function intersectsSkillHitEvent(
         return nearestForward ** 2 + nearestLateral ** 2 <= radius ** 2;
     }
 
+    if (event.shape === HitShape.ELLIPSE) {
+        // Co trục dọc về cùng tỉ lệ với trục ngang thì elip thành hình tròn; hitbox mục tiêu vẫn là hình chữ nhật
+        // song song trục nên điểm gần nhất tìm riêng từng trục rồi chia cho bán trục.
+        const forwardRadius = event.width / 2;
+        const lateralRadius = event.height / 2;
+        if (forwardRadius <= 0 || lateralRadius <= 0) return false;
+        const nearestForward = clamp(0, forwardMin, forwardMax) / forwardRadius;
+        const nearestLateral = clamp(0, lateralMin, lateralMax) / lateralRadius;
+        return nearestForward ** 2 + nearestLateral ** 2 <= 1;
+    }
+
     if (event.shape === HitShape.RECT) {
         const attackLength = event.range > 0 ? event.range : event.height;
         const attackWidth = event.width > 0 ? event.width : event.height;

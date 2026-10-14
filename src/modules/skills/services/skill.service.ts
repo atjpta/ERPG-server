@@ -1,16 +1,16 @@
 import { cacheService } from "@/core/cache/cache.service.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
-import { HitDelivery } from "@/modules/skills/enums/skill.enum.js";
+import { HitDelivery, TargetType } from "@/modules/skills/enums/skill.enum.js";
 import type { OwnedSkill, SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
 
-/** Skill `dash`: `castTimeMs` = thời gian lướt (khoá di chuyển), `cooldownMs` = hồi chiêu — chỉnh ở skill seed, không ở code. */
+/** Skill `dash`: `animationMs` = thời gian lướt (khoá di chuyển), `cooldownMs` = hồi chiêu — chỉnh ở skill seed, không ở code. */
 export const DASH_SKILL_CODE = "dash";
 
 /** `triggerTicks` của hit event được tác giả theo nhịp 20 tick/giây. */
 const AUTHORED_TICK_MS = 50;
 /**
- * Khoảng tối thiểu giữa hit cuối và lúc đòn kết thúc (`castTimeMs`). Client chạy anim ngay lúc bấm,
+ * Khoảng tối thiểu giữa hit cuối và lúc anim kết thúc (`animationMs`). Client chạy anim ngay lúc bấm,
  * sát thương về sau ~1 RTT + 1 patch, nên khoảng này giữ cho sát thương hiện ra trước khi anim xong
  * (RTT tới ~100 ms) mà không phải cho hit nổ sớm hơn frame chém.
  */
@@ -27,7 +27,10 @@ export class SkillService {
             // Sort sẵn theo thời điểm nổ để room không phải sort lại mỗi lần đánh.
             const skillHitEvents = sortSkillHitEvents(skill.skillHitEvents);
             skillsMap.set(skill.code, { ...skill, skillHitEvents });
-            warnIfLastHitTooLate(skill.code, skill.castTimeMs, skillHitEvents);
+            // Skill TARGET: đạn bay / vùng chờ nổ nên trúng sau khi anim xong là bình thường, không cảnh báo.
+            if (skill.targetType !== TargetType.TARGET) {
+                warnIfLastHitTooLate(skill.code, skill.animationMs, skillHitEvents);
+            }
         }
         this.skillsByCode.clear();
         this.skillsById.clear();
@@ -76,9 +79,13 @@ export const skillService = new SkillService();
 export const sortSkillHitEvents = (events: Skill["skillHitEvents"]) =>
     [...events].sort((a, b) => a.triggerTicks - b.triggerTicks || a.eventIndex - b.eventIndex);
 
-function warnIfLastHitTooLate(code: string, castTimeMs: number, events: Skill["skillHitEvents"]) {
-    if (castTimeMs <= 0) {
-        console.warn(`[Skill] ${code}: castTimeMs is 0 — run \`yarn seed --force\` to update it.`);
+function warnIfLastHitTooLate(
+    code: string,
+    animationMs: number,
+    events: Skill["skillHitEvents"]
+) {
+    if (animationMs <= 0) {
+        console.warn(`[Skill] ${code}: animationMs is 0 — run \`yarn seed --force\` to update it.`);
         return;
     }
     // Vùng AREA gây damage sau `delayMs`; đạn còn phải bay nên không tính trước được.
@@ -86,10 +93,10 @@ function warnIfLastHitTooLate(code: string, castTimeMs: number, events: Skill["s
         0,
         ...events.map((event) => event.triggerTicks * AUTHORED_TICK_MS + areaDelayMs(event))
     );
-    if (lastHitMs + HIT_CONFIRM_BUDGET_MS <= castTimeMs) return;
+    if (lastHitMs + HIT_CONFIRM_BUDGET_MS <= animationMs) return;
     console.warn(
         `[Skill] ${code}: last hit at ${lastHitMs}ms leaves less than ${HIT_CONFIRM_BUDGET_MS}ms ` +
-            `before the attack ends (${castTimeMs}ms) — damage may show after the animation.`
+            `before the animation ends (${animationMs}ms) — damage may show after the animation.`
     );
 }
 

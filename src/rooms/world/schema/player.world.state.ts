@@ -59,8 +59,8 @@ export class PlayerWorldState extends Schema {
     @type("uint32") stateRevision: number;
     @type("uint8") attackCooldownTicks: number = 0;
     /**
-     * Tick còn lại tới khi được bắt đầu đòn đánh thường kế tiếp: đếm từ lúc bắt đầu đòn, = thời lượng
-     * đòn + `cooldownMs` của skill. Khác `attackCooldownTicks` (khoá di chuyển lúc vung), hết vung
+     * Tick còn lại tới khi được bắt đầu đòn đánh thường kế tiếp: đếm từ lúc bắt đầu đòn, = max(thời lượng
+     * đòn, `cooldownMs` của skill). Khác `attackCooldownTicks` (khoá di chuyển lúc vung), hết vung
      * vẫn đi lại được trong lúc chờ.
      */
     @type("uint16") skillCooldownTicks: number = 0;
@@ -356,16 +356,16 @@ export class PlayerWorldState extends Schema {
         if (!Number.isFinite(this.y) || this.y < 0 || this.y > height) this.y = spawnY;
     }
 
-    /** Bắt đầu đòn: khoá di chuyển `durationTicks`, đòn kế tiếp phải đợi thêm `cooldownTicks` sau đó. */
+    /** Bắt đầu đòn: khoá di chuyển `durationTicks`; đòn kế tiếp đợi lâu hơn trong `durationTicks` và `cooldownTicks` (cùng đếm từ lúc bắt đầu). */
     startAttack(durationTicks: number, cooldownTicks = 0) {
         this.attacking = true;
         this.attackCooldownTicks = durationTicks;
-        this.skillCooldownTicks = Math.min(durationTicks + cooldownTicks, MAX_SKILL_COOLDOWN_TICKS);
+        this.skillCooldownTicks = Math.min(Math.max(durationTicks, cooldownTicks), MAX_SKILL_COOLDOWN_TICKS);
     }
 
-    /** Dash / bị đánh trúng cắt đòn đang vung: bỏ phần khoá di chuyển còn lại, giữ phần cooldown. */
+    /** Dash / bị đánh trúng cắt đòn đang vung: bỏ phần khoá di chuyển còn lại; cooldown dài hơn lúc vung thì vẫn chạy tiếp. */
     cancelAttackLock() {
-        this.skillCooldownTicks = Math.max(0, this.skillCooldownTicks - this.attackCooldownTicks);
+        if (this.skillCooldownTicks <= this.attackCooldownTicks) this.skillCooldownTicks = 0;
         this.attackCooldownTicks = 0;
     }
 
@@ -375,7 +375,7 @@ export class PlayerWorldState extends Schema {
             const cooldownMs = dash?.cooldownMs;
             this.dashTicks = Math.min(
                 MAX_DASH_TICKS,
-                millisecondsToTicks(dash?.castTimeMs, tickRate)
+                millisecondsToTicks(dash?.animationMs, tickRate)
             );
             this.dashCooldownTicks = Math.min(
                 MAX_DASH_TICKS,
@@ -400,14 +400,8 @@ export class PlayerWorldState extends Schema {
     takeDamage(damage: number) {
         if (this.dashing) return;
 
+        // Chỉ trừ máu: trúng đòn không khựng, không huỷ đòn đang đánh hay di chuyển.
         this.hp = Math.max(0, this.hp - Math.max(0, damage));
-        this.hitInterrupted = true;
-        this.moving = false;
-        this.attacking = false;
-        this.attackCombo = 0;
-        this.cancelAttackLock();
-        this.dashing = false;
-        this.dashTicks = 0;
     }
 
     syncSnapshot(player: PlayerSnapshot) {

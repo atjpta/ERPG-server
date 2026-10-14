@@ -8,7 +8,6 @@ import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.j
 import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
 import { combatSeed } from "@/rooms/world/utils/combat-roll.world.util.js";
 import type { PendingSkillHit } from "@/rooms/world/utils/skill-attack.world.util.js";
-import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 /**
@@ -120,7 +119,7 @@ export function applySkillHit(
     });
     if (!result.hit) return false;
 
-    target.takeDamage(result.damage, millisecondsToTicks(target.attackCooldownMs, room.tickRate));
+    target.takeDamage(result.damage);
     attacker.heal(result.heal);
     // Đòn kết liễu → người đánh nhận thưởng (mỗi monster chỉ chết một lần).
     if (target.hp <= 0) {
