@@ -31,7 +31,10 @@ import {
     isChargeSkill,
     sortSkillHitEvents,
 } from "@/modules/skills/services/skill.service.js";
-import { getSkillCastTicks, getSkillDurationTicks } from "@/rooms/world/utils/skill-attack.world.util.js";
+import {
+    getSkillCastTicks,
+    getSkillDurationTicks,
+} from "@/rooms/world/utils/skill-attack.world.util.js";
 import {
     WORLD_TICK_RATE,
     millisecondsToTicks,
@@ -297,7 +300,12 @@ function toClientSkill(skill: Skill) {
         /** Thuộc combo đánh thường (theo thứ tự trong `skills` của player/monster). */
         basicAttack: skill.basicAttack,
         /** Chỉ skill lướt tới mục tiêu (`isChargeSkill`): tốc độ, thời gian dư, quãng lướt không mục tiêu — đã điền mặc định. */
-        charge: isChargeSkill(skill) ? getChargeConfig(skill) : null,
+        charge: isChargeSkill(skill)
+            ? {
+                  ...getChargeConfig(skill),
+                  freeDistance: getChargeConfig(skill).freeDistance ?? skill.castRange,
+              }
+            : null,
         /** Số tick chờ từ lúc bấm đến lúc anim + hit event bắt đầu (`castTimeMs`; 0 = ngay). */
         castTicks: getSkillCastTicks(skill, WORLD_TICK_RATE),
         /** Số tick mô phỏng của cả đòn (chờ + anim, khoá di chuyển) — giống PlayerAttackChain. */
@@ -315,6 +323,8 @@ function toClientSkill(skill: Skill) {
                 height: event.height,
                 radius: event.radius,
                 angle: event.angle,
+                /** Vùng đánh xoay theo hướng ngắm (về phía target đang chọn) thay vì chỉ trái / phải. */
+                aimed: event.aimed ?? false,
                 /** Damage gốc để client predict: damageBase + attack × damageAttackScaling (server tính đủ qua `calculateDamage`). */
                 damageBase: damageEffects.reduce((total, effect) => total + effect.baseValue, 0),
                 damageAttackScaling: damageEffects
@@ -339,6 +349,25 @@ function toClientSkill(skill: Skill) {
                                   ? millisecondsToTicks(event.area.delayMs, WORLD_TICK_RATE)
                                   : 0,
                           untargetedDistance: event.area.untargetedDistance,
+                      }
+                    : null,
+                /** Vùng buff (AURA): thời gian và bán kính theo level, để client tính hồi chiêu và phóng prefab. */
+                aura: event.aura
+                    ? {
+                          durationMs: event.aura.durationMs,
+                          durationMsPerLevel: event.aura.durationMsPerLevel,
+                          radiusX: event.aura.radiusX,
+                          radiusY: event.aura.radiusY,
+                          radiusScalePerLevel: event.aura.radiusScalePerLevel,
+                      }
+                    : null,
+                /** Hồi đồng đội quanh người dùng (ALLIES): vùng elip và lượng hồi. */
+                allies: event.allies
+                    ? {
+                          radiusX: event.allies.radiusX,
+                          radiusY: event.allies.radiusY,
+                          healBase: event.allies.healBase,
+                          healScaling: event.allies.healScaling,
                       }
                     : null,
             };

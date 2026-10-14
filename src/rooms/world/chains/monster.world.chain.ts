@@ -56,6 +56,23 @@ export class MonsterDeathChain implements WorldChainAction<MonsterChainContext> 
     }
 }
 
+/**
+ * Đang choáng: không tìm mục tiêu, không đi, không đánh (đòn đang vung bị huỷ), chỉ đếm lùi. Client thấy `stunTicks` > 0 thì giữ
+ * nguyên anim đang chạy, hết choáng thì về idle.
+ */
+export class MonsterStunChain implements WorldChainAction<MonsterChainContext> {
+    constructor(private readonly attackChain: MonsterAttackChain) {}
+
+    execute({ monster }: MonsterChainContext): WorldChainResult {
+        if (monster.stunTicks <= 0) return WorldChainResult.CONTINUE;
+        monster.stunTicks--;
+        monster.moving = false;
+        monster.attacking = false;
+        this.attackChain.cancelPendingAttack(monster);
+        return WorldChainResult.STOP;
+    }
+}
+
 export class MonsterFindTargetChain implements WorldChainAction<MonsterChainContext> {
     execute(context: MonsterChainContext): WorldChainResult {
         const { room, monster } = context;

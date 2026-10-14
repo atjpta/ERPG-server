@@ -84,6 +84,12 @@ export class PlayerWorldState extends Schema {
     @type("uint8") attackCombo: number = 0;
     /** Skill chủ động đang được dùng (số thứ tự từ 1); 0 = đòn đánh thường theo `attackCombo`. */
     @type("uint8") castSlot: number = 0;
+    /**
+     * Hướng ngắm của skill đang dùng (vector đơn vị, toạ độ server, y hướng xuống): về phía target đang chọn nếu skill có hit
+     * `aimed`, còn lại là hướng mặt (±1, 0). Chốt lúc bắt đầu skill; client xoay hiệu ứng / vùng đánh theo hướng này.
+     */
+    @type("float32") aimX: number = 1;
+    @type("float32") aimY: number = 0;
     @type("boolean") hitInterrupted: boolean = false;
     @type(HitboxColliderState) hitbox: HitboxColliderState;
     @type(HitboxColliderState) collider: HitboxColliderState;
@@ -383,7 +389,10 @@ export class PlayerWorldState extends Schema {
         this.attacking = true;
         this.castSlot = 0;
         this.attackCooldownTicks = durationTicks;
-        this.skillCooldownTicks = Math.min(Math.max(durationTicks, cooldownTicks), MAX_SKILL_COOLDOWN_TICKS);
+        this.skillCooldownTicks = Math.min(
+            Math.max(durationTicks, cooldownTicks),
+            MAX_SKILL_COOLDOWN_TICKS
+        );
     }
 
     /**

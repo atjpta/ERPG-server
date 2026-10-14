@@ -9,6 +9,7 @@ import {
     ProjectileMovementType,
     ResourceType,
     SkillEffectType,
+    StatusEffectType,
     SkillType,
     TargetType,
 } from "@/modules/skills/enums/skill.enum.js";
@@ -42,6 +43,18 @@ const damage = (
     crowdControlType: CrowdControlType.NONE,
 });
 
+const stun = (durationMs: number) => ({
+    effectType: SkillEffectType.APPLY_STATUS,
+    baseValue: 0,
+    scalingType: DamageScalingType.NONE,
+    scalingValue: 0,
+    durationMs,
+    damageType: DamageType.PHYSICAL,
+    resourceType: ResourceType.NONE,
+    statusEffectType: StatusEffectType.CONTROL,
+    crowdControlType: CrowdControlType.STUN,
+});
+
 const hitEvent = (params: {
     eventIndex: number;
     triggerTicks: number;
@@ -54,6 +67,10 @@ const hitEvent = (params: {
     damageScaling: number;
     damageScalingType?: DamageScalingType;
     damageType?: DamageType;
+    /** Vùng đánh xoay theo hướng ngắm (về phía target đang chọn, không có thì theo hướng mặt) thay vì chỉ trái / phải. */
+    aimed?: boolean;
+    /** Choáng mục tiêu trúng đòn chừng này ms (đứng im, giữ nguyên anim, hết thì về idle). */
+    stunMs?: number;
     delivery?: HitDelivery;
     projectile?: SkillProjectile;
     area?: SkillArea;
@@ -66,7 +83,11 @@ const hitEvent = (params: {
     height: params.height ?? 0,
     radius: params.radius ?? 0,
     angle: params.angle ?? 90,
-    effects: [damage(params.damageScaling, params.damageScalingType, params.damageType)],
+    ...(params.aimed && { aimed: true }),
+    effects: [
+        damage(params.damageScaling, params.damageScalingType, params.damageType),
+        ...(params.stunMs ? [stun(params.stunMs)] : []),
+    ],
     delivery: params.delivery ?? HitDelivery.HITBOX,
     ...(params.projectile && { projectile: params.projectile }),
     ...(params.area && { area: params.area }),
@@ -215,6 +236,8 @@ const CLASS_SKILLS: NewSkill[] = [
         // Nhát 1 = vệt chém dọc của thân ở 417 ms (sprite Attack02_3) → tick 8.
         // Nhát 2 = sóng chém SkillEffect ở 583 ms (frame Cross_Slash_2, scale 0.75 × 0.5 → 3.75 × 1.55 tile, tâm lệch (0.5, 0.25)):
         //   vệt phủ x từ -0.09 tới 2.36, y từ -0.52 tới 1.02 → tick 12 (khớp 600 ms). Đổi scale / vị trí SkillEffect trong clip thì tính lại vùng này.
+        // Vùng đánh xoay theo hướng ngắm (về phía target đang chọn, mọi hướng): `aimed`.
+        // Cả hai nhát đều làm choáng mục tiêu 2 s (đứng im, giữ nguyên anim đang chạy, hết choáng thì về idle).
         // `cooldownMs` đếm từ lúc bắt đầu skill, riêng với hồi đòn đánh thường.
         code: "swordsman_cross_slash",
         skillType: SkillType.MELEE,
@@ -236,6 +259,8 @@ const CLASS_SKILLS: NewSkill[] = [
                 range: 1.6,
                 width: 2,
                 damageScaling: 0.8,
+                stunMs: 2000,
+                aimed: true,
             }),
             hitEvent({
                 eventIndex: 1,
@@ -244,6 +269,8 @@ const CLASS_SKILLS: NewSkill[] = [
                 range: 1.6,
                 width: 2,
                 damageScaling: 0.8,
+                stunMs: 2000,
+                aimed: true,
             }),
         ],
     },
@@ -259,7 +286,7 @@ const CLASS_SKILLS: NewSkill[] = [
         staminaCost: 0,
         maxLevel: 10,
         basicAttack: false,
-        chargeConfig: { speed: 12, graceTicks: 10, freeDistance: 2.4 },
+        chargeConfig: { speed: 12, graceTicks: 10 }, // không có mục tiêu: lướt full `castRange`
         levelConfig: basicAttackLevels(DamageScalingType.ATTACK),
         skillHitEvents: [
             hitEvent({
@@ -267,7 +294,8 @@ const CLASS_SKILLS: NewSkill[] = [
                 triggerTicks: 2,
                 shape: HitShape.RECT,
                 range: 1.5,
-                width: 1.23,
+                width: 2,
+                height: 2,
                 damageScaling: 1.2,
             }),
         ],
@@ -303,6 +331,100 @@ const CLASS_SKILLS: NewSkill[] = [
                     maxHits: 10,
                 },
             }),
+        ],
+    },
+    {
+        code: "cleric_fireball",
+        skillType: SkillType.PROJECTILE,
+        targetType: TargetType.TARGET,
+        castRange: 7,
+        castTimeMs: 0,
+        animationMs: 500,
+        cooldownMs: 2000,
+        manaCost: 8,
+        staminaCost: 0,
+        maxLevel: 10,
+        basicAttack: false,
+        levelConfig: basicAttackLevels(DamageScalingType.MAGIC_ATTACK),
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks: 4,
+                shape: HitShape.CIRCLE,
+                range: 0,
+                radius: 0.4,
+                damageScaling: 2.2,
+                damageScalingType: DamageScalingType.MAGIC_ATTACK,
+                damageType: DamageType.MAGICAL,
+                delivery: HitDelivery.PROJECTILE,
+                projectile: {
+                    movementType: ProjectileMovementType.STRAIGHT,
+                    hitBehavior: ProjectileHitBehavior.DESTROY,
+                    speed: 9,
+                    maxDistance: 7,
+                    radius: 0.4,
+                    maxHits: 1,
+                },
+            }),
+        ],
+    },
+    {
+        // Trong lúc niệm client giữ frame đầu của anim vụ nổ (key 0 của clip phải là sprite đầu tiên) ở chỗ mục tiêu, niệm xong mới chạy tiếp.
+        code: "cleric_explosion",
+        skillType: SkillType.AOE,
+        targetType: TargetType.TARGET,
+        castRange: 6,
+        castTimeMs: 1000,
+        animationMs: 300,
+        cooldownMs: 2000,
+        manaCost: 0,
+        staminaCost: 0,
+        maxLevel: 10,
+        basicAttack: false,
+        levelConfig: basicAttackLevels(DamageScalingType.MAGIC_ATTACK),
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks: 3,
+                shape: HitShape.ELLIPSE,
+                range: 0,
+                width: 2,
+                height: 1,
+                damageScaling: 3,
+                damageScalingType: DamageScalingType.MAGIC_ATTACK,
+                damageType: DamageType.MAGICAL,
+                delivery: HitDelivery.AREA,
+                area: { delayMs: 500, untargetedDistance: 3 },
+            }),
+        ],
+    },
+    {
+        code: "cleric_buff_hp",
+        skillType: SkillType.HEAL,
+        targetType: TargetType.SELF,
+        castRange: 0,
+        castTimeMs: 0,
+        animationMs: 500,
+        cooldownMs: 2000,
+        manaCost: 0,
+        staminaCost: 0,
+        maxLevel: 10,
+        basicAttack: false,
+        levelConfig: [],
+        skillHitEvents: [
+            {
+                eventIndex: 0,
+                triggerTicks: 3,
+                shape: HitShape.ELLIPSE,
+                range: 0,
+                width: 5,
+                height: 3.6,
+                radius: 0,
+                angle: 90,
+                effects: [],
+                delivery: HitDelivery.ALLIES,
+                allies: { radiusX: 4, radiusY: 3, healScaling: 3, healBase: 0 },
+            },
         ],
     },
 ];
@@ -355,7 +477,11 @@ const MONSTER_SKILLS: NewSkill[] = MONSTER_DEFINITIONS.filter(
 ).map(monsterAttackSkill);
 
 /** Skill đã bỏ: tắt (`enabled = false`) chứ không xoá, để dữ liệu cũ còn tra được. ClassSeed gán lại bộ skill mặc định cho player. */
-const RETIRED_SKILL_CODES = ["swordsman_triple_strike", "swordsman_shockwave_slash"];
+const RETIRED_SKILL_CODES = [
+    "swordsman_triple_strike",
+    "swordsman_shockwave_slash",
+    "cleric_aura_buff",
+];
 
 export const SkillSeed = async () => {
     for (const skill of [...CLASS_SKILLS, ...MONSTER_SKILLS]) {

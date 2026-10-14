@@ -1,7 +1,7 @@
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
 import { HitDelivery } from "@/modules/skills/enums/skill.enum.js";
-import type { SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
+import type { SkillAura, SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
 import { hasDamageEffect } from "@/rooms/world/chains/damage.world.chain.js";
 import type { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
@@ -17,6 +17,8 @@ export interface PendingSkillHit {
     eventIndex: number;
     ticksUntilHit: number;
     direction: HorizontalDirection;
+    /** Hướng ngắm của hit event `aimed` (vector đơn vị, toạ độ server); không có thì vùng đánh theo `direction`. */
+    aim?: { x: number; y: number };
 }
 
 export const toHorizontalDirection = (direction: string): HorizontalDirection =>
@@ -43,18 +45,64 @@ export function buildPendingSkillHits(
     attackSerial: number,
     direction: HorizontalDirection,
     tickRate: number,
-    scale = 1
+    scale = 1,
+    aim?: { x: number; y: number }
 ): PendingSkillHit[] {
     const castTicks = getSkillCastTicks(skill, tickRate);
-    return skill.skillHitEvents.map((event, eventIndex) => ({
-        skill,
-        event: scaleSkillHitEvent(event, scale),
-        attackSerial,
-        eventIndex,
-        // `triggerTicks` tính từ lúc anim bắt đầu, tức sau thời gian chờ `castTimeMs`.
-        ticksUntilHit: castTicks + skillEventTicks(event.triggerTicks, tickRate),
-        direction,
-    }));
+    return (
+        skill.skillHitEvents
+            .map((event, eventIndex) => ({
+                skill,
+                event: scaleSkillHitEvent(event, scale),
+                attackSerial,
+                eventIndex,
+                // `triggerTicks` tính từ lúc anim bắt đầu, tức sau thời gian chờ `castTimeMs`.
+                ticksUntilHit: castTicks + skillEventTicks(event.triggerTicks, tickRate),
+                direction,
+                ...(event.aimed && aim && { aim }),
+            }))
+            // Vùng buff (AURA) bắt đầu ngay lúc bấm (startAura), không chờ lịch hit.
+            .filter((hit) => hit.event.delivery !== HitDelivery.AURA)
+    );
+}
+
+/** Hit event AURA đầu tiên của skill (cùng chỉ số trong `skillHitEvents`); skill thường không có. */
+export function getAuraEvent(skill: Pick<Skill, "skillHitEvents">) {
+    const eventIndex = skill.skillHitEvents.findIndex(
+        (event) => event.delivery === HitDelivery.AURA && event.aura
+    );
+    if (eventIndex < 0) return undefined;
+    const event = skill.skillHitEvents[eventIndex];
+    return { event, eventIndex, aura: event.aura as SkillAura };
+}
+
+/** Thời gian tồn tại (tick) của vùng buff ở `level` (từ 1). Client C# (SkillConfig.AuraDurationTicks) tính y hệt. */
+export const getAuraDurationTicks = (aura: SkillAura, level: number, tickRate: number) =>
+    millisecondsToTicks(
+        aura.durationMs + aura.durationMsPerLevel * (Math.max(1, level) - 1),
+        tickRate
+    );
+
+/** Nửa trục (ô) của vùng buff ở `level`: bán kính level 1 nở thêm `radiusScalePerLevel` mỗi level sau. */
+export const getAuraRadii = (aura: SkillAura, level: number) => {
+    const scale = 1 + aura.radiusScalePerLevel * (Math.max(1, level) - 1);
+    return { radiusX: aura.radiusX * scale, radiusY: aura.radiusY * scale };
+};
+
+/**
+ * Số tick tới khi dùng lại được skill chủ động, đếm từ lúc bấm: chờ `castTimeMs`, rồi (skill AURA) thời gian buff tồn tại —
+ * hồi chiêu chỉ chạy sau khi buff hết — rồi `cooldownMs`. 0 = không hồi.
+ */
+export function getSkillCooldownTicks(skill: Skill, level: number, tickRate: number): number {
+    const cooldown = skill.cooldownMs > 0 ? millisecondsToTicks(skill.cooldownMs, tickRate) : 0;
+    const aura = getAuraEvent(skill)?.aura;
+    if (aura)
+        return (
+            getSkillCastTicks(skill, tickRate) +
+            getAuraDurationTicks(aura, level, tickRate) +
+            cooldown
+        );
+    return cooldown > 0 ? getSkillCastTicks(skill, tickRate) + cooldown : 0;
 }
 
 /** Số tick chờ từ lúc bấm đến lúc anim bắt đầu (`castTimeMs`; 0 = anim chạy ngay). */
@@ -107,7 +155,8 @@ export function tickPendingSkillHits(
         hit.ticksUntilHit--;
         if (hit.ticksUntilHit > 0) continue;
 
-        if (hasDamageEffect(hit.event)) onHit(hit);
+        // Hit hồi đồng đội (ALLIES) không có damage nhưng vẫn phải được giao.
+        if (hasDamageEffect(hit.event) || hit.event.delivery === HitDelivery.ALLIES) onHit(hit);
         hits.splice(index, 1);
     }
 }

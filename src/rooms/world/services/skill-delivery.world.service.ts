@@ -1,15 +1,39 @@
-import { HitDelivery, HitShape, ProjectileHitBehavior } from "@/modules/skills/enums/skill.enum.js";
+import {
+    CrowdControlType,
+    DamageScalingType,
+    DamageType,
+    HitDelivery,
+    HitShape,
+    ProjectileHitBehavior,
+    ResourceType,
+    SkillEffectType,
+} from "@/modules/skills/enums/skill.enum.js";
+import { StatKey } from "@/modules/player/enums/stat.enum.js";
+import { PlayerStatService } from "@/modules/player/user/services/player-stat.service.js";
+import { AuraWorldState } from "@/rooms/world/schema/aura.world.state.js";
+import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
+import {
+    WorldMessage,
+    type PotionUsedMessage,
+    type SkillEffectMessage,
+} from "@/rooms/world/world.message.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
-import type { SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
+import type { SkillAllies, SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
 import { AreaWorldState } from "@/rooms/world/schema/area.world.state.js";
 import { ProjectileWorldState } from "@/rooms/world/schema/projectile.world.state.js";
-import type { PendingSkillHit } from "@/rooms/world/utils/skill-attack.world.util.js";
+import {
+    getAuraDurationTicks,
+    getAuraEvent,
+    getAuraRadii,
+    type PendingSkillHit,
+} from "@/rooms/world/utils/skill-attack.world.util.js";
 import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import {
     SkillOwner,
     SkillTarget,
     applySkillHit,
     findSkillTargets,
+    playerSkillOwner,
 } from "@/rooms/world/utils/skill-owner.world.util.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
@@ -33,6 +57,10 @@ export interface SkillDeliveryParams {
  * - HITBOX: vùng quanh người đánh, gây damage ngay.
  * - PROJECTILE: sinh `ProjectileWorldState`, mỗi tick bay một đoạn và trúng khi chạm hitbox mục tiêu.
  * - AREA: sinh `AreaWorldState` tại mục tiêu, gây damage cả vùng sau `area.delayMs`.
+ * - ALLIES: hồi một lần cho người dùng và đồng đội cùng party trong vùng elip quanh người dùng, rồi báo client gắn hiệu ứng
+ *   của skill lên từng người đó (`SKILL_EFFECT`); "+N" hiện cả khi người được hồi đã đầy máu.
+ * - AURA: `startAura` sinh `AuraWorldState` bám theo người dùng, mỗi chu kỳ hồi máu bản thân + đồng đội cùng party
+ *   trong vùng và gây damage quái trong vùng; hết thời gian (hoặc người dùng chết / rời room) thì mới tính hồi chiêu.
  * `chain()` chạy mỗi tick sau player và monster.
  */
 export class SkillDeliveryWorldService {
@@ -46,12 +74,68 @@ export class SkillDeliveryWorldService {
             case HitDelivery.AREA:
                 this.spawnArea(room, params);
                 return;
+            case HitDelivery.AURA:
+                // Vùng buff bắt đầu ngay lúc bấm (startAura), không đi qua lịch hit.
+                return;
+            case HitDelivery.ALLIES:
+                this.healAllies(room, params);
+                return;
             default:
                 this.resolveHitbox(room, params);
         }
     }
 
+    /**
+     * Bắt đầu vùng buff của skill AURA cho `player` (đã trừ mana, đã bắt đầu đòn). Kích thước và thời gian tồn tại theo
+     * `level` của skill; mỗi người dùng chỉ có một vùng cho mỗi skill nên vùng cũ (nếu còn) bị thay.
+     */
+    startAura(
+        room: WorldRoom,
+        params: {
+            sessionId: string;
+            player: PlayerWorldState;
+            skill: Skill;
+            slot: number;
+            level: number;
+        }
+    ): void {
+        const { sessionId, player, skill, slot, level } = params;
+        const found = getAuraEvent(skill);
+        if (!found) {
+            console.warn(`[Skill] ${skill.code}: AURA hit event without aura config`);
+            return;
+        }
+        for (const aura of [...room.state.auras.values()]) {
+            if (aura.sessionId === sessionId && aura.slot === slot)
+                room.state.auras.delete(aura.id);
+        }
+
+        const { radiusX, radiusY } = getAuraRadii(found.aura, level);
+        const id = this.newId("a");
+        const aura = new AuraWorldState({
+            id,
+            owner: playerSkillOwner(sessionId, player),
+            sessionId,
+            skillId: skill.id,
+            slot,
+            aura: found.aura,
+            eventIndex: found.eventIndex,
+            radiusX,
+            radiusY,
+            durationTicks: getAuraDurationTicks(found.aura, level, room.tickRate),
+            tickEvery: millisecondsToTicks(found.aura.tickMs, room.tickRate),
+            cooldownTicks:
+                skill.cooldownMs > 0 ? millisecondsToTicks(skill.cooldownMs, room.tickRate) : 0,
+            attackSerial: player.attackSerial,
+        });
+        aura.ticksToNext = 1; // lượt hiệu ứng đầu ngay tick sau, rồi mỗi chu kỳ
+        room.state.auras.set(id, aura);
+    }
+
     chain(room: WorldRoom, dt: number): void {
+        for (const aura of [...room.state.auras.values()]) {
+            if (!this.stepAura(room, aura)) this.removeAura(room, aura);
+        }
         for (const projectile of [...room.state.projectiles.values()]) {
             if (!this.stepProjectile(room, projectile, dt)) {
                 room.state.projectiles.delete(projectile.id);
@@ -67,8 +151,117 @@ export class SkillDeliveryWorldService {
         }
     }
 
+    /** Một tick của vùng buff. `false` = hết thời gian, hoặc người dùng chết / rời room. */
+    private stepAura(room: WorldRoom, aura: AuraWorldState): boolean {
+        const player = room.state.players.get(aura.sessionId);
+        if (!player || player.id !== aura.owner.id || player.hp <= 0) return false;
+
+        if (--aura.ticksToNext <= 0) {
+            aura.ticksToNext = aura.tickEvery;
+            this.pulseAura(room, aura, player);
+        }
+        return --aura.ticksLeft > 0;
+    }
+
+    /**
+     * Một chu kỳ: hồi `healScaling × MAGIC_ATTACK` cho bản thân và đồng đội cùng party đang đứng trong vùng, gây
+     * `damageScaling × MAGIC_ATTACK` (phép) cho quái trong vùng. Vùng là elip tâm tại chân người dùng.
+     */
+    private pulseAura(room: WorldRoom, aura: AuraWorldState, player: PlayerWorldState): void {
+        const config = aura.aura;
+        const zone = auraZoneEvent(aura, config.damageScaling);
+        const origin = { x: player.x, y: player.y, direction: "right" };
+
+        if (config.healScaling > 0) {
+            const magic = PlayerStatService.whole(player.stats, StatKey.MAGIC_ATTACK);
+            this.healAlliesInZone(
+                room,
+                player,
+                zone,
+                Math.max(1, Math.floor(magic * config.healScaling))
+            );
+        }
+
+        if (config.damageScaling > 0) {
+            const hit = {
+                event: zone,
+                attackSerial: ++player.attackSerial,
+                eventIndex: aura.eventIndex,
+            };
+            for (const target of findSkillTargets(room, aura.owner)) {
+                if (!intersectsSkillHitEvent(origin, target.x, target.y, target.hitbox, zone))
+                    continue;
+                applySkillHit(room, aura.owner, target.id, hit);
+            }
+        }
+    }
+
+    /**
+     * Hit ALLIES: hồi `healBase + healScaling × MAGIC_ATTACK` cho người dùng và đồng đội cùng party trong vùng elip quanh người
+     * dùng, rồi báo client gắn hiệu ứng của skill lên từng người được hồi.
+     */
+    private healAllies(room: WorldRoom, { owner, skill, hit }: SkillDeliveryParams): void {
+        const allies = hit.event.allies;
+        if (!allies) {
+            console.warn(`[Skill] ${skill.code}: ALLIES hit event without allies config`);
+            return;
+        }
+        if (owner.kind !== "player") return;
+        const player = room.state.players.get(owner.sessionId);
+        if (!player || player.id !== owner.id || player.hp <= 0) return;
+
+        const magic = PlayerStatService.whole(player.stats, StatKey.MAGIC_ATTACK);
+        const amount = Math.max(1, Math.floor(allies.healBase + magic * allies.healScaling));
+        const healed = this.healAlliesInZone(
+            room,
+            player,
+            alliesZoneEvent(allies, hit.eventIndex),
+            amount
+        );
+        if (healed.length === 0) return;
+        const message: SkillEffectMessage = { skillId: skill.id, sessionIds: healed };
+        room.broadcast(WorldMessage.SKILL_EFFECT, message);
+    }
+
+    /**
+     * Hồi `amount` cho người dùng và đồng đội cùng party còn sống đang đứng trong `zone` (elip tâm tại người dùng). Mỗi người được
+     * hồi nhận "+amount" trên đầu — kể cả khi đã đầy máu, để thấy skill đã trúng. Trả về session của những người đó.
+     */
+    private healAlliesInZone(
+        room: WorldRoom,
+        player: PlayerWorldState,
+        zone: SkillHitEvent,
+        amount: number
+    ): string[] {
+        const origin = { x: player.x, y: player.y, direction: "right" };
+        const healed: string[] = [];
+        for (const [sessionId, ally] of room.state.players) {
+            if (ally.hp <= 0) continue;
+            const isAlly =
+                ally === player ||
+                (player.partyRoomId !== null && ally.partyRoomId === player.partyRoomId);
+            if (!isAlly || !intersectsSkillHitEvent(origin, ally.x, ally.y, ally.hitbox, zone)) {
+                continue;
+            }
+            ally.heal(amount);
+            const message: PotionUsedMessage = { sessionId, hp: amount, mp: 0 };
+            room.broadcast(WorldMessage.POTION_USED, message);
+            healed.push(sessionId);
+        }
+        return healed;
+    }
+
+    /** Vùng buff hết: bỏ khỏi state, và hồi chiêu của skill bắt đầu tính từ bây giờ. */
+    private removeAura(room: WorldRoom, aura: AuraWorldState): void {
+        room.state.auras.delete(aura.id);
+        const player = room.state.players.get(aura.sessionId);
+        if (player && player.id === aura.owner.id) {
+            player.setSkillCooldownTicks(aura.slot, aura.cooldownTicks);
+        }
+    }
+
     private resolveHitbox(room: WorldRoom, { owner, hit, originX, originY }: SkillDeliveryParams) {
-        const origin = { x: originX, y: originY, direction: hit.direction };
+        const origin = { x: originX, y: originY, direction: hit.direction, aim: hit.aim };
         for (const target of findSkillTargets(room, owner)) {
             if (intersectsSkillHitEvent(origin, target.x, target.y, target.hitbox, hit.event)) {
                 applySkillHit(room, owner, target.id, hit);
@@ -221,3 +414,52 @@ const projectileBody = (projectile: ProjectileWorldState): SkillHitEvent => ({
 });
 
 export const skillDeliveryWorldService = new SkillDeliveryWorldService();
+
+/**
+ * Vùng elip của vùng buff làm hit event để dùng chung `intersectsSkillHitEvent` (đường kính = 2 × nửa trục) và để tính damage
+ * phép (`damageScaling` × MAGIC_ATTACK) — chỉ có hiệu ứng DAMAGE khi `damageScaling` > 0.
+ */
+function auraZoneEvent(aura: AuraWorldState, damageScaling: number): SkillHitEvent {
+    return {
+        eventIndex: aura.eventIndex,
+        triggerTicks: 0,
+        shape: HitShape.ELLIPSE,
+        range: 0,
+        width: aura.radiusX * 2,
+        height: aura.radiusY * 2,
+        radius: 0,
+        angle: 90,
+        effects:
+            damageScaling > 0
+                ? [
+                      {
+                          effectType: SkillEffectType.DAMAGE,
+                          baseValue: 0,
+                          scalingType: DamageScalingType.MAGIC_ATTACK,
+                          scalingValue: damageScaling,
+                          durationMs: 0,
+                          damageType: DamageType.MAGICAL,
+                          resourceType: ResourceType.NONE,
+                          crowdControlType: CrowdControlType.NONE,
+                      },
+                  ]
+                : [],
+        delivery: HitDelivery.AURA,
+    };
+}
+
+/** Vùng elip của hit ALLIES làm hit event để dùng chung `intersectsSkillHitEvent` (đường kính = 2 × nửa trục). */
+function alliesZoneEvent(allies: SkillAllies, eventIndex: number): SkillHitEvent {
+    return {
+        eventIndex,
+        triggerTicks: 0,
+        shape: HitShape.ELLIPSE,
+        range: 0,
+        width: allies.radiusX * 2,
+        height: allies.radiusY * 2,
+        radius: 0,
+        angle: 90,
+        effects: [],
+        delivery: HitDelivery.ALLIES,
+    };
+}

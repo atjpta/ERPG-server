@@ -71,8 +71,43 @@ export const SkillChargeSchema = z.object({
     speed: z.number().positive().default(8),
     /** Số tick dư ngoài thời gian lướt vừa đủ tới `castRange`, cho mục tiêu chạy ra xa / bị địa hình cản. */
     graceTicks: z.number().int().nonnegative().default(10),
-    /** Không có mục tiêu: lướt thẳng theo hướng đang quay quãng này (ô) rồi ra đòn. Mặc định 2.4 = một cú dash thường. */
-    freeDistance: nonNegative.default(2.4),
+    /** Không có mục tiêu: lướt theo hướng đang đi quãng này (ô) rồi ra đòn. Thiếu = lướt full tầm, tức đúng `castRange` của skill. */
+    freeDistance: nonNegative.optional(),
+});
+
+/**
+ * Hit event AURA: một vùng elip bám theo người dùng skill, bắt đầu ngay lúc bấm (`triggerTicks` bỏ qua), tồn tại
+ * `durationMs` rồi mới tính hồi chiêu `cooldownMs` của skill. Mỗi `tickMs` hồi máu bản thân + đồng đội cùng party trong vùng
+ * và gây damage quái trong vùng (hệ số × MAGIC_ATTACK). Level của skill làm vùng to ra và sống lâu hơn — hình vẽ là prefab
+ * `Resources/Prefabs/SkillEffects/<code>` phóng theo cùng tỉ lệ, nên `radiusX` / `radiusY` phải khớp prefab ở scale gốc.
+ */
+export const SkillAuraSchema = z.object({
+    /** Thời gian tồn tại ở level 1 (ms) và mỗi level sau cộng thêm. */
+    durationMs: z.number().int().positive(),
+    durationMsPerLevel: z.number().int().nonnegative().default(0),
+    /** Nửa trục (ô) của vùng ở level 1; trục Y thường nhỏ hơn X vì vùng nằm sát đất. */
+    radiusX: z.number().positive(),
+    radiusY: z.number().positive(),
+    /** Mỗi level sau, vùng nở thêm chừng này lần bán kính level 1 (0.1 = +10%). */
+    radiusScalePerLevel: nonNegative.default(0),
+    /** Chu kỳ gây hiệu ứng (ms). */
+    tickMs: z.number().int().positive().default(1000),
+    /** Hồi mỗi chu kỳ: hệ số × MAGIC_ATTACK của người dùng; 0 = không hồi. */
+    healScaling: nonNegative.default(0),
+    /** Damage phép lên quái mỗi chu kỳ: hệ số × MAGIC_ATTACK của người dùng; 0 = không gây. */
+    damageScaling: nonNegative.default(0),
+});
+
+/**
+ * Hit event ALLIES: tại `triggerTicks`, hồi cho người dùng và đồng đội cùng party đứng trong vùng elip quanh người dùng
+ * (nửa trục `radiusX` / `radiusY`, ô) `healBase + healScaling × MAGIC_ATTACK` máu. Client hiện "+N" trên đầu mỗi người — kể cả khi
+ * đã đầy máu — và gắn prefab `Resources/Prefabs/SkillEffects/<code>` lên từng người được hồi.
+ */
+export const SkillAlliesSchema = z.object({
+    radiusX: z.number().positive(),
+    radiusY: z.number().positive(),
+    healBase: nonNegative.default(0),
+    healScaling: nonNegative.default(0),
 });
 
 export const SkillHitEventSchema = z.object({
@@ -84,6 +119,11 @@ export const SkillHitEventSchema = z.object({
     height: nonNegative.default(0),
     radius: nonNegative.default(0),
     angle: nonNegative.default(90),
+    /**
+     * HITBOX: vùng đánh xoay theo hướng ngắm — về phía target đang chọn, không có thì theo hướng mặt — thay vì chỉ trái / phải.
+     * Hướng chốt lúc bắt đầu skill (`PlayerWorldState.aimX/aimY`); client xoay hiệu ứng theo cùng hướng.
+     */
+    aimed: z.boolean().optional(),
     effects: z.array(SkillEffectSchema).default([]),
     /** Mặc định HITBOX: vùng (shape/offset ở trên) quanh người đánh, nổ ngay tại `triggerTicks`. */
     delivery: z.enum(HitDelivery).default(HitDelivery.HITBOX),
@@ -91,6 +131,10 @@ export const SkillHitEventSchema = z.object({
     projectile: SkillProjectileSchema.optional(),
     /** Bắt buộc khi `delivery = AREA`. */
     area: SkillAreaSchema.optional(),
+    /** Bắt buộc khi `delivery = AURA`. */
+    aura: SkillAuraSchema.optional(),
+    /** Bắt buộc khi `delivery = ALLIES`. */
+    allies: SkillAlliesSchema.optional(),
 });
 
 export const SkillConfigSchema = z.object({
@@ -113,6 +157,8 @@ export type SkillEffect = z.infer<typeof SkillEffectSchema>;
 export type SkillHitEvent = z.infer<typeof SkillHitEventSchema>;
 export type SkillProjectile = z.infer<typeof SkillProjectileSchema>;
 export type SkillArea = z.infer<typeof SkillAreaSchema>;
+export type SkillAura = z.infer<typeof SkillAuraSchema>;
+export type SkillAllies = z.infer<typeof SkillAlliesSchema>;
 /** Giá trị đã điền mặc định (đầu ra của schema); cột `chargeConfig` chỉ cần khai báo field muốn đổi. */
 export type SkillCharge = z.infer<typeof SkillChargeSchema>;
 export type SkillChargeInput = z.input<typeof SkillChargeSchema>;

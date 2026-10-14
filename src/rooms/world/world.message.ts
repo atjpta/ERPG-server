@@ -123,6 +123,8 @@ export enum WorldMessage {
     DUNGEON_RETRY_RESULT = "dungeonRetryResult",
     /** Có người vừa uống bình: số HP / MP thực sự hồi được (client hiện "+N" trên đầu người đó). */
     POTION_USED = "potionUsed",
+    /** Skill vừa gắn hiệu ứng lên một số người (hồi đồng đội...): client gắn prefab hiệu ứng của skill lên từng người. */
+    SKILL_EFFECT = "skillEffect",
     /** Thông tin xem được của một người chơi khác (trả lời `viewPlayer`). */
     PLAYER_VIEW = "playerView",
     /** Có người xin vào party của bạn (bạn là chủ): chấp nhận = mời họ, họ vào luôn. */
@@ -237,11 +239,18 @@ export interface PartyJoinRequestMessage {
 }
 
 export interface PotionUsedMessage {
-    /** Session của người uống — khoá của nhân vật bên client. */
+    /** Session của người uống / được hồi — khoá của nhân vật bên client. */
     sessionId: string;
-    /** HP / MP thực sự hồi được (đã trừ phần vượt trần). */
+    /** HP / MP hồi được. Bình: đã trừ phần vượt trần; hồi của skill: lượng hồi của skill, hiện cả khi đã đầy máu. */
     hp: number;
     mp: number;
+}
+
+/** Skill gắn hiệu ứng (prefab `Resources/Prefabs/SkillEffects/<code của skill>`) lên các nhân vật này. */
+export interface SkillEffectMessage {
+    skillId: string;
+    /** Session của các người chơi nhận hiệu ứng. */
+    sessionIds: string[];
 }
 
 /** 3 túi theo ItemType. */

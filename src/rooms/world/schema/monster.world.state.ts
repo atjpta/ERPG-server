@@ -53,6 +53,8 @@ export class MonsterWorldState extends Schema {
     @type("float32") moveSpeed: number;
     @type("uint32") attackCooldownMs: number;
     @type("uint16") attackCooldownTicks: number = 0;
+    /** Tick còn lại của choáng (skill có hiệu ứng STUN): đứng im, không đi không đánh; client giữ nguyên anim đang chạy. 0 = không choáng. */
+    @type("uint16") stunTicks: number = 0;
     @type(HitboxColliderState) hitbox: HitboxColliderState;
     @type(HitboxColliderState) collider: HitboxColliderState;
     @type("string") targetId = "";
@@ -143,6 +145,7 @@ export class MonsterWorldState extends Schema {
     }
 
     setDead() {
+        this.stunTicks = 0;
         this.status = MonsterStatus.DEAD;
         this.clearAggroTarget();
         this.moving = false;
@@ -151,8 +154,16 @@ export class MonsterWorldState extends Schema {
         this.hp = 0;
     }
 
+    /** Choáng thêm `ticks` tick (không cộng dồn: lấy lần dài hơn). Huỷ đòn đang vung và dừng di chuyển ngay. */
+    stun(ticks: number) {
+        this.stunTicks = Math.min(0xffff, Math.max(this.stunTicks, Math.floor(ticks)));
+        this.moving = false;
+        this.attacking = false;
+    }
+
     setSpawns() {
         this.status = MonsterStatus.ALIVE;
+        this.stunTicks = 0;
         this.clearAggroTarget();
         this.x = this.spawnX;
         this.y = this.spawnY;

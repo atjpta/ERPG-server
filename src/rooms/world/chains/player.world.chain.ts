@@ -26,7 +26,9 @@ import { skillDeliveryWorldService } from "@/rooms/world/services/skill-delivery
 import {
     PendingSkillHit,
     buildPendingSkillHits,
+    getAuraEvent,
     getSkillCastTicks,
+    getSkillCooldownTicks,
     getSkillDurationTicks,
     skillReachesTarget,
     tickPendingSkillHits,
@@ -57,6 +59,8 @@ export interface PlayerChainContext {
     scheduleRespawn: (player: PlayerWorldState) => void;
     /** PlayerMoveChain đặt khi step này đang tự đi lại gần target để đòn đánh chạm (chưa ra đòn). */
     approachingAttack?: boolean;
+    /** PlayerMoveChain đặt khi step này đang tự đi lại gần target cho đủ tầm dùng skill chủ động (chưa dùng skill). */
+    approachingSkill?: boolean;
 }
 
 export class PlayerDeathChain implements WorldChainAction<PlayerChainContext> {
@@ -69,6 +73,14 @@ export class PlayerDeathChain implements WorldChainAction<PlayerChainContext> {
         scheduleRespawn(state);
         return WorldChainResult.STOP;
     }
+}
+
+/** Level của skill đang sở hữu (từ 1); chưa có thì 1. */
+function getOwnedSkillLevel(state: PlayerWorldState, skill: { id: string }): number {
+    for (const owned of state.skills) {
+        if (owned.skillId === skill.id) return Math.max(1, owned.level);
+    }
+    return 1;
 }
 
 /** Skill của đòn đang vung: skill chủ động (`castSlot`) hoặc bước `attackCombo` của combo đánh thường. */
@@ -173,15 +185,21 @@ export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
             !state.dashing &&
             (attackRequested || skillRequested > 0 || state.attackCooldownTicks > 0)
         ) {
-            // Bấm đánh mà target (trong 2 ô) chưa nằm trong hitbox → tự đi lại gần, chưa ra đòn.
-            // Skill chủ động thì dùng tại chỗ, không tự áp sát.
-            const approach =
-                attackRequested && skillRequested === 0 && state.attackCooldownTicks === 0
-                    ? getAttackApproachMove(room, state)
+            // Bấm skill chủ động mà target xa hơn tầm của skill → tự đi lại gần cho đủ tầm, rồi mới dùng skill.
+            const skillApproach =
+                skillRequested > 0 && state.attackCooldownTicks === 0
+                    ? getSkillApproachMove(room, state, skillRequested)
                     : undefined;
+            // Bấm đánh mà target (trong 2 ô) chưa nằm trong hitbox → tự đi lại gần, chưa ra đòn.
+            const approach =
+                skillApproach ??
+                (attackRequested && skillRequested === 0 && state.attackCooldownTicks === 0
+                    ? getAttackApproachMove(room, state)
+                    : undefined);
             if (approach) {
                 applyWorldMove(state, approach, room.moveBounds, dt, 1, 4);
-                context.approachingAttack = true;
+                if (skillApproach) context.approachingSkill = true;
+                else context.approachingAttack = true;
                 return WorldChainResult.CONTINUE;
             }
             // Đứng yên khi đang đánh (cooldown còn) hoặc đang chờ ra đòn.
@@ -211,6 +229,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         attackRequested,
         skillRequested,
         approachingAttack,
+        approachingSkill,
         dt,
     }: PlayerChainContext): WorldChainResult {
         this.processPendingHits(room, sessionId, state);
@@ -224,8 +243,12 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
 
         // Skill chủ động được ưu tiên hơn đòn đánh thường và chỉ cần hết lúc vung (hồi đòn đánh thường
         // không chặn nó); thiếu mana / chưa hết hồi của chính skill đó thì bỏ qua yêu cầu.
-        if (skillRequested > 0 && this.startSkill(room, state, skillRequested)) {
-            return WorldChainResult.CONTINUE;
+        if (skillRequested > 0) {
+            // Còn đang đi lại gần target cho đủ tầm → giữ yêu cầu, dùng skill khi đã vào tầm.
+            if (approachingSkill) return WorldChainResult.CONTINUE;
+            if (this.startSkill(room, sessionId, state, skillRequested)) {
+                return WorldChainResult.CONTINUE;
+            }
         }
         state.castSlot = 0;
 
@@ -277,50 +300,117 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
      * Dùng skill chủ động số `slot` (khớp WorldMovementStep.cs): cần còn hồi xong, đủ mana. Lên lịch hit như
      * đòn đánh thường; hồi chiêu của skill đếm từ lúc bắt đầu (sau `castTimeMs`, như cooldown đòn đánh thường).
      */
-    private startSkill(room: WorldRoom, state: PlayerWorldState, slot: number): boolean {
+    private startSkill(
+        room: WorldRoom,
+        sessionId: string,
+        state: PlayerWorldState,
+        slot: number
+    ): boolean {
         const skill = skillService.getActiveSkills(state.skills)[slot - 1];
         if (!skill) return false;
         if (state.getSkillCooldownTicks(slot) > 0) return false;
         if (state.mp < skill.manaCost) return false;
+        // Đang chọn target thì phải đủ tầm mới dùng được skill (skill tự thân, castRange 0, không cần).
+        if (isTargetOutOfRange(room, state, skill)) return false;
 
-        const cooldownTicks =
-            skill.cooldownMs > 0
-                ? getSkillCastTicks(skill, room.tickRate) +
-                  millisecondsToTicks(skill.cooldownMs, room.tickRate)
-                : 0;
+        // Hồi chiêu đếm từ lúc bấm; skill AURA thì chỉ tính sau khi buff hết (cộng sẵn thời gian buff ở level này).
+        const level = getOwnedSkillLevel(state, skill);
+        const cooldownTicks = getSkillCooldownTicks(skill, level, room.tickRate);
         if (isChargeSkill(skill)) {
-            // Skill lướt: có mục tiêu đang chọn trong `castRange` thì lướt tới nó; không có thì lướt thẳng theo hướng đang
-            // quay, dài bằng dash thường, rồi ra đòn ở cuối. Chưa ra đòn lúc bấm, chỉ bắt đầu lướt.
+            // Skill lướt luôn lướt đủ quãng (`freeDistance`, mặc định cả `castRange`) rồi mới ra đòn ở cuối, không dừng khi chạm
+            // quái (xuyên qua). Có mục tiêu đang chọn trong `castRange` thì lướt thẳng về phía nó (hướng chốt vào aimX/aimY);
+            // không có thì lướt theo hướng đang đi. Chưa ra đòn lúc bấm, chỉ bắt đầu lướt.
             const target = findTargetById(room, state, state.targetId, skill.castRange);
             state.mp -= skill.manaCost;
-            if (target) faceTarget(state, target.x - state.x);
+            if (target) {
+                faceTarget(state, target.x - state.x);
+                const dx = target.x - state.x;
+                const dy = target.y - state.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                if (length > AIM_EPSILON) {
+                    state.aimX = dx / length;
+                    state.aimY = dy / length;
+                } else {
+                    state.aimX = state.direction === "left" ? -1 : 1;
+                    state.aimY = 0;
+                }
+            }
+            // Có mục tiêu: chỉ lướt tới ngay sau lưng nó (tâm mục tiêu + nửa collider hai bên theo hướng lướt), không quá `freeDistance`.
+            const distance = target
+                ? Math.min(
+                      Math.hypot(target.x - state.x, target.y - state.y) +
+                          getHalfExtent(target.collider, state.aimX, state.aimY) +
+                          getHalfExtent(state.collider, state.aimX, state.aimY),
+                      getChargeDistance(skill)
+                  )
+                : getChargeDistance(skill);
             state.startCharge(
                 slot,
                 target?.id ?? "",
-                target
-                    ? getChargeTicks(skill, room.tickRate)
-                    : getFreeChargeTicks(skill, room.tickRate),
+                getFreeChargeTicks(skill, room.tickRate, distance),
                 cooldownTicks
             );
             return true;
         }
 
         state.mp -= skill.manaCost;
+        const aim = this.resolveAim(room, sessionId, state, skill);
         const direction = toHorizontalDirection(state.direction);
         state.direction = direction;
         state.attackSerial++;
         this.pendingHits.set(
             state,
-            buildPendingSkillHits(skill, state.attackSerial, direction, room.tickRate)
+            buildPendingSkillHits(skill, state.attackSerial, direction, room.tickRate, 1, aim)
         );
         state.startSkill(slot, getSkillDurationTicks(skill, room.tickRate), cooldownTicks);
+        // Skill AURA: vùng buff bắt đầu ngay, bám theo người dùng (hit event AURA không nằm trong lịch hit).
+        if (getAuraEvent(skill)) {
+            skillDeliveryWorldService.startAura(room, {
+                sessionId,
+                player: state,
+                skill,
+                slot,
+                level,
+            });
+        }
         return true;
     }
 
     /**
-     * Một step lướt tới mục tiêu (khớp WorldMovementStep.cs): mỗi step dời về phía phần gần nhất của collider mục tiêu
-     * tối đa `tốc độ lướt × dt`, không vượt quãng còn lại; hai collider chạm nhau thì bắt đầu đòn (hit event tính từ đó).
-     * Hết thời gian lướt, mục tiêu chết hoặc biến mất thì dừng, không ra đòn.
+     * Hướng ngắm của skill (khớp WorldMovementStep.SetAim): skill có hit `aimed` ngắm về giữa hitbox target đang chọn (hướng mặt
+     * quay theo luôn), không có target thì theo hướng mặt; skill khác chỉ theo hướng mặt. Ghi vào `aimX/aimY` cho client.
+     * Trả về hướng ngắm nếu skill có hit `aimed`.
+     */
+    private resolveAim(
+        room: WorldRoom,
+        sessionId: string,
+        state: PlayerWorldState,
+        skill: { skillHitEvents: { aimed?: boolean }[] }
+    ): { x: number; y: number } | undefined {
+        const facing = toHorizontalDirection(state.direction) === "left" ? -1 : 1;
+        let aimX = facing;
+        let aimY = 0;
+        const aimed = skill.skillHitEvents.some((event) => event.aimed);
+        const target = aimed ? findPlayerAimTarget(room, sessionId, state) : undefined;
+        if (target) {
+            const dx = target.x + target.hitbox.offsetX - state.x;
+            const dy = target.y - target.hitbox.offsetY - state.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            if (length > AIM_EPSILON) {
+                aimX = dx / length;
+                aimY = dy / length;
+                if (aimX < 0) state.direction = "left";
+                else if (aimX > 0) state.direction = "right";
+            }
+        }
+        state.aimX = aimX;
+        state.aimY = aimY;
+        return aimed ? { x: aimX, y: aimY } : undefined;
+    }
+
+    /**
+     * Một step lướt (khớp WorldMovementStep.cs): dời `tốc độ lướt × dt` theo hướng chốt (về phía mục tiêu lúc bấm, hoặc hướng
+     * đang đi), xuyên qua quái. Hết đoạn lướt thì bắt đầu đòn (hit event tính từ đó), quay mặt lại mục tiêu nếu còn sống.
      */
     private stepCharge(
         room: WorldRoom,
@@ -334,44 +424,46 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
             return;
         }
 
-        if (state.chargeTargetId) {
-            const target = findAliveMonster(room, state.chargeTargetId);
-            if (!target || state.attackCooldownTicks <= 1) {
-                state.cancelCharge();
-                return;
-            }
-            let gap = getColliderGap(state, target);
-            if (gap.distance > CHARGE_CONTACT_EPSILON) {
-                faceTarget(state, target.x - state.x);
-                const move = Math.min(getChargeSpeed(skill) * dt, gap.distance);
+        if (state.attackCooldownTicks > 1) {
+            if (state.chargeTargetId) {
+                // Có mục tiêu: lướt thẳng theo hướng chốt lúc bấm (xuyên qua quái, collider quái không cản).
+                const dirX = state.aimX;
+                const dirY = state.aimY;
+                const step = getChargeSpeed(skill) * dt;
+                applyDirectedMove(state, dirX * step, dirY * step, room.moveBounds, state.collider);
+                if (dirX < 0) state.direction = "left";
+                else if (dirX > 0) state.direction = "right";
+            } else {
+                // Không có mục tiêu: lướt theo hướng đang đi (8 hướng như dash thường; không giữ cần thì theo hướng đang quay).
+                let moveX = move.moveX;
+                const moveY = move.moveY;
+                if (moveX === 0 && moveY === 0) moveX = state.direction === "left" ? -1 : 1;
+                const step =
+                    getChargeSpeed(skill) * dt * (moveX !== 0 && moveY !== 0 ? DIAGONAL_FACTOR : 1);
                 applyDirectedMove(
                     state,
-                    gap.directionX * move,
-                    gap.directionY * move,
+                    moveX * step,
+                    moveY * step,
                     room.moveBounds,
                     state.collider
                 );
-                state.moving = true;
-                gap = getColliderGap(state, target);
+                if (moveX < 0) state.direction = "left";
+                else if (moveX > 0) state.direction = "right";
             }
-            if (gap.distance > CHARGE_CONTACT_EPSILON) return;
-        } else if (state.attackCooldownTicks > 1) {
-            // Không có mục tiêu: lướt theo hướng đang đi (8 hướng như dash thường; không giữ cần thì theo hướng đang quay)
-            // đủ `freeDistance`, hết đoạn lướt thì ra đòn.
-            let moveX = move.moveX;
-            const moveY = move.moveY;
-            if (moveX === 0 && moveY === 0) moveX = state.direction === "left" ? -1 : 1;
-            const step =
-                getChargeSpeed(skill) * dt * (moveX !== 0 && moveY !== 0 ? DIAGONAL_FACTOR : 1);
-            applyDirectedMove(state, moveX * step, moveY * step, room.moveBounds, state.collider);
-            if (moveX < 0) state.direction = "left";
-            else if (moveX > 0) state.direction = "right";
             state.moving = true;
             return;
+        }
+        // Hết đoạn lướt: quay lại nhìn mục tiêu (nếu còn sống) để đòn thứ hai trúng nó dù đã lướt xuyên qua.
+        if (state.chargeTargetId) {
+            const target = findAliveMonster(room, state.chargeTargetId);
+            if (target) faceTarget(state, target.x - state.x);
         }
 
         const direction = toHorizontalDirection(state.direction);
         state.direction = direction;
+        // Đòn sau khi lướt không ngắm: hiệu ứng của nó quay theo hướng mặt.
+        state.aimX = direction === "left" ? -1 : 1;
+        state.aimY = 0;
         state.moving = false;
         state.attackSerial++;
         this.pendingHits.set(
@@ -451,55 +543,25 @@ function getAttackApproachMove(room: WorldRoom, state: PlayerWorldState): MoveCo
     return moveX || moveY ? { moveX, moveY } : undefined;
 }
 
-/** Hai collider coi là chạm khi khoảng cách giữa chúng không quá ngưỡng này (tile). Client C# dùng cùng giá trị. */
-const CHARGE_CONTACT_EPSILON = 1e-4;
+/** Khoảng cách tới target nhỏ hơn ngưỡng này thì coi như không có hướng (ngắm theo hướng mặt). Client C# dùng cùng giá trị. */
+const AIM_EPSILON = 1e-6;
 
 /** Tốc độ, thời gian dư, quãng lướt không mục tiêu của skill lướt: cột `chargeConfig` (skill seed), thiếu thì mặc định. */
 const getChargeSpeed = (skill: Skill) => getChargeConfig(skill).speed;
 
 /**
- * Thời gian (tick) của lướt không có mục tiêu: đủ đi `freeDistance` ô ở tốc độ lướt, cộng 2 để
+ * Thời gian (tick) của lướt: đủ đi `distance` ô ở tốc độ lướt, cộng 2 để
  * `attackCooldownTicks` còn đúng 1 ở tick ra đòn. Client C# (WorldMovementStep.FreeChargeTicks) tính y hệt.
  */
-const getFreeChargeTicks = (skill: Skill, tickRate: number) => {
-    const { speed, freeDistance } = getChargeConfig(skill);
-    return Math.min(0xff, Math.ceil((freeDistance / speed) * tickRate) + 2);
-};
+const getFreeChargeTicks = (skill: Skill, tickRate: number, distance: number) =>
+    Math.min(0xff, Math.ceil((distance / getChargeConfig(skill).speed) * tickRate) + 2);
 
-/** Thời gian lướt tối đa (tick): đủ đi hết `castRange` cộng `graceTicks`. Tối đa 255 (uint8 của attackCooldownTicks). */
-const getChargeTicks = (skill: Skill, tickRate: number) => {
-    const { speed, graceTicks } = getChargeConfig(skill);
-    return Math.min(0xff, Math.ceil((skill.castRange / speed) * tickRate) + graceTicks);
-};
+/** Quãng lướt tối đa: `freeDistance`, mặc định cả `castRange`. */
+const getChargeDistance = (skill: Skill) => getChargeConfig(skill).freeDistance ?? skill.castRange;
 
-interface BodyCollider {
-    x: number;
-    y: number;
-    collider?: HitboxColliderState;
-}
-
-/**
- * Khoảng cách giữa collider của hai bên (hình chữ nhật song song trục; tâm = (x + offsetX, y - offsetY), y world hướng xuống)
- * và hướng đi (vector đơn vị) từ bên thứ nhất về phía điểm gần nhất của bên thứ hai. 0 = đã chạm / lấn nhau.
- */
-function getColliderGap(from: BodyCollider, to: BodyCollider) {
-    const fromCenterX = from.x + (from.collider?.offsetX ?? 0);
-    const fromCenterY = from.y - (from.collider?.offsetY ?? 0);
-    const toCenterX = to.x + (to.collider?.offsetX ?? 0);
-    const toCenterY = to.y - (to.collider?.offsetY ?? 0);
-    const deltaX = toCenterX - fromCenterX;
-    const deltaY = toCenterY - fromCenterY;
-    const halfWidth = ((from.collider?.width ?? 0) + (to.collider?.width ?? 0)) / 2;
-    const halfHeight = ((from.collider?.height ?? 0) + (to.collider?.height ?? 0)) / 2;
-    const gapX = Math.max(0, Math.abs(deltaX) - halfWidth);
-    const gapY = Math.max(0, Math.abs(deltaY) - halfHeight);
-    const distance = Math.sqrt(gapX * gapX + gapY * gapY);
-    return {
-        distance,
-        directionX: distance > 0 ? (Math.sign(deltaX) * gapX) / distance : 0,
-        directionY: distance > 0 ? (Math.sign(deltaY) * gapY) / distance : 0,
-    };
-}
+/** Nửa kích thước collider (hình chữ nhật song song trục) chiếu lên hướng (dirX, dirY). */
+const getHalfExtent = (collider: HitboxColliderState | undefined, dirX: number, dirY: number) =>
+    ((collider?.width ?? 0) * Math.abs(dirX) + (collider?.height ?? 0) * Math.abs(dirY)) / 2;
 
 function findAliveMonster(room: WorldRoom, id: string) {
     if (!id) return undefined;
@@ -507,6 +569,45 @@ function findAliveMonster(room: WorldRoom, id: string) {
         if (monster.id === id && monster.hp > 0) return monster;
     }
     return undefined;
+}
+
+/**
+ * Player đang chọn một monster còn sống mà nó xa hơn `castRange` của skill (khoảng cách tâm tới tâm, như `findTargetById`).
+ * Không chọn target, hoặc skill không có tầm (castRange 0) thì không bị chặn. Khớp WorldMovementStep.IsTargetOutOfRange bên client.
+ */
+function isTargetOutOfRange(
+    room: WorldRoom,
+    state: PlayerWorldState,
+    skill: { castRange: number }
+) {
+    if (skill.castRange <= 0 || !state.targetId) return false;
+    const target = findAliveMonster(room, state.targetId);
+    return !!target && distanceSquared(state.x, state.y, target.x, target.y) > skill.castRange ** 2;
+}
+
+/**
+ * Hướng đi khi tự áp sát để dùng skill chủ động `slot`: skill dùng được (hết hồi, đủ mana) mà target đang chọn xa hơn `castRange`
+ * → đi về phía target (cùng deadzone và 8 hướng như áp sát đòn đánh thường). `undefined` = dùng tại chỗ (đã đủ tầm, không có
+ * target, hoặc skill chưa dùng được). Khớp WorldMovementStep.TryGetSkillApproach bên client.
+ */
+function getSkillApproachMove(
+    room: WorldRoom,
+    state: PlayerWorldState,
+    slot: number
+): MoveCommand | undefined {
+    const skill = skillService.getActiveSkills(state.skills)[slot - 1];
+    if (!skill || state.getSkillCooldownTicks(slot) > 0 || state.mp < skill.manaCost)
+        return undefined;
+    if (!isTargetOutOfRange(room, state, skill)) return undefined;
+    const target = findAliveMonster(room, state.targetId);
+    if (!target) return undefined;
+
+    const dx = target.x - state.x;
+    const dy = target.y - state.y;
+    const deadzone = getApproachDeadzone();
+    const moveX = Math.abs(dx) > deadzone ? Math.sign(dx) : 0;
+    const moveY = Math.abs(dy) > deadzone ? Math.sign(dy) : 0;
+    return moveX || moveY ? { moveX, moveY } : undefined;
 }
 
 function clearTarget(player: PlayerWorldState) {

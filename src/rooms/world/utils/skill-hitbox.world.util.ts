@@ -6,6 +6,11 @@ interface HitboxOrigin {
     x: number;
     y: number;
     direction: string;
+    /**
+     * Hướng ngắm (vector đơn vị, toạ độ server). Hit event `aimed` xoay vùng đánh theo hướng này (mọi hướng, không chỉ trái /
+     * phải); thiếu thì dùng `direction`.
+     */
+    aim?: { x: number; y: number };
 }
 
 export function intersectsSkillHitEvent(
@@ -15,11 +20,12 @@ export function intersectsSkillHitEvent(
     targetCollider: HitboxColliderState,
     event: SkillHitEvent
 ): boolean {
-    const forwardX = origin.direction === "left" ? -1 : 1;
-    const forwardY = 0;
-    const lateralX = 0;
-    // Attack art is mirrored only on X; local up is negative Y in the server's world coordinates.
-    const lateralY = -1;
+    const aimed = event.aimed && origin.aim !== undefined;
+    const forwardX = aimed ? origin.aim!.x : origin.direction === "left" ? -1 : 1;
+    const forwardY = aimed ? origin.aim!.y : 0;
+    // Không ngắm: attack art chỉ lật theo X, "lên" cục bộ là Y âm của world. Ngắm: trục ngang vuông góc với hướng ngắm.
+    const lateralX = aimed ? forwardY : 0;
+    const lateralY = aimed ? -forwardX : -1;
 
     const targetCenterX = targetX + targetCollider.offsetX;
     // Collider offsets are authored like the client prefab (positive Y up); the world grows down.
@@ -29,10 +35,13 @@ export function intersectsSkillHitEvent(
     const targetForward = targetDx * forwardX + targetDy * forwardY;
     const targetLateral = targetDx * lateralX + targetDy * lateralY;
 
+    // Nửa kích thước hình chiếu của collider (hình chữ nhật song song trục) lên từng trục.
     const targetForwardHalf =
-        Math.abs(forwardX) > 0 ? targetCollider.width / 2 : targetCollider.height / 2;
+        (Math.abs(forwardX) * targetCollider.width + Math.abs(forwardY) * targetCollider.height) /
+        2;
     const targetLateralHalf =
-        Math.abs(lateralX) > 0 ? targetCollider.width / 2 : targetCollider.height / 2;
+        (Math.abs(lateralX) * targetCollider.width + Math.abs(lateralY) * targetCollider.height) /
+        2;
     const forwardMin = targetForward - targetForwardHalf;
     const forwardMax = targetForward + targetForwardHalf;
     const lateralMin = targetLateral - targetLateralHalf;

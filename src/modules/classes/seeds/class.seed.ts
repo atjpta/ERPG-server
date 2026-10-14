@@ -89,7 +89,12 @@ const CLASSES: ClassSeedData[] = [
             [StatKey.MP_REGEN]: 1.2,
         },
         statBonuses: [],
-        skillCodes: ["cleric_basic_attack"],
+        skillCodes: [
+            "cleric_basic_attack",
+            "cleric_buff_hp",
+            "cleric_fireball",
+            "cleric_explosion",
+        ],
     },
 ];
 

@@ -45,6 +45,10 @@ export enum HitDelivery {
     HITBOX = "HITBOX",
     PROJECTILE = "PROJECTILE",
     AREA = "AREA",
+    /** Vùng buff bám theo người dùng, tồn tại nhiều giây, hồi máu đồng đội / gây damage quái mỗi chu kỳ (xem `SkillAuraSchema`). */
+    AURA = "AURA",
+    /** Hồi máu một lần cho người dùng và đồng đội cùng party đứng quanh (xem `SkillAlliesSchema`), kèm hiệu ứng gắn lên từng người. */
+    ALLIES = "ALLIES",
 }
 
 export enum SkillEffectType {

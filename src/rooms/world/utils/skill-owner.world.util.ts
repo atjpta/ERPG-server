@@ -1,4 +1,6 @@
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
+import { CrowdControlType, SkillEffectType } from "@/modules/skills/enums/skill.enum.js";
+import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
 import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
 import { monsterRewardService } from "@/modules/rewards/services/monster-reward.service.js";
 import { calculateDamage } from "@/rooms/world/chains/damage.world.chain.js";
@@ -121,6 +123,18 @@ export function applySkillHit(
 
     target.takeDamage(result.damage);
     attacker.heal(result.heal);
+    // Hiệu ứng choáng của hit: chỉ khi trúng và mục tiêu còn sống.
+    if (target.hp > 0) {
+        for (const effect of event.effects) {
+            if (
+                effect.effectType === SkillEffectType.APPLY_STATUS &&
+                effect.crowdControlType === CrowdControlType.STUN &&
+                effect.durationMs > 0
+            ) {
+                target.stun(millisecondsToTicks(effect.durationMs, room.tickRate));
+            }
+        }
+    }
     // Đòn kết liễu → người đánh nhận thưởng (mỗi monster chỉ chết một lần).
     if (target.hp <= 0) {
         questWorldService.onEvent(room, owner.sessionId, attacker, {
