@@ -129,13 +129,13 @@ const CLASS_SKILLS: NewSkill[] = [
         code: "swordsman_basic_attack",
         skillType: SkillType.MELEE,
         targetType: TargetType.DIRECTION,
-        castRange: 1.4,
+        castRange: 1.2,
         castTimeMs: 0,
         animationMs: 500,
         cooldownMs: 0,
         manaCost: 0,
         staminaCost: 0,
-        maxLevel: 5,
+        maxLevel: 10,
         basicAttack: true,
         levelConfig: basicAttackLevels(),
         skillHitEvents: [
@@ -143,7 +143,7 @@ const CLASS_SKILLS: NewSkill[] = [
                 eventIndex: 0,
                 triggerTicks: 3,
                 shape: HitShape.RECT,
-                range: 1.3,
+                range: 1.2,
                 width: 0.56,
                 offsetX: -0.33,
                 offsetY: 0.26,
@@ -162,7 +162,7 @@ const CLASS_SKILLS: NewSkill[] = [
         cooldownMs: 1000,
         manaCost: 0,
         staminaCost: 0,
-        maxLevel: 5,
+        maxLevel: 10,
         basicAttack: true,
         levelConfig: basicAttackLevels(),
         skillHitEvents: [
@@ -199,7 +199,7 @@ const CLASS_SKILLS: NewSkill[] = [
         cooldownMs: 1000,
         manaCost: 0,
         staminaCost: 0,
-        maxLevel: 5,
+        maxLevel: 10,
         basicAttack: true,
         levelConfig: basicAttackLevels(DamageScalingType.MAGIC_ATTACK),
         skillHitEvents: [
@@ -215,6 +215,109 @@ const CLASS_SKILLS: NewSkill[] = [
                 damageType: DamageType.MAGICAL,
                 delivery: HitDelivery.AREA,
                 area: { delayMs: 300, untargetedDistance: 2 },
+            }),
+        ],
+    },
+    {
+        // Skill chủ động số 2: anim cross_slash (10 frame thân + object con SkillEffect, 12 fps, clip 833 ms), sheet Cross_Slash 160×99 px (32 px = 1 tile).
+        // Nhát 1 = vệt chém dọc của thân ở 417 ms (sprite Attack02_3) → tick 8.
+        // Nhát 2 = sóng chém SkillEffect ở 583 ms (frame Cross_Slash_2, scale 0.75 × 0.5 → 3.75 × 1.55 tile, tâm lệch (0.5, 0.25)):
+        //   vệt phủ x từ -0.09 tới 2.36, y từ -0.52 tới 1.02 → tick 12 (khớp 600 ms). Đổi scale / vị trí SkillEffect trong clip thì tính lại vùng này.
+        // `cooldownMs` đếm từ lúc bắt đầu skill, riêng với hồi đòn đánh thường.
+        code: "swordsman_cross_slash",
+        skillType: SkillType.MELEE,
+        targetType: TargetType.DIRECTION,
+        castRange: 1.6,
+        castTimeMs: 0,
+        animationMs: 750,
+        cooldownMs: 2000,
+        manaCost: 0,
+        staminaCost: 0,
+        maxLevel: 10,
+        basicAttack: false,
+        levelConfig: basicAttackLevels(DamageScalingType.ATTACK),
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks: 4,
+                shape: HitShape.RECT,
+                range: 1.6,
+                width: 2,
+                offsetX: 0,
+                offsetY: 0.25,
+                damageScaling: 0.8,
+            }),
+            hitEvent({
+                eventIndex: 1,
+                triggerTicks: 5,
+                shape: HitShape.RECT,
+                range: 1.6,
+                width: 2,
+                offsetX: 0,
+                offsetY: 0.25,
+                damageScaling: 0.8,
+            }),
+        ],
+    },
+    {
+        code: "swordsman_slash_dash",
+        skillType: SkillType.DASH,
+        targetType: TargetType.TARGET,
+        castRange: 4,
+        castTimeMs: 0,
+        animationMs: 300,
+        cooldownMs: 2000,
+        manaCost: 0,
+        staminaCost: 0,
+        maxLevel: 10,
+        basicAttack: false,
+        chargeConfig: { speed: 12, graceTicks: 10, freeDistance: 2.4 },
+        levelConfig: basicAttackLevels(DamageScalingType.ATTACK),
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks: 2,
+                shape: HitShape.RECT,
+                range: 2.16,
+                width: 1.23,
+                offsetX: -0.66,
+                offsetY: 0.36,
+                damageScaling: 1.2,
+            }),
+        ],
+    },
+    {
+        code: "swordsman_fly_slash",
+        skillType: SkillType.PROJECTILE,
+        targetType: TargetType.TARGET,
+        castRange: 6,
+        castTimeMs: 0,
+        animationMs: 500,
+        cooldownMs: 2000,
+        manaCost: 0,
+        staminaCost: 0,
+        maxLevel: 10,
+        basicAttack: false,
+        levelConfig: basicAttackLevels(DamageScalingType.ATTACK),
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks: 3,
+                shape: HitShape.CIRCLE,
+                range: 0,
+                radius: 0.6,
+                offsetX: 0,
+                offsetY: 0,
+                damageScaling: 1.5,
+                delivery: HitDelivery.PROJECTILE,
+                projectile: {
+                    movementType: ProjectileMovementType.STRAIGHT,
+                    hitBehavior: ProjectileHitBehavior.PIERCE,
+                    speed: 12,
+                    maxDistance: 6,
+                    radius: 0.6,
+                    maxHits: 10,
+                },
             }),
         ],
     },
@@ -269,6 +372,9 @@ const MONSTER_SKILLS: NewSkill[] = MONSTER_DEFINITIONS.filter(
     (monster) => !monster.attackSkillCode && !monster.noAttack
 ).map(monsterAttackSkill);
 
+/** Skill đã bỏ: tắt (`enabled = false`) chứ không xoá, để dữ liệu cũ còn tra được. ClassSeed gán lại bộ skill mặc định cho player. */
+const RETIRED_SKILL_CODES = ["swordsman_triple_strike", "swordsman_shockwave_slash"];
+
 export const SkillSeed = async () => {
     for (const skill of [...CLASS_SKILLS, ...MONSTER_SKILLS]) {
         await SkillRepo.upsert({
@@ -277,6 +383,12 @@ export const SkillSeed = async () => {
             matchValue: skill.code,
             updateData: skill,
         });
+    }
+
+    for (const code of RETIRED_SKILL_CODES) {
+        const retired = await SkillRepo.findByCode({ code });
+        if (retired?.enabled)
+            await SkillRepo.updateById({ id: retired.id, data: { enabled: false } });
     }
 
     console.info("✅ [SkillSeed] Done");

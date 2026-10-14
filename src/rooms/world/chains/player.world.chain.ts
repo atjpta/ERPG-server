@@ -1,9 +1,20 @@
 import { distanceSquared } from "@/rooms/world/utils/world.util.js";
 import { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { MoveCommand, applyWorldMove } from "@/rooms/world/simulation/movement.step.js";
+import {
+    MoveCommand,
+    DIAGONAL_FACTOR,
+    applyDirectedMove,
+    applyWorldMove,
+} from "@/rooms/world/simulation/movement.step.js";
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
-import { skillService } from "@/modules/skills/services/skill.service.js";
+import {
+    getChargeConfig,
+    isChargeSkill,
+    skillService,
+} from "@/modules/skills/services/skill.service.js";
+import type { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
+import type { Skill } from "@/modules/skills/entities/skill.entity.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
 import {
     getApproachDeadzone,
@@ -37,6 +48,8 @@ export interface PlayerChainContext {
      * nhờ vậy `WorldMovementStep.cs` predict khớp từng tick.
      */
     attackRequested: boolean;
+    /** Skill chủ động dùng ở tick này (số thứ tự từ 1, 0 = không) — chỉ có hiệu lực đúng tick đó, không giữ buffer. */
+    skillRequested: number;
     dashRequested: boolean;
     targetSwitchPressed: boolean;
     targetUnlockPressed: boolean;
@@ -58,13 +71,21 @@ export class PlayerDeathChain implements WorldChainAction<PlayerChainContext> {
     }
 }
 
+/** Skill của đòn đang vung: skill chủ động (`castSlot`) hoặc bước `attackCombo` của combo đánh thường. */
+function getCurrentAttackSkill(state: PlayerWorldState) {
+    if (state.castSlot > 0) return skillService.getActiveSkills(state.skills)[state.castSlot - 1];
+    if (state.attackCombo > 0)
+        return skillService.getBasicAttackCombo(state.skills)[state.attackCombo - 1];
+    return undefined;
+}
+
 /**
  * Đòn đang trong thời gian chờ `castTimeMs` (anim + hit event chưa bắt đầu). Khớp WorldMovementStep.cs.
  * `attackCooldownTicks` đếm lùi từ tổng thời gian đòn, nên đã trôi `duration - attackCooldownTicks` tick.
  */
 function isCasting(state: PlayerWorldState, tickRate: number) {
-    if (state.attackCooldownTicks <= 0 || state.attackCombo <= 0) return false;
-    const skill = skillService.getBasicAttackCombo(state.skills)[state.attackCombo - 1];
+    if (state.attackCooldownTicks <= 0) return false;
+    const skill = getCurrentAttackSkill(state);
     if (!skill) return false;
     const elapsed = getSkillDurationTicks(skill, tickRate) - state.attackCooldownTicks;
     return elapsed < getSkillCastTicks(skill, tickRate);
@@ -82,7 +103,10 @@ export class PlayerDashChain implements WorldChainAction<PlayerChainContext> {
             const casting = isCasting(state, room.tickRate);
             state.attacking = false;
             state.cancelAttackLock();
-            if (casting) state.skillCooldownTicks = 0;
+            if (casting) {
+                state.skillCooldownTicks = 0;
+                state.setSkillCooldownTicks(state.castSlot, 0);
+            }
             this.attackChain.interrupt(state);
         }
 
@@ -102,6 +126,7 @@ export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
         targetUnlockPressed,
         dashRequested,
         attackRequested,
+        skillRequested,
     }: PlayerChainContext): WorldChainResult {
         if (targetUnlockPressed) clearTarget(state);
 
@@ -131,7 +156,7 @@ export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
             target &&
             !state.dashing &&
             !dashRequested &&
-            (state.moving || targetSwitchPressed || attackRequested) &&
+            (state.moving || targetSwitchPressed || attackRequested || skillRequested > 0) &&
             distanceSquared(state.x, state.y, target.x, target.y) <= faceRange ** 2
         ) {
             faceTarget(state, target.x - state.x);
@@ -142,12 +167,16 @@ export class PlayerTargetChain implements WorldChainAction<PlayerChainContext> {
 
 export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
     execute(context: PlayerChainContext): WorldChainResult {
-        const { room, state, move, dt, attackRequested } = context;
+        const { room, state, move, dt, attackRequested, skillRequested } = context;
         state.recoverPosition(room.map.spawnX, room.map.spawnY, room.map.width, room.map.height);
-        if (!state.dashing && (attackRequested || state.attackCooldownTicks > 0)) {
+        if (
+            !state.dashing &&
+            (attackRequested || skillRequested > 0 || state.attackCooldownTicks > 0)
+        ) {
             // Bấm đánh mà target (trong 2 ô) chưa nằm trong hitbox → tự đi lại gần, chưa ra đòn.
+            // Skill chủ động thì dùng tại chỗ, không tự áp sát.
             const approach =
-                attackRequested && state.attackCooldownTicks === 0
+                attackRequested && skillRequested === 0 && state.attackCooldownTicks === 0
                     ? getAttackApproachMove(room, state)
                     : undefined;
             if (approach) {
@@ -170,19 +199,38 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
     interrupt(state: PlayerWorldState): void {
         this.pendingHits.delete(state);
         state.attackCombo = 0;
+        state.castSlot = 0;
+        state.clearCharge();
     }
 
     execute({
         room,
         sessionId,
         state,
+        move,
         attackRequested,
+        skillRequested,
         approachingAttack,
+        dt,
     }: PlayerChainContext): WorldChainResult {
         this.processPendingHits(room, sessionId, state);
-        if (state.dashing || state.attackCooldownTicks > 0 || state.skillCooldownTicks > 0) {
+        // Đang lướt tới mục tiêu của skill lướt: chưa ra đòn, mọi đòn khác bị khoá (attackCooldownTicks đang đếm lùi).
+        if (state.charging) {
+            this.stepCharge(room, state, move, dt);
             return WorldChainResult.CONTINUE;
         }
+        // Đang vung (animationMs) hoặc lướt: khoá mọi skill và đòn đánh thường.
+        if (state.dashing || state.attackCooldownTicks > 0) return WorldChainResult.CONTINUE;
+
+        // Skill chủ động được ưu tiên hơn đòn đánh thường và chỉ cần hết lúc vung (hồi đòn đánh thường
+        // không chặn nó); thiếu mana / chưa hết hồi của chính skill đó thì bỏ qua yêu cầu.
+        if (skillRequested > 0 && this.startSkill(room, state, skillRequested)) {
+            return WorldChainResult.CONTINUE;
+        }
+        state.castSlot = 0;
+
+        // Hồi đòn đánh thường (`cooldownMs`) chỉ chặn đòn đánh thường.
+        if (state.skillCooldownTicks > 0) return WorldChainResult.CONTINUE;
 
         // Hết đòn mà không có yêu cầu đánh tiếp ngay tick đầu tiên → mất combo.
         if (!attackRequested) {
@@ -223,6 +271,114 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
                       millisecondsToTicks(skill.cooldownMs, room.tickRate)
                 : 0
         );
+    }
+
+    /**
+     * Dùng skill chủ động số `slot` (khớp WorldMovementStep.cs): cần còn hồi xong, đủ mana. Lên lịch hit như
+     * đòn đánh thường; hồi chiêu của skill đếm từ lúc bắt đầu (sau `castTimeMs`, như cooldown đòn đánh thường).
+     */
+    private startSkill(room: WorldRoom, state: PlayerWorldState, slot: number): boolean {
+        const skill = skillService.getActiveSkills(state.skills)[slot - 1];
+        if (!skill) return false;
+        if (state.getSkillCooldownTicks(slot) > 0) return false;
+        if (state.mp < skill.manaCost) return false;
+
+        const cooldownTicks =
+            skill.cooldownMs > 0
+                ? getSkillCastTicks(skill, room.tickRate) +
+                  millisecondsToTicks(skill.cooldownMs, room.tickRate)
+                : 0;
+        if (isChargeSkill(skill)) {
+            // Skill lướt: có mục tiêu đang chọn trong `castRange` thì lướt tới nó; không có thì lướt thẳng theo hướng đang
+            // quay, dài bằng dash thường, rồi ra đòn ở cuối. Chưa ra đòn lúc bấm, chỉ bắt đầu lướt.
+            const target = findTargetById(room, state, state.targetId, skill.castRange);
+            state.mp -= skill.manaCost;
+            if (target) faceTarget(state, target.x - state.x);
+            state.startCharge(
+                slot,
+                target?.id ?? "",
+                target
+                    ? getChargeTicks(skill, room.tickRate)
+                    : getFreeChargeTicks(skill, room.tickRate),
+                cooldownTicks
+            );
+            return true;
+        }
+
+        state.mp -= skill.manaCost;
+        const direction = toHorizontalDirection(state.direction);
+        state.direction = direction;
+        state.attackSerial++;
+        this.pendingHits.set(
+            state,
+            buildPendingSkillHits(skill, state.attackSerial, direction, room.tickRate)
+        );
+        state.startSkill(slot, getSkillDurationTicks(skill, room.tickRate), cooldownTicks);
+        return true;
+    }
+
+    /**
+     * Một step lướt tới mục tiêu (khớp WorldMovementStep.cs): mỗi step dời về phía phần gần nhất của collider mục tiêu
+     * tối đa `tốc độ lướt × dt`, không vượt quãng còn lại; hai collider chạm nhau thì bắt đầu đòn (hit event tính từ đó).
+     * Hết thời gian lướt, mục tiêu chết hoặc biến mất thì dừng, không ra đòn.
+     */
+    private stepCharge(
+        room: WorldRoom,
+        state: PlayerWorldState,
+        move: MoveCommand,
+        dt: number
+    ): void {
+        const skill = skillService.getActiveSkills(state.skills)[state.castSlot - 1];
+        if (!skill) {
+            state.cancelCharge();
+            return;
+        }
+
+        if (state.chargeTargetId) {
+            const target = findAliveMonster(room, state.chargeTargetId);
+            if (!target || state.attackCooldownTicks <= 1) {
+                state.cancelCharge();
+                return;
+            }
+            let gap = getColliderGap(state, target);
+            if (gap.distance > CHARGE_CONTACT_EPSILON) {
+                faceTarget(state, target.x - state.x);
+                const move = Math.min(getChargeSpeed(skill) * dt, gap.distance);
+                applyDirectedMove(
+                    state,
+                    gap.directionX * move,
+                    gap.directionY * move,
+                    room.moveBounds,
+                    state.collider
+                );
+                state.moving = true;
+                gap = getColliderGap(state, target);
+            }
+            if (gap.distance > CHARGE_CONTACT_EPSILON) return;
+        } else if (state.attackCooldownTicks > 1) {
+            // Không có mục tiêu: lướt theo hướng đang đi (8 hướng như dash thường; không giữ cần thì theo hướng đang quay)
+            // đủ `freeDistance`, hết đoạn lướt thì ra đòn.
+            let moveX = move.moveX;
+            const moveY = move.moveY;
+            if (moveX === 0 && moveY === 0) moveX = state.direction === "left" ? -1 : 1;
+            const step =
+                getChargeSpeed(skill) * dt * (moveX !== 0 && moveY !== 0 ? DIAGONAL_FACTOR : 1);
+            applyDirectedMove(state, moveX * step, moveY * step, room.moveBounds, state.collider);
+            if (moveX < 0) state.direction = "left";
+            else if (moveX > 0) state.direction = "right";
+            state.moving = true;
+            return;
+        }
+
+        const direction = toHorizontalDirection(state.direction);
+        state.direction = direction;
+        state.moving = false;
+        state.attackSerial++;
+        this.pendingHits.set(
+            state,
+            buildPendingSkillHits(skill, state.attackSerial, direction, room.tickRate)
+        );
+        state.beginChargeStrike(getSkillDurationTicks(skill, room.tickRate));
     }
 
     private processPendingHits(room: WorldRoom, sessionId: string, state: PlayerWorldState): void {
@@ -293,6 +449,64 @@ function getAttackApproachMove(room: WorldRoom, state: PlayerWorldState): MoveCo
     const moveX = Math.abs(dx) > deadzone ? Math.sign(dx) : 0;
     const moveY = Math.abs(dy) > deadzone ? Math.sign(dy) : 0;
     return moveX || moveY ? { moveX, moveY } : undefined;
+}
+
+/** Hai collider coi là chạm khi khoảng cách giữa chúng không quá ngưỡng này (tile). Client C# dùng cùng giá trị. */
+const CHARGE_CONTACT_EPSILON = 1e-4;
+
+/** Tốc độ, thời gian dư, quãng lướt không mục tiêu của skill lướt: cột `chargeConfig` (skill seed), thiếu thì mặc định. */
+const getChargeSpeed = (skill: Skill) => getChargeConfig(skill).speed;
+
+/**
+ * Thời gian (tick) của lướt không có mục tiêu: đủ đi `freeDistance` ô ở tốc độ lướt, cộng 2 để
+ * `attackCooldownTicks` còn đúng 1 ở tick ra đòn. Client C# (WorldMovementStep.FreeChargeTicks) tính y hệt.
+ */
+const getFreeChargeTicks = (skill: Skill, tickRate: number) => {
+    const { speed, freeDistance } = getChargeConfig(skill);
+    return Math.min(0xff, Math.ceil((freeDistance / speed) * tickRate) + 2);
+};
+
+/** Thời gian lướt tối đa (tick): đủ đi hết `castRange` cộng `graceTicks`. Tối đa 255 (uint8 của attackCooldownTicks). */
+const getChargeTicks = (skill: Skill, tickRate: number) => {
+    const { speed, graceTicks } = getChargeConfig(skill);
+    return Math.min(0xff, Math.ceil((skill.castRange / speed) * tickRate) + graceTicks);
+};
+
+interface BodyCollider {
+    x: number;
+    y: number;
+    collider?: HitboxColliderState;
+}
+
+/**
+ * Khoảng cách giữa collider của hai bên (hình chữ nhật song song trục; tâm = (x + offsetX, y - offsetY), y world hướng xuống)
+ * và hướng đi (vector đơn vị) từ bên thứ nhất về phía điểm gần nhất của bên thứ hai. 0 = đã chạm / lấn nhau.
+ */
+function getColliderGap(from: BodyCollider, to: BodyCollider) {
+    const fromCenterX = from.x + (from.collider?.offsetX ?? 0);
+    const fromCenterY = from.y - (from.collider?.offsetY ?? 0);
+    const toCenterX = to.x + (to.collider?.offsetX ?? 0);
+    const toCenterY = to.y - (to.collider?.offsetY ?? 0);
+    const deltaX = toCenterX - fromCenterX;
+    const deltaY = toCenterY - fromCenterY;
+    const halfWidth = ((from.collider?.width ?? 0) + (to.collider?.width ?? 0)) / 2;
+    const halfHeight = ((from.collider?.height ?? 0) + (to.collider?.height ?? 0)) / 2;
+    const gapX = Math.max(0, Math.abs(deltaX) - halfWidth);
+    const gapY = Math.max(0, Math.abs(deltaY) - halfHeight);
+    const distance = Math.sqrt(gapX * gapX + gapY * gapY);
+    return {
+        distance,
+        directionX: distance > 0 ? (Math.sign(deltaX) * gapX) / distance : 0,
+        directionY: distance > 0 ? (Math.sign(deltaY) * gapY) / distance : 0,
+    };
+}
+
+function findAliveMonster(room: WorldRoom, id: string) {
+    if (!id) return undefined;
+    for (const monster of room.state.monsters) {
+        if (monster.id === id && monster.hp > 0) return monster;
+    }
+    return undefined;
 }
 
 function clearTarget(player: PlayerWorldState) {

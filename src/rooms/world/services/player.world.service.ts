@@ -159,6 +159,7 @@ export class PlayerWorldService {
             state,
             move,
             attackRequested: input?.attack === true,
+            skillRequested: normalizeSlot(input?.skill),
             dashRequested: input?.dash === true,
             targetSwitchPressed: buttons.targetNext && !previous.targetNext,
             targetUnlockPressed: buttons.targetUnlock && !previous.targetUnlock,
@@ -167,6 +168,7 @@ export class PlayerWorldService {
         });
         if (state.attackCooldownTicks > 0) state.attackCooldownTicks--;
         if (state.skillCooldownTicks > 0) state.skillCooldownTicks--;
+        state.tickSkillCooldowns();
     }
 
     private scheduleRespawn(room: WorldRoom, player: PlayerWorldState): void {
@@ -205,6 +207,10 @@ export class PlayerWorldService {
 }
 
 export const playerWorldService = new PlayerWorldService();
+
+/** Số thứ tự skill chủ động từ input: số nguyên dương, còn lại coi như không dùng skill. */
+const normalizeSlot = (value: number | undefined) =>
+    typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
 
 const normalizeAxis = (value: number | undefined) =>
     typeof value === "number" && Number.isFinite(value)

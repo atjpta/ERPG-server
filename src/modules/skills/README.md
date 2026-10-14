@@ -36,3 +36,21 @@ Chạy `yarn db:migrate` rồi `yarn seed` để tạo schema và thêm skill. D
 ## Skill của player / monster
 
 `player_states.skills` và `monsters.skills` là jsonb `[{ skillId, level }]` (`OwnedSkill`). Các skill `basicAttack`, theo đúng thứ tự trong mảng, là combo đánh thường (`skillService.getBasicAttackCombo`): mỗi class hiện có 1 đòn (thêm skill `basicAttack` vào danh sách là thành combo); monster dùng skill đầu tiên. Player mới nhận skill mặc định của class (`classes.skills`); vì chưa có học skill, `ClassSeed` gán lại bộ này cho mọi player của class đang có bộ khác (`PlayerStateRepo.replaceClassSkills`). Danh sách này được gửi xuống client qua world state (`OwnedSkillState`), client tra `skills.json` theo `skillId`. `level` đã lưu nhưng chưa dùng để tính damage.
+
+## Skill chủ động
+
+Skill không thuộc combo đánh thường (`basicAttack: false`), không phải `DASH` / `PASSIVE` là skill chủ động (`skillService.getActiveSkills`, đúng thứ tự trong `skills` của player). Hiện có 3 slot: `swordsman_cross_slash` (slot 1, phím Z), `swordsman_slash_dash` (slot 2, phím C) và `swordsman_fly_slash` (slot 3, phím V); trên mobile mỗi slot một nút. Thêm slot mới = thêm `skillNCooldownTicks` + trigger `SkillN` + phím/nút ở client.
+
+- Input: `MoveWorldInput.skill` = số thứ tự skill (từ 1), 0 = không; chỉ có hiệu lực đúng tick đó, không có buffer. Skill được ưu tiên hơn đòn đánh thường và dùng tại chỗ (không tự áp sát target).
+- Điều kiện (`PlayerAttackChain.startSkill`, client mirror ở `WorldMovementStep.cs`): hết đòn đang vung, `skillNCooldownTicks` của slot đó = 0, đủ `manaCost` (trừ ngay khi dùng).
+- State: `castSlot` (skill đang vung, 0 = đòn đánh thường theo `attackCombo`), `skill1CooldownTicks` / `skill2CooldownTicks` (đếm từ lúc bắt đầu skill, sau `castTimeMs`, riêng với hồi đòn đánh thường). Đang vung (`animationMs`) hoặc lướt thì khoá mọi skill và đòn đánh thường; hết vung thì hồi đòn đánh thường (`cooldownMs`) chỉ chặn đòn đánh thường, còn hồi của một skill chủ động chỉ chặn chính skill đó. Client hiện cooldown ở đúng nút của skill, các nút khác chỉ bị khoá trong lúc vung.
+- Hit event tác giả như đòn đánh thường: vùng RECT = bbox của sprite ở frame chém (pivot, 32 px = 1 tile), `triggerTicks` = frame × 50 ms / 50. Animator của class cần trigger `Skill1` dẫn tới state của skill.
+
+### Skill lướt tới mục tiêu (charge)
+
+Skill kiểu `DASH` khác `dash` thường (`isChargeSkill`, ví dụ `swordsman_slash_dash`) có 2 hành động. Bấm skill khi có mục tiêu đang chọn trong `castRange` thì chưa ra đòn mà lướt tới với tốc độ dash (client hiện hiệu ứng dash như thường, không bất tử) cho tới khi collider hai bên chạm nhau (`PlayerAttackChain.stepCharge`, client mirror `WorldMovementStep.StepCharge`). Chạm thì mới ra đòn: `animationMs` và `triggerTicks` của hit event tính từ lúc chạm, anim của skill phát lúc đó.
+
+- State: `charging` (đang lướt), `chargeTargetId` (mục tiêu chốt lúc bấm), `attackCooldownTicks` đếm lùi thời gian lướt tối đa (đủ đi hết `castRange` + 10 tick, tối đa 255). Hết giờ, mục tiêu chết hoặc dash thường cắt thì dừng, không ra đòn.
+- Mỗi step dời tối đa `tốc độ × dt` về phía điểm gần nhất của collider mục tiêu, không vượt quãng còn lại, nên dừng sát mà không lấn (`applyDirectedMove` xử lý địa hình như di chuyển thường).
+- Không có mục tiêu (hoặc mục tiêu ngoài `castRange`) thì vẫn dùng được như dash: lướt theo hướng đang đi (8 hướng như dash; không giữ cần thì theo hướng đang quay), dài `chargeConfig.freeDistance` (`chargeTargetId` rỗng, `attackCooldownTicks` đếm lùi số tick đó), hết đoạn lướt thì ra đòn ở chỗ đứng.
+- Cooldown đếm từ lúc bấm (gồm cả thời gian lướt). Mana trừ lúc bấm.

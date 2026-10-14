@@ -2,6 +2,7 @@ import { boolean, integer, jsonb, pgEnum, pgTable, real } from "drizzle-orm/pg-c
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import { SkillOwnerType, SkillType, TargetType } from "@/modules/skills/enums/skill.enum.js";
 import type {
+    SkillChargeInput,
     SkillHitEvent,
     SkillLevelConfig,
 } from "@/modules/skills/schemas/skill-config.schema.js";
@@ -28,6 +29,8 @@ export const Skills = pgTable("skills", {
     basicAttack: boolean("basic_attack").notNull().default(false),
     levelConfig: jsonb("level_config").$type<SkillLevelConfig[]>().notNull().default([]),
     skillHitEvents: jsonb("skill_hit_events").$type<SkillHitEvent[]>().notNull().default([]),
+    /** Chỉ skill lướt tới mục tiêu (`isChargeSkill`): tốc độ, thời gian dư, quãng lướt khi không có mục tiêu. Thiếu field → mặc định. */
+    chargeConfig: jsonb("charge_config").$type<SkillChargeInput>(),
 });
 
 export type Skill = typeof Skills.$inferSelect;

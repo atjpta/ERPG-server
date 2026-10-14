@@ -67,8 +67,23 @@ export class PlayerWorldState extends Schema {
     @type("boolean") dashing: boolean = false;
     @type("uint8") dashTicks: number = 0;
     @type("uint8") dashCooldownTicks: number = 0;
+    /** Tick còn lại tới khi dùng lại được skill chủ động số 1 (đếm từ lúc bắt đầu skill; 0 = dùng được). */
+    @type("uint16") skill1CooldownTicks: number = 0;
+    /** Như `skill1CooldownTicks`, cho skill chủ động số 2. */
+    @type("uint16") skill2CooldownTicks: number = 0;
+    /** Như `skill1CooldownTicks`, cho skill chủ động số 3. */
+    @type("uint16") skill3CooldownTicks: number = 0;
+    /**
+     * Đang lướt tới mục tiêu của skill lướt (charge, `castSlot` = skill đó): chưa ra đòn, `attackCooldownTicks` đếm lùi thời gian
+     * lướt tối đa. Chạm collider mục tiêu thì thành đòn đánh bình thường (`attacking`, hit event tính từ lúc đó).
+     */
+    @type("boolean") charging: boolean = false;
+    /** Mục tiêu đã chốt lúc bắt đầu lướt (không đổi khi người chơi đổi target giữa chừng). */
+    @type("string") chargeTargetId: string = "";
     @type("boolean") attacking: boolean = false;
     @type("uint8") attackCombo: number = 0;
+    /** Skill chủ động đang được dùng (số thứ tự từ 1); 0 = đòn đánh thường theo `attackCombo`. */
+    @type("uint8") castSlot: number = 0;
     @type("boolean") hitInterrupted: boolean = false;
     @type(HitboxColliderState) hitbox: HitboxColliderState;
     @type(HitboxColliderState) collider: HitboxColliderState;
@@ -329,6 +344,7 @@ export class PlayerWorldState extends Schema {
         this.moving = false;
         this.attacking = false;
         this.attackCombo = 0;
+        this.castSlot = 0;
         this.hitInterrupted = false;
         this.targetId = "";
         this.targetLocked = false;
@@ -336,6 +352,10 @@ export class PlayerWorldState extends Schema {
         this.hp = this.maxHp;
         this.attackCooldownTicks = 0;
         this.skillCooldownTicks = 0;
+        this.skill1CooldownTicks = 0;
+        this.skill2CooldownTicks = 0;
+        this.skill3CooldownTicks = 0;
+        this.clearCharge();
         this.dashTicks = 0;
         this.dashCooldownTicks = 0;
     }
@@ -345,6 +365,8 @@ export class PlayerWorldState extends Schema {
         this.moving = false;
         this.attacking = false;
         this.attackCombo = 0;
+        this.castSlot = 0;
+        this.clearCharge();
         this.hitInterrupted = false;
         this.targetId = "";
         this.targetLocked = false;
@@ -359,8 +381,84 @@ export class PlayerWorldState extends Schema {
     /** Bắt đầu đòn: khoá di chuyển `durationTicks`; đòn kế tiếp đợi lâu hơn trong `durationTicks` và `cooldownTicks` (cùng đếm từ lúc bắt đầu). */
     startAttack(durationTicks: number, cooldownTicks = 0) {
         this.attacking = true;
+        this.castSlot = 0;
         this.attackCooldownTicks = durationTicks;
         this.skillCooldownTicks = Math.min(Math.max(durationTicks, cooldownTicks), MAX_SKILL_COOLDOWN_TICKS);
+    }
+
+    /**
+     * Bắt đầu skill chủ động số `slot`: khoá di chuyển và mọi đòn khác `durationTicks`, còn skill đó chỉ
+     * dùng lại được sau `cooldownTicks` kể từ lúc bắt đầu. Hồi đòn đánh thường đang chạy vẫn giữ nguyên.
+     */
+    startSkill(slot: number, durationTicks: number, cooldownTicks: number) {
+        this.attacking = true;
+        this.attackCombo = 0;
+        this.castSlot = slot;
+        this.attackCooldownTicks = durationTicks;
+        this.skillCooldownTicks = Math.min(
+            Math.max(this.skillCooldownTicks, durationTicks),
+            MAX_SKILL_COOLDOWN_TICKS
+        );
+        this.setSkillCooldownTicks(slot, cooldownTicks);
+    }
+
+    /** Tick còn lại tới khi dùng lại được skill chủ động số `slot` (từ 1); slot không có thì 0. */
+    getSkillCooldownTicks(slot: number): number {
+        if (slot === 1) return this.skill1CooldownTicks;
+        if (slot === 2) return this.skill2CooldownTicks;
+        if (slot === 3) return this.skill3CooldownTicks;
+        return 0;
+    }
+
+    setSkillCooldownTicks(slot: number, ticks: number) {
+        const value = Math.min(Math.max(0, ticks), MAX_SKILL_COOLDOWN_TICKS);
+        if (slot === 1) this.skill1CooldownTicks = value;
+        else if (slot === 2) this.skill2CooldownTicks = value;
+        else if (slot === 3) this.skill3CooldownTicks = value;
+    }
+
+    /** Mỗi step giảm 1 tick hồi chiêu của mọi skill chủ động. */
+    tickSkillCooldowns() {
+        if (this.skill1CooldownTicks > 0) this.skill1CooldownTicks--;
+        if (this.skill2CooldownTicks > 0) this.skill2CooldownTicks--;
+        if (this.skill3CooldownTicks > 0) this.skill3CooldownTicks--;
+    }
+
+    /**
+     * Bắt đầu skill lướt số `slot`: khoá mọi đòn trong `chargeTicks` (thời gian lướt tối đa, đếm lùi bằng
+     * `attackCooldownTicks`); chưa `attacking` — đòn chỉ bắt đầu khi chạm mục tiêu (`beginChargeStrike`).
+     */
+    startCharge(slot: number, targetId: string, chargeTicks: number, cooldownTicks: number) {
+        this.attackCombo = 0;
+        this.castSlot = slot;
+        this.charging = true;
+        this.chargeTargetId = targetId;
+        this.attackCooldownTicks = Math.min(chargeTicks, 0xff);
+        this.setSkillCooldownTicks(slot, cooldownTicks);
+    }
+
+    /** Chạm mục tiêu: hết lướt, bắt đầu đòn `durationTicks` (hồi đòn đánh thường đang chạy vẫn giữ). */
+    beginChargeStrike(durationTicks: number) {
+        this.clearCharge();
+        this.attacking = true;
+        this.attackCooldownTicks = durationTicks;
+        this.skillCooldownTicks = Math.min(
+            Math.max(this.skillCooldownTicks, durationTicks),
+            MAX_SKILL_COOLDOWN_TICKS
+        );
+    }
+
+    /** Dừng lướt (hết thời gian, mất mục tiêu): không ra đòn; hồi chiêu của skill giữ nguyên. */
+    cancelCharge() {
+        this.clearCharge();
+        this.moving = false;
+        this.attackCooldownTicks = 0;
+        this.castSlot = 0;
+    }
+
+    clearCharge() {
+        this.charging = false;
+        this.chargeTargetId = "";
     }
 
     /** Dash / bị đánh trúng cắt đòn đang vung: bỏ phần khoá di chuyển còn lại; cooldown dài hơn lúc vung thì vẫn chạy tiếp. */

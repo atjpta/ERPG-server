@@ -63,6 +63,19 @@ export const SkillAreaSchema = z.object({
     untargetedDistance: nonNegative.default(1),
 });
 
+/**
+ * Cách một skill lướt tới mục tiêu (kiểu `DASH` khác `dash` thường, xem `isChargeSkill`) di chuyển — chỉnh ở
+ * skill seed (`chargeConfig`), thiếu field thì dùng mặc định. Client đọc cùng giá trị qua `skills.json`.
+ */
+export const SkillChargeSchema = z.object({
+    /** Tốc độ lướt (ô / giây); mặc định 8 = tốc độ dash thường. */
+    speed: z.number().positive().default(8),
+    /** Số tick dư ngoài thời gian lướt vừa đủ tới `castRange`, cho mục tiêu chạy ra xa / bị địa hình cản. */
+    graceTicks: z.number().int().nonnegative().default(10),
+    /** Không có mục tiêu: lướt thẳng theo hướng đang quay quãng này (ô) rồi ra đòn. Mặc định 2.4 = một cú dash thường. */
+    freeDistance: nonNegative.default(2.4),
+});
+
 export const SkillHitEventSchema = z.object({
     eventIndex: z.number().int().nonnegative(),
     triggerTicks: z.number().int().nonnegative().default(0),
@@ -103,4 +116,7 @@ export type SkillEffect = z.infer<typeof SkillEffectSchema>;
 export type SkillHitEvent = z.infer<typeof SkillHitEventSchema>;
 export type SkillProjectile = z.infer<typeof SkillProjectileSchema>;
 export type SkillArea = z.infer<typeof SkillAreaSchema>;
+/** Giá trị đã điền mặc định (đầu ra của schema); cột `chargeConfig` chỉ cần khai báo field muốn đổi. */
+export type SkillCharge = z.infer<typeof SkillChargeSchema>;
+export type SkillChargeInput = z.input<typeof SkillChargeSchema>;
 export type SkillConfig = z.infer<typeof SkillConfigSchema>;

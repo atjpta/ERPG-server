@@ -26,7 +26,11 @@ import {
 } from "@/modules/skills/enums/skill.enum.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
-import { sortSkillHitEvents } from "@/modules/skills/services/skill.service.js";
+import {
+    getChargeConfig,
+    isChargeSkill,
+    sortSkillHitEvents,
+} from "@/modules/skills/services/skill.service.js";
 import { getSkillCastTicks, getSkillDurationTicks } from "@/rooms/world/utils/skill-attack.world.util.js";
 import {
     WORLD_TICK_RATE,
@@ -289,8 +293,11 @@ function toClientSkill(skill: Skill) {
         skillType: skill.skillType,
         castRange: skill.castRange,
         cooldownMs: skill.cooldownMs,
+        manaCost: skill.manaCost,
         /** Thuộc combo đánh thường (theo thứ tự trong `skills` của player/monster). */
         basicAttack: skill.basicAttack,
+        /** Chỉ skill lướt tới mục tiêu (`isChargeSkill`): tốc độ, thời gian dư, quãng lướt không mục tiêu — đã điền mặc định. */
+        charge: isChargeSkill(skill) ? getChargeConfig(skill) : null,
         /** Số tick chờ từ lúc bấm đến lúc anim + hit event bắt đầu (`castTimeMs`; 0 = ngay). */
         castTicks: getSkillCastTicks(skill, WORLD_TICK_RATE),
         /** Số tick mô phỏng của cả đòn (chờ + anim, khoá di chuyển) — giống PlayerAttackChain. */

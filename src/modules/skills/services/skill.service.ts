@@ -1,11 +1,36 @@
 import { cacheService } from "@/core/cache/cache.service.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
-import { HitDelivery, TargetType } from "@/modules/skills/enums/skill.enum.js";
-import type { OwnedSkill, SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
+import { HitDelivery, SkillType, TargetType } from "@/modules/skills/enums/skill.enum.js";
+import {
+    SkillChargeSchema,
+    type OwnedSkill,
+    type SkillCharge,
+    type SkillHitEvent,
+} from "@/modules/skills/schemas/skill-config.schema.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
 
 /** Skill `dash`: `animationMs` = thời gian lướt (khoá di chuyển), `cooldownMs` = hồi chiêu — chỉnh ở skill seed, không ở code. */
 export const DASH_SKILL_CODE = "dash";
+
+/**
+ * Skill lướt tới mục tiêu (kiểu `DASH`, không phải `dash` thường): lướt tới trước mặt mục tiêu, chạm collider thì
+ * mới ra đòn — `castRange` = khoảng cách tối đa tới mục tiêu lúc bấm, `animationMs` + hit event tính từ lúc chạm.
+ * Dùng chung kiểu `DASH` để không phải thêm giá trị enum (migration).
+ */
+export const isChargeSkill = (skill: Pick<Skill, "code" | "skillType">) =>
+    skill.skillType === SkillType.DASH && skill.code !== DASH_SKILL_CODE;
+
+const chargeConfigs = new WeakMap<object, SkillCharge>();
+
+/** Cấu hình lướt của skill (cột `chargeConfig`) đã điền mặc định, cache theo từng object skill. */
+export const getChargeConfig = (skill: Pick<Skill, "chargeConfig">): SkillCharge => {
+    let config = chargeConfigs.get(skill);
+    if (!config) {
+        config = SkillChargeSchema.parse(skill.chargeConfig ?? {});
+        chargeConfigs.set(skill, config);
+    }
+    return config;
+};
 
 /** `triggerTicks` của hit event được tác giả theo nhịp 20 tick/giây. */
 const AUTHORED_TICK_MS = 50;
@@ -61,6 +86,22 @@ export class SkillService {
             if (skill?.basicAttack) combo.push(skill);
         }
         return combo;
+    }
+
+    /**
+     * Skill chủ động của một player: các skill nó sở hữu không thuộc combo đánh thường, không phải dash / passive,
+     * đúng thứ tự trong cột `skills`. Input `skill` của client là số thứ tự (từ 1) trong danh sách này.
+     */
+    getActiveSkills(owned: Iterable<Pick<OwnedSkill, "skillId">>): Skill[] {
+        const skills: Skill[] = [];
+        for (const { skillId } of owned) {
+            const skill = this.skillsById.get(skillId);
+            if (!skill || skill.basicAttack) continue;
+            // Skill DASH khác `dash` thường là skill lướt tới mục tiêu (isChargeSkill): vẫn là skill chủ động.
+            if (skill.code === DASH_SKILL_CODE || skill.skillType === SkillType.PASSIVE) continue;
+            skills.push(skill);
+        }
+        return skills;
     }
 
     /** `[{ skillId, level: 1 }]` cho danh sách code; lỗi nếu có code không tồn tại/đã tắt. */

@@ -29,6 +29,13 @@
       "when": 1791959847713,
       "tag": "0003_groovy_baron_strucker",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791991739054,
+      "tag": "0004_romantic_eddie_brock",
+      "breakpoints": true
     }
   ]
 }

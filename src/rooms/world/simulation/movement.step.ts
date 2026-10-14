@@ -65,8 +65,8 @@ export const TERRAIN_EPSILON = 1e-4;
  */
 export const SLIDE_REACH = 1;
 
-/** Hệ số chuẩn hoá khi đi chéo (1/√2) — hằng số để C# port khớp tuyệt đối. */
-export const DIAGONAL_FACTOR = 0.7071067811865476;
+/** Hệ số chuẩn hoá khi đi chéo (1/√2). Client C# (`Math.Sqrt(0.5)`) ra đúng cùng giá trị double. */
+export const DIAGONAL_FACTOR = Math.SQRT1_2;
 
 export function applyMove(
     state: MovableState,
@@ -103,6 +103,35 @@ export function applyMove(
     }
     if (moveX < 0) state.direction = Direction.LEFT;
     else if (moveX > 0) state.direction = Direction.RIGHT;
+}
+
+/**
+ * Dời entity đúng `(dx, dy)` (không theo 8 hướng của `applyMove`) rồi xử lý địa hình như `applyMove` — dùng cho lướt tới
+ * mục tiêu (charge). Không đổi `moving` / `direction`. Client C# (WorldCollision.Resolve) nhận cùng dấu và quãng đường.
+ */
+export function applyDirectedMove(
+    state: MovableState,
+    dx: number,
+    dy: number,
+    bounds: MoveBounds,
+    footprint?: MoveFootprint
+): void {
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+    const prevX = state.x;
+    const prevY = state.y;
+    state.x = clamp(state.x + dx, 0, bounds.width);
+    state.y = clamp(state.y + dy, 0, bounds.height);
+    if (footprint && bounds.colliders?.length) {
+        const wantX = state.x;
+        const wantY = state.y;
+        resolveTerrain(state, prevX, prevY, bounds.colliders, footprint);
+        slideAroundCorner(
+            state,
+            { wantX, wantY, moveX: Math.sign(dx), moveY: Math.sign(dy), step: Math.sqrt(dx * dx + dy * dy) },
+            bounds,
+            footprint
+        );
+    }
 }
 
 /** Chuẩn hóa tốc độ và fixed-step trước khi di chuyển mọi entity trong world. */
