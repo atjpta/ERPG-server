@@ -1,4 +1,5 @@
 import { Skills, type NewSkill } from "@/modules/skills/entities/skill.entity.js";
+import { skillClipWarnings } from "@/modules/bodies/utils/anim-clip.util.js";
 import {
     DamageScalingType,
     DamageType,
@@ -619,6 +620,15 @@ export const SkillSeed = async () => {
         if (retired?.enabled)
             await SkillRepo.updateById({ id: retired.id, data: { enabled: false } });
     }
+
+    // Class skills are tuned by hand, but must not outlast the Unity clip they play.
+    const timed = CLASS_SKILLS.map((skill) => ({
+        code: skill.code,
+        animationMs: skill.animationMs ?? 0,
+        castTimeMs: skill.castTimeMs ?? 0,
+        skillHitEvents: skill.skillHitEvents ?? [],
+    }));
+    for (const warning of skillClipWarnings(timed)) console.warn(`⚠️ [SkillSeed] ${warning}`);
 
     console.info("✅ [SkillSeed] Done");
 };
