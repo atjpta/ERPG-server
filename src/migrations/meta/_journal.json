@@ -1,41 +1,48 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1791695625710,
-      "tag": "0000_high_quicksilver",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1791719991607,
-      "tag": "0001_bent_ink",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1791948292580,
-      "tag": "0002_rapid_lightspeed",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1791959847713,
-      "tag": "0003_groovy_baron_strucker",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1791991739054,
-      "tag": "0004_romantic_eddie_brock",
-      "breakpoints": true
-    }
-  ]
+    "version": "7",
+    "dialect": "postgresql",
+    "entries": [
+        {
+            "idx": 0,
+            "version": "7",
+            "when": 1791695625710,
+            "tag": "0000_high_quicksilver",
+            "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1791719991607,
+            "tag": "0001_bent_ink",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1791948292580,
+            "tag": "0002_rapid_lightspeed",
+            "breakpoints": true
+        },
+        {
+            "idx": 3,
+            "version": "7",
+            "when": 1791959847713,
+            "tag": "0003_groovy_baron_strucker",
+            "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "7",
+            "when": 1791991739054,
+            "tag": "0004_romantic_eddie_brock",
+            "breakpoints": true
+        },
+        {
+            "idx": 5,
+            "version": "7",
+            "when": 1792082396037,
+            "tag": "0005_careful_the_santerians",
+            "breakpoints": true
+        }
+    ]
 }

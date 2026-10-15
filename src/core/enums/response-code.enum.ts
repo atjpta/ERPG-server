@@ -58,4 +58,5 @@ export enum ResponseCode {
 
     // Master data
     MASTER_DATA_NOT_FOUND = "MASTER_DATA_NOT_FOUND",
+    MASTER_DATA_READ_ONLY = "MASTER_DATA_READ_ONLY",
 }

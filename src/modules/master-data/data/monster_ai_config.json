@@ -1,0 +1,8 @@
+{
+    "detectionRadius": 6,
+    "leashRadius": 8,
+    "roamRadius": 4,
+    "roamArrivalDistance": 0.15,
+    "idleMinMs": 1000,
+    "idleMaxMs": 3000
+}

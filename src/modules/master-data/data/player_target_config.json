@@ -1,0 +1,34 @@
+{
+    "keepTargetRange": 6,
+    "approachDeadzone": 1,
+    "default": {
+        "autoTargetMargin": 1,
+        "faceTargetMargin": 0,
+        "minFaceRange": 2
+    },
+    "classes": {
+        "swordsman": {
+            "autoTargetMargin": 1,
+            "faceTargetMargin": 2,
+            "minFaceRange": 2
+        },
+        "archer": {
+            "autoTargetMargin": 1,
+            "faceTargetMargin": 2,
+            "minFaceRange": 2
+        },
+        "cleric": {
+            "autoTargetMargin": 1,
+            "faceTargetMargin": 2,
+            "minFaceRange": 2
+        }
+    },
+    "autoBattle": {
+        "range": 5,
+        "loseRange": 8,
+        "minSwingRange": 1,
+        "rangedSwingMargin": 0.5,
+        "minLockRange": 4,
+        "lockMargin": 0.5
+    }
+}

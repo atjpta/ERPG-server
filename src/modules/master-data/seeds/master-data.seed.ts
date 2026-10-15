@@ -18,6 +18,11 @@ import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.j
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
 import { DEFAULT_PLAYER_TARGET_CONFIG } from "@/modules/master-data/schemas/player-target-config.schema.js";
+import { DEFAULT_MONSTER_AI_CONFIG } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
+import {
+    isUnityMasterDataKey,
+    loadUnityMasterData,
+} from "@/modules/master-data/utils/unity-master-data.util.js";
 import type { MasterDataValueMap } from "@/modules/master-data/schemas/master-data-value.schema.js";
 
 const MAX_LEVEL = 100;
@@ -102,6 +107,10 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
         value: DEFAULT_PLAYER_TARGET_CONFIG,
         note: "Tầm chọn / giữ / quay mặt về target theo class + thông số auto battle (client đọc qua skills.json)",
     },
+    [MasterDataKey.MONSTER_AI_CONFIG]: {
+        value: DEFAULT_MONSTER_AI_CONFIG,
+        note: "Tầm thấy / đuổi / đi dạo của monster (làm trong Unity)",
+    },
     [MasterDataKey.DAILY_QUEST_CONFIG]: {
         value: DEFAULT_DAILY_QUEST_CONFIG,
         note: "Quest hằng ngày: giờ reset, bậc level, thưởng theo level",
@@ -110,7 +119,13 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
 
 export const MasterDataSeed = async () => {
     for (const key of Object.values(MasterDataKey)) {
-        const { value, note } = DEFAULTS[key];
+        // Ranges are authored in Unity: the file wins over the default and the table is overwritten by it on every seed.
+        const { value, note } = isUnityMasterDataKey(key)
+            ? {
+                  value: loadUnityMasterData(key),
+                  note: `${DEFAULTS[key].note}. Làm trong Unity, không sửa ở admin.`,
+              }
+            : DEFAULTS[key];
         await MasterDataRepo.upsert({
             data: { key, value, note },
             target: MasterDatas.key,
