@@ -1,7 +1,10 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { GameMaps, type NewGameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { GameMapRepo } from "@/modules/maps/repositories/game-map.repository.js";
-import type { MapDefinition } from "@/modules/maps/schemas/map-definition.schema.js";
+import {
+    MapDefinitionSchema,
+    type MapDefinition,
+} from "@/modules/maps/schemas/map-definition.schema.js";
 import type { MapLayout } from "@/modules/maps/schemas/map-layout.schema.js";
 import { MAP_DEFINITIONS } from "@/modules/maps/seeds/map-definitions.js";
 import {
@@ -29,11 +32,31 @@ export const loadMapLayouts = (): MapLayout[] =>
             return layout;
         });
 
-/** Định nghĩa (config) của mọi map, đã kiểm tham chiếu chéo giữa các map. */
+const DEFINITIONS_DIR = new URL("../definitions/", import.meta.url);
+
+/** Mọi `definitions/<code>.json` (map tạo trong Map Lab của Unity thay vì trong `map-definitions.ts`), đã kiểm schema. */
+export const loadMapDefinitionFiles = (): MapDefinition[] =>
+    readdirSync(DEFINITIONS_DIR)
+        .filter((file) => file.endsWith(".json"))
+        .sort()
+        .map((file) => {
+            const definition = MapDefinitionSchema.parse(
+                JSON.parse(readFileSync(new URL(file, DEFINITIONS_DIR), "utf-8"))
+            );
+            if (`${definition.code}.json` !== file) {
+                throw new Error(
+                    `[GameMapSeed] definitions/${file}: code "${definition.code}" không khớp tên file`
+                );
+            }
+            return definition;
+        });
+
+/** Định nghĩa (config) của mọi map (code + file), đã kiểm tham chiếu chéo giữa các map. */
 export const loadMapDefinitions = (): MapDefinition[] => {
-    const errors = validateDefinitionRefs(MAP_DEFINITIONS);
+    const all = [...MAP_DEFINITIONS, ...loadMapDefinitionFiles()];
+    const errors = validateDefinitionRefs(all);
     if (errors.length > 0) throw new Error(`[GameMapSeed] ${errors.join("; ")}`);
-    return MAP_DEFINITIONS;
+    return all;
 };
 
 /** Định nghĩa chưa có file layout từ Unity (sẽ thành row placeholder). */
