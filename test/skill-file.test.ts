@@ -1,7 +1,11 @@
 import { strict as assert } from "node:assert";
 import { HitDelivery, SkillType } from "@/modules/skills/enums/skill.enum.js";
 import { SkillFileSchema } from "@/modules/skills/schemas/skill-file.schema.js";
-import { skillFileToRow, withFileSkills } from "@/modules/skills/seeds/skill-file.util.js";
+import {
+    monsterSkillCodes,
+    skillFileToRow,
+    withFileSkills,
+} from "@/modules/skills/seeds/skill-file.util.js";
 
 const file = (extra: Record<string, unknown> = {}) =>
     SkillFileSchema.parse({
@@ -68,6 +72,25 @@ describe("skill files (authored in the Unity Skill Lab)", () => {
         assert.deepEqual(
             row.skillHitEvents?.map((hit) => hit.hitGroup),
             [0, 0, undefined]
+        );
+    });
+
+    it("gives a monster its attack skills from the files, in slot order", () => {
+        const bite = file({
+            code: "bat_attack",
+            classCode: undefined,
+            monsterCode: "bat",
+            skillType: SkillType.MELEE,
+        });
+        const claw = file({ code: "bat_claw", classCode: undefined, monsterCode: "bat", slot: 0 });
+        const other = file({ code: "slime_attack", classCode: undefined, monsterCode: "slime" });
+        assert.deepEqual(monsterSkillCodes("bat", [bite, claw, other]), ["bat_claw", "bat_attack"]);
+        assert.deepEqual(monsterSkillCodes("slime", [bite, claw, other]), ["slime_attack"]);
+        assert.deepEqual(monsterSkillCodes("werewolf", [bite, claw, other]), []);
+        assert.deepEqual(
+            withFileSkills("archer", [], [bite]),
+            [],
+            "a monster attack is not a class skill"
         );
     });
 

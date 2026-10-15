@@ -25,12 +25,6 @@ export interface MonsterDefinition {
     hitbox: CollisionBounds;
     collider: CollisionBounds;
     attackClipMs: number;
-    /** Đánh xa (bắn tên / phép): vùng đánh dài, đứng xa mới ra đòn. */
-    ranged?: boolean;
-    /** Skill đánh thường đã chỉnh tay (mặc định sinh `{code}_attack` theo hitbox). */
-    attackSkillCode?: string;
-    /** Không đánh (quái tập): không sinh skill `{code}_attack`, monster không có skill nào. */
-    noAttack?: boolean;
 }
 
 /**
@@ -63,7 +57,6 @@ const MONSTER_ENTRIES: Omit<MonsterDefinition, "hitbox" | "collider" | "attackCl
         code: "training_slime",
         biome: Biome.SLIME,
         level: 1,
-        noAttack: true,
     },
 ];
 
@@ -73,10 +66,6 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = MONSTER_ENTRIES.map((ent
     ...monsterBody(entry.code),
     attackClipMs: monsterAttackMs(entry.code),
 }));
-
-/** Code skill đánh thường của monster. */
-export const monsterAttackSkillCode = (monster: MonsterDefinition) =>
-    monster.attackSkillCode ?? `${monster.code}_attack`;
 
 /**
  * Mặc định master data `monster_level_config` — +100% chỉ số gốc mỗi level (stat = base × level),

@@ -72,6 +72,8 @@ export const SkillFileSchema = z.object({
     code: z.string().regex(/^[a-z][a-z0-9_]*$/),
     /** Class that gets the skill; leave out for a shared skill nobody owns (the dash). */
     classCode: z.string().min(1).optional(),
+    /** Monster that uses the skill (its attack); a skill has a class, a monster or neither. */
+    monsterCode: z.string().min(1).optional(),
     /** Position in the class's skill list; leave out to put it last. */
     slot: z.number().int().nonnegative().optional(),
     skillType: z.enum(SkillType),

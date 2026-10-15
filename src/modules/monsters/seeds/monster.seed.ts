@@ -10,6 +10,7 @@ import { resolveMonsterAi } from "@/modules/monsters/schemas/monster-ai-config.s
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import type { Stats } from "@/modules/player/schemas/stat.schema.js";
+import { loadSkillFiles, monsterSkillCodes } from "@/modules/skills/seeds/skill-file.util.js";
 import { toOwnedSkills } from "@/modules/skills/seeds/owned-skills.seed.util.js";
 
 interface ItemDropSeed {
@@ -26,7 +27,6 @@ interface MonsterSeedEntry {
     attackCooldownMs: number;
     /** Chỉ số gốc ở mốc level 1; tăng theo level bằng master data `monster_level_config`. */
     stats: Stats;
-    skillCodes: string[];
     /**
      * Mức NORMAL / common — nhân theo loại × độ hiếm lúc chạy bằng master data `monster_scale_config`.
      * Quái thường (kể cả boss dungeon) chỉ rơi đá cường hoá + bình máu; trang bị biome là phần thưởng
@@ -61,7 +61,6 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
             [StatKey.ACCURACY]: 1,
             [StatKey.EVASION]: 1,
         },
-        skillCodes: ["bat_attack"],
         drops: {
             gold: { min: 1, max: 10 },
             exp: 22,
@@ -83,7 +82,6 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
             [StatKey.ACCURACY]: 1,
             [StatKey.EVASION]: 1,
         },
-        skillCodes: ["slime_attack"],
         drops: {
             gold: { min: 1, max: 10 },
             exp: 22,
@@ -105,7 +103,6 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
             [StatKey.ACCURACY]: 1,
             [StatKey.EVASION]: 1,
         },
-        skillCodes: ["werewolf_attack"],
         drops: {
             gold: { min: 10, max: 100 },
             exp: 400,
@@ -128,7 +125,6 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
             [StatKey.ACCURACY]: 1,
             [StatKey.EVASION]: 1,
         },
-        skillCodes: ["werebear_attack"],
         drops: {
             gold: { min: 20, max: 200 },
             exp: 1200,
@@ -154,7 +150,6 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
             [StatKey.ACCURACY]: 0,
             [StatKey.EVASION]: 0,
         },
-        skillCodes: [],
         drops: { exp: 0, items: [] },
     },
 ];
@@ -162,7 +157,8 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
 /** Chạy sau SkillSeed và ItemSeed (tham chiếu skill/item theo id). */
 export const MonsterSeed = async () => {
     const aiConfig = loadUnityMasterData(MasterDataKey.MONSTER_AI_CONFIG);
-    for (const { skillCodes, drops, ...entry } of MONSTER_SEEDS) {
+    const skillFiles = loadSkillFiles();
+    for (const { drops, ...entry } of MONSTER_SEEDS) {
         const monster: NewMonster = {
             ...entry,
             // Speed is authored in Unity (Ranges tab): a base for every monster, a monster's own number over it.
@@ -171,7 +167,8 @@ export const MonsterSeed = async () => {
                 [StatKey.MOVE_SPEED]: resolveMonsterAi(aiConfig, entry.code).moveSpeed,
             },
             ...prefabOf(entry.code),
-            skills: await toOwnedSkills(skillCodes),
+            // Attacks are skill files authored in Unity (Skill Lab), given to the monster by `monsterCode`.
+            skills: await toOwnedSkills(monsterSkillCodes(entry.code, skillFiles)),
             drops: MonsterDropsSchema.parse({
                 currency: drops.gold ? [{ code: CurrencyCode.GOLD, ...drops.gold }] : [],
                 items: await toItemDrops(drops.items),

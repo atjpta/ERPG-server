@@ -25,9 +25,15 @@ export const loadSkillFiles = (): SkillFile[] =>
                     `[SkillFile] ${file}: code "${skill.code}" does not match the file name`
                 );
             }
-            if (skill.classCode && !skill.code.startsWith(`${skill.classCode}_`)) {
+            if (skill.classCode && skill.monsterCode) {
                 throw new Error(
-                    `[SkillFile] ${file}: code must start with "${skill.classCode}_" (its animation clip is the rest)`
+                    `[SkillFile] ${file}: a skill belongs to a class or to a monster, not both`
+                );
+            }
+            const owner = skill.classCode ?? skill.monsterCode;
+            if (owner && !skill.code.startsWith(`${owner}_`)) {
+                throw new Error(
+                    `[SkillFile] ${file}: code must start with "${owner}_" (its animation clip is the rest)`
                 );
             }
             return skill;
@@ -90,6 +96,16 @@ export const skillFileToRow = (skill: SkillFile): NewSkill => ({
     skillHitEvents: skill.hits.map(toHitEvent),
     ...(skill.charge && { chargeConfig: skill.charge }),
 });
+
+/** Codes of the skill files a monster uses (its attacks), in `slot` order then by code. */
+export const monsterSkillCodes = (
+    monsterCode: string,
+    files: readonly SkillFile[] = loadSkillFiles()
+): string[] =>
+    files
+        .filter((skill) => skill.monsterCode === monsterCode)
+        .sort((a, b) => (a.slot ?? Infinity) - (b.slot ?? Infinity) || a.code.localeCompare(b.code))
+        .map((skill) => skill.code);
 
 /**
  * The class's skill codes with its file skills put in: a file skill with a `slot` goes to that position (so it can sit
