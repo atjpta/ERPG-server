@@ -42,6 +42,26 @@ Chế độ khác: **Validate** (chỉ kiểm tra), **Sync Seed** (phía server:
 
 **Đổi tên / xoá một code ở server.** _Sync Server_ hoặc _Validate_ liệt kê mọi chỗ Unity còn dùng code cũ (tab _Codes_, bấm _Select_ để nhảy tới asset). Prefab chưa nằm trong library cũng được báo.
 
+## Skill Lab và Map Lab
+
+Hai cửa sổ trong Unity để tạo skill / map mà không viết code server. Chúng ghi **file dữ liệu** vào server, seed đọc cùng với dữ liệu trong code; skill/map viết trong `skill.seed.ts` / `map-definitions.ts` thì không sửa ở Lab (dùng _copy of_ để làm biến thể).
+
+**Skill Lab** (`Tools/ERPG/Skill Lab`) → `src/modules/skills/data/<code>.skill.json` (schema `skill-file.schema.ts`).
+
+- Chọn class, chọn **animation clip** của class (code = `<class>_<clip>`), chọn template (cận chiến, đạn, vùng đất, aura buff, hồi đồng đội) hoặc copy một skill có sẵn.
+- Đặt hit theo **frame** của clip ("Set tick"), nhập hình/damage/stun/đẩy lùi, khối `projectile` / `area` / `aura` / `allies` theo loại.
+- Xem trước hình trúng đòn ngay trong Scene (cùng công thức hitbox của server) và timeline cạnh độ dài clip.
+- Cảnh báo: code trùng, animation dài hơn clip, hit rơi sau khi clip hết, thiếu prefab hiệu ứng (thêm vào _SkillEffectPrefabLibrary_ ngay trong Lab).
+- _Save and apply_ xuất độ dài clip, seed, restart server. Skill được cấp cho class ở vị trí `slot` (mặc định cuối danh sách).
+- Xoá file không xoá row DB; muốn gỡ hẳn thì thêm code vào `RETIRED_SKILL_CODES` trong `skill.seed.ts`.
+
+**Map Lab** (`Tools/ERPG/Map Lab`) → `src/modules/maps/definitions/<code>.json` (schema `map-definition.schema.ts`).
+
+- Tạo map field / town / dungeon, hoặc copy marker từ map có sẵn: spawn point, nhóm quái (dropdown monster, số lượng, loại, level), slot NPC, portal (chọn map và spawn đích), bảng thông báo, teleport, dungeon (chamber, phase, nhóm quái, cổng).
+- Phần Lab không có ô (phần thưởng gather / clear, điều kiện) được giữ nguyên trong file.
+- _Save and create prefab_ chạy `yarn config:export` (server ghi marker của map mới), dựng prefab từ `BaseRoom`/mẫu dungeon cùng mọi marker, rồi mở prefab: chỉ còn đặt vị trí marker và vẽ collider, sau đó _Sync Server_.
+- Kiểm trùng id (kể cả id vật thể trùng giữa các map), portal trỏ vào map/spawn có thật, một spawn `default`, chamber cuối là boss, phase tăng dần.
+
 ## Nơi dữ liệu tới tay client
 
 Asset không còn nằm trong `Resources` nếu không phải tải theo đường dẫn: âm thanh (`SfxBank`), icon item (`ItemIconBank`), idle class (`ClassIdles`) được `Bootstrap` đăng ký lúc khởi động; icon UI gắn thẳng vào prefab. `Resources` chỉ còn `Config` (skills.json, các bảng prefab), `Locales` và prefab do các bảng đó nạp.
