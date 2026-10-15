@@ -4,7 +4,7 @@
     "slot": 1,
     "skillType": "PROJECTILE",
     "targetType": "TARGET",
-    "castRange": 8.0,
+    "castRange": 7.8,
     "castTimeMs": 0,
     "animationMs": 1000,
     "cooldownMs": 3000,
@@ -26,6 +26,7 @@
             "height": 0.0,
             "radius": 0.3,
             "angle": 90.0,
+            "offsetY": 0.3,
             "delivery": "PROJECTILE",
             "damageScaling": 2.0,
             "damageScalingType": "ATTACK",
@@ -33,9 +34,9 @@
             "projectile": {
                 "movementType": "STRAIGHT",
                 "hitBehavior": "PIERCE",
-                "speed": 14.0,
+                "speed": 12.0,
                 "maxDistance": 8.0,
-                "radius": 0.3,
+                "radius": 0.4,
                 "maxHits": 10
             }
         }

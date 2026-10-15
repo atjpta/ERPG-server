@@ -59,6 +59,7 @@ import { MoveWorldInput } from "@/rooms/world/schema/move.world.input.js";
 import { WorldState } from "@/rooms/world/schema/world.state.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 import { WORLD_TICK_RATE } from "@/rooms/world/utils/tick.world.util.js";
+import { sendSkillConfigs } from "@/rooms/world/services/skill-config.world.service.js";
 const RECONNECT_SECONDS = 20;
 
 export class WorldRoom extends BasePlayerRoom<{
@@ -78,6 +79,9 @@ export class WorldRoom extends BasePlayerRoom<{
     });
 
     messages = {
+        [WorldClientMessage.REQUEST_SKILL_CONFIGS]: (client: PlayerClient) => {
+            sendSkillConfigs(client);
+        },
         [WorldClientMessage.ALLOCATE_ATTRIBUTES]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new AllocateAttributesWorldCommand(), {
                 client,

@@ -26,6 +26,7 @@
             "height": 0.0,
             "radius": 0.6,
             "angle": 90.0,
+            "offsetY": 0.3,
             "delivery": "PROJECTILE",
             "damageScaling": 1.5,
             "damageScalingType": "ATTACK",

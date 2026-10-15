@@ -75,6 +75,11 @@ export class SkillService {
         return this.skillsById.get(id);
     }
 
+    /** The enabled skills currently used by world simulation. */
+    getAll(): Skill[] {
+        return [...this.skillsById.values()];
+    }
+
     /**
      * Combo đánh thường của một player/monster: các skill `basicAttack` nó sở hữu, đúng thứ tự trong
      * cột `skills` (bước 1, 2, 3…). Skill đã tắt hoặc không tồn tại bị bỏ qua.

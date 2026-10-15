@@ -4,7 +4,7 @@
     "slot": 2,
     "skillType": "PROJECTILE",
     "targetType": "TARGET",
-    "castRange": 7.0,
+    "castRange": 4.8,
     "castTimeMs": 0,
     "animationMs": 500,
     "cooldownMs": 2000,
@@ -26,16 +26,17 @@
             "height": 0.0,
             "radius": 0.4,
             "angle": 90.0,
+            "offsetY": 0.3,
             "delivery": "PROJECTILE",
-            "damageScaling": 2.2,
+            "damageScaling": 2.0,
             "damageScalingType": "MAGIC_ATTACK",
             "damageType": "MAGICAL",
             "projectile": {
                 "movementType": "STRAIGHT",
                 "hitBehavior": "DESTROY",
-                "speed": 9.0,
-                "maxDistance": 7.0,
-                "radius": 0.4,
+                "speed": 12.0,
+                "maxDistance": 5.0,
+                "radius": 0.3,
                 "maxHits": 1
             }
         }

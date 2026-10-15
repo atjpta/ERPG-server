@@ -4,7 +4,7 @@
     "slot": 3,
     "skillType": "AOE",
     "targetType": "TARGET",
-    "castRange": 7.0,
+    "castRange": 4.8,
     "castTimeMs": 0,
     "animationMs": 750,
     "cooldownMs": 1,
@@ -22,8 +22,8 @@
             "triggerTicks": 10,
             "shape": "ELLIPSE",
             "range": 0.0,
-            "width": 2.0,
-            "height": 0.6,
+            "width": 1.8,
+            "height": 0.5,
             "radius": 0.0,
             "angle": 90.0,
             "delivery": "AREA",
@@ -32,8 +32,8 @@
             "damageType": "PHYSICAL",
             "area": {
                 "delayMs": 400,
-                "untargetedDistance": 3.0,
-                "durationMs": 4000,
+                "untargetedDistance": 4.0,
+                "durationMs": 3000,
                 "tickMs": 500
             }
         }

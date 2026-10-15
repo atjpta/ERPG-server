@@ -20,12 +20,14 @@
     "hits": [
         {
             "triggerTicks": 2,
-            "shape": "RECT",
-            "range": 1.5,
-            "width": 2.0,
-            "height": 2.0,
+            "shape": "ELLIPSE",
+            "range": 1.6,
+            "width": 2.5,
+            "height": 1.5,
             "radius": 0.0,
             "angle": 90.0,
+            "offsetX": 0.4,
+            "offsetY": 0.4,
             "delivery": "HITBOX",
             "damageScaling": 1.2,
             "damageScalingType": "ATTACK",

@@ -32,7 +32,7 @@
             "damageType": "MAGICAL",
             "area": {
                 "delayMs": 300,
-                "untargetedDistance": 2.0
+                "untargetedDistance": 3.0
             }
         }
     ]
