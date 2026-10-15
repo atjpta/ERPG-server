@@ -123,10 +123,12 @@
     "npcs": [],
     "interactables": [
         {
-            "id": "teleport_evergrowth",
-            "code": "teleport",
+            "id": "evergrowth_to_sanctuary",
+            "code": "entry_dungeon",
             "radius": 1.5,
-            "type": "teleport"
+            "type": "portal",
+            "targetMapCode": "sanctuary_of_life",
+            "targetSpawnId": "from_evergrowth"
         },
         {
             "id": "evergrowth_to_forest",
@@ -137,12 +139,10 @@
             "targetSpawnId": "from_evergrowth"
         },
         {
-            "id": "evergrowth_to_sanctuary",
-            "code": "entry_dungeon",
+            "id": "teleport_evergrowth",
+            "code": "teleport",
             "radius": 1.5,
-            "type": "portal",
-            "targetMapCode": "sanctuary_of_life",
-            "targetSpawnId": "from_evergrowth"
+            "type": "teleport"
         }
     ]
 }

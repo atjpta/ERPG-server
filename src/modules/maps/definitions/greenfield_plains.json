@@ -183,12 +183,6 @@
     "npcs": [],
     "interactables": [
         {
-            "id": "teleport_plains",
-            "code": "teleport",
-            "radius": 1.5,
-            "type": "teleport"
-        },
-        {
             "id": "to_village",
             "code": "portal",
             "radius": 1.2,
@@ -203,6 +197,12 @@
             "type": "portal",
             "targetMapCode": "slime_hollow",
             "targetSpawnId": "from_plains"
+        },
+        {
+            "id": "teleport_plains",
+            "code": "teleport",
+            "radius": 1.5,
+            "type": "teleport"
         }
     ]
 }
