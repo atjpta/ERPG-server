@@ -14,6 +14,7 @@ import { MonsterScaleConfigSchema } from "@/modules/monsters/schemas/monster-sca
 import { PartyConfigSchema } from "@/modules/party/schemas/party.schema.js";
 import { DailyQuestConfigSchema } from "@/modules/quests/schemas/daily-quest.schema.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { NpcConfigSchema } from "@/modules/npcs/schemas/npc-config.schema.js";
 import { MonsterAiConfigSchema } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
 import { PlayerTargetConfigSchema } from "@/modules/master-data/schemas/player-target-config.schema.js";
 
@@ -68,6 +69,7 @@ export const MasterDataValueSchemas = {
     [MasterDataKey.PARTY_CONFIG]: PartyConfigSchema,
     [MasterDataKey.PLAYER_TARGET_CONFIG]: PlayerTargetConfigSchema,
     [MasterDataKey.MONSTER_AI_CONFIG]: MonsterAiConfigSchema,
+    [MasterDataKey.NPC_CONFIG]: NpcConfigSchema,
 } satisfies Record<MasterDataKey, z.ZodType>;
 
 export type AuthSessionConfigValue = z.infer<typeof AuthSessionConfigSchema>;

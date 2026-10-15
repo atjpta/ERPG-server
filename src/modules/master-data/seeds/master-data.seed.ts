@@ -18,6 +18,7 @@ import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.j
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
 import { DEFAULT_PLAYER_TARGET_CONFIG } from "@/modules/master-data/schemas/player-target-config.schema.js";
+import { DEFAULT_NPC_CONFIG } from "@/modules/npcs/schemas/npc-config.schema.js";
 import { DEFAULT_MONSTER_AI_CONFIG } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
 import {
     isUnityMasterDataKey,
@@ -109,7 +110,11 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
     },
     [MasterDataKey.MONSTER_AI_CONFIG]: {
         value: DEFAULT_MONSTER_AI_CONFIG,
-        note: "Tầm thấy / đuổi / đi dạo của monster (làm trong Unity)",
+        note: "Tốc độ, tầm thấy / đuổi / đi dạo của monster, mặc định + ghi đè theo monster (làm trong Unity)",
+    },
+    [MasterDataKey.NPC_CONFIG]: {
+        value: DEFAULT_NPC_CONFIG,
+        note: "Tầm nói chuyện của NPC, mặc định + ghi đè theo NPC (làm trong Unity)",
     },
     [MasterDataKey.DAILY_QUEST_CONFIG]: {
         value: DEFAULT_DAILY_QUEST_CONFIG,

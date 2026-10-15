@@ -4,6 +4,9 @@ import { Monsters, type NewMonster } from "@/modules/monsters/entities/monster.e
 import { MonsterRepo } from "@/modules/monsters/repositories/monster.repository.js";
 import { MonsterDropsSchema } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import { MONSTER_DEFINITIONS } from "@/modules/monsters/seeds/monster.seed-data.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { loadUnityMasterData } from "@/modules/master-data/utils/unity-master-data.util.js";
+import { resolveMonsterAi } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import type { Stats } from "@/modules/player/schemas/stat.schema.js";
@@ -52,7 +55,6 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
         biome: Biome.SLIME,
         attackCooldownMs: 1700,
         stats: {
-            [StatKey.MOVE_SPEED]: 1,
             [StatKey.CRITICAL_DAMAGE]: 1.5,
             [StatKey.MAX_HP]: 50,
             [StatKey.PHYSICAL_ATTACK]: 5,
@@ -75,7 +77,6 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
         biome: Biome.SLIME,
         attackCooldownMs: 1700,
         stats: {
-            [StatKey.MOVE_SPEED]: 1,
             [StatKey.CRITICAL_DAMAGE]: 1.5,
             [StatKey.MAX_HP]: 50,
             [StatKey.PHYSICAL_ATTACK]: 5,
@@ -98,7 +99,6 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
         biome: Biome.WEREWOLF,
         attackCooldownMs: 1950,
         stats: {
-            [StatKey.MOVE_SPEED]: 1,
             [StatKey.CRITICAL_DAMAGE]: 1.5,
             [StatKey.MAX_HP]: 50,
             [StatKey.PHYSICAL_ATTACK]: 5,
@@ -121,7 +121,6 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
         biome: Biome.WEREBEAR,
         attackCooldownMs: 1950,
         stats: {
-            [StatKey.MOVE_SPEED]: 1,
             [StatKey.CRITICAL_DAMAGE]: 1.5,
             [StatKey.MAX_HP]: 50,
             [StatKey.PHYSICAL_ATTACK]: 5,
@@ -139,7 +138,7 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
             ],
         },
     },
-    // Slime tập ở phòng tập: 1 tỷ máu, mọi chỉ số khác 0 (không di chuyển, không đánh, né 0), không rơi gì, không cho exp.
+    // Slime tập ở phòng tập: 1 tỷ máu, mọi chỉ số khác 0 (không đánh, né 0; đứng yên vì tốc độ 0 ghi đè trong Unity), không rơi gì, không cho exp.
     {
         code: "training_slime",
         level: 1,
@@ -147,7 +146,6 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
         attackCooldownMs: 1000,
         stats: {
             [StatKey.MAX_HP]: 1_000_000_000,
-            [StatKey.MOVE_SPEED]: 0,
             [StatKey.CRITICAL_DAMAGE]: 0,
             [StatKey.PHYSICAL_ATTACK]: 0,
             [StatKey.MAGIC_ATTACK]: 0,
@@ -163,9 +161,15 @@ const MONSTER_SEEDS: MonsterSeedEntry[] = [
 
 /** Chạy sau SkillSeed và ItemSeed (tham chiếu skill/item theo id). */
 export const MonsterSeed = async () => {
+    const aiConfig = loadUnityMasterData(MasterDataKey.MONSTER_AI_CONFIG);
     for (const { skillCodes, drops, ...entry } of MONSTER_SEEDS) {
         const monster: NewMonster = {
             ...entry,
+            // Speed is authored in Unity (Ranges tab): a base for every monster, a monster's own number over it.
+            stats: {
+                ...entry.stats,
+                [StatKey.MOVE_SPEED]: resolveMonsterAi(aiConfig, entry.code).moveSpeed,
+            },
             ...prefabOf(entry.code),
             skills: await toOwnedSkills(skillCodes),
             drops: MonsterDropsSchema.parse({

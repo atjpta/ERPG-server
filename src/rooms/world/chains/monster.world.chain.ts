@@ -2,7 +2,8 @@ import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import {
     DEFAULT_MONSTER_AI_CONFIG,
-    type MonsterAiConfig,
+    resolveMonsterAi,
+    type MonsterAiRule,
 } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
 import { MonsterWorldState } from "@/rooms/world/schema/monster.world.state.js";
 import { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
@@ -25,11 +26,14 @@ import {
 } from "@/rooms/world/utils/skill-attack.world.util.js";
 
 /** Ranges authored in Unity (master data `monster_ai_config`); the defaults when the room runs without the cache (tests). */
-const monsterAi = (): MonsterAiConfig => {
+const monsterAi = (monster: MonsterWorldState): MonsterAiRule => {
     try {
-        return masterDataCacheService.get(MasterDataKey.MONSTER_AI_CONFIG);
+        return resolveMonsterAi(
+            masterDataCacheService.get(MasterDataKey.MONSTER_AI_CONFIG),
+            monster.code
+        );
     } catch {
-        return DEFAULT_MONSTER_AI_CONFIG;
+        return resolveMonsterAi(DEFAULT_MONSTER_AI_CONFIG, monster.code);
     }
 };
 interface RoamTarget {
@@ -102,7 +106,7 @@ export class MonsterFindTargetChain implements WorldChainAction<MonsterChainCont
             target &&
             (target.hp <= 0 ||
                 distanceSquared(monster.spawnX, monster.spawnY, target.x, target.y) >
-                    monsterAi().leashRadius ** 2)
+                    monsterAi(monster).leashRadius ** 2)
         ) {
             monster.clearAggroTarget();
             target = undefined;
@@ -113,9 +117,9 @@ export class MonsterFindTargetChain implements WorldChainAction<MonsterChainCont
                 .filter(
                     (player) =>
                         distanceSquared(monster.x, monster.y, player.x, player.y) <=
-                            monsterAi().detectionRadius ** 2 &&
+                            monsterAi(monster).detectionRadius ** 2 &&
                         distanceSquared(monster.spawnX, monster.spawnY, player.x, player.y) <=
-                            monsterAi().leashRadius ** 2
+                            monsterAi(monster).leashRadius ** 2
                 )
                 .sort(
                     (a, b) =>
@@ -184,10 +188,10 @@ export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
         const roamTarget = this.getRoamTarget(room, monster);
         const roamDx = roamTarget.x - monster.x;
         const roamDy = roamTarget.y - monster.y;
-        if (Math.hypot(roamDx, roamDy) <= monsterAi().roamArrivalDistance) {
+        if (Math.hypot(roamDx, roamDy) <= monsterAi(monster).roamArrivalDistance) {
             monster.moving = false;
             this.roamTargets.delete(monster);
-            this.idleTicks.set(monster, randomIdleTicks(room.tickRate));
+            this.idleTicks.set(monster, randomIdleTicks(monster, room.tickRate));
             return WorldChainResult.STOP;
         }
 
@@ -217,7 +221,7 @@ export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
         if (current) return current;
 
         const angle = Math.random() * Math.PI * 2;
-        const radius = Math.sqrt(Math.random()) * monsterAi().roamRadius;
+        const radius = Math.sqrt(Math.random()) * monsterAi(monster).roamRadius;
         const target = {
             x: clamp(monster.spawnX + Math.cos(angle) * radius, 0, room.map.width),
             y: clamp(monster.spawnY + Math.sin(angle) * radius, 0, room.map.height),
@@ -328,8 +332,8 @@ function isMonsterSkillHitboxInRange(
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const randomIdleTicks = (tickRate: number) => {
-    const idleMs =
-        monsterAi().idleMinMs + Math.random() * (monsterAi().idleMaxMs - monsterAi().idleMinMs);
+const randomIdleTicks = (monster: MonsterWorldState, tickRate: number) => {
+    const { idleMinMs, idleMaxMs } = monsterAi(monster);
+    const idleMs = idleMinMs + Math.random() * (idleMaxMs - idleMinMs);
     return millisecondsToTicks(idleMs, tickRate);
 };

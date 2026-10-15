@@ -1,8 +1,16 @@
 {
-    "detectionRadius": 6,
-    "leashRadius": 8,
-    "roamRadius": 4,
-    "roamArrivalDistance": 0.15,
-    "idleMinMs": 1000,
-    "idleMaxMs": 3000
+    "default": {
+        "detectionRadius": 6,
+        "leashRadius": 8,
+        "roamRadius": 4,
+        "roamArrivalDistance": 0.15,
+        "idleMinMs": 1000,
+        "idleMaxMs": 3000,
+        "moveSpeed": 1
+    },
+    "monsters": {
+        "training_slime": {
+            "moveSpeed": 0
+        }
+    }
 }

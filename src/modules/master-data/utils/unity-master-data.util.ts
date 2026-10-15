@@ -13,6 +13,7 @@ import {
 export const UNITY_MASTER_DATA_KEYS = [
     MasterDataKey.PLAYER_TARGET_CONFIG,
     MasterDataKey.MONSTER_AI_CONFIG,
+    MasterDataKey.NPC_CONFIG,
 ] as const;
 
 export type UnityMasterDataKey = (typeof UNITY_MASTER_DATA_KEYS)[number];

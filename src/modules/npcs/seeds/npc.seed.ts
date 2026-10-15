@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { loadUnityMasterData } from "@/modules/master-data/utils/unity-master-data.util.js";
+import { resolveNpcRule } from "@/modules/npcs/schemas/npc-config.schema.js";
 import { npcCollider } from "@/modules/bodies/utils/entity-body.util.js";
 import { DialogueRuleSchema } from "@/modules/dialogues/schemas/dialogue.schema.js";
 import { Npcs } from "@/modules/npcs/entities/npc.entity.js";
@@ -7,13 +10,17 @@ import { NpcFunctionSchema } from "@/modules/npcs/schemas/npc-function.schema.js
 import { NPCS } from "@/modules/npcs/seeds/npc.seed-data.js";
 
 export const NpcSeed = async () => {
+    const npcConfig = loadUnityMasterData(MasterDataKey.NPC_CONFIG);
     for (const npc of NPCS) {
         // The foot collider comes from the NPC's Unity prefab (entity-bodies.json), not from the seed.
         const { width, height } = npcCollider(npc.code);
+        // Talk range is authored in Unity (Ranges tab): a base for every NPC, an NPC's own number over it.
+        const { interactRadius } = resolveNpcRule(npcConfig, npc.code);
         const data = {
             ...npc,
             colliderWidth: width,
             colliderHeight: height,
+            interactRadius,
             dialogueRules: z.array(DialogueRuleSchema).parse(npc.dialogueRules ?? []),
             functions: z.array(NpcFunctionSchema).parse(npc.functions ?? []),
         };

@@ -5,7 +5,11 @@ import {
     isUnityMasterDataKey,
     loadUnityMasterData,
 } from "@/modules/master-data/utils/unity-master-data.util.js";
-import { MonsterAiConfigSchema } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
+import { resolveNpcRule } from "@/modules/npcs/schemas/npc-config.schema.js";
+import {
+    MonsterAiConfigSchema,
+    resolveMonsterAi,
+} from "@/modules/monsters/schemas/monster-ai-config.schema.js";
 
 describe("master data authored in Unity (the Ranges tab)", () => {
     it("loads a valid file for every Unity-owned key", () => {
@@ -23,14 +27,57 @@ describe("master data authored in Unity (the Ranges tab)", () => {
 
     it("rejects a monster that would detect farther than it chases", () => {
         const ai = loadUnityMasterData(MasterDataKey.MONSTER_AI_CONFIG);
+        const base = ai.default;
         assert.equal(MonsterAiConfigSchema.safeParse(ai).success, true);
+        const withDefault = (change: object) => ({ ...ai, default: { ...base, ...change } });
         assert.equal(
-            MonsterAiConfigSchema.safeParse({ ...ai, detectionRadius: ai.leashRadius + 1 }).success,
+            MonsterAiConfigSchema.safeParse(withDefault({ detectionRadius: base.leashRadius + 1 }))
+                .success,
             false
         );
         assert.equal(
-            MonsterAiConfigSchema.safeParse({ ...ai, idleMinMs: ai.idleMaxMs + 1 }).success,
+            MonsterAiConfigSchema.safeParse(withDefault({ idleMinMs: base.idleMaxMs + 1 })).success,
             false
+        );
+    });
+
+    it("checks a monster override together with the default", () => {
+        const ai = loadUnityMasterData(MasterDataKey.MONSTER_AI_CONFIG);
+        const broken = { ...ai, monsters: { ...ai.monsters, slime: { detectionRadius: 99 } } };
+        assert.equal(MonsterAiConfigSchema.safeParse(broken).success, false);
+    });
+
+    it("gives a monster its own number over the default, the rest from the default", () => {
+        const ai = loadUnityMasterData(MasterDataKey.MONSTER_AI_CONFIG);
+        const slime = resolveMonsterAi(ai, "slime");
+        assert.equal(slime.moveSpeed, ai.monsters.slime?.moveSpeed ?? ai.default.moveSpeed);
+        assert.equal(
+            resolveMonsterAi(ai, "training_slime").moveSpeed,
+            0,
+            "the training slime stands still"
+        );
+        assert.equal(resolveMonsterAi(ai, "training_slime").leashRadius, ai.default.leashRadius);
+    });
+
+    it("gives an NPC the default talk range unless it has its own", () => {
+        const npc = loadUnityMasterData(MasterDataKey.NPC_CONFIG);
+        assert.equal(
+            resolveNpcRule(npc, "village_chief").interactRadius,
+            npc.npcs.village_chief?.interactRadius ?? npc.default.interactRadius
+        );
+        assert.equal(
+            resolveNpcRule(
+                { default: { interactRadius: 2 }, npcs: { a: { interactRadius: 5 } } },
+                "a"
+            ).interactRadius,
+            5
+        );
+        assert.equal(
+            resolveNpcRule(
+                { default: { interactRadius: 2 }, npcs: { a: { interactRadius: 5 } } },
+                "b"
+            ).interactRadius,
+            2
         );
     });
 

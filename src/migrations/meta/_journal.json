@@ -43,6 +43,13 @@
             "when": 1792082396037,
             "tag": "0005_careful_the_santerians",
             "breakpoints": true
+        },
+        {
+            "idx": 6,
+            "version": "7",
+            "when": 1792083776956,
+            "tag": "0006_rainy_psynapse",
+            "breakpoints": true
         }
     ]
 }

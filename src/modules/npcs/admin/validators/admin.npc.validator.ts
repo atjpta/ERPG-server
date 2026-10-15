@@ -13,9 +13,6 @@ export const AdminCreateNpcSchema = z.object({
         .max(64)
         .regex(/^[a-z0-9_]+$/),
     enabled: z.boolean().optional(),
-    colliderWidth: z.number().nonnegative().optional(),
-    colliderHeight: z.number().nonnegative().optional(),
-    interactRadius: z.number().positive().optional(),
     defaultDialogueCode: z.string().min(1).nullable().optional(),
     dialogueRules: z.array(DialogueRuleSchema).optional(),
     functions: z.array(NpcFunctionSchema).optional(),
