@@ -36,6 +36,18 @@
         },
         "cleric_buff_hp": {
             "lengthMs": 500
+        },
+        "bat_attack": {
+            "lengthMs": 500
+        },
+        "slime_attack": {
+            "lengthMs": 500
+        },
+        "werebear_attack": {
+            "lengthMs": 750
+        },
+        "werewolf_attack": {
+            "lengthMs": 750
         }
     },
     "monsters": {
