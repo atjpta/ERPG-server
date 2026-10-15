@@ -10,7 +10,7 @@ const BoundsSchema = z.object({
 const BodySchema = z.object({ hitbox: BoundsSchema, collider: BoundsSchema });
 
 /**
- * `entity-bodies.json`, exported from the Unity prefabs (`Tools/ERPG/Sync Server`): the HitBox / Collider
+ * `entity-bodies.json`, exported from the Unity prefabs (Sync Server in the Authoring Hub): the HitBox / Collider
  * BoxCollider2D of each monster and each class (plus the foot Collider of each NPC), in tiles, offset from the feet with positive Y up.
  */
 export const EntityBodiesSchema = z.object({

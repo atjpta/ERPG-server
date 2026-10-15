@@ -8,7 +8,7 @@ export const CLIP_TOLERANCE_MS = 10;
 
 let cached: AnimClips | undefined;
 
-/** Clip lengths exported from Unity; a missing or malformed file is an error (run Tools/ERPG/Sync Server). */
+/** Clip lengths exported from Unity; a missing or malformed file is an error (run Sync Server in the Authoring Hub). */
 export const loadAnimClips = (): AnimClips => {
     cached ??= AnimClipsSchema.parse(JSON.parse(readFileSync(FILE, "utf-8")));
     return cached;

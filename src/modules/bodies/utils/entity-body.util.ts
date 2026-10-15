@@ -9,7 +9,7 @@ const FILE = new URL("../data/entity-bodies.json", import.meta.url);
 
 let cached: EntityBodies | undefined;
 
-/** Bodies exported from the Unity prefabs; a missing or malformed file is an error (run Tools/ERPG/Sync Server). */
+/** Bodies exported from the Unity prefabs; a missing or malformed file is an error (run Sync Server in the Authoring Hub). */
 export const loadEntityBodies = (): EntityBodies => {
     cached ??= EntityBodiesSchema.parse(JSON.parse(readFileSync(FILE, "utf-8")));
     return cached;

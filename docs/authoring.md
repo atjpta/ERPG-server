@@ -44,11 +44,15 @@ Chế độ khác: **Validate** (chỉ kiểm tra), **Sync Seed** (phía server:
 
 **Đổi tên / xoá một code ở server.** _Sync Server_ hoặc _Validate_ liệt kê mọi chỗ Unity còn dùng code cũ (tab _Codes_, bấm _Select_ để nhảy tới asset). Prefab chưa nằm trong library cũng được báo.
 
+## Tab Build của Hub
+
+Môi trường và phiên bản không còn phải mở asset: tab _Build_ sửa thẳng `Env` và `Version`. _Environment_: môi trường Editor dùng và môi trường bản build dùng, cùng URL server, Google client id, secret và token thử của từng môi trường (secret và token được che, bật _Show secrets_ để xem). _Version_: app / build / update, nút + tăng số (tăng bậc trên thì reset bậc dưới), và _Apply to Player Settings_ ghi `x.y.z` vào bundle version, `app × 10000 + build × 100 + update` vào Android version code. Hai việc vặt cũng ở đây: áp logo làm icon và cập nhật danh sách modal prefab (cả hai vẫn tự chạy trước khi build / khi prefab modal đổi).
+
 ## Skill Lab và Map Lab
 
 Hai cửa sổ trong Unity để tạo và sửa **mọi** skill / map mà không viết code server. Chúng ghi **file dữ liệu** vào server; seed chỉ đọc các file đó (`skill.seed.ts` chỉ còn danh sách skill đã gỡ, và không còn `map-definitions.ts`). Bản cũ trong code nằm ở lịch sử git.
 
-**Skill Lab** (`Tools/ERPG/Skill Lab`) → `src/modules/skills/data/<code>.skill.json` (schema `skill-file.schema.ts`).
+**Skill Lab** (menu _Skill Lab_) → `src/modules/skills/data/<code>.skill.json` (schema `skill-file.schema.ts`).
 
 - Chọn chủ sở hữu (class, monster hoặc skill chung như dash), chọn **animation clip** của prefab chủ (class: code = `<class>_<clip>`; monster: `<monster>_attack` = clip `Attack1`, `<monster>_attack2` = `Attack2`), chọn template (cận chiến, đạn, vùng đất, aura buff, hồi đồng đội) hoặc copy một skill có sẵn.
 - Đặt hit theo **frame** của clip ("Set tick"), nhập hình/damage/stun/đẩy lùi, khối `projectile` / `area` / `aura` / `allies` theo loại.
@@ -58,7 +62,7 @@ Hai cửa sổ trong Unity để tạo và sửa **mọi** skill / map mà khôn
 - _Save and apply_ xuất độ dài clip, seed, restart server. Skill được cấp cho class ở vị trí `slot` (mặc định cuối danh sách).
 - Xoá file không xoá row DB; muốn gỡ hẳn thì thêm code vào `RETIRED_SKILL_CODES` trong `skill.seed.ts`.
 
-**Map Lab** (`Tools/ERPG/Map Lab`) → `src/modules/maps/definitions/<code>.json` (schema `map-definition.schema.ts`).
+**Map Lab** (menu _Map Lab_) → `src/modules/maps/definitions/<code>.json` (schema `map-definition.schema.ts`).
 
 - Tạo map field / town / dungeon, hoặc copy marker từ map có sẵn: spawn point, nhóm quái (dropdown monster, số lượng, loại, level), slot NPC, portal (chọn map và spawn đích), bảng thông báo, teleport, dungeon (chamber, phase, nhóm quái, cổng).
 - Phần Lab không có ô (phần thưởng gather / clear, điều kiện) được giữ nguyên trong file.
@@ -75,5 +79,5 @@ Asset không còn nằm trong `Resources` nếu không phải tải theo đườ
 
 ## Kiểm tra
 
-- Unity: `Tools/ERPG/Validate Codes`, hoặc chạy EditMode tests (`ERPG.Tests.Editor`): code đủ mọi loại, không field `code` nào gõ tay, mọi monster có body và clip, export lặp lại ra cùng file.
+- Unity: nút _Validate codes_ ở tab _Codes_ của Hub, hoặc chạy EditMode tests (`ERPG.Tests.Editor`): code đủ mọi loại, không field `code` nào gõ tay, mọi monster có body và clip, export lặp lại ra cùng file.
 - Server: `yarn test`, `yarn typecheck`, `yarn lint`.

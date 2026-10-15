@@ -1,6 +1,6 @@
 /**
  * Danh sách monster. `hitbox` / `collider` không khai báo ở đây: chúng lấy từ prefab Unity
- * (BoxCollider2D `HitBox` / `Collider`) qua `entity-bodies.json` (`Tools/ERPG/Sync Server`), nên sửa
+ * (BoxCollider2D `HitBox` / `Collider`) qua `entity-bodies.json` (Sync Server in the Authoring Hub), nên sửa
  * collider thì sửa prefab rồi sync, không sửa ở server.
  *
  * `attackClipMs` = độ dài clip `Attack1` của prefab Unity (qua `anim-clips.json`) — thời lượng đòn đánh.

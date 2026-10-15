@@ -21,7 +21,7 @@ export type UnityMasterDataKey = (typeof UNITY_MASTER_DATA_KEYS)[number];
 export const isUnityMasterDataKey = (key: MasterDataKey): key is UnityMasterDataKey =>
     (UNITY_MASTER_DATA_KEYS as readonly MasterDataKey[]).includes(key);
 
-/** The validated value Unity wrote for the key; a missing or malformed file is an error (run Tools/ERPG/Sync Server). */
+/** The validated value Unity wrote for the key; a missing or malformed file is an error (run Sync Server in the Authoring Hub). */
 export const loadUnityMasterData = <K extends UnityMasterDataKey>(
     key: K
 ): MasterDataValueMap[K] => {
