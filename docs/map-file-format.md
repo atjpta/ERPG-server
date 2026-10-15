@@ -2,16 +2,16 @@
 
 Map gồm hai nguồn, ghép lúc `yarn seed` thành row `game_maps`:
 
-| Nguồn                                          | Ai sở hữu | Chứa gì                                                                                                                                                                                                 |
-| ---------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Định nghĩa** `maps/seeds/map-definitions.ts` | Server    | **Config**: loại map, `minLevel`, số người/kênh, PvP, khoảng level quái, nhóm quái ở từng marker, NPC nào ở slot nào, portal đi đâu, vật thu thập/biển báo, dungeon (chamber, phase, thưởng, level cap) |
-| **Layout** `maps/data/<code>.map.json`         | Unity     | **Vị trí/hình học**: kích thước map, vị trí các marker, collider, hình học chamber                                                                                                                      |
+| Nguồn                                         | Ai sở hữu | Chứa gì                                                                                                                                                                                                 |
+| --------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Định nghĩa** `maps/definitions/<code>.json` | Server    | **Config**: loại map, `minLevel`, số người/kênh, PvP, khoảng level quái, nhóm quái ở từng marker, NPC nào ở slot nào, portal đi đâu, vật thu thập/biển báo, dungeon (chamber, phase, thưởng, level cap) |
+| **Layout** `maps/data/<code>.map.json`        | Unity     | **Vị trí/hình học**: kích thước map, vị trí các marker, collider, hình học chamber                                                                                                                      |
 
 Config chỉnh trong định nghĩa rồi `yarn seed` (admin sửa row `game_maps` qua `/admin/maps` cho các trường cơ bản, nhưng seed lại sẽ ghi đè). Unity **không** nhập số người, PvP, level quái, loại quái, đích portal — chỉ kéo marker tới đúng chỗ.
 
 ## Quy trình
 
-1. Server khai báo marker trong `map-definitions.ts` (id ổn định, không đổi sau khi phát hành).
+1. Server khai báo marker trong `definitions/<code>.json` (id ổn định, không đổi sau khi phát hành).
 2. `yarn config:export` xuất `map-markers.json`: danh sách marker từng map. Unity dựng sẵn mọi marker theo danh sách này (đủ id), người làm map chỉ chỉnh **vị trí**.
 3. Unity export `<code>.map.json` → commit vào `src/modules/maps/data/` → `yarn seed` ghép + validate.
 4. Marker có trong định nghĩa nhưng chưa có vị trí: bị bỏ qua và seed/`yarn dev` cảnh báo `Unity chưa đặt vị trí marker: ...`. Marker trong layout mà định nghĩa không có: **lỗi seed**. Map chưa có file: row placeholder `inactive` + cảnh báo.

@@ -4,16 +4,19 @@ Mọi thứ nối Unity với server qua **code** (`swordsman`, `slime`, `archer
 
 ## Ai sở hữu dữ liệu nào
 
-| Dữ liệu                                                                     | Nguồn sự thật                                     | Đường đi                                               |
-| --------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------ |
-| Layout map: collider, spawn, vùng monster, vị trí NPC, vật thể, chamber     | **Unity** (prefab map)                            | Unity → `src/modules/maps/data/<code>.map.json`        |
-| Hitbox / collider thân của monster và class                                 | **Unity** (child `HitBox`, `Collider` của prefab) | Unity → `src/modules/bodies/data/entity-bodies.json`   |
-| Độ dài clip animation (đòn đánh monster, skill class)                       | **Unity** (Animator của prefab)                   | Unity → `src/modules/bodies/data/anim-clips.json`      |
-| Chỉ số, damage, cooldown, castRange, hit event, combo, level, hiệu ứng buff | **Server** (seed)                                 | Server → `Assets/ERPG/Resources/Config/skills.json`    |
-| Danh sách code (class, monster, npc, item, skill, quest, map, gate...)      | **Server**                                        | Server → `Assets/ERPG/ServerData/codes.json`           |
-| Marker mỗi map (spawn, nhóm quái, NPC, vật thể, chamber)                    | **Server** (`map-definitions.ts`)                 | Server → `ServerData/map-markers.json`                 |
-| NPC, hội thoại, quest, locale key                                           | **Server**                                        | Server → `ServerData/content.json`, `locale-keys.json` |
-| Prefab hiệu ứng skill, icon, âm thanh, anim                                 | **Unity**                                         | Gắn với server qua code                                |
+| Dữ liệu                                                                                              | Nguồn sự thật                                                                               | Đường đi                                                                                       |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Layout map: collider, spawn, vùng monster, vị trí NPC, vật thể, chamber                              | **Unity** (prefab map)                                                                      | Unity → `src/modules/maps/data/<code>.map.json`                                                |
+| Định nghĩa map: loại, level, spawn, nhóm quái, NPC, portal, chamber dungeon, thưởng                  | **Unity** (Map Lab)                                                                         | Unity → `src/modules/maps/definitions/<code>.json`                                             |
+| Skill của class và dash: chỉ số, damage, cooldown, castRange, hit event, combo, level, hiệu ứng buff | **Unity** (Skill Lab)                                                                       | Unity → `src/modules/skills/data/<code>.skill.json`; server seed rồi trả `skills.json` về      |
+| Tầm chọn / giữ / quay mặt target, Auto Battle, tầm thấy / đuổi / đi dạo của quái                     | **Unity** (tab _Ranges_ của Hub)                                                            | Unity → `src/modules/master-data/data/*.json` → seed ghi vào master data; admin không sửa được |
+| Hitbox / collider thân của monster và class, collider chân của NPC                                   | **Unity** (child `HitBox`, `Collider` của prefab; NPC không có prefab riêng dùng `BaseNpc`) | Unity → `src/modules/bodies/data/entity-bodies.json`                                           |
+| Độ dài clip animation (đòn đánh monster, skill class)                                                | **Unity** (Animator của prefab)                                                             | Unity → `src/modules/bodies/data/anim-clips.json`                                              |
+| Đòn đánh của monster                                                                                 | Server sinh từ hitbox và clip `Attack1` của prefab Unity                                    | —                                                                                              |
+| Chỉ số monster, kinh tế, trang bị, level, quest, hội thoại, NPC, locale key, các master data còn lại | **Server** (seed / admin)                                                                   | Server → `ServerData/content.json`, `locale-keys.json`                                         |
+| Danh sách code (class, monster, npc, item, skill, quest, map, gate...)                               | **Server**                                                                                  | Server → `Assets/ERPG/ServerData/codes.json`                                                   |
+| Marker mỗi map (spawn, nhóm quái, NPC, vật thể, chamber)                                             | Suy ra từ định nghĩa map                                                                    | Server → `ServerData/map-markers.json`                                                         |
+| Prefab hiệu ứng skill, icon, âm thanh, anim                                                          | **Unity**                                                                                   | Gắn với server qua code                                                                        |
 
 Quy tắc: thứ cần mắt nhìn và kéo thả (vị trí, kích thước vật lý, thời gian anim) đo ở Unity rồi export; con số cân bằng seed ở server. File do công cụ sinh có dòng `comment: ... Do not edit`.
 
@@ -30,13 +33,13 @@ Chế độ khác: **Validate** (chỉ kiểm tra), **Sync Seed** (phía server:
 
 ## Việc thường gặp
 
-**Thêm map mới.** Thêm định nghĩa vào `src/modules/maps/seeds/map-definitions.ts` → _Sync Server_ (Unity tự tạo prefab từ `BaseRoom`/dungeon mẫu cùng các marker) → kéo marker vào đúng chỗ, vẽ collider → _Sync Server_ lần nữa. Tab _Maps_ của Hub liệt kê marker chưa đặt.
+**Thêm map mới.** Mở _Map Lab_ → tạo map (field / town / dungeon) hoặc copy marker từ map có sẵn → _Save and create prefab_ (Unity tự tạo prefab từ `BaseRoom`/dungeon mẫu cùng các marker) → kéo marker vào đúng chỗ, vẽ collider → _Sync Server_. Tab _Maps_ của Hub liệt kê marker chưa đặt.
 
 **Thêm / sửa monster.** Seed ở `monster.seed-data.ts` (chỉ số, biome, level) và `monster.seed.ts`. Prefab trong Unity phải có child `HitBox` và `Collider` (BoxCollider2D) và clip `Attack1`; thêm vào bảng _MonsterPrefabs_. Hitbox, collider, thời gian đòn đánh lấy từ prefab, không khai báo ở server.
 
 **Chỉnh collider thân.** Sửa BoxCollider2D `HitBox` / `Collider` của prefab → _Sync Server_. Player đã tồn tại cũng nhận body mới khi vào phòng.
 
-**Thêm / sửa skill (kể cả combo).** Sửa `skill.seed.ts`: hit event, castRange, cooldown, `animationMs`. Combo đánh thường là các skill `basicAttack` của owner theo thứ tự cột `skills`. Trong Unity: thêm clip `<tên>` (skill `archer_rain_arrows` = clip `rain_arrows` trong Animator của prefab `archer`) và prefab hiệu ứng vào bảng _SkillEffectPrefabs_ (code chọn từ dropdown). Xem hit event vẽ trong Scene ở tab _Skills_ của Hub. Khi seed, server cảnh báo nếu skill dài hơn clip hoặc hit rơi sau khi clip kết thúc.
+**Thêm / sửa skill (kể cả combo).** Mở _Skill Lab_, chọn skill (hoặc tạo mới theo template), chỉnh hit event / damage / cooldown, _Save and apply_. Combo đánh thường là các skill `basicAttack` của class theo `slot`. Clip animation: skill `archer_rain_arrows` = clip `rain_arrows` trong Animator của prefab `archer`; prefab hiệu ứng vào bảng _SkillEffectPrefabs_ (code chọn từ dropdown). Khi seed, server cảnh báo nếu skill dài hơn clip hoặc hit rơi sau khi clip kết thúc.
 
 **Thêm NPC.** Seed NPC + hội thoại ở server, thêm slot trong định nghĩa map, thêm prefab vào _NpcPrefabs_. Collider NPC hiện vẫn lấy từ DB (`colliderWidth/Height`).
 
@@ -44,7 +47,7 @@ Chế độ khác: **Validate** (chỉ kiểm tra), **Sync Seed** (phía server:
 
 ## Skill Lab và Map Lab
 
-Hai cửa sổ trong Unity để tạo skill / map mà không viết code server. Chúng ghi **file dữ liệu** vào server, seed đọc cùng với dữ liệu trong code; skill/map viết trong `skill.seed.ts` / `map-definitions.ts` thì không sửa ở Lab (dùng _copy of_ để làm biến thể).
+Hai cửa sổ trong Unity để tạo và sửa **mọi** skill / map mà không viết code server. Chúng ghi **file dữ liệu** vào server; seed chỉ đọc các file đó (`skill.seed.ts` chỉ còn đòn đánh monster sinh từ hitbox, và không còn `map-definitions.ts`). Bản cũ trong code nằm ở lịch sử git.
 
 **Skill Lab** (`Tools/ERPG/Skill Lab`) → `src/modules/skills/data/<code>.skill.json` (schema `skill-file.schema.ts`).
 
@@ -61,6 +64,10 @@ Hai cửa sổ trong Unity để tạo skill / map mà không viết code server
 - Phần Lab không có ô (phần thưởng gather / clear, điều kiện) được giữ nguyên trong file.
 - _Save and create prefab_ chạy `yarn config:export` (server ghi marker của map mới), dựng prefab từ `BaseRoom`/mẫu dungeon cùng mọi marker, rồi mở prefab: chỉ còn đặt vị trí marker và vẽ collider, sau đó _Sync Server_.
 - Kiểm trùng id (kể cả id vật thể trùng giữa các map), portal trỏ vào map/spawn có thật, một spawn `default`, chamber cuối là boss, phase tăng dần.
+
+## Tầm (Ranges)
+
+Tab _Ranges_ của Hub sửa hai file master data: `player_target_config.json` (tầm chọn / giữ / quay mặt target theo class, Auto Battle) và `monster_ai_config.json` (tầm thấy, đuổi, đi dạo của quái, thời gian đứng nghỉ). Vẽ các vòng tròn quanh object đang chọn trong Scene, kèm tầm đánh của một skill để so. _Save and apply_ ghi file, seed vào master data, restart server; client nhận phần target qua `skills.json`. API admin từ chối sửa hai key này (`MASTER_DATA_READ_ONLY`).
 
 ## Nơi dữ liệu tới tay client
 

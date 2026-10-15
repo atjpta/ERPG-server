@@ -15,7 +15,7 @@ Node/option có `textKey` riêng thì dùng key đó. `yarn config:export` xuấ
 
 ## Thêm map
 
-1. Khai báo map trong `src/modules/maps/seeds/map-definitions.ts` (config: loại, level, quái ở marker nào, NPC slot, portal...) → [map-file-format.md](map-file-format.md).
+1. Khai báo map trong `src/modules/maps/definitions/<code>.json` (Map Lab của Unity) (config: loại, level, quái ở marker nào, NPC slot, portal...) → [map-file-format.md](map-file-format.md).
 2. `yarn config:export` xuất `map-markers.json`; Unity đặt vị trí các marker đó rồi export `<mapCode>.map.json` (chỉ vị trí) vào `src/modules/maps/data/`.
 3. `yarn seed`. Seed dừng nếu portal trỏ tới map/spawn không có, layout có marker lạ, hoặc code NPC/item/monster/thoại sai (`ContentRefsCheck`). Marker chưa có vị trí chỉ cảnh báo.
 
