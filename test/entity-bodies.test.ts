@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { EntityBodiesSchema } from "@/modules/bodies/schemas/entity-bodies.schema.js";
-import { classBody, monsterBody } from "@/modules/bodies/utils/entity-body.util.js";
+import { classBody, monsterBody, npcCollider } from "@/modules/bodies/utils/entity-body.util.js";
+import { NPCS } from "@/modules/npcs/seeds/npc.seed-data.js";
 import { MONSTER_DEFINITIONS } from "@/modules/monsters/seeds/monster.seed-data.js";
 
 describe("entity bodies (exported from the Unity prefabs)", () => {
@@ -13,6 +14,14 @@ describe("entity bodies (exported from the Unity prefabs)", () => {
 
     it("throws for a monster Unity did not export", () => {
         assert.throws(() => monsterBody("no_such_monster"), /No body for monster/);
+    });
+
+    it("gives every npc a foot collider", () => {
+        for (const npc of NPCS) {
+            const { width, height } = npcCollider(npc.code);
+            assert.ok(width > 0 && height > 0, npc.code);
+        }
+        assert.throws(() => npcCollider("no_such_npc"), /No collider for npc/);
     });
 
     it("falls back to the base class body", () => {

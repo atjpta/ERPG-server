@@ -115,5 +115,127 @@
                 "offsetY": 0.1
             }
         }
+    },
+    "npcs": {
+        "alchemist": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "archer_trainer": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "blacksmith": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "cleric_trainer": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "farmer_rowan": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "general_merchant": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "guard_captain": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "guild_officer": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "herbalist": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "hunter_garrick": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "innkeeper": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "researcher": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "swordsman_trainer": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "village_chief": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        },
+        "village_priestess": {
+            "collider": {
+                "width": 0.3,
+                "height": 0.1,
+                "offsetX": 0.0,
+                "offsetY": 0.1
+            }
+        }
     }
 }
