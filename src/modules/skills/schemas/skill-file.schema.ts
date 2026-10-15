@@ -30,6 +30,9 @@ export const SkillFileHitSchema = z
         radius: nonNegative.default(0),
         angle: nonNegative.default(90),
         aimed: z.boolean().optional(),
+        /** Where the shape (or a projectile / zone) starts relative to the caster, in tiles: forward along the facing or aim, and up. */
+        offsetX: z.number().optional(),
+        offsetY: z.number().optional(),
         /** Hits with the same group are one hit drawn frame by frame (see `hitGroup` in skill-config.schema.ts). */
         hitGroup: z.number().int().nonnegative().optional(),
         delivery: z.enum(HitDelivery).default(HitDelivery.HITBOX),

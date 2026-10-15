@@ -4,7 +4,7 @@
     "slot": 3,
     "skillType": "AOE",
     "targetType": "TARGET",
-    "castRange": 6,
+    "castRange": 6.0,
     "castTimeMs": 1000,
     "animationMs": 300,
     "cooldownMs": 2000,
@@ -21,18 +21,18 @@
         {
             "triggerTicks": 3,
             "shape": "ELLIPSE",
-            "range": 0,
-            "width": 2,
-            "height": 1,
-            "radius": 0,
-            "angle": 90,
+            "range": 0.0,
+            "width": 2.0,
+            "height": 1.0,
+            "radius": 0.0,
+            "angle": 90.0,
             "delivery": "AREA",
-            "damageScaling": 3,
+            "damageScaling": 3.0,
             "damageScalingType": "MAGIC_ATTACK",
             "damageType": "MAGICAL",
             "area": {
                 "delayMs": 500,
-                "untargetedDistance": 3
+                "untargetedDistance": 3.0
             }
         }
     ]

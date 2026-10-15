@@ -23,11 +23,11 @@
             "shape": "RECT",
             "range": 0.87,
             "width": 0.56,
-            "height": 0,
-            "radius": 0,
-            "angle": 90,
+            "height": 0.0,
+            "radius": 0.0,
+            "angle": 90.0,
             "delivery": "HITBOX",
-            "damageScaling": 1,
+            "damageScaling": 1.0,
             "damageScalingType": "ATTACK",
             "damageType": "PHYSICAL"
         }

@@ -32,8 +32,9 @@ export function intersectsSkillHitEvent(
     const targetCenterY = targetY - targetCollider.offsetY;
     const targetDx = targetCenterX - origin.x;
     const targetDy = targetCenterY - origin.y;
-    const targetForward = targetDx * forwardX + targetDy * forwardY;
-    const targetLateral = targetDx * lateralX + targetDy * lateralY;
+    // Vùng đánh đứng cách người đánh `offsetX` về trước và `offsetY` lên trên: mục tiêu gần tâm vùng thêm chừng đó.
+    const targetForward = targetDx * forwardX + targetDy * forwardY - (event.offsetX ?? 0);
+    const targetLateral = targetDx * lateralX + targetDy * lateralY - (event.offsetY ?? 0);
 
     // Nửa kích thước hình chiếu của collider (hình chữ nhật song song trục) lên từng trục.
     const targetForwardHalf =
@@ -102,6 +103,20 @@ export function intersectsSkillHitEvent(
     const lateralGap = lateralMin > 0 ? lateralMin : lateralMax < 0 ? -lateralMax : 0;
     return forwardGap ** 2 + lateralGap ** 2 <= capsuleRadius ** 2;
 }
+
+/**
+ * Chỗ đạn / vùng (AREA) của hit event bắt đầu: vị trí người đánh dời `offsetX` theo hướng mặt và `offsetY` lên trên
+ * (toạ độ server, y hướng xuống). Client C# (SkillHitboxWorldUtil.OffsetOrigin) tính y hệt.
+ */
+export const offsetSkillOrigin = (
+    x: number,
+    y: number,
+    direction: string,
+    event: Pick<SkillHitEvent, "offsetX" | "offsetY">
+) => ({
+    x: x + (direction === "left" ? -1 : 1) * (event.offsetX ?? 0),
+    y: y - (event.offsetY ?? 0),
+});
 
 function getEffectiveRange(range: number, shapeSize: number): number {
     if (range <= 0) return shapeSize;

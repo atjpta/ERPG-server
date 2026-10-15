@@ -4,7 +4,7 @@
     "slot": 0,
     "skillType": "GROUND",
     "targetType": "TARGET",
-    "castRange": 3,
+    "castRange": 3.0,
     "castTimeMs": 0,
     "animationMs": 500,
     "cooldownMs": 1000,
@@ -21,18 +21,18 @@
         {
             "triggerTicks": 4,
             "shape": "ELLIPSE",
-            "range": 0,
-            "width": 1,
+            "range": 0.0,
+            "width": 1.0,
             "height": 0.3,
-            "radius": 0,
-            "angle": 90,
+            "radius": 0.0,
+            "angle": 90.0,
             "delivery": "AREA",
-            "damageScaling": 1,
+            "damageScaling": 1.0,
             "damageScalingType": "MAGIC_ATTACK",
             "damageType": "MAGICAL",
             "area": {
                 "delayMs": 300,
-                "untargetedDistance": 2
+                "untargetedDistance": 2.0
             }
         }
     ]

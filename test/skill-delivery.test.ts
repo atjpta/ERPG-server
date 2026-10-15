@@ -24,7 +24,10 @@ import {
     skillReachesTarget,
     tickPendingSkillHits,
 } from "@/rooms/world/utils/skill-attack.world.util.js";
-import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
+import {
+    intersectsSkillHitEvent,
+    offsetSkillOrigin,
+} from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import {
     applySkillHit,
     monsterSkillOwner,
@@ -743,6 +746,33 @@ describe("vùng đánh theo hướng ngắm (aimed)", () => {
         assert.equal(intersectsSkillHitEvent(aimedOrigin, 5, 3.8, point, plain), false);
         const noAim = { x: 5, y: 5, direction: "left" };
         assert.equal(intersectsSkillHitEvent(noAim, 3.8, 5, point, slash), true);
+    });
+});
+
+describe("offset của hit event", () => {
+    const point = { offsetX: 0, offsetY: 0, width: 0.2, height: 0.2 } as HitboxColliderState;
+
+    it("dời vùng đánh về trước và lên trên theo hướng mặt", () => {
+        const circle = event({ shape: HitShape.CIRCLE, radius: 0.5, offsetX: 2, offsetY: 1 });
+        const right = { x: 5, y: 5, direction: "right" };
+        const left = { x: 5, y: 5, direction: "left" };
+        assert.equal(intersectsSkillHitEvent(right, 7, 4, point, circle), true); // 2 trước, 1 lên (y hướng xuống)
+        assert.equal(intersectsSkillHitEvent(right, 5, 5, point, circle), false); // chỗ người đánh đứng không còn trúng
+        assert.equal(intersectsSkillHitEvent(left, 3, 4, point, circle), true); // lật theo hướng mặt
+    });
+
+    it("offset âm đặt vùng phía sau", () => {
+        const circle = event({ shape: HitShape.CIRCLE, radius: 0.5, offsetX: -1.5 });
+        assert.equal(
+            intersectsSkillHitEvent({ x: 5, y: 5, direction: "right" }, 3.5, 5, point, circle),
+            true
+        );
+    });
+
+    it("chỗ đạn và vùng bắt đầu dời theo cùng công thức", () => {
+        const moved = offsetSkillOrigin(5, 5, "left", { offsetX: 2, offsetY: 1 });
+        assert.deepEqual(moved, { x: 3, y: 4 });
+        assert.deepEqual(offsetSkillOrigin(5, 5, "right", {}), { x: 5, y: 5 });
     });
 });
 

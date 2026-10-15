@@ -72,6 +72,8 @@ export const hitEvent = (params: {
     hitGroup?: number;
     /** Vùng đánh xoay theo hướng ngắm (về phía target đang chọn, không có thì theo hướng mặt) thay vì chỉ trái / phải. */
     aimed?: boolean;
+    offsetX?: number;
+    offsetY?: number;
     /** Choáng mục tiêu trúng đòn chừng này ms (đứng im, giữ nguyên anim, hết thì về idle). */
     stunMs?: number;
     /** Đẩy lùi mục tiêu trúng đòn ra xa người đánh `distance` ô trong `durationMs` ms. */
@@ -89,6 +91,8 @@ export const hitEvent = (params: {
     radius: params.radius ?? 0,
     angle: params.angle ?? 90,
     ...(params.aimed && { aimed: true }),
+    ...(params.offsetX && { offsetX: params.offsetX }),
+    ...(params.offsetY && { offsetY: params.offsetY }),
     ...(params.hitGroup !== undefined && { hitGroup: params.hitGroup }),
     effects: [
         damage(params.damageScaling, params.damageScalingType, params.damageType),

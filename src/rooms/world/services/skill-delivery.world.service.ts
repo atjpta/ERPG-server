@@ -28,7 +28,10 @@ import {
     type PendingSkillHit,
     claimGroupHit,
 } from "@/rooms/world/utils/skill-attack.world.util.js";
-import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
+import {
+    intersectsSkillHitEvent,
+    offsetSkillOrigin,
+} from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import {
     SkillOwner,
     SkillTarget,
@@ -289,8 +292,12 @@ export class SkillDeliveryWorldService {
 
         // Đạn xuất phát đúng vị trí người đánh, bay về giữa hitbox mục tiêu.
         const forward = hit.direction === "left" ? -1 : 1;
-        const x = params.originX;
-        const y = params.originY;
+        const { x, y } = offsetSkillOrigin(
+            params.originX,
+            params.originY,
+            hit.direction,
+            hit.event
+        );
         let dirX = forward;
         let dirY = 0;
         if (aim) {
@@ -360,7 +367,13 @@ export class SkillDeliveryWorldService {
     }
 
     private spawnArea(room: WorldRoom, params: SkillDeliveryParams): void {
-        const { owner, skill, hit, aim, originX, originY } = params;
+        const { owner, skill, hit, aim } = params;
+        const { x: originX, y: originY } = offsetSkillOrigin(
+            params.originX,
+            params.originY,
+            hit.direction,
+            hit.event
+        );
         const area = hit.event.area;
         if (!area) {
             console.warn(`[Skill] ${skill.code}: AREA hit event without area config`);
@@ -405,7 +418,8 @@ export class SkillDeliveryWorldService {
 
     private resolveArea(room: WorldRoom, area: AreaWorldState): void {
         // Vùng là shape của event đặt tại tâm vùng (không phụ thuộc hướng).
-        const event: SkillHitEvent = area.event;
+        // Chỗ vùng đã tính offset lúc đặt (spawnArea): đo tại tâm vùng, không dời lần nữa.
+        const event: SkillHitEvent = { ...area.event, offsetX: 0, offsetY: 0 };
         const origin = { x: area.x, y: area.y, direction: "right" };
         for (const target of findSkillTargets(room, area.owner)) {
             if (intersectsSkillHitEvent(origin, target.x, target.y, target.hitbox, event)) {
@@ -423,6 +437,8 @@ export class SkillDeliveryWorldService {
 /** Thân đạn: hình tròn bán kính `radius` quanh vị trí đạn. */
 const projectileBody = (projectile: ProjectileWorldState): SkillHitEvent => ({
     ...projectile.event,
+    offsetX: 0,
+    offsetY: 0,
     shape: HitShape.CIRCLE,
     range: 0,
     radius: projectile.radius,

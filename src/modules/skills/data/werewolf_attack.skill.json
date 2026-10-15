@@ -11,27 +11,27 @@
     "staminaCost": 0,
     "maxLevel": 1,
     "basicAttack": true,
-    "levelConfig": [
-        {
-            "level": 1,
-            "baseValue": 2,
-            "scalingType": "ATTACK",
-            "scalingValue": 0.25
-        }
-    ],
     "hits": [
         {
             "triggerTicks": 9,
             "shape": "RECT",
             "range": 0.75,
             "width": 0.98,
-            "height": 0,
-            "radius": 0,
-            "angle": 90,
+            "height": 0.0,
+            "radius": 0.0,
+            "angle": 90.0,
             "delivery": "HITBOX",
             "damageScaling": 1.25,
             "damageScalingType": "ATTACK",
             "damageType": "PHYSICAL"
+        }
+    ],
+    "levelConfig": [
+        {
+            "level": 1,
+            "baseValue": 2,
+            "scalingType": "ATTACK",
+            "scalingValue": 0.25
         }
     ]
 }

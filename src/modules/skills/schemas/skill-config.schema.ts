@@ -132,6 +132,12 @@ export const SkillHitEventSchema = z.object({
      */
     aimed: z.boolean().optional(),
     /**
+     * Vị trí vùng đánh (hoặc chỗ đạn / vùng bắt đầu) so với người đánh, tính bằng ô: `offsetX` về phía trước (theo hướng mặt hoặc
+     * hướng ngắm, lật theo hướng), `offsetY` lên trên. Thiếu = 0 (đúng chỗ người đánh đứng).
+     */
+    offsetX: z.number().optional(),
+    offsetY: z.number().optional(),
+    /**
      * HITBOX: hit events with the same group are ONE hit drawn frame by frame (each event is the collider of one animation frame):
      * a target is damaged by the first frame whose collider touches it, and the later frames of the group skip it. Events without
      * a group are hits of their own. A skill therefore hits a target once per group (plus once per ungrouped event).

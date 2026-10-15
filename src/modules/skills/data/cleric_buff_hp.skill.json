@@ -4,7 +4,7 @@
     "slot": 1,
     "skillType": "HEAL",
     "targetType": "SELF",
-    "castRange": 0,
+    "castRange": 0.0,
     "castTimeMs": 0,
     "animationMs": 500,
     "cooldownMs": 2000,
@@ -12,23 +12,23 @@
     "staminaCost": 0,
     "maxLevel": 10,
     "basicAttack": false,
-    "levelConfig": [],
     "hits": [
         {
             "triggerTicks": 3,
             "shape": "ELLIPSE",
-            "range": 0,
-            "width": 5,
+            "range": 0.0,
+            "width": 5.0,
             "height": 3.6,
-            "radius": 0,
-            "angle": 90,
+            "radius": 0.0,
+            "angle": 90.0,
             "delivery": "ALLIES",
             "allies": {
-                "radiusX": 4,
-                "radiusY": 3,
-                "healScaling": 3,
-                "healBase": 0
+                "radiusX": 4.0,
+                "radiusY": 3.0,
+                "healBase": 0.0,
+                "healScaling": 3.0
             }
         }
-    ]
+    ],
+    "levelConfig": []
 }

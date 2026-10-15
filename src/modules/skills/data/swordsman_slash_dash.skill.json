@@ -4,7 +4,7 @@
     "slot": 2,
     "skillType": "DASH",
     "targetType": "TARGET",
-    "castRange": 4,
+    "castRange": 4.0,
     "castTimeMs": 0,
     "animationMs": 300,
     "cooldownMs": 2000,
@@ -17,23 +17,23 @@
         "step": 0.1,
         "scalingType": "ATTACK"
     },
-    "charge": {
-        "speed": 12,
-        "graceTicks": 10
-    },
     "hits": [
         {
             "triggerTicks": 2,
             "shape": "RECT",
             "range": 1.5,
-            "width": 2,
-            "height": 2,
-            "radius": 0,
-            "angle": 90,
+            "width": 2.0,
+            "height": 2.0,
+            "radius": 0.0,
+            "angle": 90.0,
             "delivery": "HITBOX",
             "damageScaling": 1.2,
             "damageScalingType": "ATTACK",
             "damageType": "PHYSICAL"
         }
-    ]
+    ],
+    "charge": {
+        "speed": 12,
+        "graceTicks": 10
+    }
 }
