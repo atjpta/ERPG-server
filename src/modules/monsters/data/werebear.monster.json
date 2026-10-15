@@ -1,0 +1,30 @@
+{
+    "code": "werebear",
+    "biome": "werebear",
+    "level": 20,
+    "attackCooldownMs": 1950,
+    "stats": {
+        "physical_defense": 1
+    },
+    "drops": {
+        "gold": {
+            "min": 20,
+            "max": 200
+        },
+        "exp": 1200,
+        "items": [
+            {
+                "itemCode": "enhance_stone_2",
+                "min": 1,
+                "max": 1,
+                "rate": 0.1
+            },
+            {
+                "itemCode": "hp_potion_small",
+                "min": 1,
+                "max": 1,
+                "rate": 0.1
+            }
+        ]
+    }
+}

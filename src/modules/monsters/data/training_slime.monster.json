@@ -1,0 +1,19 @@
+{
+    "code": "training_slime",
+    "biome": "slime",
+    "attackCooldownMs": 1000,
+    "stats": {
+        "max_hp": 1000000000,
+        "critical_damage": 0,
+        "physical_attack": 0,
+        "magic_attack": 0,
+        "physical_defense": 0,
+        "magic_defense": 0,
+        "accuracy": 0,
+        "evasion": 0
+    },
+    "drops": {
+        "exp": 0,
+        "items": []
+    }
+}

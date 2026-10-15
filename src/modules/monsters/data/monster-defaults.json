@@ -1,0 +1,32 @@
+{
+    "level": 1,
+    "attackCooldownMs": 1700,
+    "stats": {
+        "critical_damage": 1.5,
+        "max_hp": 50,
+        "physical_attack": 5,
+        "accuracy": 1,
+        "evasion": 1
+    },
+    "drops": {
+        "gold": {
+            "min": 1,
+            "max": 10
+        },
+        "exp": 22,
+        "items": [
+            {
+                "itemCode": "enhance_stone_1",
+                "min": 1,
+                "max": 1,
+                "rate": 0.1
+            },
+            {
+                "itemCode": "hp_potion_small",
+                "min": 1,
+                "max": 1,
+                "rate": 0.1
+            }
+        ]
+    }
+}

@@ -8,6 +8,7 @@
  */
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { monsterAttackMs } from "@/modules/bodies/utils/anim-clip.util.js";
+import { loadResolvedMonsters } from "@/modules/monsters/seeds/monster-file.util.js";
 import { monsterBody } from "@/modules/bodies/utils/entity-body.util.js";
 import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
@@ -27,42 +28,11 @@ export interface MonsterDefinition {
     attackClipMs: number;
 }
 
-/**
- * `level` = level gốc (mốc scale chỉ số/thưởng); level thật do `monsterLevel` của map/dungeon quyết định.
- * Bat thuộc biome slime (rơi set slime); tinh anh/boss là `type` của spawn, không phải monster riêng.
- */
-const MONSTER_ENTRIES: Omit<MonsterDefinition, "hitbox" | "collider" | "attackClipMs">[] = [
-    {
-        code: "bat",
-        biome: Biome.SLIME,
-        level: 1,
-    },
-    {
-        code: "slime",
-        biome: Biome.SLIME,
-        level: 1,
-    },
-    {
-        code: "werebear",
-        biome: Biome.WEREBEAR,
-        level: 20,
-    },
-    {
-        code: "werewolf",
-        biome: Biome.WEREWOLF,
-        level: 10,
-    },
-    // Slime tập ở phòng tập (dùng prefab/hình của slime): đứng yên, không đánh, rất nhiều máu — để thử sát thương.
-    {
-        code: "training_slime",
-        biome: Biome.SLIME,
-        level: 1,
-    },
-];
-
 /** Mỗi monster kèm hitbox / collider đọc từ prefab Unity (`entity-bodies.json`). */
-export const MONSTER_DEFINITIONS: MonsterDefinition[] = MONSTER_ENTRIES.map((entry) => ({
-    ...entry,
+export const MONSTER_DEFINITIONS: MonsterDefinition[] = loadResolvedMonsters().map((entry) => ({
+    code: entry.code,
+    biome: entry.biome,
+    level: entry.level,
     ...monsterBody(entry.code),
     attackClipMs: monsterAttackMs(entry.code),
 }));
