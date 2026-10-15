@@ -68,6 +68,8 @@ export const hitEvent = (params: {
     damageScaling: number;
     damageScalingType?: DamageScalingType;
     damageType?: DamageType;
+    /** Cùng nhóm = một hit vẽ từng frame: mỗi mục tiêu chỉ trúng frame đầu tiên chạm nó (xem `hitGroup` ở schema). */
+    hitGroup?: number;
     /** Vùng đánh xoay theo hướng ngắm (về phía target đang chọn, không có thì theo hướng mặt) thay vì chỉ trái / phải. */
     aimed?: boolean;
     /** Choáng mục tiêu trúng đòn chừng này ms (đứng im, giữ nguyên anim, hết thì về idle). */
@@ -87,6 +89,7 @@ export const hitEvent = (params: {
     radius: params.radius ?? 0,
     angle: params.angle ?? 90,
     ...(params.aimed && { aimed: true }),
+    ...(params.hitGroup !== undefined && { hitGroup: params.hitGroup }),
     effects: [
         damage(params.damageScaling, params.damageScalingType, params.damageType),
         ...(params.stunMs ? [stun(params.stunMs)] : []),

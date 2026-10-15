@@ -26,6 +26,7 @@ import {
     getAuraEvent,
     getAuraRadii,
     type PendingSkillHit,
+    claimGroupHit,
 } from "@/rooms/world/utils/skill-attack.world.util.js";
 import { intersectsSkillHitEvent } from "@/rooms/world/utils/skill-hitbox.world.util.js";
 import {
@@ -269,7 +270,10 @@ export class SkillDeliveryWorldService {
     private resolveHitbox(room: WorldRoom, { owner, hit, originX, originY }: SkillDeliveryParams) {
         const origin = { x: originX, y: originY, direction: hit.direction, aim: hit.aim };
         for (const target of findSkillTargets(room, owner)) {
-            if (intersectsSkillHitEvent(origin, target.x, target.y, target.hitbox, hit.event)) {
+            if (
+                intersectsSkillHitEvent(origin, target.x, target.y, target.hitbox, hit.event) &&
+                claimGroupHit(hit, target.id)
+            ) {
                 applySkillHit(room, owner, target.id, hit);
             }
         }

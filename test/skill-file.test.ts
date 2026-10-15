@@ -54,6 +54,23 @@ describe("skill files (authored in the Unity Skill Lab)", () => {
         assert.deepEqual(withFileSkills("archer", [], [dash]), []);
     });
 
+    it("keeps the group of the frames of one hit", () => {
+        const row = skillFileToRow(
+            file({
+                skillType: SkillType.MELEE,
+                hits: [
+                    { triggerTicks: 4, range: 1, width: 1, hitGroup: 0 },
+                    { triggerTicks: 5, range: 1.6, width: 1, hitGroup: 0 },
+                    { triggerTicks: 8, range: 1, width: 1 },
+                ],
+            })
+        );
+        assert.deepEqual(
+            row.skillHitEvents?.map((hit) => hit.hitGroup),
+            [0, 0, undefined]
+        );
+    });
+
     it("adds a stun and a knockback as effects", () => {
         const row = skillFileToRow(
             file({

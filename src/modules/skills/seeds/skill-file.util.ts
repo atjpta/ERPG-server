@@ -44,6 +44,7 @@ const toHitEvent = (hit: SkillFileHit, eventIndex: number): SkillHitEvent => {
         radius: hit.radius,
         angle: hit.angle,
         aimed: hit.aimed,
+        hitGroup: hit.hitGroup,
         damageScaling: hit.damageScaling,
         damageScalingType: hit.damageScalingType,
         damageType: hit.damageType,

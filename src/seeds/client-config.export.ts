@@ -250,6 +250,8 @@ function toClientSkill(skill: Skill) {
                 angle: event.angle,
                 /** Vùng đánh xoay theo hướng ngắm (về phía target đang chọn) thay vì chỉ trái / phải. */
                 aimed: event.aimed ?? false,
+                /** Hit cùng nhóm = một hit vẽ từng frame (-1 = hit riêng): mỗi mục tiêu chỉ trúng frame đầu tiên chạm nó. */
+                hitGroup: event.hitGroup ?? -1,
                 /** Damage gốc để client predict: damageBase + attack × damageAttackScaling (server tính đủ qua `calculateDamage`). */
                 damageBase: damageEffects.reduce((total, effect) => total + effect.baseValue, 0),
                 damageAttackScaling: damageEffects

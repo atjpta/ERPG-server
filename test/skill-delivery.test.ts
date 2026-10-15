@@ -17,7 +17,10 @@ import type { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.w
 import type { MonsterWorldState } from "@/rooms/world/schema/monster.world.state.js";
 import { SkillDeliveryWorldService } from "@/rooms/world/services/skill-delivery.world.service.js";
 import {
+    type HorizontalDirection,
     PendingSkillHit,
+    buildPendingSkillHits,
+    claimGroupHit,
     skillReachesTarget,
     tickPendingSkillHits,
 } from "@/rooms/world/utils/skill-attack.world.util.js";
@@ -66,6 +69,7 @@ const pending = (s: Skill): PendingSkillHit => ({
     eventIndex: 0,
     ticksUntilHit: 0,
     direction: "right" as PendingSkillHit["direction"],
+    groupHits: new Map(),
 });
 
 /** Room giả: 1 monster bắn, các player làm mục tiêu (damage TRUE nên luôn trúng). */
@@ -739,5 +743,80 @@ describe("vùng đánh theo hướng ngắm (aimed)", () => {
         assert.equal(intersectsSkillHitEvent(aimedOrigin, 5, 3.8, point, plain), false);
         const noAim = { x: 5, y: 5, direction: "left" };
         assert.equal(intersectsSkillHitEvent(noAim, 3.8, 5, point, slash), true);
+    });
+});
+
+describe("hit groups (the collider of a skill frame by frame)", () => {
+    // Three frames of one swing, each the RECT in front of the attacker; the target stands about 1 tile in front.
+    const frame = (eventIndex: number, range: number, hitGroup?: number) =>
+        event({
+            eventIndex,
+            triggerTicks: eventIndex * 2,
+            shape: HitShape.RECT,
+            range,
+            width: 1,
+            ...(hitGroup !== undefined && { hitGroup }),
+        });
+
+    const swing = (frames: SkillHitEvent[]) => {
+        const s = skill(frames);
+        const groupHits = new Map<number, Set<string>>();
+        return frames.map((e, i): PendingSkillHit => ({
+            ...pending(s),
+            event: e,
+            eventIndex: i,
+            groupHits,
+        }));
+    };
+
+    const run = (hits: PendingSkillHit[], targets: { id: string; x: number; y: number }[]) => {
+        const service = new SkillDeliveryWorldService();
+        const { room, players, owner } = createRoom(targets);
+        for (const hit of hits) {
+            service.deliver(room, { owner, skill: hit.skill, hit, originX: 5, originY: 5 });
+        }
+        return players;
+    };
+
+    it("hits a target once per group, on the first frame whose collider touches it", () => {
+        const players = run(swing([frame(0, 0.4, 1), frame(1, 1.5, 1), frame(2, 2.5, 1)]), [
+            { id: "a", x: 6, y: 5 },
+        ]);
+        assert.deepEqual(players.get("a")!.damageTaken, [10]);
+    });
+
+    it("still hits a second target the earlier frames did not touch", () => {
+        const players = run(swing([frame(0, 1.5, 1), frame(1, 3.5, 1)]), [
+            { id: "near", x: 6, y: 5 },
+            { id: "far", x: 7.8, y: 5 },
+        ]);
+        assert.deepEqual(players.get("near")!.damageTaken, [10]);
+        assert.deepEqual(players.get("far")!.damageTaken, [10]);
+    });
+
+    it("counts every ungrouped event as a hit of its own", () => {
+        const players = run(swing([frame(0, 1.5), frame(1, 1.5), frame(2, 1.5)]), [
+            { id: "a", x: 6, y: 5 },
+        ]);
+        assert.deepEqual(players.get("a")!.damageTaken, [10, 10, 10]);
+    });
+
+    it("hits once per group when a skill has two groups", () => {
+        const players = run(
+            swing([frame(0, 1.5, 1), frame(1, 1.5, 1), frame(2, 1.5, 2), frame(3, 1.5, 2)]),
+            [{ id: "a", x: 6, y: 5 }]
+        );
+        assert.deepEqual(players.get("a")!.damageTaken, [10, 10]);
+    });
+
+    it("shares the record of one attack between its hits, and not between attacks", () => {
+        const s = skill([frame(0, 1.5, 1), frame(1, 1.5, 1)]);
+        const first = buildPendingSkillHits(s, 1, "right" as HorizontalDirection, TICK_RATE);
+        const second = buildPendingSkillHits(s, 2, "right" as HorizontalDirection, TICK_RATE);
+        assert.equal(first[0].groupHits, first[1].groupHits);
+        assert.notEqual(first[0].groupHits, second[0].groupHits);
+        assert.equal(claimGroupHit(first[0], "a"), true);
+        assert.equal(claimGroupHit(first[1], "a"), false);
+        assert.equal(claimGroupHit(second[0], "a"), true);
     });
 });

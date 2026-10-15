@@ -30,6 +30,8 @@ export const SkillFileHitSchema = z
         radius: nonNegative.default(0),
         angle: nonNegative.default(90),
         aimed: z.boolean().optional(),
+        /** Hits with the same group are one hit drawn frame by frame (see `hitGroup` in skill-config.schema.ts). */
+        hitGroup: z.number().int().nonnegative().optional(),
         delivery: z.enum(HitDelivery).default(HitDelivery.HITBOX),
         /** Damage = attack (or magic attack) x this. AURA / ALLIES hits deal none of their own. */
         damageScaling: nonNegative.default(1),

@@ -17,6 +17,8 @@ export interface PendingSkillHit {
     eventIndex: number;
     ticksUntilHit: number;
     direction: HorizontalDirection;
+    /** Một bản dùng chung cho mọi hit của đòn: nhóm `hitGroup` → mục tiêu đã trúng (xem `claimGroupHit`). */
+    groupHits: Map<number, Set<string>>;
     /** Hướng ngắm của hit event `aimed` (vector đơn vị, toạ độ server); không có thì vùng đánh theo `direction`. */
     aim?: { x: number; y: number };
 }
@@ -49,6 +51,7 @@ export function buildPendingSkillHits(
     aim?: { x: number; y: number }
 ): PendingSkillHit[] {
     const castTicks = getSkillCastTicks(skill, tickRate);
+    const groupHits = new Map<number, Set<string>>();
     return (
         skill.skillHitEvents
             .map((event, eventIndex) => ({
@@ -59,11 +62,32 @@ export function buildPendingSkillHits(
                 // `triggerTicks` tính từ lúc anim bắt đầu, tức sau thời gian chờ `castTimeMs`.
                 ticksUntilHit: castTicks + skillEventTicks(event.triggerTicks, tickRate),
                 direction,
+                groupHits,
                 ...(event.aimed && aim && { aim }),
             }))
             // Vùng buff (AURA) bắt đầu ngay lúc bấm (startAura), không chờ lịch hit.
             .filter((hit) => hit.event.delivery !== HitDelivery.AURA)
     );
+}
+
+/**
+ * Mục tiêu có được hit event này tính hay không: hit không có `hitGroup` luôn tính; hit trong một nhóm chỉ tính cho mục tiêu
+ * chưa trúng frame nào của nhóm (rồi ghi nhớ nó) — các frame sau của nhóm bỏ qua mục tiêu đã trúng.
+ */
+export function claimGroupHit(
+    hit: Pick<PendingSkillHit, "event" | "groupHits">,
+    targetId: string
+): boolean {
+    const group = hit.event.hitGroup;
+    if (group === undefined) return true;
+    let hitTargets = hit.groupHits.get(group);
+    if (!hitTargets) {
+        hitTargets = new Set();
+        hit.groupHits.set(group, hitTargets);
+    }
+    if (hitTargets.has(targetId)) return false;
+    hitTargets.add(targetId);
+    return true;
 }
 
 /** Hit event AURA đầu tiên của skill (cùng chỉ số trong `skillHitEvents`); skill thường không có. */
