@@ -120,11 +120,7 @@ export const skillService = new SkillService();
 export const sortSkillHitEvents = (events: Skill["skillHitEvents"]) =>
     [...events].sort((a, b) => a.triggerTicks - b.triggerTicks || a.eventIndex - b.eventIndex);
 
-function warnIfLastHitTooLate(
-    code: string,
-    animationMs: number,
-    events: Skill["skillHitEvents"]
-) {
+function warnIfLastHitTooLate(code: string, animationMs: number, events: Skill["skillHitEvents"]) {
     if (animationMs <= 0) {
         console.warn(`[Skill] ${code}: animationMs is 0 — run \`yarn seed --force\` to update it.`);
         return;

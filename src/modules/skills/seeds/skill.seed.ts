@@ -1,26 +1,19 @@
 import { Skills, type NewSkill } from "@/modules/skills/entities/skill.entity.js";
+import { basicAttackLevels, hitEvent, level } from "@/modules/skills/seeds/skill-build.util.js";
+import { loadSkillFiles, skillFileToRow } from "@/modules/skills/seeds/skill-file.util.js";
 import { skillClipWarnings } from "@/modules/bodies/utils/anim-clip.util.js";
 import {
     DamageScalingType,
     DamageType,
-    CrowdControlType,
     HitDelivery,
     HitShape,
     ProjectileHitBehavior,
     ProjectileMovementType,
-    ResourceType,
-    SkillEffectType,
-    StatusEffectType,
     SkillType,
     TargetType,
 } from "@/modules/skills/enums/skill.enum.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
 import { DASH_SKILL_CODE } from "@/modules/skills/services/skill.service.js";
-import type {
-    SkillArea,
-    SkillHitEvent,
-    SkillProjectile,
-} from "@/modules/skills/schemas/skill-config.schema.js";
 import { big, bigToNumber, floorBig } from "@/core/utils/big-number.util.js";
 import {
     MONSTER_DEFINITIONS,
@@ -28,114 +21,6 @@ import {
     type MonsterDefinition,
 } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { BASE_SKILL_TICK_RATE } from "@/rooms/world/utils/tick.world.util.js";
-
-const damage = (
-    scalingValue: number,
-    scalingType = DamageScalingType.ATTACK,
-    damageType = DamageType.PHYSICAL
-) => ({
-    effectType: SkillEffectType.DAMAGE,
-    baseValue: 0,
-    scalingType,
-    scalingValue,
-    durationMs: 0,
-    damageType,
-    resourceType: ResourceType.NONE,
-    crowdControlType: CrowdControlType.NONE,
-});
-
-const stun = (durationMs: number) => ({
-    effectType: SkillEffectType.APPLY_STATUS,
-    baseValue: 0,
-    scalingType: DamageScalingType.NONE,
-    scalingValue: 0,
-    durationMs,
-    damageType: DamageType.PHYSICAL,
-    resourceType: ResourceType.NONE,
-    statusEffectType: StatusEffectType.CONTROL,
-    crowdControlType: CrowdControlType.STUN,
-});
-
-/** Đẩy lùi: `baseValue` = quãng (ô) tính từ người đánh ra xa, `durationMs` = thời gian bị đẩy (mục tiêu choáng suốt lúc đó). */
-const knockback = (distance: number, durationMs: number) => ({
-    effectType: SkillEffectType.KNOCKBACK,
-    baseValue: distance,
-    scalingType: DamageScalingType.NONE,
-    scalingValue: 0,
-    durationMs,
-    damageType: DamageType.PHYSICAL,
-    resourceType: ResourceType.NONE,
-    statusEffectType: StatusEffectType.CONTROL,
-    crowdControlType: CrowdControlType.KNOCKBACK,
-});
-
-const hitEvent = (params: {
-    eventIndex: number;
-    triggerTicks: number;
-    shape: HitShape;
-    range: number;
-    width?: number;
-    height?: number;
-    radius?: number;
-    angle?: number;
-    damageScaling: number;
-    damageScalingType?: DamageScalingType;
-    damageType?: DamageType;
-    /** Vùng đánh xoay theo hướng ngắm (về phía target đang chọn, không có thì theo hướng mặt) thay vì chỉ trái / phải. */
-    aimed?: boolean;
-    /** Choáng mục tiêu trúng đòn chừng này ms (đứng im, giữ nguyên anim, hết thì về idle). */
-    stunMs?: number;
-    /** Đẩy lùi mục tiêu trúng đòn ra xa người đánh `distance` ô trong `durationMs` ms. */
-    knockback?: { distance: number; durationMs: number };
-    delivery?: HitDelivery;
-    projectile?: SkillProjectile;
-    area?: SkillArea;
-}): SkillHitEvent => ({
-    eventIndex: params.eventIndex,
-    triggerTicks: params.triggerTicks,
-    shape: params.shape,
-    range: params.range,
-    width: params.width ?? 0,
-    height: params.height ?? 0,
-    radius: params.radius ?? 0,
-    angle: params.angle ?? 90,
-    ...(params.aimed && { aimed: true }),
-    effects: [
-        damage(params.damageScaling, params.damageScalingType, params.damageType),
-        ...(params.stunMs ? [stun(params.stunMs)] : []),
-        ...(params.knockback
-            ? [knockback(params.knockback.distance, params.knockback.durationMs)]
-            : []),
-    ],
-    delivery: params.delivery ?? HitDelivery.HITBOX,
-    ...(params.projectile && { projectile: params.projectile }),
-    ...(params.area && { area: params.area }),
-});
-
-const level = (
-    level: number,
-    baseValue: number,
-    scalingValue: number,
-    scalingType = DamageScalingType.ATTACK
-) => ({
-    level,
-    baseValue,
-    scalingType,
-    scalingValue,
-});
-
-const basicAttackLevels = (scalingType = DamageScalingType.ATTACK) => [
-    level(1, 0, 1.1, scalingType),
-    level(2, 0, 1.2, scalingType),
-    level(3, 0, 1.3, scalingType),
-    level(4, 0, 1.4, scalingType),
-    level(5, 0, 1.5, scalingType),
-    level(6, 0, 1.6, scalingType),
-    level(7, 0, 1.7, scalingType),
-    level(8, 0, 1.8, scalingType),
-    level(9, 0, 1.9, scalingType),
-    level(10, 0, 2, scalingType),
-];
 
 /**
  * Đòn đánh thường (`basicAttack`) của 3 class khởi đầu, canh theo anim trong
@@ -606,7 +491,18 @@ const RETIRED_SKILL_CODES = [
 ];
 
 export const SkillSeed = async () => {
-    for (const skill of [...CLASS_SKILLS, ...MONSTER_SKILLS]) {
+    const fileSkills = loadSkillFiles();
+    const seededCodes = new Set([...CLASS_SKILLS, ...MONSTER_SKILLS].map((skill) => skill.code));
+    for (const file of fileSkills) {
+        if (seededCodes.has(file.code)) {
+            throw new Error(
+                `[SkillSeed] ${file.code}.skill.json: the code is already in skill.seed.ts`
+            );
+        }
+    }
+    const authored = fileSkills.map(skillFileToRow);
+
+    for (const skill of [...CLASS_SKILLS, ...MONSTER_SKILLS, ...authored]) {
         await SkillRepo.upsert({
             data: skill,
             target: Skills.code,
@@ -622,7 +518,7 @@ export const SkillSeed = async () => {
     }
 
     // Class skills are tuned by hand, but must not outlast the Unity clip they play.
-    const timed = CLASS_SKILLS.map((skill) => ({
+    const timed = [...CLASS_SKILLS, ...authored].map((skill) => ({
         code: skill.code,
         animationMs: skill.animationMs ?? 0,
         castTimeMs: skill.castTimeMs ?? 0,

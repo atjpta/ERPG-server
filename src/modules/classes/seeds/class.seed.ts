@@ -1,4 +1,5 @@
 import { Classes, type NewCharacterClass } from "@/modules/classes/entities/class.entity.js";
+import { withFileSkills } from "@/modules/skills/seeds/skill-file.util.js";
 import { toOwnedSkills } from "@/modules/skills/seeds/owned-skills.seed.util.js";
 import { ClassRepo } from "@/modules/classes/repositories/class.repository.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
@@ -105,7 +106,7 @@ const CLASSES: ClassSeedData[] = [
 
 export const ClassSeed = async () => {
     for (const { skillCodes, ...rest } of CLASSES) {
-        const skills = await toOwnedSkills(skillCodes);
+        const skills = await toOwnedSkills(withFileSkills(rest.code, skillCodes));
         const characterClass: NewCharacterClass = { ...rest, skills };
         const saved = await ClassRepo.upsert({
             data: characterClass,

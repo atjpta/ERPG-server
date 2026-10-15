@@ -8,7 +8,7 @@ Hiện dữ liệu được quản lý bằng seed. `SkillSeed` tạo đòn đá
 
 | Class     | Skill                                                             | Cách gây damage                                                                 |
 | --------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Swordsman | `swordsman_basic_attack` (MELEE)                                  | HITBOX: 1 nhát chém ở frame 3, `animationMs` 300                                 |
+| Swordsman | `swordsman_basic_attack` (MELEE)                                  | HITBOX: 1 nhát chém ở frame 3, `animationMs` 300                                |
 | Archer    | `archer_basic_attack` (PROJECTILE)                                | Mũi tên rời cung ở 500 ms, bay 12 ô/s, tối đa 6 ô, trúng con đầu tiên (DESTROY) |
 | Cleric    | `cleric_basic_attack` (GROUND, sát thương phép theo MAGIC_ATTACK) | Vùng tròn bán kính 0.6 đặt ở chân mục tiêu lúc 350 ms, nổ sau 150 ms            |
 
