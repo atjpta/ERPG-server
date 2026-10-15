@@ -10,6 +10,7 @@ const file = (extra: Record<string, unknown> = {}) =>
         skillType: SkillType.PROJECTILE,
         castRange: 6,
         animationMs: 750,
+        levels: { start: 1.1, step: 0.1 },
         cooldownMs: 4000,
         manaCost: 5,
         hits: [
@@ -37,6 +38,20 @@ describe("skill files (authored in the Unity Skill Lab)", () => {
         assert.equal(hit?.delivery, HitDelivery.PROJECTILE);
         assert.equal(hit?.projectile?.speed, 12);
         assert.equal(hit?.effects.length, 1);
+    });
+
+    it("does not level a skill without a level table, and keeps an explicit one", () => {
+        assert.deepEqual(skillFileToRow(file({ levels: undefined })).levelConfig, []);
+        const explicit = [{ level: 1, baseValue: 2, scalingType: "ATTACK", scalingValue: 0.25 }];
+        const row = skillFileToRow(file({ levelConfig: explicit }));
+        assert.equal(row.levelConfig?.length, 1);
+        assert.equal(row.levelConfig?.[0].baseValue, 2);
+    });
+
+    it("lets a shared skill (the dash) have no class", () => {
+        const dash = file({ code: "dash", classCode: undefined, skillType: SkillType.DASH });
+        assert.equal(dash.classCode, undefined);
+        assert.deepEqual(withFileSkills("archer", [], [dash]), []);
     });
 
     it("adds a stun and a knockback as effects", () => {

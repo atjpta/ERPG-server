@@ -25,7 +25,7 @@ export const loadSkillFiles = (): SkillFile[] =>
                     `[SkillFile] ${file}: code "${skill.code}" does not match the file name`
                 );
             }
-            if (!skill.code.startsWith(`${skill.classCode}_`)) {
+            if (skill.classCode && !skill.code.startsWith(`${skill.classCode}_`)) {
                 throw new Error(
                     `[SkillFile] ${file}: code must start with "${skill.classCode}_" (its animation clip is the rest)`
                 );
@@ -59,6 +59,19 @@ const toHitEvent = (hit: SkillFileHit, eventIndex: number): SkillHitEvent => {
     return base;
 };
 
+const levelTable = (skill: SkillFile) =>
+    skill.levels
+        ? Array.from({ length: skill.maxLevel }, (_, i) =>
+              level(
+                  i + 1,
+                  0,
+                  Math.round(((skill.levels?.start ?? 0) + (skill.levels?.step ?? 0) * i) * 100) /
+                      100,
+                  skill.levels?.scalingType
+              )
+          )
+        : [];
+
 /** The `skills` row of a skill file. */
 export const skillFileToRow = (skill: SkillFile): NewSkill => ({
     code: skill.code,
@@ -72,14 +85,7 @@ export const skillFileToRow = (skill: SkillFile): NewSkill => ({
     staminaCost: skill.staminaCost,
     maxLevel: skill.maxLevel,
     basicAttack: skill.basicAttack,
-    levelConfig: Array.from({ length: skill.maxLevel }, (_, i) =>
-        level(
-            i + 1,
-            0,
-            Math.round((skill.levels.start + skill.levels.step * i) * 100) / 100,
-            skill.levels.scalingType
-        )
-    ),
+    levelConfig: skill.levelConfig ?? levelTable(skill),
     skillHitEvents: skill.hits.map(toHitEvent),
     ...(skill.charge && { chargeConfig: skill.charge }),
 });

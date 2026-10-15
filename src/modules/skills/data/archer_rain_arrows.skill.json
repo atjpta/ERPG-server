@@ -1,0 +1,41 @@
+{
+    "code": "archer_rain_arrows",
+    "classCode": "archer",
+    "slot": 3,
+    "skillType": "AOE",
+    "targetType": "TARGET",
+    "castRange": 7,
+    "castTimeMs": 0,
+    "animationMs": 750,
+    "cooldownMs": 8000,
+    "manaCost": 10,
+    "staminaCost": 0,
+    "maxLevel": 10,
+    "basicAttack": false,
+    "levels": {
+        "start": 1.1,
+        "step": 0.1,
+        "scalingType": "ATTACK"
+    },
+    "hits": [
+        {
+            "triggerTicks": 10,
+            "shape": "ELLIPSE",
+            "range": 0,
+            "width": 3,
+            "height": 1.5,
+            "radius": 0,
+            "angle": 90,
+            "delivery": "AREA",
+            "damageScaling": 0.5,
+            "damageScalingType": "ATTACK",
+            "damageType": "PHYSICAL",
+            "area": {
+                "delayMs": 400,
+                "untargetedDistance": 3,
+                "durationMs": 4000,
+                "tickMs": 500
+            }
+        }
+    ]
+}

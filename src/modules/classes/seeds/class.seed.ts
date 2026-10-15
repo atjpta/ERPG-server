@@ -5,10 +5,8 @@ import { ClassRepo } from "@/modules/classes/repositories/class.repository.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import { PlayerStateRepo } from "@/modules/player/repositories/player-state.repository.js";
 
-interface ClassSeedData extends Omit<NewCharacterClass, "skills"> {
-    /** Skill mặc định theo code, đúng thứ tự combo đánh thường. */
-    skillCodes: string[];
-}
+/** Skill của class không khai báo ở đây: chúng là file skill do Unity ghi ra, cấp cho class theo `classCode` và `slot`. */
+type ClassSeedData = Omit<NewCharacterClass, "skills">;
 
 /** Chạy sau SkillSeed (tham chiếu skill theo id). 3 class khởi đầu, tổng 25 điểm ở level 1. */
 const CLASSES: ClassSeedData[] = [
@@ -35,12 +33,6 @@ const CLASSES: ClassSeedData[] = [
             [StatKey.MP_REGEN]: 0.5,
         },
         statBonuses: [],
-        skillCodes: [
-            "swordsman_basic_attack",
-            "swordsman_cross_slash",
-            "swordsman_slash_dash",
-            "swordsman_fly_slash",
-        ],
     },
     {
         code: "archer",
@@ -65,12 +57,6 @@ const CLASSES: ClassSeedData[] = [
             [StatKey.MP_REGEN]: 0.6,
         },
         statBonuses: [],
-        skillCodes: [
-            "archer_basic_attack",
-            "archer_piercing_arrow",
-            "archer_knockback_shot",
-            "archer_rain_arrows",
-        ],
     },
     {
         code: "cleric",
@@ -95,19 +81,13 @@ const CLASSES: ClassSeedData[] = [
             [StatKey.MP_REGEN]: 1.2,
         },
         statBonuses: [],
-        skillCodes: [
-            "cleric_basic_attack",
-            "cleric_buff_hp",
-            "cleric_fireball",
-            "cleric_explosion",
-        ],
     },
 ];
 
 export const ClassSeed = async () => {
-    for (const { skillCodes, ...rest } of CLASSES) {
-        const skills = await toOwnedSkills(withFileSkills(rest.code, skillCodes));
-        const characterClass: NewCharacterClass = { ...rest, skills };
+    for (const data of CLASSES) {
+        const skills = await toOwnedSkills(withFileSkills(data.code, []));
+        const characterClass: NewCharacterClass = { ...data, skills };
         const saved = await ClassRepo.upsert({
             data: characterClass,
             target: Classes.code,

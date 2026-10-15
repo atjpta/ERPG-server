@@ -1,0 +1,43 @@
+{
+    "code": "archer_basic_attack",
+    "classCode": "archer",
+    "slot": 0,
+    "skillType": "PROJECTILE",
+    "targetType": "TARGET",
+    "castRange": 4,
+    "castTimeMs": 0,
+    "animationMs": 660,
+    "cooldownMs": 1000,
+    "manaCost": 0,
+    "staminaCost": 0,
+    "maxLevel": 10,
+    "basicAttack": true,
+    "levels": {
+        "start": 1.1,
+        "step": 0.1,
+        "scalingType": "ATTACK"
+    },
+    "hits": [
+        {
+            "triggerTicks": 6,
+            "shape": "CIRCLE",
+            "range": 0,
+            "width": 0,
+            "height": 0,
+            "radius": 0.15,
+            "angle": 90,
+            "delivery": "PROJECTILE",
+            "damageScaling": 1,
+            "damageScalingType": "ATTACK",
+            "damageType": "PHYSICAL",
+            "projectile": {
+                "movementType": "STRAIGHT",
+                "hitBehavior": "DESTROY",
+                "speed": 12,
+                "maxDistance": 5,
+                "radius": 0.15,
+                "maxHits": 1
+            }
+        }
+    ]
+}

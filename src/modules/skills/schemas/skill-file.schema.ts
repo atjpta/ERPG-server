@@ -8,6 +8,7 @@ import {
     TargetType,
 } from "@/modules/skills/enums/skill.enum.js";
 import {
+    SkillLevelConfigSchema,
     SkillAlliesSchema,
     SkillAreaSchema,
     SkillAuraSchema,
@@ -63,11 +64,12 @@ export const SkillFileHitSchema = z
 /**
  * `data/<code>.skill.json`: a skill authored in Unity (Skill Lab) instead of in `skill.seed.ts`. The file name is the code.
  * The skill is given to `classCode` at `slot` (the class's skill order; the basic attack comes first), and its animation clip
- * is the class prefab Animator clip named after the code without the class prefix (`archer_rain_arrows` = `rain_arrows`).
+ * is the class prefab Animator clip named after the code without the class prefix (a shared skill has no class and no clip) (`archer_rain_arrows` = `rain_arrows`).
  */
 export const SkillFileSchema = z.object({
     code: z.string().regex(/^[a-z][a-z0-9_]*$/),
-    classCode: z.string().min(1),
+    /** Class that gets the skill; leave out for a shared skill nobody owns (the dash). */
+    classCode: z.string().min(1).optional(),
     /** Position in the class's skill list; leave out to put it last. */
     slot: z.number().int().nonnegative().optional(),
     skillType: z.enum(SkillType),
@@ -88,7 +90,9 @@ export const SkillFileSchema = z.object({
             step: nonNegative.default(0.1),
             scalingType: z.enum(DamageScalingType).default(DamageScalingType.ATTACK),
         })
-        .default({ start: 1.1, step: 0.1, scalingType: DamageScalingType.ATTACK }),
+        .optional(),
+    /** Level table written out in full (wins over `levels`); no `levels` and no `levelConfig` = the skill does not level. */
+    levelConfig: z.array(SkillLevelConfigSchema).optional(),
     charge: SkillChargeSchema.partial().optional(),
     hits: z.array(SkillFileHitSchema).default([]),
 });

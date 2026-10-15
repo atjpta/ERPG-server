@@ -1,0 +1,15 @@
+{
+    "code": "dash",
+    "skillType": "DASH",
+    "targetType": "DIRECTION",
+    "castRange": 0,
+    "castTimeMs": 0,
+    "animationMs": 300,
+    "cooldownMs": 3000,
+    "manaCost": 0,
+    "staminaCost": 0,
+    "maxLevel": 1,
+    "basicAttack": false,
+    "levelConfig": [],
+    "hits": []
+}

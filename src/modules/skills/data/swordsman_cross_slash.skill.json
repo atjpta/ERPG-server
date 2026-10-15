@@ -1,0 +1,52 @@
+{
+    "code": "swordsman_cross_slash",
+    "classCode": "swordsman",
+    "slot": 1,
+    "skillType": "MELEE",
+    "targetType": "DIRECTION",
+    "castRange": 1.6,
+    "castTimeMs": 0,
+    "animationMs": 750,
+    "cooldownMs": 2000,
+    "manaCost": 0,
+    "staminaCost": 0,
+    "maxLevel": 10,
+    "basicAttack": false,
+    "levels": {
+        "start": 1.1,
+        "step": 0.1,
+        "scalingType": "ATTACK"
+    },
+    "hits": [
+        {
+            "triggerTicks": 4,
+            "shape": "RECT",
+            "range": 1.6,
+            "width": 2,
+            "height": 0,
+            "radius": 0,
+            "angle": 90,
+            "aimed": true,
+            "delivery": "HITBOX",
+            "damageScaling": 0.8,
+            "damageScalingType": "ATTACK",
+            "damageType": "PHYSICAL",
+            "stunMs": 2000
+        },
+        {
+            "triggerTicks": 5,
+            "shape": "RECT",
+            "range": 1.6,
+            "width": 2,
+            "height": 0,
+            "radius": 0,
+            "angle": 90,
+            "aimed": true,
+            "delivery": "HITBOX",
+            "damageScaling": 0.8,
+            "damageScalingType": "ATTACK",
+            "damageType": "PHYSICAL",
+            "stunMs": 2000
+        }
+    ]
+}

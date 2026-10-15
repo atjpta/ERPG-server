@@ -1,0 +1,39 @@
+{
+    "code": "swordsman_slash_dash",
+    "classCode": "swordsman",
+    "slot": 2,
+    "skillType": "DASH",
+    "targetType": "TARGET",
+    "castRange": 4,
+    "castTimeMs": 0,
+    "animationMs": 300,
+    "cooldownMs": 2000,
+    "manaCost": 0,
+    "staminaCost": 0,
+    "maxLevel": 10,
+    "basicAttack": false,
+    "levels": {
+        "start": 1.1,
+        "step": 0.1,
+        "scalingType": "ATTACK"
+    },
+    "charge": {
+        "speed": 12,
+        "graceTicks": 10
+    },
+    "hits": [
+        {
+            "triggerTicks": 2,
+            "shape": "RECT",
+            "range": 1.5,
+            "width": 2,
+            "height": 2,
+            "radius": 0,
+            "angle": 90,
+            "delivery": "HITBOX",
+            "damageScaling": 1.2,
+            "damageScalingType": "ATTACK",
+            "damageType": "PHYSICAL"
+        }
+    ]
+}
