@@ -147,6 +147,12 @@ export class SkillDeliveryWorldService {
                 continue;
             }
             this.resolveArea(room, area);
+            if (--area.pulsesLeft > 0) {
+                // Lần gây damage kế tiếp sau `pulseEvery` tick (đổi seed để mỗi lần roll riêng).
+                area.ticksUntilImpact = area.pulseEvery - 1;
+                area.attackSerial++;
+                continue;
+            }
             room.state.areas.delete(area.id);
         }
     }
@@ -372,20 +378,25 @@ export class SkillDeliveryWorldService {
         x = Math.min(Math.max(x, 0), room.map.width);
         y = Math.min(Math.max(y, 0), room.map.height);
 
+        const delayTicks = area.delayMs > 0 ? millisecondsToTicks(area.delayMs, room.tickRate) : 0;
         const id = this.newId("a");
-        room.state.areas.set(
+        const state = new AreaWorldState({
             id,
-            new AreaWorldState({
-                id,
-                owner,
-                skillId: skill.id,
-                hit,
-                x,
-                y,
-                ticksUntilImpact:
-                    area.delayMs > 0 ? millisecondsToTicks(area.delayMs, room.tickRate) : 0,
-            })
-        );
+            owner,
+            skillId: skill.id,
+            hit,
+            x,
+            y,
+            ticksUntilImpact: delayTicks,
+        });
+        // Vùng kéo dài: gây damage mỗi `tickMs` từ lần đầu (sau `delayMs`) cho tới hết `durationMs`.
+        if (area.durationMs) {
+            state.pulseEvery = millisecondsToTicks(area.tickMs ?? 1000, room.tickRate);
+            const durationTicks = millisecondsToTicks(area.durationMs, room.tickRate);
+            state.pulsesLeft =
+                Math.floor(Math.max(0, durationTicks - delayTicks) / state.pulseEvery) + 1;
+        }
+        room.state.areas.set(id, state);
     }
 
     private resolveArea(room: WorldRoom, area: AreaWorldState): void {

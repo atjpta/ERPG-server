@@ -55,6 +55,19 @@ const stun = (durationMs: number) => ({
     crowdControlType: CrowdControlType.STUN,
 });
 
+/** Đẩy lùi: `baseValue` = quãng (ô) tính từ người đánh ra xa, `durationMs` = thời gian bị đẩy (mục tiêu choáng suốt lúc đó). */
+const knockback = (distance: number, durationMs: number) => ({
+    effectType: SkillEffectType.KNOCKBACK,
+    baseValue: distance,
+    scalingType: DamageScalingType.NONE,
+    scalingValue: 0,
+    durationMs,
+    damageType: DamageType.PHYSICAL,
+    resourceType: ResourceType.NONE,
+    statusEffectType: StatusEffectType.CONTROL,
+    crowdControlType: CrowdControlType.KNOCKBACK,
+});
+
 const hitEvent = (params: {
     eventIndex: number;
     triggerTicks: number;
@@ -71,6 +84,8 @@ const hitEvent = (params: {
     aimed?: boolean;
     /** Choáng mục tiêu trúng đòn chừng này ms (đứng im, giữ nguyên anim, hết thì về idle). */
     stunMs?: number;
+    /** Đẩy lùi mục tiêu trúng đòn ra xa người đánh `distance` ô trong `durationMs` ms. */
+    knockback?: { distance: number; durationMs: number };
     delivery?: HitDelivery;
     projectile?: SkillProjectile;
     area?: SkillArea;
@@ -87,6 +102,9 @@ const hitEvent = (params: {
     effects: [
         damage(params.damageScaling, params.damageScalingType, params.damageType),
         ...(params.stunMs ? [stun(params.stunMs)] : []),
+        ...(params.knockback
+            ? [knockback(params.knockback.distance, params.knockback.durationMs)]
+            : []),
     ],
     delivery: params.delivery ?? HitDelivery.HITBOX,
     ...(params.projectile && { projectile: params.projectile }),
@@ -197,6 +215,109 @@ const CLASS_SKILLS: NewSkill[] = [
                     radius: 0.15,
                     maxHits: 1,
                 },
+            }),
+        ],
+    },
+    {
+        // Anim piercing_arrow (12 frame, 12 fps = 1000 ms): mũi tên rời cung ở frame 9 (750 ms) → tick 15. Mũi tên xuyên qua mọi
+        // mục tiêu trên đường bay (PIERCE, mỗi con trúng 1 lần); prefab hiệu ứng `archer_piercing_arrow`.
+        code: "archer_piercing_arrow",
+        skillType: SkillType.PROJECTILE,
+        targetType: TargetType.TARGET,
+        castRange: 8,
+        castTimeMs: 0,
+        animationMs: 1000,
+        cooldownMs: 3000,
+        manaCost: 6,
+        staminaCost: 0,
+        maxLevel: 10,
+        basicAttack: false,
+        levelConfig: basicAttackLevels(DamageScalingType.ATTACK),
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks: 15,
+                shape: HitShape.CIRCLE,
+                range: 0,
+                radius: 0.3,
+                damageScaling: 2,
+                delivery: HitDelivery.PROJECTILE,
+                projectile: {
+                    movementType: ProjectileMovementType.STRAIGHT,
+                    hitBehavior: ProjectileHitBehavior.PIERCE,
+                    speed: 14,
+                    maxDistance: 8,
+                    radius: 0.3,
+                    maxHits: 10,
+                },
+            }),
+        ],
+    },
+    {
+        // Anim knockback_shot (cùng sheet Archer_Attack02, 12 frame = 1000 ms): mũi tên rời cung ở frame 9 (750 ms) → tick 15.
+        // Trúng thì đẩy lùi mục tiêu 2.5 ô ra xa người bắn trong 300 ms (mục tiêu choáng suốt lúc bị đẩy); prefab `archer_knockback_shot`.
+        code: "archer_knockback_shot",
+        skillType: SkillType.PROJECTILE,
+        targetType: TargetType.TARGET,
+        castRange: 7,
+        castTimeMs: 0,
+        animationMs: 1000,
+        cooldownMs: 4000,
+        manaCost: 5,
+        staminaCost: 0,
+        maxLevel: 10,
+        basicAttack: false,
+        levelConfig: basicAttackLevels(DamageScalingType.ATTACK),
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks: 15,
+                shape: HitShape.CIRCLE,
+                range: 0,
+                radius: 0.3,
+                damageScaling: 1.2,
+                knockback: { distance: 2.5, durationMs: 300 },
+                delivery: HitDelivery.PROJECTILE,
+                projectile: {
+                    movementType: ProjectileMovementType.STRAIGHT,
+                    hitBehavior: ProjectileHitBehavior.DESTROY,
+                    speed: 14,
+                    maxDistance: 7,
+                    radius: 0.3,
+                    maxHits: 1,
+                },
+            }),
+        ],
+    },
+    {
+        // Anim rain_arrows (cùng sheet Archer_Attack01, 9 frame = 750 ms): bắn lên trời ở frame 6 (500 ms) → tick 10. Vùng đặt ở chỗ
+        // mục tiêu (hoặc 3 ô phía trước nếu không có) và tồn tại `durationMs`: ParticleSystem trong prefab `archer_rain_arrows`
+        // (chỉnh ở Inspector, loop tới khi vùng hết) rơi mưa tên, còn damage gây lặp mỗi `tickMs` lên mọi quái trong vòng đỏ.
+        // Vòng đỏ = width × height.
+        code: "archer_rain_arrows",
+        skillType: SkillType.AOE,
+        targetType: TargetType.TARGET,
+        castRange: 7,
+        castTimeMs: 0,
+        animationMs: 750,
+        cooldownMs: 8000,
+        manaCost: 10,
+        staminaCost: 0,
+        maxLevel: 10,
+        basicAttack: false,
+        levelConfig: basicAttackLevels(DamageScalingType.ATTACK),
+        skillHitEvents: [
+            hitEvent({
+                eventIndex: 0,
+                triggerTicks: 10,
+                shape: HitShape.ELLIPSE,
+                range: 0,
+                width: 3,
+                height: 1.5,
+                damageScaling: 0.5, // mỗi lần mưa trúng
+                delivery: HitDelivery.AREA,
+                // Mưa kéo dài 4 s: lần trúng đầu sau 0.4 s (mũi tên đầu chạm đất), rồi mỗi 0.5 s → 8 lần.
+                area: { delayMs: 400, untargetedDistance: 3, durationMs: 4000, tickMs: 500 },
             }),
         ],
     },

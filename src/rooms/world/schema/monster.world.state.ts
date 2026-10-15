@@ -74,6 +74,10 @@ export class MonsterWorldState extends Schema {
     attackSerial = 0;
     /** Số tick liên tiếp chưa nhận sát thương (về 0 khi bị đánh) — chain hồi máu dùng cho spawn có `healAfterIdleSec`. */
     idleTicks = 0;
+    /** Đang bị đẩy lùi (skill có hiệu ứng KNOCKBACK): số tick còn lại và độ dời mỗi tick (ô). Vị trí đồng bộ qua x / y như bình thường. */
+    knockbackTicks = 0;
+    knockbackStepX = 0;
+    knockbackStepY = 0;
 
     constructor(props: {
         monster: Monster;
@@ -146,6 +150,7 @@ export class MonsterWorldState extends Schema {
 
     setDead() {
         this.stunTicks = 0;
+        this.knockbackTicks = 0;
         this.status = MonsterStatus.DEAD;
         this.clearAggroTarget();
         this.moving = false;
@@ -161,9 +166,22 @@ export class MonsterWorldState extends Schema {
         this.attacking = false;
     }
 
+    /**
+     * Đẩy lùi theo vector đơn vị (dirX, dirY) đủ `distance` ô trong `ticks` tick; mục tiêu choáng suốt lúc bị đẩy
+     * (MonsterStunChain dời vị trí mỗi tick). Đẩy mới thay đẩy đang chạy.
+     */
+    knockback(dirX: number, dirY: number, distance: number, ticks: number) {
+        const count = Math.max(1, Math.floor(ticks));
+        this.knockbackTicks = count;
+        this.knockbackStepX = (dirX * distance) / count;
+        this.knockbackStepY = (dirY * distance) / count;
+        this.stun(count);
+    }
+
     setSpawns() {
         this.status = MonsterStatus.ALIVE;
         this.stunTicks = 0;
+        this.knockbackTicks = 0;
         this.clearAggroTarget();
         this.x = this.spawnX;
         this.y = this.spawnY;

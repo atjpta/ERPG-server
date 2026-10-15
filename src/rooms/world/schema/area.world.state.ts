@@ -23,6 +23,9 @@ export class AreaWorldState extends Schema {
     owner: SkillOwner;
     event: SkillHitEvent;
     attackSerial: number;
+    /** Vùng kéo dài (`area.durationMs`): chu kỳ gây damage (tick) và số lần gây damage còn lại, tính cả lần sắp tới. */
+    pulseEvery = 0;
+    pulsesLeft = 1;
 
     constructor(props: {
         id: string;

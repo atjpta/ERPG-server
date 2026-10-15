@@ -60,6 +60,13 @@ export const SkillProjectileSchema = z.object({
 export const SkillAreaSchema = z.object({
     delayMs: z.number().int().nonnegative().default(0),
     untargetedDistance: nonNegative.default(1),
+    /**
+     * Vùng tồn tại bao lâu tính từ lúc đặt (ms): lần gây damage đầu sau `delayMs`, rồi cứ mỗi `tickMs` lại gây tiếp cho tới khi hết
+     * thời gian này (mưa tên, bãi lửa...). 0 = chỉ một lần sau `delayMs` rồi biến mất.
+     */
+    durationMs: z.number().int().nonnegative().optional(),
+    /** Chu kỳ gây damage (ms) khi `durationMs` > 0; thiếu = 1000. */
+    tickMs: z.number().int().positive().optional(),
 });
 
 /**

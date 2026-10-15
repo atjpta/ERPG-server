@@ -349,6 +349,35 @@ function toClientSkill(skill: Skill) {
                                   ? millisecondsToTicks(event.area.delayMs, WORLD_TICK_RATE)
                                   : 0,
                           untargetedDistance: event.area.untargetedDistance,
+                          /** Vùng kéo dài: số lần gây damage và chu kỳ giữa hai lần (tick); 1 / 0 = chỉ một lần. */
+                          ...(event.area.durationMs
+                              ? {
+                                    pulseTicks: millisecondsToTicks(
+                                        event.area.tickMs ?? 1000,
+                                        WORLD_TICK_RATE
+                                    ),
+                                    pulses:
+                                        Math.floor(
+                                            Math.max(
+                                                0,
+                                                millisecondsToTicks(
+                                                    event.area.durationMs,
+                                                    WORLD_TICK_RATE
+                                                ) -
+                                                    (event.area.delayMs > 0
+                                                        ? millisecondsToTicks(
+                                                              event.area.delayMs,
+                                                              WORLD_TICK_RATE
+                                                          )
+                                                        : 0)
+                                            ) /
+                                                millisecondsToTicks(
+                                                    event.area.tickMs ?? 1000,
+                                                    WORLD_TICK_RATE
+                                                )
+                                        ) + 1,
+                                }
+                              : { pulseTicks: 0, pulses: 1 }),
                       }
                     : null,
                 /** Vùng buff (AURA): thời gian và bán kính theo level, để client tính hồi chiêu và phóng prefab. */

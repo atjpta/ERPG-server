@@ -1,7 +1,7 @@
 import { MonsterWorldState } from "@/rooms/world/schema/monster.world.state.js";
 import { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
-import { applyWorldMove } from "@/rooms/world/simulation/movement.step.js";
+import { applyDirectedMove, applyWorldMove } from "@/rooms/world/simulation/movement.step.js";
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
 import { distanceSquared } from "@/rooms/world/utils/world.util.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
@@ -57,15 +57,25 @@ export class MonsterDeathChain implements WorldChainAction<MonsterChainContext> 
 }
 
 /**
- * Đang choáng: không tìm mục tiêu, không đi, không đánh (đòn đang vung bị huỷ), chỉ đếm lùi. Client thấy `stunTicks` > 0 thì giữ
+ * Đang choáng (hoặc bị đẩy lùi, khi đó dời vị trí mỗi tick): không tìm mục tiêu, không đi, không đánh (đòn đang vung bị huỷ), chỉ đếm lùi. Client thấy `stunTicks` > 0 thì giữ
  * nguyên anim đang chạy, hết choáng thì về idle.
  */
 export class MonsterStunChain implements WorldChainAction<MonsterChainContext> {
     constructor(private readonly attackChain: MonsterAttackChain) {}
 
-    execute({ monster }: MonsterChainContext): WorldChainResult {
+    execute({ room, monster }: MonsterChainContext): WorldChainResult {
         if (monster.stunTicks <= 0) return WorldChainResult.CONTINUE;
         monster.stunTicks--;
+        if (monster.knockbackTicks > 0) {
+            monster.knockbackTicks--;
+            applyDirectedMove(
+                monster,
+                monster.knockbackStepX,
+                monster.knockbackStepY,
+                room.moveBounds,
+                monster.collider
+            );
+        }
         monster.moving = false;
         monster.attacking = false;
         this.attackChain.cancelPendingAttack(monster);

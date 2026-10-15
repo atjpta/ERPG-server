@@ -133,6 +133,19 @@ export function applySkillHit(
             ) {
                 target.stun(millisecondsToTicks(effect.durationMs, room.tickRate));
             }
+            if (effect.effectType === SkillEffectType.KNOCKBACK && effect.baseValue > 0) {
+                // Đẩy ra xa người đánh theo đường từ người đánh tới mục tiêu (không có hướng thì theo hướng mặt).
+                const dx = target.x - attacker.x;
+                const dy = target.y - attacker.y;
+                const length = Math.hypot(dx, dy);
+                const facing = attacker.direction === "left" ? -1 : 1;
+                target.knockback(
+                    length > 1e-6 ? dx / length : facing,
+                    length > 1e-6 ? dy / length : 0,
+                    effect.baseValue,
+                    millisecondsToTicks(Math.max(effect.durationMs, 1), room.tickRate)
+                );
+            }
         }
     }
     // Đòn kết liễu → người đánh nhận thưởng (mỗi monster chỉ chết một lần).

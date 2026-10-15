@@ -98,7 +98,13 @@ function createRoom(targets: { id: string; x: number; y: number }[]) {
     const room = {
         tickRate: TICK_RATE,
         map: { width: 30, height: 30 },
-        state: { players, monsters: [], projectiles: new Map(), areas: new Map(), auras: new Map() },
+        state: {
+            players,
+            monsters: [],
+            projectiles: new Map(),
+            areas: new Map(),
+            auras: new Map(),
+        },
     } as unknown as WorldRoom;
     return { room, players, owner: monsterSkillOwner(monster) };
 }
@@ -209,6 +215,35 @@ describe("SkillDeliveryWorldService", () => {
         assert.equal(room.state.areas.size, 0);
     });
 
+    it("vùng kéo dài gây damage lặp mỗi tickMs cho tới hết durationMs", () => {
+        const service = new SkillDeliveryWorldService();
+        const { room, players, owner } = createRoom([{ id: "a", x: 5, y: 5 }]);
+        const rain = skill([
+            event({
+                delivery: HitDelivery.AREA,
+                radius: 0.6,
+                // 150 ms = 6 tick đầu tiên, rồi mỗi 100 ms = 4 tick; 400 ms = 16 tick → 3 lần.
+                area: { delayMs: 150, untargetedDistance: 1.5, durationMs: 400, tickMs: 100 },
+            }),
+        ]);
+        service.deliver(room, {
+            owner,
+            skill: rain,
+            hit: pending(rain),
+            originX: 2,
+            originY: 5,
+            aim: players.get("a")!,
+        });
+        for (let tick = 0; tick < 7; tick++) service.chain(room, DT);
+        assert.deepEqual(players.get("a")!.damageTaken, [10]);
+        assert.equal(room.state.areas.size, 1);
+        for (let tick = 0; tick < 4; tick++) service.chain(room, DT);
+        assert.deepEqual(players.get("a")!.damageTaken, [10, 10]);
+        for (let tick = 0; tick < 4; tick++) service.chain(room, DT);
+        assert.deepEqual(players.get("a")!.damageTaken, [10, 10, 10]);
+        assert.equal(room.state.areas.size, 0);
+    });
+
     it("vùng kéo về trong castRange khi mục tiêu ở xa", () => {
         const service = new SkillDeliveryWorldService();
         const { room, players, owner } = createRoom([{ id: "a", x: 12, y: 5 }]);
@@ -269,7 +304,12 @@ describe("hình elip", () => {
     it("hai trục bằng nhau thì như hình tròn", () => {
         const round = event({ shape: HitShape.ELLIPSE, width: 2, height: 2 });
         const circle = event({ shape: HitShape.CIRCLE, radius: 1 });
-        for (const [x, y] of [[0.5, 0.5], [0.9, 0.9], [1.4, 0], [0, -1.2]]) {
+        for (const [x, y] of [
+            [0.5, 0.5],
+            [0.9, 0.9],
+            [1.4, 0],
+            [0, -1.2],
+        ]) {
             assert.equal(
                 intersectsSkillHitEvent(origin, x, y, point, round),
                 intersectsSkillHitEvent(origin, x, y, point, circle)
@@ -591,6 +631,84 @@ describe("choáng (STUN)", () => {
         applySkillHit(room, playerSkillOwner("s1", attacker as never), "m1", stunHit(2000));
         assert.equal(monster.hp, 90);
         assert.deepEqual(monster.stuns, [80]); // 2000 ms ở 40 tick/giây
+    });
+});
+
+describe("đẩy lùi (KNOCKBACK)", () => {
+    const knockbackHit = (distance: number, durationMs: number) => ({
+        event: event({
+            effects: [
+                {
+                    effectType: SkillEffectType.DAMAGE,
+                    baseValue: 10,
+                    scalingType: DamageScalingType.NONE,
+                    scalingValue: 0,
+                    durationMs: 0,
+                    damageType: DamageType.TRUE,
+                },
+                {
+                    effectType: SkillEffectType.KNOCKBACK,
+                    baseValue: distance,
+                    scalingType: DamageScalingType.NONE,
+                    scalingValue: 0,
+                    durationMs,
+                    damageType: DamageType.PHYSICAL,
+                    crowdControlType: CrowdControlType.KNOCKBACK,
+                },
+            ] as SkillHitEvent["effects"],
+        }),
+        attackSerial: 1,
+        eventIndex: 0,
+    });
+
+    function setup(monsterHp: number) {
+        const attacker = {
+            id: "p1",
+            x: 2,
+            y: 3,
+            direction: "right",
+            toDamageCombatant: () => ({ id: "p1", stats: {}, hp: 100, maxHp: 100 }),
+            heal: (): void => undefined,
+        };
+        const monster = {
+            id: "m1",
+            code: "slime",
+            hp: monsterHp,
+            x: 5,
+            y: 7, // lệch (3, 4) so với người bắn → khoảng cách 5, hướng (0.6, 0.8)
+            knocks: [] as number[][],
+            setAggroTarget: (): void => undefined,
+            toDamageCombatant() {
+                return { id: "m1", stats: {}, hp: this.hp, maxHp: 100 };
+            },
+            takeDamage(damage: number): void {
+                this.hp = Math.max(0, this.hp - damage);
+            },
+            knockback(dirX: number, dirY: number, distance: number, ticks: number): void {
+                this.knocks.push([dirX, dirY, distance, ticks]);
+            },
+        };
+        const room = {
+            tickRate: TICK_RATE,
+            state: { players: new Map([["s1", attacker]]), monsters: [monster] },
+        } as unknown as WorldRoom;
+        return { room, attacker, monster };
+    }
+
+    it("đẩy mục tiêu ra xa người đánh theo đường nối hai bên", () => {
+        const { room, attacker, monster } = setup(100);
+        applySkillHit(
+            room,
+            playerSkillOwner("s1", attacker as never),
+            "m1",
+            knockbackHit(2.5, 300)
+        );
+        assert.equal(monster.hp, 90);
+        assert.equal(monster.knocks.length, 1);
+        const [dirX, dirY, distance, ticks] = monster.knocks[0];
+        assert.ok(Math.abs(dirX - 0.6) < 1e-9 && Math.abs(dirY - 0.8) < 1e-9);
+        assert.equal(distance, 2.5);
+        assert.equal(ticks, 12); // 300 ms ở 40 tick/giây
     });
 });
 
