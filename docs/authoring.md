@@ -54,6 +54,7 @@ Hai cửa sổ trong Unity để tạo và sửa **mọi** skill / map mà khôn
 - Chọn class, chọn **animation clip** của class (code = `<class>_<clip>`), chọn template (cận chiến, đạn, vùng đất, aura buff, hồi đồng đội) hoặc copy một skill có sẵn.
 - Đặt hit theo **frame** của clip ("Set tick"), nhập hình/damage/stun/đẩy lùi, khối `projectile` / `area` / `aura` / `allies` theo loại.
 - Xem trước hình trúng đòn ngay trong Scene (cùng công thức hitbox của server) và timeline cạnh độ dài clip.
+- **Collider từng frame:** mỗi hit event là collider của một thời điểm. Muốn vẽ một nhát chém theo từng frame của anim, đặt nhiều hit event cùng **Hit group** (ô trong Skill Lab, hoặc nút _Make frames_ để sinh sẵn một hit mỗi frame trong khoảng, rồi chỉnh hình từng frame). Các frame cùng group là **một hit**: mục tiêu bị trúng ở frame đầu tiên collider chạm nó, các frame sau của group bỏ qua mục tiêu đó. Số hit của skill = số group cộng số hit không group (mỗi hit không group là một hit riêng, như `swordsman_cross_slash` có hai nhát). Group chỉ áp cho hit thường; đạn / vùng là hit riêng. Server (`claimGroupHit`) và client dự đoán dùng cùng quy tắc.
 - Cảnh báo: code trùng, animation dài hơn clip, hit rơi sau khi clip hết, thiếu prefab hiệu ứng (thêm vào _SkillEffectPrefabLibrary_ ngay trong Lab).
 - _Save and apply_ xuất độ dài clip, seed, restart server. Skill được cấp cho class ở vị trí `slot` (mặc định cuối danh sách).
 - Xoá file không xoá row DB; muốn gỡ hẳn thì thêm code vào `RETIRED_SKILL_CODES` trong `skill.seed.ts`.
