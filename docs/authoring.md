@@ -34,7 +34,7 @@ Chế độ khác: **Validate** (chỉ kiểm tra), **Sync Seed** (phía server:
 
 **Thêm map mới.** Mở _Map Lab_ → tạo map (field / town / dungeon) hoặc copy marker từ map có sẵn → _Save and create prefab_ (Unity tự tạo prefab từ `BaseRoom`/dungeon mẫu cùng các marker) → kéo marker vào đúng chỗ, vẽ collider → _Sync Server_. Tab _Maps_ của Hub liệt kê marker chưa đặt.
 
-**Thêm / sửa monster.** Seed ở `monster.seed-data.ts` (chỉ số, biome, level) và `monster.seed.ts`. Prefab trong Unity phải có child `HitBox` và `Collider` (BoxCollider2D) và clip `Attack1`; thêm vào bảng _MonsterPrefabs_. Hitbox, collider, thời gian đòn đánh lấy từ prefab, không khai báo ở server.
+**Thêm / sửa monster.** Mở _Monster Lab_: mỗi số có giá trị mặc định chung (`monster-defaults.json`), một quái chỉ ghi đè số khác (tick để đặt số riêng). Đòn đánh là skill file của quái (_Skill Lab_), tốc độ và tầm ở tab _Ranges_. Prefab trong Unity phải có child `HitBox` và `Collider` (BoxCollider2D) và clip `Attack1`; thêm vào bảng _MonsterPrefabs_. Hitbox, collider, thời gian đòn đánh lấy từ prefab, không khai báo ở server.
 
 **Chỉnh collider thân.** Sửa BoxCollider2D `HitBox` / `Collider` của prefab → _Sync Server_. Player đã tồn tại cũng nhận body mới khi vào phòng.
 
@@ -47,6 +47,10 @@ Chế độ khác: **Validate** (chỉ kiểm tra), **Sync Seed** (phía server:
 ## Tab Build của Hub
 
 Môi trường và phiên bản không còn phải mở asset: tab _Build_ sửa thẳng `Env` và `Version`. _Environment_: môi trường Editor dùng và môi trường bản build dùng, cùng URL server, Google client id, secret và token thử của từng môi trường (secret và token được che, bật _Show secrets_ để xem). _Version_: app / build / update, nút + tăng số (tăng bậc trên thì reset bậc dưới), và _Apply to Player Settings_ ghi `x.y.z` vào bundle version, `app × 10000 + build × 100 + update` vào Android version code. Hai việc vặt cũng ở đây: áp logo làm icon và cập nhật danh sách modal prefab (cả hai vẫn tự chạy trước khi build / khi prefab modal đổi).
+
+## Monster Lab
+
+_Monster Lab_ (menu, hoặc tab _Monsters_ của Hub) tạo và sửa monster bằng file `monsters/data/<code>.monster.json` đè lên `monster-defaults.json`. Có: biome, level, thời gian hồi đòn, bảng chỉ số gốc (dropdown stat), thưởng rơi (vàng, exp, danh sách item chọn từ dropdown), thêm prefab vào bảng _MonsterPrefabs_ (kèm kiểm HitBox, Collider, clip Attack1), danh sách đòn đánh của quái. Tab _Defaults_ sửa giá trị chung. _Save and apply_ xuất body + clip, seed, restart server. Hitbox / collider lấy từ prefab, tốc độ từ tab _Ranges_.
 
 ## Skill Lab và Map Lab
 
