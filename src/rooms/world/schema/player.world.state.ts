@@ -28,6 +28,7 @@ import type { AttributeKey, Attributes, Stats } from "@/modules/player/schemas/s
 import { allocateAttributePoints } from "@/modules/player/utils/player-progress.util.js";
 import type { AttributeSummary } from "@/rooms/world/world.message.js";
 import type { DamageCombatant } from "@/rooms/world/chains/damage.world.chain.js";
+import { classBody } from "@/modules/bodies/utils/entity-body.util.js";
 import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 import {
     OwnedSkillState,
@@ -167,8 +168,10 @@ export class PlayerWorldState extends Schema {
         this.hp = this.maxHp;
         this.mp = player.mp;
         this.stateRevision = player.stateRevision;
-        this.hitbox = new HitboxColliderState(player.hitbox);
-        this.collider = new HitboxColliderState(player.collider);
+        // The body follows the class prefab in Unity (not the row, which holds what it was when the character was made).
+        const body = classBody(this.classCode, this.baseClassCode);
+        this.hitbox = new HitboxColliderState(body?.hitbox ?? player.hitbox);
+        this.collider = new HitboxColliderState(body?.collider ?? player.collider);
         this.skills.push(...toOwnedSkillStates(player.skills));
         this.applyProgress(player);
     }

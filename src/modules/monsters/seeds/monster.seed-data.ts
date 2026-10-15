@@ -1,13 +1,13 @@
 /**
- * Danh sách monster lấy từ project Unity (`Assets/ERPG/Prefabs/Monsters/<Biome>/<Tên>.prefab`):
- * hitbox = BoxCollider2D `HitBox`, collider = BoxCollider2D `Collider` (size → width/height,
- * offset → offsetX/offsetY, đơn vị tile, Y dương hướng lên — `worldUnitsPerTile` = 1). Server gửi
- * các giá trị này xuống và client ghi đè collider của prefab, nên sửa prefab phải sửa ở đây.
+ * Danh sách monster. `hitbox` / `collider` không khai báo ở đây: chúng lấy từ prefab Unity
+ * (BoxCollider2D `HitBox` / `Collider`) qua `entity-bodies.json` (`Tools/ERPG/Sync Server`), nên sửa
+ * collider thì sửa prefab rồi sync, không sửa ở server.
  *
  * `attackClipMs` = độ dài clip `Attack1` (12 fps) — thời lượng đòn đánh.
  * Dùng chung cho SkillSeed (skill `{code}_attack`) và MonsterSeed.
  */
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
+import { monsterBody } from "@/modules/bodies/utils/entity-body.util.js";
 import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
@@ -20,6 +20,7 @@ export interface MonsterDefinition {
     code: string;
     biome: Biome;
     level: number;
+    /** From the Unity prefab (see `monsterBody`). */
     hitbox: CollisionBounds;
     collider: CollisionBounds;
     attackClipMs: number;
@@ -31,48 +32,33 @@ export interface MonsterDefinition {
     noAttack?: boolean;
 }
 
-const box = (width: number, height: number, offsetX: number, offsetY: number) => ({
-    width,
-    height,
-    offsetX,
-    offsetY,
-});
-
 /**
  * `level` = level gốc (mốc scale chỉ số/thưởng); level thật do `monsterLevel` của map/dungeon quyết định.
  * Bat thuộc biome slime (rơi set slime); tinh anh/boss là `type` của spawn, không phải monster riêng.
  */
-export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
+const MONSTER_ENTRIES: Omit<MonsterDefinition, "hitbox" | "collider">[] = [
     {
         code: "bat",
         biome: Biome.SLIME,
         level: 1,
-        hitbox: box(0.4, 0.6, 0, 0.35),
-        collider: box(0.3, 0.1, 0, 0.1),
         attackClipMs: 500,
     },
     {
         code: "slime",
         biome: Biome.SLIME,
         level: 1,
-        hitbox: box(0.7, 0.4, 0, 0.3),
-        collider: box(0.7, 0.1, 0, 0.1),
         attackClipMs: 500,
     },
     {
         code: "werebear",
         biome: Biome.WEREBEAR,
         level: 20,
-        hitbox: box(0.6, 0.6, 0, 0.35),
-        collider: box(0.6, 0.1, 0, 0.1),
         attackClipMs: 750,
     },
     {
         code: "werewolf",
         biome: Biome.WEREWOLF,
         level: 10,
-        hitbox: box(0.4, 0.6, 0, 0.35),
-        collider: box(0.3, 0.1, 0, 0.1),
         attackClipMs: 750,
     },
     // Slime tập ở phòng tập (dùng prefab/hình của slime): đứng yên, không đánh, rất nhiều máu — để thử sát thương.
@@ -80,12 +66,16 @@ export const MONSTER_DEFINITIONS: MonsterDefinition[] = [
         code: "training_slime",
         biome: Biome.SLIME,
         level: 1,
-        hitbox: box(0.7, 0.4, 0, 0.3),
-        collider: box(0.7, 0.1, 0, 0.1),
         attackClipMs: 500,
         noAttack: true,
     },
 ];
+
+/** Mỗi monster kèm hitbox / collider đọc từ prefab Unity (`entity-bodies.json`). */
+export const MONSTER_DEFINITIONS: MonsterDefinition[] = MONSTER_ENTRIES.map((entry) => ({
+    ...entry,
+    ...monsterBody(entry.code),
+}));
 
 /** Code skill đánh thường của monster. */
 export const monsterAttackSkillCode = (monster: MonsterDefinition) =>

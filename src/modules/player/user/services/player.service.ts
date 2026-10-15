@@ -3,6 +3,7 @@ import type { Queryable } from "@/configs/postgres.config.js";
 import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
 import { BaseService } from "@/core/services/base.service.js";
+import { classBody } from "@/modules/bodies/utils/entity-body.util.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import { Players, type PlayerIdentity } from "@/modules/auth/entities/player.entity.js";
 import { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
@@ -190,8 +191,8 @@ export class PlayerService extends BaseService<typeof Players> {
                     x: startMap.spawnX,
                     y: startMap.spawnY,
                     direction: Direction.DOWN,
-                    hitbox: { width: 0.4, height: 0.6, offsetX: 0, offsetY: 0.35 },
-                    collider: { width: 0.3, height: 0.1, offsetX: 0, offsetY: 0.1 },
+                    // The Unity prefab's body; a room refreshes it from the prefab whenever the player joins.
+                    ...(classBody(characterClass.code) ?? {}),
                     skills: characterClass.skills,
                     equipments,
                 },
