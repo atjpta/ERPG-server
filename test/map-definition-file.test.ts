@@ -3,7 +3,6 @@ import { MapSpawnKind } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { MapDefinitionSchema } from "@/modules/maps/schemas/map-definition.schema.js";
 import { loadMapDefinitionFiles, loadMapDefinitions } from "@/modules/maps/seeds/game-map.seed.js";
-import { MAP_DEFINITIONS } from "@/modules/maps/seeds/map-definitions.js";
 import { validateDefinitionRefs } from "@/modules/maps/utils/map-build.util.js";
 
 const definition = (code: string, extra: Record<string, unknown> = {}) =>
@@ -15,10 +14,12 @@ const definition = (code: string, extra: Record<string, unknown> = {}) =>
     });
 
 describe("map definition files (created in the Unity Map Lab)", () => {
-    it("loads every definitions/*.json on top of the coded ones", () => {
+    it("loads every definitions/*.json, all valid together", () => {
         const files = loadMapDefinitionFiles();
         const all = loadMapDefinitions();
-        assert.equal(all.length, MAP_DEFINITIONS.length + files.length);
+        assert.equal(all.length, files.length);
+        assert.ok(all.some((map) => map.code === "greenfield_village"));
+        assert.deepEqual(validateDefinitionRefs(all), []);
     });
 
     it("fills the defaults of a minimal field map", () => {

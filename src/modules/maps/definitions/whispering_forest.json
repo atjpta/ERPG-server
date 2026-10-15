@@ -1,0 +1,235 @@
+{
+    "code": "whispering_forest",
+    "type": "field",
+    "minLevel": 10,
+    "maxPlayersPerChannel": 100,
+    "pvpEnabled": false,
+    "monsterLevel": {
+        "min": 10,
+        "max": 19
+    },
+    "spawnPoints": [
+        {
+            "id": "default",
+            "kind": "default"
+        },
+        {
+            "id": "from_village",
+            "kind": "arrival"
+        },
+        {
+            "id": "from_evergrowth",
+            "kind": "arrival"
+        }
+    ],
+    "monsterGroups": [
+        {
+            "markerId": "g01",
+            "members": [
+                {
+                    "monsterCode": "werewolf",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g02",
+            "members": [
+                {
+                    "monsterCode": "werewolf",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g03",
+            "members": [
+                {
+                    "monsterCode": "werewolf",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g04",
+            "members": [
+                {
+                    "monsterCode": "werewolf",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g05",
+            "members": [
+                {
+                    "monsterCode": "werewolf",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g06",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g07",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g08",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g09",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g10",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g11",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 1,
+                    "type": "random"
+                },
+                {
+                    "monsterCode": "werewolf",
+                    "count": 2,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g12",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 1,
+                    "type": "random"
+                },
+                {
+                    "monsterCode": "werewolf",
+                    "count": 2,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g13",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 1,
+                    "type": "random"
+                },
+                {
+                    "monsterCode": "werewolf",
+                    "count": 2,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g14",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 1,
+                    "type": "random"
+                },
+                {
+                    "monsterCode": "werewolf",
+                    "count": 2,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g15",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 1,
+                    "type": "random"
+                },
+                {
+                    "monsterCode": "werewolf",
+                    "count": 2,
+                    "type": "random"
+                }
+            ]
+        }
+    ],
+    "npcs": [],
+    "interactables": [
+        {
+            "id": "teleport_forest",
+            "code": "teleport",
+            "radius": 1.5,
+            "type": "teleport"
+        },
+        {
+            "id": "forest_to_village",
+            "code": "portal",
+            "radius": 1.5,
+            "type": "portal",
+            "targetMapCode": "greenfield_village",
+            "targetSpawnId": "from_field"
+        },
+        {
+            "id": "forest_to_evergrowth",
+            "code": "portal",
+            "radius": 1.5,
+            "type": "portal",
+            "targetMapCode": "deep_evergrowth",
+            "targetSpawnId": "from_forest"
+        },
+        {
+            "id": "forest_to_werewolf_den",
+            "code": "entry_dungeon",
+            "radius": 1.5,
+            "type": "portal",
+            "targetMapCode": "werewolf_den",
+            "targetSpawnId": "from_forest"
+        }
+    ]
+}

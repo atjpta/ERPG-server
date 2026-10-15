@@ -1,0 +1,175 @@
+{
+    "code": "sanctuary_of_life",
+    "type": "dungeon",
+    "minLevel": 20,
+    "maxPlayersPerChannel": 100,
+    "pvpEnabled": false,
+    "spawnPoints": [
+        {
+            "id": "from_evergrowth",
+            "kind": "arrival"
+        }
+    ],
+    "monsterGroups": [],
+    "npcs": [],
+    "interactables": [],
+    "dungeon": {
+        "maxLevel": 30,
+        "timeLimitSec": 1800,
+        "clearReward": {
+            "exp": 9000,
+            "currency": [
+                {
+                    "code": "gold",
+                    "amount": 3500
+                }
+            ],
+            "items": [],
+            "slots": 4,
+            "dropItems": [
+                {
+                    "itemCode": "hp_potion_small",
+                    "min": 1,
+                    "max": 5,
+                    "rate": 0.05
+                },
+                {
+                    "itemCode": "enhance_stone_2",
+                    "min": 1,
+                    "max": 5,
+                    "rate": 0.05
+                },
+                {
+                    "itemCode": "enhance_stone_3",
+                    "min": 1,
+                    "max": 5,
+                    "rate": 0.05
+                }
+            ],
+            "equipment": {
+                "biome": "slime",
+                "rarity": {
+                    "common": 90,
+                    "good": 8,
+                    "rare": 1.5,
+                    "epic": 0.4,
+                    "legendary": 0.1
+                }
+            }
+        },
+        "gateCode": "sanctuary_gate",
+        "chambers": [
+            {
+                "id": "c1",
+                "exitRadius": 1.5,
+                "phases": [
+                    {
+                        "id": "p1",
+                        "delaySec": 0,
+                        "groups": [
+                            {
+                                "markerId": "c1_p1_1",
+                                "members": [
+                                    {
+                                        "monsterCode": "werewolf",
+                                        "count": 3
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c1_p1_2",
+                                "members": [
+                                    {
+                                        "monsterCode": "werewolf",
+                                        "count": 3
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c1_p1_3",
+                                "members": [
+                                    {
+                                        "monsterCode": "werebear",
+                                        "count": 3
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c1_p1_4",
+                                "members": [
+                                    {
+                                        "monsterCode": "werebear",
+                                        "count": 3
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "c2",
+                "exitRadius": 1.5,
+                "phases": [
+                    {
+                        "id": "p1",
+                        "delaySec": 0,
+                        "groups": [
+                            {
+                                "markerId": "c2_p1a",
+                                "members": [
+                                    {
+                                        "monsterCode": "werewolf",
+                                        "count": 4
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c2_p1b",
+                                "members": [
+                                    {
+                                        "monsterCode": "werebear",
+                                        "count": 4
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c2_p2",
+                                "members": [
+                                    {
+                                        "monsterCode": "werewolf",
+                                        "count": 1,
+                                        "type": "elite"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "c3",
+                "isBoss": true,
+                "exitRadius": 1.5,
+                "phases": [
+                    {
+                        "id": "p1",
+                        "delaySec": 0,
+                        "groups": [
+                            {
+                                "markerId": "c3_boss",
+                                "members": [
+                                    {
+                                        "monsterCode": "werebear",
+                                        "count": 1,
+                                        "type": "boss"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

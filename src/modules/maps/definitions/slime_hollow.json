@@ -1,0 +1,169 @@
+{
+    "code": "slime_hollow",
+    "type": "dungeon",
+    "minLevel": 1,
+    "maxPlayersPerChannel": 100,
+    "pvpEnabled": false,
+    "spawnPoints": [
+        {
+            "id": "from_plains",
+            "kind": "arrival"
+        }
+    ],
+    "monsterGroups": [],
+    "npcs": [],
+    "interactables": [],
+    "dungeon": {
+        "maxLevel": 10,
+        "timeLimitSec": 1200,
+        "clearReward": {
+            "exp": 600,
+            "currency": [
+                {
+                    "code": "gold",
+                    "amount": 300
+                }
+            ],
+            "items": [],
+            "slots": 4,
+            "dropItems": [
+                {
+                    "itemCode": "hp_potion_small",
+                    "min": 1,
+                    "max": 5,
+                    "rate": 0.1
+                },
+                {
+                    "itemCode": "enhance_stone_1",
+                    "min": 1,
+                    "max": 5,
+                    "rate": 0.1
+                }
+            ],
+            "equipment": {
+                "biome": "slime",
+                "rarity": {
+                    "common": 90,
+                    "good": 8,
+                    "rare": 1.5,
+                    "epic": 0.4,
+                    "legendary": 0.1
+                }
+            }
+        },
+        "gateCode": "slime_gate",
+        "chambers": [
+            {
+                "id": "c1",
+                "exitRadius": 1.5,
+                "phases": [
+                    {
+                        "id": "p1",
+                        "delaySec": 0,
+                        "groups": [
+                            {
+                                "markerId": "c1_p1_1",
+                                "members": [
+                                    {
+                                        "monsterCode": "slime",
+                                        "count": 3
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c1_p1_2",
+                                "members": [
+                                    {
+                                        "monsterCode": "slime",
+                                        "count": 3
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c1_p1_3",
+                                "members": [
+                                    {
+                                        "monsterCode": "slime",
+                                        "count": 3
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c1_p1_4",
+                                "members": [
+                                    {
+                                        "monsterCode": "slime",
+                                        "count": 3
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "c2",
+                "exitRadius": 1.5,
+                "phases": [
+                    {
+                        "id": "p1",
+                        "delaySec": 0,
+                        "groups": [
+                            {
+                                "markerId": "c2_p1a",
+                                "members": [
+                                    {
+                                        "monsterCode": "slime",
+                                        "count": 4
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c2_p1b",
+                                "members": [
+                                    {
+                                        "monsterCode": "bat",
+                                        "count": 4
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c2_p2",
+                                "members": [
+                                    {
+                                        "monsterCode": "bat",
+                                        "count": 1,
+                                        "type": "elite"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "c3",
+                "isBoss": true,
+                "exitRadius": 1.5,
+                "phases": [
+                    {
+                        "id": "p1",
+                        "delaySec": 0,
+                        "groups": [
+                            {
+                                "markerId": "c3_boss",
+                                "members": [
+                                    {
+                                        "monsterCode": "slime",
+                                        "count": 1,
+                                        "type": "boss"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

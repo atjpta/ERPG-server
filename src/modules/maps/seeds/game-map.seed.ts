@@ -6,7 +6,6 @@ import {
     type MapDefinition,
 } from "@/modules/maps/schemas/map-definition.schema.js";
 import type { MapLayout } from "@/modules/maps/schemas/map-layout.schema.js";
-import { MAP_DEFINITIONS } from "@/modules/maps/seeds/map-definitions.js";
 import {
     buildMapRow,
     buildPlaceholderRow,
@@ -34,7 +33,7 @@ export const loadMapLayouts = (): MapLayout[] =>
 
 const DEFINITIONS_DIR = new URL("../definitions/", import.meta.url);
 
-/** Mọi `definitions/<code>.json` (map tạo trong Map Lab của Unity thay vì trong `map-definitions.ts`), đã kiểm schema. */
+/** Mọi `definitions/<code>.json` (mỗi map một file, do Map Lab của Unity ghi ra), đã kiểm schema. */
 export const loadMapDefinitionFiles = (): MapDefinition[] =>
     readdirSync(DEFINITIONS_DIR)
         .filter((file) => file.endsWith(".json"))
@@ -51,9 +50,9 @@ export const loadMapDefinitionFiles = (): MapDefinition[] =>
             return definition;
         });
 
-/** Định nghĩa (config) của mọi map (code + file), đã kiểm tham chiếu chéo giữa các map. */
+/** Định nghĩa (config) của mọi map — mỗi map một file `definitions/<code>.json` do Map Lab của Unity ghi ra — đã kiểm tham chiếu chéo giữa các map. */
 export const loadMapDefinitions = (): MapDefinition[] => {
-    const all = [...MAP_DEFINITIONS, ...loadMapDefinitionFiles()];
+    const all = loadMapDefinitionFiles();
     const errors = validateDefinitionRefs(all);
     if (errors.length > 0) throw new Error(`[GameMapSeed] ${errors.join("; ")}`);
     return all;
@@ -70,7 +69,9 @@ export const buildAllMapRows = (): NewGameMap[] => {
     const errors: string[] = [];
     for (const layout of layouts) {
         if (!definitions.some((def) => def.code === layout.code)) {
-            errors.push(`${layout.code}.map.json: chưa có định nghĩa map (map-definitions.ts)`);
+            errors.push(
+                `${layout.code}.map.json: chưa có định nghĩa map (definitions/<code>.json, tạo bằng Map Lab)`
+            );
         }
     }
     const rows = definitions.map((def) => {

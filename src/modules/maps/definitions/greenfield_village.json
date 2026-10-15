@@ -1,0 +1,111 @@
+{
+    "code": "greenfield_village",
+    "type": "town",
+    "minLevel": 1,
+    "maxPlayersPerChannel": 100,
+    "pvpEnabled": false,
+    "spawnPoints": [
+        {
+            "id": "default",
+            "kind": "default"
+        },
+        {
+            "id": "from_field",
+            "kind": "arrival"
+        }
+    ],
+    "monsterGroups": [],
+    "npcs": [
+        {
+            "id": "npc_village_chief",
+            "npcCode": "village_chief"
+        },
+        {
+            "id": "npc_guild_officer",
+            "npcCode": "guild_officer"
+        },
+        {
+            "id": "npc_swordsman_trainer",
+            "npcCode": "swordsman_trainer"
+        },
+        {
+            "id": "npc_archer_trainer",
+            "npcCode": "archer_trainer"
+        },
+        {
+            "id": "npc_cleric_trainer",
+            "npcCode": "cleric_trainer"
+        },
+        {
+            "id": "npc_village_priestess",
+            "npcCode": "village_priestess"
+        },
+        {
+            "id": "npc_blacksmith",
+            "npcCode": "blacksmith"
+        },
+        {
+            "id": "npc_alchemist",
+            "npcCode": "alchemist"
+        },
+        {
+            "id": "npc_general_merchant",
+            "npcCode": "general_merchant"
+        },
+        {
+            "id": "npc_hunter_garrick",
+            "npcCode": "hunter_garrick"
+        },
+        {
+            "id": "npc_researcher",
+            "npcCode": "researcher"
+        },
+        {
+            "id": "npc_innkeeper",
+            "npcCode": "innkeeper"
+        },
+        {
+            "id": "npc_farmer_rowan",
+            "npcCode": "farmer_rowan"
+        },
+        {
+            "id": "npc_herbalist",
+            "npcCode": "herbalist"
+        },
+        {
+            "id": "npc_guard_captain",
+            "npcCode": "guard_captain"
+        }
+    ],
+    "interactables": [
+        {
+            "id": "teleport_village",
+            "code": "teleport",
+            "radius": 1.5,
+            "type": "teleport"
+        },
+        {
+            "id": "notice_board",
+            "code": "notice_board",
+            "radius": 0.5,
+            "type": "sign",
+            "dialogueCode": "notice_board"
+        },
+        {
+            "id": "south_gate",
+            "code": "portal",
+            "radius": 1.8,
+            "type": "portal",
+            "targetMapCode": "greenfield_plains",
+            "targetSpawnId": "from_village"
+        },
+        {
+            "id": "east_gate",
+            "code": "portal",
+            "radius": 1,
+            "type": "portal",
+            "targetMapCode": "whispering_forest",
+            "targetSpawnId": "from_village"
+        }
+    ]
+}

@@ -1,0 +1,148 @@
+{
+    "code": "deep_evergrowth",
+    "type": "field",
+    "minLevel": 20,
+    "maxPlayersPerChannel": 100,
+    "pvpEnabled": false,
+    "monsterLevel": {
+        "min": 20,
+        "max": 29
+    },
+    "spawnPoints": [
+        {
+            "id": "default",
+            "kind": "default"
+        },
+        {
+            "id": "from_forest",
+            "kind": "arrival"
+        }
+    ],
+    "monsterGroups": [
+        {
+            "markerId": "g01",
+            "members": [
+                {
+                    "monsterCode": "werewolf",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g02",
+            "members": [
+                {
+                    "monsterCode": "werewolf",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g03",
+            "members": [
+                {
+                    "monsterCode": "werewolf",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g04",
+            "members": [
+                {
+                    "monsterCode": "werewolf",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g05",
+            "members": [
+                {
+                    "monsterCode": "werewolf",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g06",
+            "members": [
+                {
+                    "monsterCode": "werebear",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g07",
+            "members": [
+                {
+                    "monsterCode": "werebear",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g08",
+            "members": [
+                {
+                    "monsterCode": "werebear",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g09",
+            "members": [
+                {
+                    "monsterCode": "werebear",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g10",
+            "members": [
+                {
+                    "monsterCode": "werebear",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        }
+    ],
+    "npcs": [],
+    "interactables": [
+        {
+            "id": "teleport_evergrowth",
+            "code": "teleport",
+            "radius": 1.5,
+            "type": "teleport"
+        },
+        {
+            "id": "evergrowth_to_forest",
+            "code": "portal",
+            "radius": 1.5,
+            "type": "portal",
+            "targetMapCode": "whispering_forest",
+            "targetSpawnId": "from_evergrowth"
+        },
+        {
+            "id": "evergrowth_to_sanctuary",
+            "code": "entry_dungeon",
+            "radius": 1.5,
+            "type": "portal",
+            "targetMapCode": "sanctuary_of_life",
+            "targetSpawnId": "from_evergrowth"
+        }
+    ]
+}

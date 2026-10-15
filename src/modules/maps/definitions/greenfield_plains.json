@@ -1,0 +1,208 @@
+{
+    "code": "greenfield_plains",
+    "type": "field",
+    "minLevel": 1,
+    "maxPlayersPerChannel": 100,
+    "pvpEnabled": false,
+    "monsterLevel": {
+        "min": 1,
+        "max": 10
+    },
+    "spawnPoints": [
+        {
+            "id": "default",
+            "kind": "default"
+        },
+        {
+            "id": "from_village",
+            "kind": "arrival"
+        }
+    ],
+    "monsterGroups": [
+        {
+            "markerId": "g01",
+            "members": [
+                {
+                    "monsterCode": "slime",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g02",
+            "members": [
+                {
+                    "monsterCode": "slime",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g03",
+            "members": [
+                {
+                    "monsterCode": "slime",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g04",
+            "members": [
+                {
+                    "monsterCode": "slime",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g05",
+            "members": [
+                {
+                    "monsterCode": "slime",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g06",
+            "members": [
+                {
+                    "monsterCode": "slime",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g07",
+            "members": [
+                {
+                    "monsterCode": "slime",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g08",
+            "members": [
+                {
+                    "monsterCode": "slime",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g09",
+            "members": [
+                {
+                    "monsterCode": "slime",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g10",
+            "members": [
+                {
+                    "monsterCode": "slime",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g11",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g12",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g13",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g14",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g15",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        },
+        {
+            "markerId": "g16",
+            "members": [
+                {
+                    "monsterCode": "bat",
+                    "count": 3,
+                    "type": "random"
+                }
+            ]
+        }
+    ],
+    "npcs": [],
+    "interactables": [
+        {
+            "id": "teleport_plains",
+            "code": "teleport",
+            "radius": 1.5,
+            "type": "teleport"
+        },
+        {
+            "id": "to_village",
+            "code": "portal",
+            "radius": 1.2,
+            "type": "portal",
+            "targetMapCode": "greenfield_village",
+            "targetSpawnId": "from_field"
+        },
+        {
+            "id": "to_slime_hollow",
+            "code": "entry_dungeon",
+            "radius": 1.5,
+            "type": "portal",
+            "targetMapCode": "slime_hollow",
+            "targetSpawnId": "from_plains"
+        }
+    ]
+}

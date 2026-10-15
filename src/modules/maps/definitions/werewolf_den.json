@@ -1,0 +1,175 @@
+{
+    "code": "werewolf_den",
+    "type": "dungeon",
+    "minLevel": 10,
+    "maxPlayersPerChannel": 100,
+    "pvpEnabled": false,
+    "spawnPoints": [
+        {
+            "id": "from_forest",
+            "kind": "arrival"
+        }
+    ],
+    "monsterGroups": [],
+    "npcs": [],
+    "interactables": [],
+    "dungeon": {
+        "maxLevel": 20,
+        "timeLimitSec": 1500,
+        "clearReward": {
+            "exp": 3000,
+            "currency": [
+                {
+                    "code": "gold",
+                    "amount": 1200
+                }
+            ],
+            "items": [],
+            "slots": 4,
+            "dropItems": [
+                {
+                    "itemCode": "hp_potion_small",
+                    "min": 1,
+                    "max": 5,
+                    "rate": 0.05
+                },
+                {
+                    "itemCode": "enhance_stone_1",
+                    "min": 1,
+                    "max": 5,
+                    "rate": 0.05
+                },
+                {
+                    "itemCode": "enhance_stone_2",
+                    "min": 1,
+                    "max": 5,
+                    "rate": 0.05
+                }
+            ],
+            "equipment": {
+                "biome": "slime",
+                "rarity": {
+                    "common": 90,
+                    "good": 8,
+                    "rare": 1.5,
+                    "epic": 0.4,
+                    "legendary": 0.1
+                }
+            }
+        },
+        "gateCode": "werewolf_gate",
+        "chambers": [
+            {
+                "id": "c1",
+                "exitRadius": 1.5,
+                "phases": [
+                    {
+                        "id": "p1",
+                        "delaySec": 0,
+                        "groups": [
+                            {
+                                "markerId": "c1_p1_1",
+                                "members": [
+                                    {
+                                        "monsterCode": "bat",
+                                        "count": 3
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c1_p1_2",
+                                "members": [
+                                    {
+                                        "monsterCode": "bat",
+                                        "count": 3
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c1_p1_3",
+                                "members": [
+                                    {
+                                        "monsterCode": "werewolf",
+                                        "count": 3
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c1_p1_4",
+                                "members": [
+                                    {
+                                        "monsterCode": "werewolf",
+                                        "count": 3
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "c2",
+                "exitRadius": 1.5,
+                "phases": [
+                    {
+                        "id": "p1",
+                        "delaySec": 0,
+                        "groups": [
+                            {
+                                "markerId": "c2_p1a",
+                                "members": [
+                                    {
+                                        "monsterCode": "werewolf",
+                                        "count": 4
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c2_p1b",
+                                "members": [
+                                    {
+                                        "monsterCode": "bat",
+                                        "count": 4
+                                    }
+                                ]
+                            },
+                            {
+                                "markerId": "c2_p2",
+                                "members": [
+                                    {
+                                        "monsterCode": "bat",
+                                        "count": 1,
+                                        "type": "elite"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "c3",
+                "isBoss": true,
+                "exitRadius": 1.5,
+                "phases": [
+                    {
+                        "id": "p1",
+                        "delaySec": 0,
+                        "groups": [
+                            {
+                                "markerId": "c3_boss",
+                                "members": [
+                                    {
+                                        "monsterCode": "werewolf",
+                                        "count": 1,
+                                        "type": "boss"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
