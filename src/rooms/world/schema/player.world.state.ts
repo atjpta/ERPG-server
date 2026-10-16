@@ -17,7 +17,7 @@ import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
 import { classService } from "@/modules/classes/services/class.service.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
 import { DASH_SKILL_CODE, skillService } from "@/modules/skills/services/skill.service.js";
-import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
+import { millisecondsToTicks } from "@/rooms/world/core/utils/tick.world.util.js";
 import {
     fromInventories,
     toInventories,
@@ -27,7 +27,7 @@ import {
 import type { AttributeKey, Attributes, Stats } from "@/modules/player/schemas/stat.schema.js";
 import { allocateAttributePoints } from "@/modules/player/utils/player-progress.util.js";
 import type { AttributeSummary } from "@/rooms/world/world.message.js";
-import type { DamageCombatant } from "@/rooms/world/chains/damage.world.chain.js";
+import type { DamageCombatant } from "@/rooms/world/combat/chains/damage.world.chain.js";
 import { classBody } from "@/modules/bodies/utils/entity-body.util.js";
 import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 import {
@@ -367,6 +367,19 @@ export class PlayerWorldState extends Schema {
         this.clearCharge();
         this.dashTicks = 0;
         this.dashCooldownTicks = 0;
+    }
+
+    /** Đặt lại vị trí (chuyển map, vào/ra chamber): đứng yên và bỏ mục tiêu. */
+    placeAt(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+        this.moving = false;
+        this.clearTarget();
+    }
+
+    clearTarget() {
+        this.targetId = "";
+        this.targetLocked = false;
     }
 
     setDead() {

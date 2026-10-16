@@ -1,7 +1,7 @@
 import { Schema, type } from "@colyseus/schema";
 
 import type { SkillAura } from "@/modules/skills/schemas/skill-config.schema.js";
-import type { SkillOwner } from "@/rooms/world/utils/skill-owner.world.util.js";
+import type { SkillOwner } from "@/rooms/world/combat/utils/skill-owner.world.util.js";
 
 /**
  * Vùng buff của skill AURA (hit event `AURA`): bám theo người dùng, tồn tại `ticksLeft` tick rồi bị xoá khỏi

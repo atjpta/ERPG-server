@@ -11,8 +11,8 @@ import { DEFAULT_PLAYER_TARGET_CONFIG } from "@/modules/master-data/schemas/play
 import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
-import { sendSkillConfigs } from "@/rooms/world/services/skill-config.world.service.js";
-import { buildClientSkillConfig } from "@/rooms/world/utils/skill-config.world.util.js";
+import { sendSkillConfigs } from "@/rooms/world/combat/services/skill-config.world.service.js";
+import { buildClientSkillConfig } from "@/rooms/world/combat/utils/skill-config.world.util.js";
 import { WorldMessage } from "@/rooms/world/world.message.js";
 
 const skill = {

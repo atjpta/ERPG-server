@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { MonsterIdleHealChain } from "@/rooms/world/chains/monster-idle-heal.world.chain.js";
-import type { MonsterChainContext } from "@/rooms/world/chains/monster.world.chain.js";
+import { MonsterIdleHealChain } from "@/rooms/world/monsters/chains/monster-idle-heal.world.chain.js";
+import type { MonsterChainContext } from "@/rooms/world/monsters/chains/monster.world.chain.js";
 import { MapSpawnKind } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { MapDefinitionSchema } from "@/modules/maps/schemas/map-definition.schema.js";

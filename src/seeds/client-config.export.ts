@@ -20,7 +20,7 @@ import { QuestRepo } from "@/modules/quests/repositories/quest.repository.js";
 import { collectLocaleKeys } from "@/modules/quests/utils/locale-keys.util.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
-import { buildClientSkillConfig } from "@/rooms/world/utils/skill-config.world.util.js";
+import { buildClientSkillConfig } from "@/rooms/world/combat/utils/skill-config.world.util.js";
 
 /** Exports offline authoring data to ServerData. Runtime clients request skill config from their world room. */
 export async function exportClientConfig(outputDir: string): Promise<void> {

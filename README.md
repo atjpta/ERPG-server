@@ -42,7 +42,7 @@ phiên cũ của hai tài khoản test sẽ bị thu hồi.
 5. Di chuyển theo [Colyseus Netcode](https://docs.colyseus.io/netcode) (tick 40Hz):
     - Mỗi fixed step: `input = room.Input(...)`, gán `MoveX`/`MoveY` ∈ {-1, 0, 1} rồi `Send()` (1 input / step).
     - Player của mình: `predict.reconciler` với step = bản C# của
-      [`movement.step.ts`](src/rooms/world/simulation/movement.step.ts) (port y hệt, cùng hằng số).
+      [`movement.step.ts`](src/rooms/world/players/simulation/movement.step.ts) (port y hệt, cùng hằng số).
     - Player khác: nội suy (lerp) từ state `players` (key = sessionId).
 6. Bị đá khỏi room → `OnLeave(code)`: `4001` đăng nhập ở máy khác, `4002` bị ban, `4003` tài khoản đã
    xoá, `4004` phiên đăng nhập hết hiệu lực (logout) → hiện thông báo và quay về màn đăng nhập,

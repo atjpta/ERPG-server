@@ -1,4 +1,12 @@
-import { Schema, type } from "@colyseus/schema";
+import { ArraySchema, Schema, type } from "@colyseus/schema";
+
+/** Cổng chắn đang đóng (cùng hệ toạ độ và kích thước với collider của map) — client dùng để predict va chạm. */
+export class DungeonGateState extends Schema {
+    @type("float32") x = 0;
+    @type("float32") y = 0;
+    @type("float32") w = 0;
+    @type("float32") h = 0;
+}
 
 /** Tiến độ dungeon cho HUD (room `dungeon`): chamber, phase, bộ đếm quái, đếm ngược. */
 export class DungeonWorldState extends Schema {
@@ -23,4 +31,6 @@ export class DungeonWorldState extends Schema {
     @type("uint32") elapsedSec = 0;
     /** Level quái của chamber hiện tại. */
     @type("uint16") monsterLevel = 0;
+    /** Cổng chắn đang đóng của chamber hiện tại (rỗng khi đã dọn xong); cùng nguồn với `moveBounds` của server. */
+    @type([DungeonGateState]) gates = new ArraySchema<DungeonGateState>();
 }

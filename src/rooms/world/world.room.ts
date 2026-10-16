@@ -1,18 +1,18 @@
 import { Dispatcher } from "@colyseus/command";
 import type { Rewind } from "colyseus";
-import type { DungeonRuntime } from "@/rooms/world/services/dungeon.world.service.js";
+import type { DungeonRuntime } from "@/rooms/world/dungeons/services/dungeon.world.service.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { BasePlayerRoom, type PlayerClient } from "@/rooms/base/base-player.room.js";
 import {
     OnCreateWorldCommand,
     WorldRoomOptions,
-} from "@/rooms/world/commands/on-create.world.command.js";
-import { JoinPlayerWorldCommand } from "@/rooms/world/commands/on-join.world.command.js";
-import { LeavePlayerWorldCommand } from "@/rooms/world/commands/on-leave.world.command.js";
+} from "@/rooms/world/core/commands/on-create.world.command.js";
+import { JoinPlayerWorldCommand } from "@/rooms/world/core/commands/on-join.world.command.js";
+import { LeavePlayerWorldCommand } from "@/rooms/world/core/commands/on-leave.world.command.js";
 import {
     AllocateAttributesWorldCommand,
     PreviewAttributesWorldCommand,
-} from "@/rooms/world/commands/allocate-attributes.world.command.js";
+} from "@/rooms/world/players/commands/allocate-attributes.world.command.js";
 import {
     DisassembleItemsWorldCommand,
     EnhanceEquipmentWorldCommand,
@@ -24,7 +24,7 @@ import {
     PreviewUpgradeWorldCommand,
     RefineEquipmentWorldCommand,
     UnequipItemWorldCommand,
-} from "@/rooms/world/commands/inventory.world.command.js";
+} from "@/rooms/world/inventory/commands/inventory.world.command.js";
 import {
     DialogueChooseWorldCommand,
     DialogueCloseWorldCommand,
@@ -34,32 +34,32 @@ import {
     QuestListWorldCommand,
     QuestPreviewWorldCommand,
     TeleportToWorldCommand,
-} from "@/rooms/world/commands/content.world.command.js";
-import type { MoveBounds } from "@/rooms/world/simulation/movement.step.js";
+} from "@/rooms/world/content/commands/content.world.command.js";
+import type { MoveBounds } from "@/rooms/world/players/simulation/movement.step.js";
 import {
     PartyCreateWorldCommand,
     PartyDeclineWorldCommand,
-} from "@/rooms/world/commands/party.world.command.js";
-import { partyWorldService } from "@/rooms/world/services/party.world.service.js";
+} from "@/rooms/world/party/commands/party.world.command.js";
+import { partyWorldService } from "@/rooms/world/party/services/party.world.service.js";
 import type {
     PartyInviteReceivedMessage,
     PartyJoinRequestMessage,
 } from "@/rooms/world/world.message.js";
-import { playerViewWorldService } from "@/rooms/world/services/player-view.world.service.js";
-import { PlayerTargetSchema } from "@/rooms/world/validators/inventory.world.validator.js";
+import { playerViewWorldService } from "@/rooms/world/players/services/player-view.world.service.js";
+import { PlayerTargetSchema } from "@/rooms/world/inventory/validators/inventory.world.validator.js";
 import type { PartyLootMode, PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
 import { visitedFlagKey } from "@/modules/maps/utils/teleport.util.js";
-import { dungeonWorldService } from "@/rooms/world/services/dungeon.world.service.js";
-import { dialogueWorldService } from "@/rooms/world/services/dialogue.world.service.js";
-import { questWorldService } from "@/rooms/world/services/quest.world.service.js";
-import { attributeWorldService } from "@/rooms/world/services/attribute.world.service.js";
-import { inventoryWorldService } from "@/rooms/world/services/inventory.world.service.js";
+import { dungeonWorldService } from "@/rooms/world/dungeons/services/dungeon.world.service.js";
+import { dialogueWorldService } from "@/rooms/world/content/services/dialogue.world.service.js";
+import { questWorldService } from "@/rooms/world/content/services/quest.world.service.js";
+import { attributeWorldService } from "@/rooms/world/players/services/attribute.world.service.js";
+import { inventoryWorldService } from "@/rooms/world/inventory/services/inventory.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/world.message.js";
 import { MoveWorldInput } from "@/rooms/world/schema/move.world.input.js";
 import { WorldState } from "@/rooms/world/schema/world.state.js";
-import { worldService } from "@/rooms/world/services/world.service.js";
-import { WORLD_TICK_RATE } from "@/rooms/world/utils/tick.world.util.js";
-import { sendSkillConfigs } from "@/rooms/world/services/skill-config.world.service.js";
+import { worldService } from "@/rooms/world/core/services/world.service.js";
+import { WORLD_TICK_RATE } from "@/rooms/world/core/utils/tick.world.util.js";
+import { sendSkillConfigs } from "@/rooms/world/combat/services/skill-config.world.service.js";
 const RECONNECT_SECONDS = 20;
 
 export class WorldRoom extends BasePlayerRoom<{
@@ -160,11 +160,11 @@ export class WorldRoom extends BasePlayerRoom<{
             void this.dispatcher.dispatch(new PartyDeclineWorldCommand(), { client, payload });
         },
         [WorldClientMessage.DUNGEON_LEAVE]: (client: PlayerClient) => {
-            if (this.dungeon) void dungeonWorldService.leaveByClient(this, client);
+            if (this.isDungeon) void dungeonWorldService.leaveByClient(this, client);
         },
         [WorldClientMessage.DUNGEON_RETRY]: (client: PlayerClient) => {
             const player = this.state.players.get(client.sessionId);
-            if (this.dungeon && player) void partyWorldService.retryDungeon(this, client, player);
+            if (this.isDungeon && player) void partyWorldService.retryDungeon(this, client, player);
         },
         [WorldClientMessage.PREVIEW_DISASSEMBLE]: (client: PlayerClient, payload: unknown) => {
             void this.dispatcher.dispatch(new PreviewDisassembleWorldCommand(), {
@@ -177,12 +177,14 @@ export class WorldRoom extends BasePlayerRoom<{
     map!: GameMap;
     /** Chỉ có ở room dungeon. */
     dungeon?: DungeonRuntime;
-    /** Dungeon: map + cổng chắn của chamber đang chơi (đổi khi vào / dọn xong chamber). */
-    dungeonBounds?: MoveBounds;
+
+    get isDungeon(): boolean {
+        return this.dungeon !== undefined;
+    }
 
     /** Vùng chặn hiệu lực để di chuyển: địa hình của map, cộng cổng chắn khi đang ở dungeon. */
     get moveBounds(): MoveBounds {
-        return this.dungeonBounds ?? this.map;
+        return this.dungeon?.bounds ?? this.map;
     }
     rewind!: Rewind;
     private readonly leavingSessions = new Set<string>();
@@ -204,7 +206,7 @@ export class WorldRoom extends BasePlayerRoom<{
         if (player) {
             // Đã đến map này → về sau teleport tới được.
             player.flags[visitedFlagKey(this.map.code)] = true;
-            if (this.dungeon) dungeonWorldService.onPlayerJoined(this, player);
+            if (this.isDungeon) dungeonWorldService.onPlayerJoined(this, player);
             await partyWorldService.onJoin(this, player);
             inventoryWorldService.send(client, player);
             attributeWorldService.send(client, player);

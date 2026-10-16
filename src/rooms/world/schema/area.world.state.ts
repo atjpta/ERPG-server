@@ -1,9 +1,9 @@
 import { Schema, type } from "@colyseus/schema";
 
 import { HitShape } from "@/modules/skills/enums/skill.enum.js";
-import type { PendingSkillHit } from "@/rooms/world/utils/skill-attack.world.util.js";
+import type { PendingSkillHit } from "@/rooms/world/combat/utils/skill-attack.world.util.js";
 import type { SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
-import type { SkillOwner } from "@/rooms/world/utils/skill-owner.world.util.js";
+import type { SkillOwner } from "@/rooms/world/combat/utils/skill-owner.world.util.js";
 
 /**
  * Vùng sát thương đặt trên mặt đất (hit event `AREA`): gây damage cho mọi mục tiêu chạm vùng khi

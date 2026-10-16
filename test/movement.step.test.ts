@@ -4,7 +4,7 @@ import {
     applyMove,
     DIAGONAL_FACTOR,
     type MovableState,
-} from "@/rooms/world/simulation/movement.step.js";
+} from "@/rooms/world/players/simulation/movement.step.js";
 
 /**
  * `applyMove` là hợp đồng với client Unity (prediction) — test này khoá hành vi.

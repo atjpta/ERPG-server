@@ -15,7 +15,7 @@ import {
 import type { SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
 import type { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 import type { MonsterWorldState } from "@/rooms/world/schema/monster.world.state.js";
-import { SkillDeliveryWorldService } from "@/rooms/world/services/skill-delivery.world.service.js";
+import { SkillDeliveryWorldService } from "@/rooms/world/combat/services/skill-delivery.world.service.js";
 import {
     type HorizontalDirection,
     PendingSkillHit,
@@ -23,16 +23,16 @@ import {
     claimGroupHit,
     skillReachesTarget,
     tickPendingSkillHits,
-} from "@/rooms/world/utils/skill-attack.world.util.js";
+} from "@/rooms/world/combat/utils/skill-attack.world.util.js";
 import {
     intersectsSkillHitEvent,
     offsetSkillOrigin,
-} from "@/rooms/world/utils/skill-hitbox.world.util.js";
+} from "@/rooms/world/combat/utils/skill-hitbox.world.util.js";
 import {
     applySkillHit,
     monsterSkillOwner,
     playerSkillOwner,
-} from "@/rooms/world/utils/skill-owner.world.util.js";
+} from "@/rooms/world/combat/utils/skill-owner.world.util.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 const TICK_RATE = 40;

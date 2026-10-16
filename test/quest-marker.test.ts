@@ -9,7 +9,7 @@ import {
     collectQuestTargets,
     npcMarkerFor,
     type MarkerQuest,
-} from "@/rooms/world/utils/quest-marker.world.util.js";
+} from "@/rooms/world/content/utils/quest-marker.world.util.js";
 import { NpcMarker } from "@/rooms/world/world.message.js";
 
 const quest = (extra: Partial<MarkerQuest> = {}): MarkerQuest => ({

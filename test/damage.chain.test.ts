@@ -8,8 +8,11 @@ import {
     SkillEffectType,
 } from "@/modules/skills/enums/skill.enum.js";
 import type { SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
-import { calculateDamage, type DamageCombatant } from "@/rooms/world/chains/damage.world.chain.js";
-import { combatRoll, fnv1a32 } from "@/rooms/world/utils/combat-roll.world.util.js";
+import {
+    calculateDamage,
+    type DamageCombatant,
+} from "@/rooms/world/combat/chains/damage.world.chain.js";
+import { combatRoll, fnv1a32 } from "@/rooms/world/combat/utils/combat-roll.world.util.js";
 
 /** Hit event tối giản: chỉ `effects` được chain đọc. */
 const createEvent = (

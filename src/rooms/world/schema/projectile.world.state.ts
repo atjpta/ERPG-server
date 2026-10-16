@@ -1,11 +1,11 @@
 import { Schema, type } from "@colyseus/schema";
 
-import type { PendingSkillHit } from "@/rooms/world/utils/skill-attack.world.util.js";
+import type { PendingSkillHit } from "@/rooms/world/combat/utils/skill-attack.world.util.js";
 import type {
     SkillHitEvent,
     SkillProjectile,
 } from "@/modules/skills/schemas/skill-config.schema.js";
-import type { SkillOwner } from "@/rooms/world/utils/skill-owner.world.util.js";
+import type { SkillOwner } from "@/rooms/world/combat/utils/skill-owner.world.util.js";
 
 /**
  * Đạn đang bay (hit event `PROJECTILE`). Client vẽ từ vị trí/hướng/tốc độ này và tự nội suy; đạn
