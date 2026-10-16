@@ -257,7 +257,7 @@ export class DungeonWorldService {
             returnY: previous?.returnY ?? player.y,
         };
         player.dungeonSession = session;
-        player.pendingMapCode = dungeon.code;
+        player.beginMapChange(dungeon.code);
         player.moving = false;
         player.clearTarget();
         const message: MapChangeMessage = {
@@ -314,7 +314,7 @@ export class DungeonWorldService {
         }
         player.placeAt(spawn.x, spawn.y);
         player.dungeonSession = undefined;
-        player.pendingMapCode = mapCode;
+        player.beginMapChange(mapCode);
         const message: MapChangeMessage = {
             mapCode,
             spawnId: "default",

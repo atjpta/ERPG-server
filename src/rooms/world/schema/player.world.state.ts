@@ -111,6 +111,9 @@ export class PlayerWorldState extends Schema {
     dailyQuests: PlayerDailyQuests | null = null;
     /** Map đích khi đã bước vào portal/teleport và đang đợi client vào room mới. */
     pendingMapCode?: string;
+    /** Vị trí đích chốt lúc bắt đầu đổi map — room cũ còn simulate player tới khi client rời, không được để nó ghi đè vị trí lưu. */
+    private pendingX = 0;
+    private pendingY = 0;
     private _partyRoomId: string | null = null;
     /** Room party đang tham gia (server-only) — dùng chia exp / quest cho thành viên cùng room. Gán là cập nhật luôn `inParty`. */
     get partyRoomId(): string | null {
@@ -325,8 +328,8 @@ export class PlayerWorldState extends Schema {
         return {
             // Đang chuyển map (portal/teleport): lưu map đích để rời room không ghi đè về map cũ.
             mapCode: session?.returnMapCode ?? this.pendingMapCode ?? mapCode,
-            x: session?.returnX ?? this.x,
-            y: session?.returnY ?? this.y,
+            x: session?.returnX ?? (this.pendingMapCode ? this.pendingX : this.x),
+            y: session?.returnY ?? (this.pendingMapCode ? this.pendingY : this.y),
             lastTownMapCode: this.lastTownMapCode,
             dailyQuests: this.dailyQuests ? structuredClone(this.dailyQuests) : null,
             dungeonSession: session ? { ...session } : null,
@@ -367,6 +370,13 @@ export class PlayerWorldState extends Schema {
         this.clearCharge();
         this.dashTicks = 0;
         this.dashCooldownTicks = 0;
+    }
+
+    /** Bắt đầu đổi map: chốt vị trí hiện tại (đã đặt ở đích) làm vị trí lưu cho tới khi rời room. */
+    beginMapChange(mapCode: string) {
+        this.pendingMapCode = mapCode;
+        this.pendingX = this.x;
+        this.pendingY = this.y;
     }
 
     /** Đặt lại vị trí (chuyển map, vào/ra chamber): đứng yên và bỏ mục tiêu. */
