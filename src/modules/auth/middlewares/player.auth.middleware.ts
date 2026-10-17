@@ -1,13 +1,13 @@
 import { createMiddleware } from "colyseus";
 import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { Response } from "@/core/utils/response.util.js";
-import type { AuthUser } from "@/modules/auth/types/auth-user.type.js";
-import { authService } from "@/modules/auth/user/services/auth.service.js";
+import type { AuthPlayer } from "@/modules/auth/types/auth-user.type.js";
+import { playerAuthService } from "@/modules/auth/user/services/player-auth.service.js";
 
-/** Xác thực token tài khoản (user) — `ctx.context` = `AuthUser`. */
-export const authMiddleware = createMiddleware(
+/** Xác thực player token — `ctx.context` = `AuthPlayer`. Dùng cho API gắn với player đang chơi. */
+export const playerAuthMiddleware = createMiddleware(
     { requireHeaders: true },
-    async (ctx): Promise<AuthUser> => {
+    async (ctx): Promise<AuthPlayer> => {
         const authHeader = ctx.getHeader("authorization");
         if (!authHeader?.startsWith("Bearer ")) {
             Response.unauthorized(ctx, {
@@ -17,7 +17,7 @@ export const authMiddleware = createMiddleware(
         }
 
         try {
-            return await authService.verifyToken(authHeader!.slice(7));
+            return await playerAuthService.verifyToken(authHeader!.slice(7));
         } catch {
             Response.unauthorized(ctx, {
                 message: "🔒 Invalid or expired token",

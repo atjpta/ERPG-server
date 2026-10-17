@@ -12,7 +12,7 @@ export type AuthUser = { typ: "user"; userId: string; userSessionId: string } & 
 
 /**
  * Payload token player — trả về lúc login, dùng để join room Colyseus (`client.auth`)
- * và gọi API gắn với player (`ctx.context` sau `authPlayerMiddleware`).
+ * và gọi API gắn với player (`ctx.context` sau `playerAuthMiddleware`).
  */
 export type AuthPlayer = {
     typ: "player";

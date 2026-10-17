@@ -1,3 +1,4 @@
+import { ItemCode } from "@/modules/items/enums/item-code.enum.js";
 import { boolean, integer, jsonb, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import { ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
@@ -8,8 +9,7 @@ export const itemRarityEnum = pgEnum("item_rarity", ItemRarity);
 
 /** Catalog item. `metadata` validate theo `type` (xem parseItemMetadata). */
 export const Items = pgTable("items", {
-    ...baseWithCodeColumns(),
-    name: text("name").notNull(),
+    ...baseWithCodeColumns(ItemCode),
     type: itemTypeEnum("type").notNull(),
     /** Rarity gốc; trang bị: rarity thật nằm ở từng món (ItemEquipmentInstanceMetadata.rarity). */
     rarity: itemRarityEnum("rarity").notNull().default(ItemRarity.COMMON),

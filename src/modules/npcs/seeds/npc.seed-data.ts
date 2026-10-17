@@ -1,3 +1,4 @@
+import { NpcCode } from "@/modules/npcs/enums/npc-code.enum.js";
 import type { NewNpc } from "@/modules/npcs/entities/npc.entity.js";
 import { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
 import { QuestState } from "@/modules/quests/enums/quest.enum.js";
@@ -9,13 +10,13 @@ export const NPCS: NewNpc[] = [
     // ---- Greenfield Village --------------------------------------------------------------------------
     // Trưởng làng: cốt truyện hero.
     {
-        code: "village_chief",
+        code: NpcCode.VILLAGE_CHIEF,
         defaultDialogueCode: "elder_default",
         dialogueRules: questDialogueRules("village_chief"),
     },
     // Nhân viên hội: hero + nhiệm vụ hằng ngày (bảng nhiệm vụ).
     {
-        code: "guild_officer",
+        code: NpcCode.GUILD_OFFICER,
         defaultDialogueCode: "guild_officer_default",
         dialogueRules: [
             ...questDialogueRules("guild_officer"),
@@ -28,46 +29,46 @@ export const NPCS: NewNpc[] = [
         ],
         functions: [{ id: "quest_board", type: NpcFunctionType.QUEST_BOARD, config: {} }],
     },
-    { code: "swordsman_trainer", defaultDialogueCode: "swordsman_trainer_default" },
-    { code: "archer_trainer", defaultDialogueCode: "archer_trainer_default" },
-    { code: "cleric_trainer", defaultDialogueCode: "cleric_trainer_default" },
+    { code: NpcCode.SWORDSMAN_TRAINER, defaultDialogueCode: "swordsman_trainer_default" },
+    { code: NpcCode.ARCHER_TRAINER, defaultDialogueCode: "archer_trainer_default" },
+    { code: NpcCode.CLERIC_TRAINER, defaultDialogueCode: "cleric_trainer_default" },
     // Nữ tu: hồi sinh / nhà thờ.
-    { code: "village_priestess", defaultDialogueCode: "village_priestess_default" },
+    { code: NpcCode.VILLAGE_PRIESTESS, defaultDialogueCode: "village_priestess_default" },
     // Thợ rèn: trang bị (cường hoá).
     {
-        code: "blacksmith",
+        code: NpcCode.BLACKSMITH,
         defaultDialogueCode: "blacksmith_default",
         functions: [{ id: "enhance", type: NpcFunctionType.ENHANCE, config: {} }],
     },
     // Giả kim: tinh hoá (mở khoá bởi quest `strange_mana`).
     {
-        code: "alchemist",
+        code: NpcCode.ALCHEMIST,
         defaultDialogueCode: "alchemist_default",
         functions: [{ id: "refine", type: NpcFunctionType.REFINE, config: {} }],
     },
     {
-        code: "general_merchant",
+        code: NpcCode.GENERAL_MERCHANT,
         defaultDialogueCode: "general_merchant_default",
         functions: [{ id: "shop", type: NpcFunctionType.SHOP, config: { shop: "general_store" } }],
     },
     // Thợ săn: quest khu rừng.
     {
-        code: "hunter_garrick",
+        code: NpcCode.HUNTER_GARRICK,
         defaultDialogueCode: "garrick_default",
         dialogueRules: questDialogueRules("hunter_garrick"),
     },
     // Nhà nghiên cứu: cốt truyện mana + quest phụ.
     {
-        code: "researcher",
+        code: NpcCode.RESEARCHER,
         defaultDialogueCode: "researcher_default",
         dialogueRules: questDialogueRules("researcher"),
     },
-    { code: "innkeeper", defaultDialogueCode: "innkeeper_default" },
+    { code: NpcCode.INNKEEPER, defaultDialogueCode: "innkeeper_default" },
     {
-        code: "farmer_rowan",
+        code: NpcCode.FARMER_ROWAN,
         defaultDialogueCode: "rowan_default",
         dialogueRules: questDialogueRules("farmer_rowan"),
     },
-    { code: "guard_captain", defaultDialogueCode: "guard_captain_default" },
-    { code: "herbalist", defaultDialogueCode: "herbalist_default" },
+    { code: NpcCode.GUARD_CAPTAIN, defaultDialogueCode: "guard_captain_default" },
+    { code: NpcCode.HERBALIST, defaultDialogueCode: "herbalist_default" },
 ];

@@ -1,7 +1,6 @@
 import { GameServers } from "@/modules/auth/entities/game-server.entity.js";
 import { GameServerRepo } from "@/modules/auth/repositories/game-server.repository.js";
-
-const SERVERS = [{ code: "s1", name: "S1 - Khởi Nguyên", sortOrder: 1 }];
+import { SERVERS } from "@/modules/auth/seeds/game-server.seed-data.js";
 
 export const GameServerSeed = async (force = false) => {
     for (const server of SERVERS) {

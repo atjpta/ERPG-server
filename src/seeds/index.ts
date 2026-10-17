@@ -1,3 +1,4 @@
+import { checkCatalogCodes } from "@/seeds/catalog-codes.check.js";
 import { connectPostgres } from "@/configs/postgres.config.js";
 import { AdminSeed } from "@/modules/auth/seeds/admin.seed.js";
 import { GameServerSeed } from "@/modules/auth/seeds/game-server.seed.js";
@@ -14,6 +15,7 @@ import { SkillSeed } from "@/modules/skills/seeds/skill.seed.js";
 
 const force = process.argv.includes("--force");
 
+checkCatalogCodes();
 await connectPostgres();
 await MasterDataSeed();
 await AdminSeed(force);

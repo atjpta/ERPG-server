@@ -1,3 +1,4 @@
+import { MapCode } from "@/modules/maps/enums/map-code.enum.js";
 import { boolean, integer, jsonb, pgEnum, pgTable, real, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { Condition } from "@/modules/dialogues/schemas/condition.schema.js";
@@ -16,7 +17,7 @@ export const mapStatusEnum = pgEnum("map_status", MapStatus);
  * Toạ độ trong game dùng đơn vị TILE (float) — client tự nhân `tileSize` khi render pixel.
  */
 export const GameMaps = pgTable("game_maps", {
-    ...baseWithCodeColumns(),
+    ...baseWithCodeColumns(MapCode),
     name: text("name").notNull(),
     type: mapTypeEnum("type").notNull().default(MapType.FIELD),
     status: mapStatusEnum("status").notNull().default(MapStatus.ACTIVE),

@@ -1,3 +1,4 @@
+import { QuestCode } from "@/modules/quests/enums/quest-code.enum.js";
 import type { NewDialogue } from "@/modules/dialogues/entities/dialogue.entity.js";
 import type { Condition } from "@/modules/dialogues/schemas/condition.schema.js";
 import type { DialogueRule } from "@/modules/dialogues/schemas/dialogue.schema.js";
@@ -54,7 +55,7 @@ const clearDungeon = (id: string, targetCode: string): QuestObjective => ({
 const CONTENT: QuestContent[] = [
     // ---- Hero (đỏ): cốt truyện, mở khoá chức năng ---------------------------------------------------
     {
-        code: "adventurer_registration",
+        code: QuestCode.ADVENTURER_REGISTRATION,
         category: QuestCategory.HERO,
         chapter: 1,
         requiredLevel: 1,
@@ -67,7 +68,7 @@ const CONTENT: QuestContent[] = [
         unlock: ["guild", "quest_board", "daily_quest"],
     },
     {
-        code: "first_hunt",
+        code: QuestCode.FIRST_HUNT,
         category: QuestCategory.HERO,
         chapter: 1,
         requiredLevel: 1,
@@ -81,7 +82,7 @@ const CONTENT: QuestContent[] = [
         unlock: ["dungeon"],
     },
     {
-        code: "strange_mana",
+        code: QuestCode.STRANGE_MANA,
         category: QuestCategory.HERO,
         chapter: 2,
         requiredLevel: 3,
@@ -95,7 +96,7 @@ const CONTENT: QuestContent[] = [
         unlock: ["alchemy"],
     },
     {
-        code: "shadows_of_the_forest",
+        code: QuestCode.SHADOWS_OF_THE_FOREST,
         category: QuestCategory.HERO,
         chapter: 3,
         requiredLevel: 10,
@@ -108,7 +109,7 @@ const CONTENT: QuestContent[] = [
         potions: 5,
     },
     {
-        code: "werewolf_den",
+        code: QuestCode.WEREWOLF_DEN,
         category: QuestCategory.HERO,
         chapter: 3,
         requiredLevel: 10,
@@ -121,7 +122,7 @@ const CONTENT: QuestContent[] = [
         potions: 5,
     },
     {
-        code: "into_the_evergrowth",
+        code: QuestCode.INTO_THE_EVERGROWTH,
         category: QuestCategory.HERO,
         chapter: 4,
         requiredLevel: 20,
@@ -134,7 +135,7 @@ const CONTENT: QuestContent[] = [
         potions: 5,
     },
     {
-        code: "sanctuary_of_life",
+        code: QuestCode.SANCTUARY_OF_LIFE,
         category: QuestCategory.HERO,
         chapter: 4,
         requiredLevel: 20,
@@ -147,7 +148,7 @@ const CONTENT: QuestContent[] = [
         potions: 5,
     },
     {
-        code: "road_to_the_city",
+        code: QuestCode.ROAD_TO_THE_CITY,
         category: QuestCategory.HERO,
         chapter: 5,
         requiredLevel: 30,
@@ -162,7 +163,7 @@ const CONTENT: QuestContent[] = [
     },
     // ---- Side (vàng): nội dung thiết kế sau, đây chỉ là mẫu ------------------------------------------
     {
-        code: "rowan_crops",
+        code: QuestCode.ROWAN_CROPS,
         category: QuestCategory.SIDE,
         requiredLevel: 1,
         giverNpcCode: "farmer_rowan",

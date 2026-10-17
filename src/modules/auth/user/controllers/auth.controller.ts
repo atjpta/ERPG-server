@@ -3,7 +3,7 @@ import { createRateLimitMiddleware } from "@/core/middlewares/rate-limit.middlew
 import { Response, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { AUTH_IP_RATE_LIMIT } from "@/modules/auth/constants/rate-limit.constant.js";
-import { authMiddleware } from "@/modules/auth/middlewares/auth.middleware.js";
+import { userAuthMiddleware } from "@/modules/auth/middlewares/user.auth.middleware.js";
 import { authService } from "@/modules/auth/user/services/auth.service.js";
 import {
     GoogleLoginSchema,
@@ -13,7 +13,7 @@ import {
     RegisterSchema,
 } from "@/modules/auth/user/validators/auth.validator.js";
 
-const authEndpoint = createEndpoint.create({ use: [authMiddleware] });
+const authEndpoint = createEndpoint.create({ use: [userAuthMiddleware] });
 /** Endpoint public đăng ký/đăng nhập — giới hạn theo IP. */
 const publicAuthEndpoint = createEndpoint.create({
     use: [createRateLimitMiddleware(AUTH_IP_RATE_LIMIT)],

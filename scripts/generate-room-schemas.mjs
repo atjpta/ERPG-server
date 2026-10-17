@@ -74,3 +74,13 @@ function findRoomSchemaFiles(directory) {
         });
     });
 }
+
+// Code catalogs are also used outside room payloads. Respect every configured schema output.
+for (const output of outputs) {
+    const catalogResult = spawnSync(
+        process.execPath,
+        ["--import=tsx", "scripts/generate-catalog-codes.ts", "--schema-output", output.directory],
+        { cwd: projectRoot, stdio: "inherit" }
+    );
+    if (catalogResult.status !== 0) process.exit(catalogResult.status ?? 1);
+}

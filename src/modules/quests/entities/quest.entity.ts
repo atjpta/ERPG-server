@@ -1,3 +1,4 @@
+import { QuestCode } from "@/modules/quests/enums/quest-code.enum.js";
 import { integer, jsonb, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { Condition } from "@/modules/dialogues/schemas/condition.schema.js";
@@ -13,7 +14,7 @@ export const questCategoryEnum = pgEnum("quest_category", QuestCategory);
  * `quest.{code}.obj.{objectiveId}`; tiến độ từng player nằm ở `player_states.quests`.
  */
 export const Quests = pgTable("quests", {
-    ...baseWithCodeColumns(),
+    ...baseWithCodeColumns(QuestCode),
     category: questCategoryEnum("category").notNull().default(QuestCategory.SIDE),
     /** Thứ tự trong cùng loại (hero: thứ tự cốt truyện). */
     sortOrder: integer("sort_order").notNull().default(0),

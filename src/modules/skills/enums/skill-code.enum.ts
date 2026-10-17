@@ -1,0 +1,20 @@
+/** Shared catalog codes. After changes run yarn codes:generate to sync Unity. */
+export enum SkillCode {
+    ARCHER_BASIC_ATTACK = "archer_basic_attack",
+    ARCHER_KNOCKBACK_SHOT = "archer_knockback_shot",
+    ARCHER_PIERCING_ARROW = "archer_piercing_arrow",
+    ARCHER_RAIN_ARROWS = "archer_rain_arrows",
+    BAT_ATTACK = "bat_attack",
+    CLERIC_BASIC_ATTACK = "cleric_basic_attack",
+    CLERIC_BUFF_HP = "cleric_buff_hp",
+    CLERIC_EXPLOSION = "cleric_explosion",
+    CLERIC_FIREBALL = "cleric_fireball",
+    DASH = "dash",
+    SLIME_ATTACK = "slime_attack",
+    SWORDSMAN_BASIC_ATTACK = "swordsman_basic_attack",
+    SWORDSMAN_CROSS_SLASH = "swordsman_cross_slash",
+    SWORDSMAN_FLY_SLASH = "swordsman_fly_slash",
+    SWORDSMAN_SLASH_DASH = "swordsman_slash_dash",
+    WEREBEAR_ATTACK = "werebear_attack",
+    WEREWOLF_ATTACK = "werewolf_attack",
+}

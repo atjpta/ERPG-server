@@ -13,8 +13,10 @@ export const baseColumns = () => ({
         .$onUpdate(() => DateTime.now().toJSDate()),
 });
 
-export const baseWithCodeColumns = () => ({
+export const baseWithCodeColumns = (codes: Record<string, string>) => ({
     ...baseColumns(),
-    code: text("code").notNull().unique(),
+    code: text("code", { enum: Object.values(codes) as [string, ...string[]] })
+        .notNull()
+        .unique(),
     enabled: boolean("enabled").notNull().default(true),
 });

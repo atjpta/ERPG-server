@@ -1,8 +1,8 @@
 import { createEndpoint } from "colyseus";
 import { Response, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
-import { authPlayerMiddleware } from "@/modules/auth/middlewares/auth-player.middleware.js";
-import { authMiddleware } from "@/modules/auth/middlewares/auth.middleware.js";
+import { playerAuthMiddleware } from "@/modules/auth/middlewares/player.auth.middleware.js";
+import { userAuthMiddleware } from "@/modules/auth/middlewares/user.auth.middleware.js";
 import { playerAuthService } from "@/modules/auth/user/services/player-auth.service.js";
 import { playerService } from "@/modules/player/user/services/player.service.js";
 import {
@@ -10,8 +10,8 @@ import {
     RenamePlayerSchema,
 } from "@/modules/player/user/validators/player.validator.js";
 
-const userEndpoint = createEndpoint.create({ use: [authMiddleware] });
-const playerEndpoint = createEndpoint.create({ use: [authPlayerMiddleware] });
+const userEndpoint = createEndpoint.create({ use: [userAuthMiddleware] });
+const playerEndpoint = createEndpoint.create({ use: [playerAuthMiddleware] });
 const prefix = "/players";
 
 export const playerController = {

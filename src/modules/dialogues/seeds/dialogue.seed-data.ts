@@ -1,3 +1,4 @@
+import { DialogueCode } from "@/modules/dialogues/enums/dialogue-code.enum.js";
 import type { NewDialogue } from "@/modules/dialogues/entities/dialogue.entity.js";
 import { QuestState } from "@/modules/quests/enums/quest.enum.js";
 import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
@@ -9,11 +10,11 @@ import { STORY_DIALOGUES } from "@/modules/quests/seeds/quest-content.js";
  */
 export const DIALOGUES: NewDialogue[] = [
     {
-        code: "elder_default",
+        code: DialogueCode.ELDER_DEFAULT,
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
-        code: "blacksmith_default",
+        code: DialogueCode.BLACKSMITH_DEFAULT,
         nodes: [
             {
                 id: "start",
@@ -30,12 +31,12 @@ export const DIALOGUES: NewDialogue[] = [
         ],
     },
     {
-        code: "notice_board",
+        code: DialogueCode.NOTICE_BOARD,
         nodes: [{ id: "start", next: "page_2" }, { id: "page_2" }],
     },
     // ---- Greenfield Village ------------------------------------------------------------------------
     {
-        code: "guild_officer_default",
+        code: DialogueCode.GUILD_OFFICER_DEFAULT,
         nodes: [
             {
                 id: "start",
@@ -51,19 +52,19 @@ export const DIALOGUES: NewDialogue[] = [
         ],
     },
     {
-        code: "swordsman_trainer_default",
+        code: DialogueCode.SWORDSMAN_TRAINER_DEFAULT,
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
-        code: "archer_trainer_default",
+        code: DialogueCode.ARCHER_TRAINER_DEFAULT,
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
-        code: "cleric_trainer_default",
+        code: DialogueCode.CLERIC_TRAINER_DEFAULT,
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
-        code: "guard_captain_default",
+        code: DialogueCode.GUARD_CAPTAIN_DEFAULT,
         nodes: [
             {
                 id: "start",
@@ -73,19 +74,19 @@ export const DIALOGUES: NewDialogue[] = [
         ],
     },
     {
-        code: "herbalist_default",
+        code: DialogueCode.HERBALIST_DEFAULT,
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
-        code: "rowan_default",
+        code: DialogueCode.ROWAN_DEFAULT,
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
-        code: "garrick_default",
+        code: DialogueCode.GARRICK_DEFAULT,
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
-        code: "village_priestess_default",
+        code: DialogueCode.VILLAGE_PRIESTESS_DEFAULT,
         nodes: [
             {
                 id: "start",
@@ -103,7 +104,7 @@ export const DIALOGUES: NewDialogue[] = [
         ],
     },
     {
-        code: "general_merchant_default",
+        code: DialogueCode.GENERAL_MERCHANT_DEFAULT,
         nodes: [
             {
                 id: "start",
@@ -119,7 +120,7 @@ export const DIALOGUES: NewDialogue[] = [
         ],
     },
     {
-        code: "innkeeper_default",
+        code: DialogueCode.INNKEEPER_DEFAULT,
         nodes: [
             {
                 id: "start",
@@ -134,15 +135,15 @@ export const DIALOGUES: NewDialogue[] = [
         ],
     },
     {
-        code: "gate_locked",
+        code: DialogueCode.GATE_LOCKED,
         nodes: [{ id: "start" }],
     },
     {
-        code: "researcher_default",
+        code: DialogueCode.RESEARCHER_DEFAULT,
         nodes: [{ id: "start", options: [{ id: "bye", hideIfFail: false }] }],
     },
     {
-        code: "alchemist_default",
+        code: DialogueCode.ALCHEMIST_DEFAULT,
         nodes: [
             {
                 id: "start",
@@ -159,7 +160,7 @@ export const DIALOGUES: NewDialogue[] = [
         ],
     },
     {
-        code: "daily_claim",
+        code: DialogueCode.DAILY_CLAIM,
         nodes: [
             {
                 id: "start",

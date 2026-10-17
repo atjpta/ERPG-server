@@ -1,3 +1,4 @@
+import { ClassCode } from "@/modules/classes/enums/class-code.enum.js";
 import { integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { Attributes, StatBonus, Stats } from "@/modules/player/schemas/stat.schema.js";
@@ -5,8 +6,7 @@ import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js
 
 /** Class nhân vật (Swordsman → chuyển class lên tier sau). */
 export const Classes = pgTable("classes", {
-    ...baseWithCodeColumns(),
-    name: text("name").notNull(),
+    ...baseWithCodeColumns(ClassCode),
     tier: integer("tier").notNull().default(1),
     /**
      * Class con trực thuộc (tier + 1) — các hướng chuyển cấp từ class này. 1 class có thể có nhiều

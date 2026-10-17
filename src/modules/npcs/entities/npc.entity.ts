@@ -1,3 +1,4 @@
+import { NpcCode } from "@/modules/npcs/enums/npc-code.enum.js";
 import { jsonb, pgTable, real, text } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { DialogueRule } from "@/modules/dialogues/schemas/dialogue.schema.js";
@@ -8,7 +9,7 @@ import type { NpcFunction } from "@/modules/npcs/schemas/npc-function.schema.js"
  * theo `npc.{code}.name`.
  */
 export const Npcs = pgTable("npcs", {
-    ...baseWithCodeColumns(),
+    ...baseWithCodeColumns(NpcCode),
     /** Kích thước vùng chặn dưới chân NPC (tile) — cộng vào collider của map. */
     colliderWidth: real("collider_width").notNull().default(0.8),
     colliderHeight: real("collider_height").notNull().default(0.4),

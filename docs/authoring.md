@@ -85,3 +85,26 @@ Asset không còn nằm trong `Resources` nếu không phải tải theo đườ
 
 - Unity: nút _Validate codes_ ở tab _Codes_ của Hub, hoặc chạy EditMode tests (`ERPG.Tests.Editor`): code đủ mọi loại, không field `code` nào gõ tay, mọi monster có body và clip, export lặp lại ra cùng file.
 - Server: `yarn test`, `yarn typecheck`, `yarn lint`.
+
+## Shared catalog code enums
+
+Every entity using `baseWithCodeColumns` must pass its module's code enum, for example
+`baseWithCodeColumns(ClassCode)`. Register the enum in
+`src/seeds/catalog-codes.constant.ts` so it reaches Unity.
+
+When adding or removing a catalog entry (including a map, monster or skill authored in Unity),
+update the corresponding `*-code.enum.ts` and its seed/authoring data together.
+`yarn seed` requires both lists to match. Code sync rejects unregistered or duplicate authored codes,
+but allows a registered code to await Unity authoring, so you can select it in the creation dropdown.
+QuestCode includes the three daily quests.
+
+Run `yarn codes:generate` to sync without a database. It writes
+`../ERPG/Assets/ERPG/ServerData/codes.json` for Editor dropdowns and string constants under
+`../ERPG/Assets/ERPG/Scripts/Schema/` for runtime code, for example
+`ERPG.Schema.ClassCode.SWORDSMAN` and `ERPG.Schema.SkillCode.DASH`.
+C# constants preserve the string values used by JSON/network payloads.
+Both `yarn config:export` and `yarn schema:generate` also sync these catalogs.
+
+Client creation forms and skill inspectors select codes exclusively from server lists. Register a new
+code in the server enum, run `yarn codes:generate`, then choose that code when creating its Unity asset.
+Missing lists disable editing. Runtime comparisons use the generated `ERPG.Schema.*Code` constants.

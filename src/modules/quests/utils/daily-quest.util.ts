@@ -1,3 +1,4 @@
+import { QuestCode } from "@/modules/quests/enums/quest-code.enum.js";
 import type { DateTime } from "luxon";
 import type { Rng } from "@/modules/equipment/utils/equipment-roll.util.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
@@ -50,7 +51,7 @@ export const generateDailyQuests = (
     const collect = pick(tier.collect, rng);
     return [
         {
-            code: "daily_kill",
+            code: QuestCode.DAILY_KILL,
             level,
             objective: {
                 id: "kill",
@@ -61,7 +62,7 @@ export const generateDailyQuests = (
             rewards: rewardOf(config.rewards.kill, level),
         },
         {
-            code: "daily_dungeon",
+            code: QuestCode.DAILY_DUNGEON,
             level,
             objective: {
                 id: "dungeon",
@@ -72,7 +73,7 @@ export const generateDailyQuests = (
             rewards: rewardOf(config.rewards.dungeon, level),
         },
         {
-            code: "daily_collect",
+            code: QuestCode.DAILY_COLLECT,
             level,
             objective: {
                 id: "collect",

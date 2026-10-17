@@ -2,7 +2,7 @@ import { createEndpoint } from "colyseus";
 import { createRateLimitMiddleware } from "@/core/middlewares/rate-limit.middleware.js";
 import { Response, RouterContainer } from "@/core/utils/response.util.js";
 import { ACCOUNT_DELETION_WEB_RATE_LIMIT } from "@/modules/auth/constants/rate-limit.constant.js";
-import { authMiddleware } from "@/modules/auth/middlewares/auth.middleware.js";
+import { userAuthMiddleware } from "@/modules/auth/middlewares/user.auth.middleware.js";
 import { renderAccountDeletionPage } from "@/modules/auth/user/pages/account-deletion.page.js";
 import { accountDeletionService } from "@/modules/auth/user/services/account-deletion.service.js";
 import {
@@ -10,7 +10,7 @@ import {
     WebAccountDeletionSchema,
 } from "@/modules/auth/user/validators/account-deletion.validator.js";
 
-const authEndpoint = createEndpoint.create({ use: [authMiddleware] });
+const authEndpoint = createEndpoint.create({ use: [userAuthMiddleware] });
 const webEndpoint = createEndpoint.create({
     use: [createRateLimitMiddleware(ACCOUNT_DELETION_WEB_RATE_LIMIT)],
 });

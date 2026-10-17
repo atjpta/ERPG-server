@@ -114,7 +114,7 @@ export const adminFooController = {
 ```
 
 - Luôn bọc handler trong `RouterContainer`.
-- Middleware: `authMiddleware` (user token), `authPlayerMiddleware` (player token),
+- Middleware: `authMiddleware` (user token), `playerAuthMiddleware` (player token),
   `adminAuthMiddleware` (admin token).
 - Param path không phải `:id` (vd `:key` enum) → `Schema.parse(ctx.params)` để có đúng kiểu.
 

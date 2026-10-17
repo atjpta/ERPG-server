@@ -1,9 +1,14 @@
+import { QuestCode } from "@/modules/quests/enums/quest-code.enum.js";
 import { z } from "zod";
 import { QuestObjectiveSchema } from "@/modules/quests/schemas/quest.schema.js";
 import { RewardSpecSchema } from "@/modules/rewards/schemas/reward-spec.schema.js";
 
 /** Code cố định của 3 quest hằng ngày — thoại / rule tham chiếu theo code, nội dung sinh theo level. */
-export const DAILY_QUEST_CODES = ["daily_kill", "daily_dungeon", "daily_collect"] as const;
+export const DAILY_QUEST_CODES = [
+    QuestCode.DAILY_KILL,
+    QuestCode.DAILY_DUNGEON,
+    QuestCode.DAILY_COLLECT,
+] as const;
 export type DailyQuestCode = (typeof DAILY_QUEST_CODES)[number];
 
 /** 1 quest hằng ngày đã sinh cho player (lưu trong `player_states.daily_quests`). */

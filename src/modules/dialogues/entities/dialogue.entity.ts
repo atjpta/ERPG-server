@@ -1,10 +1,11 @@
+import { DialogueCode } from "@/modules/dialogues/enums/dialogue-code.enum.js";
 import { jsonb, pgTable } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { DialogueNode } from "@/modules/dialogues/schemas/dialogue.schema.js";
 
 /** Đồ thị thoại (node + option). Text không lưu ở đây — client tra locale theo key suy ra từ code. */
 export const Dialogues = pgTable("dialogues", {
-    ...baseWithCodeColumns(),
+    ...baseWithCodeColumns(DialogueCode),
     nodes: jsonb("nodes").$type<DialogueNode[]>().notNull().default([]),
 });
 

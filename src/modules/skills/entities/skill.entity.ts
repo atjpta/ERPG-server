@@ -1,3 +1,4 @@
+import { SkillCode } from "@/modules/skills/enums/skill-code.enum.js";
 import { boolean, integer, jsonb, pgEnum, pgTable, real } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import { SkillOwnerType, SkillType, TargetType } from "@/modules/skills/enums/skill.enum.js";
@@ -13,7 +14,7 @@ export const skillOwnerTypeEnum = pgEnum("skill_owner_type", SkillOwnerType);
 
 /** Skill catalog. Variable level values and ordered hit events are stored as validated JSONB. */
 export const Skills = pgTable("skills", {
-    ...baseWithCodeColumns(),
+    ...baseWithCodeColumns(SkillCode),
     skillType: skillTypeEnum("skill_type").notNull(),
     targetType: targetTypeEnum("target_type").notNull().default(TargetType.NONE),
     castRange: real("cast_range").notNull().default(0),

@@ -111,7 +111,7 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
     - Player: user 1:N player, tối đa `player_config.maxCharacters` (độ dài tên `nameMinLength` /
       `nameMaxLength`). `GET /players` liệt kê + giới hạn, `GET /players/random-name`, `POST /players`
       tạo, `POST /players/:id/select` lấy `playerToken`; login trả sẵn token của nhân vật đầu tiên.
-    - 3 loại token: user (`authMiddleware`), player (`authPlayerMiddleware`, join room), admin (`adminAuthMiddleware`, secret riêng).
+    - 3 loại token: user (`authMiddleware`), player (`playerAuthMiddleware`, join room), admin (`adminAuthMiddleware`, secret riêng).
 - `master-data/` — config key-value, `value` validate bằng zod theo từng key (`MasterDataValueSchemas`);
   check phiên bản client (`GET /master-data/client-version`, login bị chặn 426 nếu dưới `minVersion`).
 - `maps/` — metadata map (toạ độ đơn vị tile), spawn point, số người/kênh.

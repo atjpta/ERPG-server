@@ -27,6 +27,7 @@
         "db:generate": "dotenvx run -f .env.development -- drizzle-kit generate",
         "db:migrate": "dotenvx run -f .env.development -- drizzle-kit migrate",
         "db:push": "dotenvx run -f .env.development -- drizzle-kit push",
+        "codes:generate": "tsx scripts/generate-catalog-codes.ts ../ERPG",
         "schema:generate": "node scripts/generate-room-schemas.mjs ../ERPG/Assets/ERPG/Scripts/Schema",
         "config:export": "dotenvx run -f .env.development -- tsx scripts/export-client-config.ts ../ERPG/Assets/ERPG/Resources/Config",
         "env:dev:decrypt": "dotenvx decrypt -f .env.development",
