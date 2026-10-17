@@ -8,18 +8,21 @@ import type {
     GameMap,
 } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
-import { dungeonMonsterLevel, phasesMonsterCount } from "@/modules/maps/utils/dungeon.util.js";
-import { respawnPointOf } from "@/modules/maps/utils/map-file.util.js";
-import { mapService } from "@/modules/maps/user/services/map.service.js";
+import {
+    dungeonMonsterLevel,
+    phasesMonsterCount,
+} from "@/modules/maps/services/dungeon.service.js";
+import { respawnPointOf } from "@/modules/maps/services/map-file.service.js";
+import { mapService } from "@/modules/maps/services/map.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import type { RewardSpec } from "@/modules/rewards/schemas/reward-spec.schema.js";
 import { monsterRewardService } from "@/modules/rewards/services/monster-reward.service.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import type { ItemReward } from "@/modules/rewards/types/reward.type.js";
-import { randomInt, rollChance } from "@/modules/rewards/utils/reward-roll.util.js";
-import { resolveRewardSpec } from "@/modules/rewards/utils/reward-spec.util.js";
+import { randomInt, rollChance } from "@/modules/rewards/services/reward-roll.service.js";
+import { resolveRewardSpec } from "@/modules/rewards/services/reward-spec.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import { DungeonGateState, DungeonWorldState } from "@/rooms/world/schema/dungeon.world.state.js";
 import type { MonsterWorldState } from "@/rooms/world/schema/monster.world.state.js";

@@ -1,8 +1,8 @@
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import type { MapInteractable } from "@/modules/maps/entities/game-map.entity.js";
-import { evaluateConditions } from "@/modules/dialogues/utils/condition.util.js";
+import { evaluateConditions } from "@/modules/dialogues/services/condition.service.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
-import { resolveRewardSpec } from "@/modules/rewards/utils/reward-spec.util.js";
+import { resolveRewardSpec } from "@/modules/rewards/services/reward-spec.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import { InteractableWorldState } from "@/rooms/world/schema/interactable.world.state.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";

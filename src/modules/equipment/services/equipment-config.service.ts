@@ -8,7 +8,7 @@ import type {
     ItemEquipmentType,
 } from "@/modules/items/enums/item-equipment.enum.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 
 const statKey = (classCode: string | null, type: ItemEquipmentType, level: number) =>
     `${classCode ?? "*"}:${type}:${level}`;

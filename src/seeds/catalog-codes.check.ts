@@ -38,7 +38,7 @@ export function checkCatalogCodes(requireAuthoredData = true): void {
         classes: CLASSES.map((row) => row.code),
         dialogues: DIALOGUES.map((row) => row.code),
         items: ITEMS.map((row) => row.code),
-        maps: fileCodes(new URL("../modules/maps/definitions/", import.meta.url), ".json"),
+        maps: fileCodes(new URL("../modules/maps/data/definitions/", import.meta.url), ".json"),
         monsters: fileCodes(new URL("../modules/monsters/data/", import.meta.url), ".monster.json"),
         npcs: NPCS.map((row) => row.code),
         quests: [...QUESTS.map((row) => row.code), ...DAILY_QUEST_CODES],

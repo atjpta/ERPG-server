@@ -1,6 +1,6 @@
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import type { LevelConfigValue } from "@/modules/master-data/schemas/master-data-value.schema.js";
-import { masterDataService } from "@/modules/master-data/user/services/master-data.service.js";
+import { masterDataService } from "@/modules/master-data/services/master-data.service.js";
 
 /** Cache bảng exp (master data `level_config`) lúc khởi động và khi admin sửa. */
 export class LevelService {

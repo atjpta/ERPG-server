@@ -8,7 +8,7 @@ import {
     randomInt,
     rollDropRarity,
     rollMonsterReward,
-} from "@/modules/rewards/utils/reward-roll.util.js";
+} from "@/modules/rewards/services/reward-roll.service.js";
 
 const stoneId = generateEntityId();
 const drops: MonsterDrops = {

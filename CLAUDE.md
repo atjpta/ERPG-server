@@ -9,7 +9,8 @@ và PC. Server: Colyseus 0.18 (REST + realtime room) · PostgreSQL/Drizzle · Zo
 src/
 ├── configs/     # env, postgres, redis (tuỳ chọn), timezone
 ├── core/        # hạ tầng dùng chung — xem src/core/README.md (kèm checklist init project)
-├── modules/     # business logic, mỗi module tách user/ và admin/ — xem docs/module-pattern.md
+|-- apis/         # HTTP admin/<module> and user/<module>: controllers, services, validators
+|-- modules/     # business logic shared by API and rooms; see docs/module-pattern.md
 ├── rooms/       # Colyseus rooms (realtime)
 ├── seeds/       # `yarn seed` chạy tuần tự mọi seed
 ├── migrations/  # sinh bởi `yarn db:generate` — không sửa tay
@@ -18,10 +19,10 @@ src/
 
 | Module                         | Nội dung                                                                                                                                                                                                                                                                            |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth/`                        | `User`, `Admin`, `Player`, `GameServer`, session, đăng nhập Play Games Services v2 (Android) + Google idToken (PC), xoá tài khoản (chính sách Google Play), rate limit. User 1:N player (tối đa `player_config.maxCharacters`, chọn ở `/players`)                                   |
+| `auth/`                        | `User`, `Admin`, `Player`, `GameServer`, session, đăng nhập Play Games Services v2 (Android) + Google idToken (PC), xoá tài khoản (chính sách Google Play), rate limit. User 1:N player (tối đa `player_config.maxCharacters`, chọn ở `/user/players`)                              |
 | `master-data/`                 | Config key-value (client version, session, player), validate theo key                                                                                                                                                                                                               |
 | `maps/`                        | `GameMap` từ file `data/<code>.map.json` (Unity export): spawn point, collider, monster spawn, NPC đặt chỗ, vật thể tương tác (portal/thu thập/biển báo), `minLevel`, dungeon (chamber/phase); map chưa có file thì seed tạo placeholder + cảnh báo — xem `docs/map-file-format.md` |
-| `classes/`                     | Class nhân vật (`baseAttributes`, `baseStats`, cây `nextClassCodes`); 4 class khởi đầu chọn lúc `POST /players`                                                                                                                                                                     |
+| `classes/`                     | Class nhân vật (`baseAttributes`, `baseStats`, cây `nextClassCodes`); 4 class khởi đầu chọn lúc `POST /user/players`                                                                                                                                                                |
 | `items/`                       | Catalog item: trang bị là template (biome + class + loại), material/consumable stack được                                                                                                                                                                                           |
 | `equipment/`                   | Roll/tính chỉ số trang bị, set, cường hoá, tinh hoá, phân rã — mọi bảng số nằm ở master data `equipment_*_config`                                                                                                                                                                   |
 | `npcs/` `dialogues/` `quests/` | NPC dùng chung nhiều map, đồ thị thoại + rule chọn thoại theo hoàn cảnh, quest hero/side/daily (daily sinh theo level mỗi ngày) — data-driven, text qua key locale — xem `docs/content-authoring.md`                                                                                |
@@ -59,3 +60,12 @@ yarn db:generate  # sau khi sửa entity
 yarn db:migrate && yarn seed
 yarn smoke        # test end-to-end khi server đang chạy
 ```
+
+## API/module boundaries
+
+- `modules/<module>` only contains constants, entities, enums, repositories, middlewares, schemas (Zod), seeds, types, data and services.
+- Modules cannot import API or rooms. Rooms cannot import API. API roles share logic through modules.
+- API admin/user files, exports and endpoint keys have the corresponding `admin`/`user` prefix.
+- Application URLs start with `/admin/` or `/user/`. `loadControllers()` discovers only `src/apis`.
+
+- `loadControllers()` returns `{ admin, user }`. Only `src/index.ts` mounts `/admin` and `/user` via `prefixEndpoints`; controllers use local resource paths.

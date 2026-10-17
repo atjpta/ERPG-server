@@ -1,10 +1,10 @@
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
-import { respawnPointOf } from "@/modules/maps/utils/map-file.util.js";
+import { respawnPointOf } from "@/modules/maps/services/map-file.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { partyWorldService } from "@/rooms/world/party/services/party.world.service.js";
-import { mapService } from "@/modules/maps/user/services/map.service.js";
+import { mapService } from "@/modules/maps/services/map.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import { worldService } from "@/rooms/world/core/services/world.service.js";

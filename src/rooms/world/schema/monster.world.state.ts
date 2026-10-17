@@ -10,10 +10,10 @@ import {
     combineSize,
     monsterScales,
     type MonsterVariant,
-} from "@/modules/monsters/utils/monster-stat.util.js";
+} from "@/modules/monsters/services/monster-stat.service.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import type { DamageCombatant } from "@/rooms/world/combat/chains/damage.world.chain.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";

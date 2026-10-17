@@ -1,7 +1,10 @@
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
-import { equipmentItemCode } from "@/modules/equipment/utils/equipment-code.util.js";
-import { rollEquipmentInstance, type Rng } from "@/modules/equipment/utils/equipment-roll.util.js";
+import { equipmentItemCode } from "@/modules/equipment/services/equipment-code.service.js";
+import {
+    rollEquipmentInstance,
+    type Rng,
+} from "@/modules/equipment/services/equipment-roll.service.js";
 import type { Item } from "@/modules/items/entities/item.entity.js";
 import {
     EQUIPMENT_GROUP_BY_TYPE,

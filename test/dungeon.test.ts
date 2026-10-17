@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { DungeonDefSchema } from "@/modules/maps/schemas/map-definition.schema.js";
-import { dungeonMonsterLevel, phasesMonsterCount } from "@/modules/maps/utils/dungeon.util.js";
+import {
+    dungeonMonsterLevel,
+    phasesMonsterCount,
+} from "@/modules/maps/services/dungeon.service.js";
 
 const spawn = (count: number) => ({ monsterCode: "slime", count, spawnX: 1, spawnY: 1 });
 const group = (markerId: string, count: number) => ({

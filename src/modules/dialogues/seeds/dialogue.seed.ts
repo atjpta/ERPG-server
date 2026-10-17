@@ -2,7 +2,7 @@ import { Dialogues } from "@/modules/dialogues/entities/dialogue.entity.js";
 import { DialogueRepo } from "@/modules/dialogues/repositories/dialogue.repository.js";
 import { DialogueNodesSchema } from "@/modules/dialogues/schemas/dialogue.schema.js";
 import { DIALOGUES } from "@/modules/dialogues/seeds/dialogue.seed-data.js";
-import { validateDialogueGraph } from "@/modules/dialogues/utils/dialogue-graph.util.js";
+import { validateDialogueGraph } from "@/modules/dialogues/services/dialogue-graph.service.js";
 
 export const DialogueSeed = async () => {
     for (const dialogue of DIALOGUES) {

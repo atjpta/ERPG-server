@@ -5,7 +5,7 @@ import { ClassRepo } from "@/modules/classes/repositories/class.repository.js";
 import {
     buildUsableItemClassCodes,
     validateClassTree,
-} from "@/modules/classes/utils/class-tree.util.js";
+} from "@/modules/classes/services/class-tree.service.js";
 
 /** Cache class lúc khởi động (giống SkillService/ItemService). */
 export class ClassService {

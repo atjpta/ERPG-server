@@ -4,7 +4,7 @@ import {
     loadAnimClips,
     monsterAttackMs,
     skillClipWarnings,
-} from "@/modules/bodies/utils/anim-clip.util.js";
+} from "@/modules/bodies/services/anim-clip.service.js";
 import { MONSTER_DEFINITIONS } from "@/modules/monsters/seeds/monster.seed-data.js";
 
 const clips = AnimClipsSchema.parse({

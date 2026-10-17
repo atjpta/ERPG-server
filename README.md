@@ -24,18 +24,18 @@ Script tự tạo hoặc đăng nhập `test-swordsman@erpg.local`, `test-archer
 Có thể đổi địa chỉ server bằng `SERVER_URL` và mật khẩu bằng `TEST_USER_PASSWORD`.
 
 Token được in ra terminal và lưu tại `generated/local-test-tokens.json` (đã được Git bỏ qua).
-Dùng `playerToken` để join room `world` với `mapCode` trong thông tin player, hoặc gọi `/players/me`;
-dùng `token` cho các API `/auth`. Chạy lại script để lấy token mới; nếu bật chế độ một session/user,
+Dùng `playerToken` để join room `world` với `mapCode` trong thông tin player, hoặc gọi `/user/players/me`;
+dùng `token` cho các API `/user/auth`. Chạy lại script để lấy token mới; nếu bật chế độ một session/user,
 phiên cũ của hai tài khoản test sẽ bị thu hồi.
 
 ## Luồng client (Unity)
 
 1. `GET /master-data/client-version?platform=android&version=x.y.z` → `forceUpdate` thì mở `downloadUrl`.
 2. Đăng nhập:
-    - **Android** — Credential Manager / Sign in with Google lấy `idToken` (nonce từ `POST /auth/oauth/nonce`)
-      → `POST /auth/oauth/google/login` `{ idToken, nonce, platform: "android", clientVersion, device }`.
+    - **Android** — Credential Manager / Sign in with Google lấy `idToken` (nonce từ `POST /user/auth/oauth/nonce`)
+      → `POST /user/auth/oauth/google/login` `{ idToken, nonce, platform: "android", clientVersion, device }`.
     - **PC** — Google OAuth desktop flow lấy `idToken` → cùng endpoint
-      `POST /auth/oauth/google/login` `{ idToken, nonce, platform: "pc", clientVersion, device }`.
+      `POST /user/auth/oauth/google/login` `{ idToken, nonce, platform: "pc", clientVersion, device }`.
 3. Response có `token` (user) + `playerToken` + `player` (map, toạ độ...).
 4. Join realtime: Colyseus Unity SDK, `client.Auth.Token = playerToken`,
    `JoinOrCreate<WorldState>("world", { mapCode = player.mapCode })`.
@@ -53,8 +53,8 @@ phiên cũ của hai tài khoản test sẽ bị thu hồi.
 - Google Cloud: tạo OAuth client loại **Web application** làm audience của ID token; cấu hình cùng Client ID trong
   Unity `googleServerClientId` và server `GOOGLE_WEB_CLIENT_ID`. Luồng ID token không cần Game server credential
   hay client secret. Endpoint Play Games `auth/oauth/play-games/login` cũ vẫn cần client secret nếu còn dùng.
-- Play Console → App content → Data safety → **Delete account URL**: `<PUBLIC_URL>/account-deletion`.
-- Trong game phải có nút xoá tài khoản → `DELETE /auth/account` (xoá ngay, token hết hiệu lực).
+- Play Console → App content → Data safety → **Delete account URL**: `<PUBLIC_URL>/user/account-deletion`.
+- Trong game phải có nút xoá tài khoản → `DELETE /user/auth/account` (xoá ngay, token hết hiệu lực).
 
 Tài liệu cho dev: [CLAUDE.md](CLAUDE.md), [docs/module-pattern.md](docs/module-pattern.md),
 [src/core/README.md](src/core/README.md).

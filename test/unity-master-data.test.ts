@@ -4,7 +4,7 @@ import {
     UNITY_MASTER_DATA_KEYS,
     isUnityMasterDataKey,
     loadUnityMasterData,
-} from "@/modules/master-data/utils/unity-master-data.util.js";
+} from "@/modules/master-data/services/unity-master-data.service.js";
 import { resolveNpcRule } from "@/modules/npcs/schemas/npc-config.schema.js";
 import {
     MonsterAiConfigSchema,

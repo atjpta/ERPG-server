@@ -2,10 +2,10 @@ import { randomUUID } from "node:crypto";
 import { matchMaker } from "colyseus";
 import { KickReason } from "@/modules/auth/enums/kick-reason.enum.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
-import { playerService } from "@/modules/player/user/services/player.service.js";
+import { playerService } from "@/modules/player/services/player.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
-import { PartyError, PartyModel } from "@/modules/party/party.model.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
+import { PartyError, PartyModel } from "@/modules/party/services/party.model.js";
 import type { PartyLootMode, PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
 import { BasePlayerRoom, type PlayerClient } from "@/rooms/base/base-player.room.js";
@@ -177,7 +177,11 @@ export class PartyRoom extends BasePlayerRoom<{ state: PartyState; client: Playe
      */
     async requestJoin(fromPlayerId: string, fromName: string): Promise<PartyNoticeCode> {
         if (!this.model) return PartyNoticeCode.TARGET_NOT_IN_PARTY;
-        const error = this.model.canInvite(this.model.leaderId, fromPlayerId, this.clock.currentTime);
+        const error = this.model.canInvite(
+            this.model.leaderId,
+            fromPlayerId,
+            this.clock.currentTime
+        );
         if (error) return NOTICE_BY_ERROR[error];
         const leaderWorldRoomId = this.worldRoomOf.get(this.model.leaderId);
         if (!leaderWorldRoomId) return PartyNoticeCode.TARGET_OFFLINE;

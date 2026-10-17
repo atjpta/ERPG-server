@@ -15,7 +15,7 @@ Node/option có `textKey` riêng thì dùng key đó. `yarn config:export` xuấ
 
 ## Thêm map
 
-1. Khai báo map trong `src/modules/maps/definitions/<code>.json` (Map Lab của Unity) (config: loại, level, quái ở marker nào, NPC slot, portal...) → [map-file-format.md](map-file-format.md).
+1. Khai báo map trong `src/modules/maps/data/definitions/<code>.json` (Map Lab của Unity) (config: loại, level, quái ở marker nào, NPC slot, portal...) → [map-file-format.md](map-file-format.md).
 2. `yarn config:export` xuất `map-markers.json`; Unity đặt vị trí các marker đó rồi export `<mapCode>.map.json` (chỉ vị trí) vào `src/modules/maps/data/`.
 3. `yarn seed`. Seed dừng nếu portal trỏ tới map/spawn không có, layout có marker lạ, hoặc code NPC/item/monster/thoại sai (`ContentRefsCheck`). Marker chưa có vị trí chỉ cảnh báo.
 
@@ -86,7 +86,7 @@ Server → client: `interactResult` (lỗi chuyển map: `level_too_low`, `map_n
 
 ## Minimap
 
-Server không render ảnh: client dùng sprite theo `map.code`. `GET /maps/:code/content` trả layout (collider, spawn, NPC, portal, `contentHash`);
+Server không render ảnh: client dùng sprite theo `map.code`. `GET /user/maps/:code/content` trả layout (collider, spawn, NPC, portal, `contentHash`);
 marker NPC theo quest của riêng player đến qua message `npcMarkers`.
 
 ## Phía Unity cần làm theo

@@ -19,14 +19,14 @@ import {
     mapMarkerList,
     validateDefinitionRefs,
     validateLayoutAgainstDefinition,
-} from "@/modules/maps/utils/map-build.util.js";
+} from "@/modules/maps/seeds/map-build.seed-util.js";
 import {
     hasVisited,
     listTeleportDestinations,
     teleportStatus,
     visitedFlagKey,
-} from "@/modules/maps/utils/teleport.util.js";
-import { hashMapLayout, parseMapLayout } from "@/modules/maps/utils/map-file.util.js";
+} from "@/modules/maps/services/teleport.service.js";
+import { hashMapLayout, parseMapLayout } from "@/modules/maps/services/map-file.service.js";
 
 const definition = (extra: Partial<MapDefinitionInput> = {}) =>
     MapDefinitionSchema.parse({

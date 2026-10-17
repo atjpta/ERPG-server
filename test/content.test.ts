@@ -9,28 +9,28 @@ import {
 import {
     evaluateConditions,
     type ConditionContext,
-} from "@/modules/dialogues/utils/condition.util.js";
-import { validateDialogueGraph } from "@/modules/dialogues/utils/dialogue-graph.util.js";
-import { selectDialogueCode } from "@/modules/dialogues/utils/dialogue-rule.util.js";
+} from "@/modules/dialogues/services/condition.service.js";
+import { validateDialogueGraph } from "@/modules/dialogues/services/dialogue-graph.service.js";
+import { selectDialogueCode } from "@/modules/dialogues/services/dialogue-rule.service.js";
 import { DIALOGUES } from "@/modules/dialogues/seeds/dialogue.seed-data.js";
 import { loadMapDefinitions } from "@/modules/maps/seeds/game-map.seed.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { MONSTER_DEFINITIONS } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { QuestCategory } from "@/modules/quests/enums/quest.enum.js";
-import { unlockedFeatures, unlockFlagKey } from "@/modules/quests/utils/unlock.util.js";
+import { unlockedFeatures, unlockFlagKey } from "@/modules/quests/services/unlock.service.js";
 import { NPCS } from "@/modules/npcs/seeds/npc.seed-data.js";
 import { QuestObjectiveType, QuestRepeat, QuestState } from "@/modules/quests/enums/quest.enum.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
 import type { PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
 import { QUESTS } from "@/modules/quests/seeds/quest.seed-data.js";
 import { QuestDefinitionSchema } from "@/modules/quests/schemas/quest.schema.js";
-import { findContentRefErrors } from "@/modules/quests/utils/content-refs.util.js";
+import { findContentRefErrors } from "@/modules/quests/seeds/content-refs.seed-util.js";
 import {
     applyQuestEvent,
     canAcceptQuest,
     newQuestEntry,
     questStateOf,
-} from "@/modules/quests/utils/quest-progress.util.js";
+} from "@/modules/quests/services/quest-progress.service.js";
 
 const ctx = (overrides: Partial<ConditionContext> = {}): ConditionContext => ({
     level: 5,

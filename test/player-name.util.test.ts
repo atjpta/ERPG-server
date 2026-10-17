@@ -3,7 +3,7 @@ import {
     PLAYER_NAME_PATTERN,
     playerNameLength,
     randomPlayerName,
-} from "@/modules/player/utils/player-name.util.js";
+} from "@/modules/player/services/player-name.service.js";
 
 describe("player-name.util", () => {
     it("đếm độ dài theo ký tự, kể cả tiếng Việt có dấu", () => {

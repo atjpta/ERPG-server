@@ -5,13 +5,13 @@ import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import {
     PlayerStatService,
     playerStatService,
-} from "@/modules/player/user/services/player-stat.service.js";
+} from "@/modules/player/services/player-stat.service.js";
 import { PartyLootMode } from "@/modules/party/schemas/party.schema.js";
 import type { DungeonSession } from "@/modules/maps/entities/game-map.entity.js";
 import type { FlagValue } from "@/modules/dialogues/schemas/condition.schema.js";
 import type { PlayerDailyQuests } from "@/modules/quests/schemas/daily-quest.schema.js";
 import type { PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
-import type { PlayerSnapshot } from "@/modules/player/user/services/player.service.js";
+import type { PlayerSnapshot } from "@/modules/player/types/player.type.js";
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
 import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
 import { classService } from "@/modules/classes/services/class.service.js";
@@ -25,10 +25,10 @@ import {
     type Inventories,
 } from "@/modules/player/schemas/inventory.schema.js";
 import type { AttributeKey, Attributes, Stats } from "@/modules/player/schemas/stat.schema.js";
-import { allocateAttributePoints } from "@/modules/player/utils/player-progress.util.js";
+import { allocateAttributePoints } from "@/modules/player/services/player-progress.service.js";
 import type { AttributeSummary } from "@/rooms/world/world.message.js";
 import type { DamageCombatant } from "@/rooms/world/combat/chains/damage.world.chain.js";
-import { classBody } from "@/modules/bodies/utils/entity-body.util.js";
+import { classBody } from "@/modules/bodies/services/entity-body.service.js";
 import { HitboxColliderState } from "@/rooms/world/schema/hitbox-collider.world.state.js";
 import {
     OwnedSkillState,

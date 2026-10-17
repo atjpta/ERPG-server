@@ -3,7 +3,7 @@ import {
     buildUsableItemClassCodes,
     validateClassTree,
     type ClassTreeNode,
-} from "@/modules/classes/utils/class-tree.util.js";
+} from "@/modules/classes/services/class-tree.service.js";
 
 /**
  *   swordsman (t1) ─┬─> knight (t2) ─┬─> paladin (t3)

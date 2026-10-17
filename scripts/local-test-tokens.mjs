@@ -17,12 +17,12 @@ const accounts = classCodes.map((classCode) => ({
 async function ensurePlayer(email, classCode, value) {
     if (value?.player && value?.playerToken) return value;
     const headers = { "content-type": "application/json", authorization: `Bearer ${value.token}` };
-    const nameResponse = await fetch(`${serverUrl}/players/random-name`, {
+    const nameResponse = await fetch(`${serverUrl}/user/players/random-name`, {
         headers,
         signal: AbortSignal.timeout(15_000),
     });
     const name = (await nameResponse.json())?.data?.name;
-    const response = await fetch(`${serverUrl}/players`, {
+    const response = await fetch(`${serverUrl}/user/players`, {
         method: "POST",
         headers,
         body: JSON.stringify({ name, classCode }),
@@ -31,7 +31,7 @@ async function ensurePlayer(email, classCode, value) {
     const payload = await response.json();
     if (!response.ok) {
         throw new Error(
-            `${email}: POST /players -> ${response.status} ${payload?.code ?? ""} ${payload?.message ?? response.statusText}`
+            `${email}: POST /user/players -> ${response.status} ${payload?.code ?? ""} ${payload?.message ?? response.statusText}`
         );
     }
     return { ...value, ...payload.data };
@@ -68,7 +68,7 @@ async function authenticate({ email, classCode }) {
 
     // Registration already issues both tokens. Only log in if the account exists.
     for (const action of ["register", "login"]) {
-        const response = await fetch(`${serverUrl}/auth/${action}`, {
+        const response = await fetch(`${serverUrl}/user/auth/${action}`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body,
@@ -85,7 +85,7 @@ async function authenticate({ email, classCode }) {
         }
         if (!response.ok) {
             throw new Error(
-                `${email}: POST /auth/${action} -> ${response.status} ` +
+                `${email}: POST /user/auth/${action} -> ${response.status} ` +
                     `${payload?.code ?? ""} ${payload?.message ?? response.statusText}`
             );
         }
@@ -111,7 +111,7 @@ try {
     await writeFile(outputFile, `${json}\n`, { mode: 0o600 });
     console.info(json);
     console.error(`Saved tokens to ${outputFile}`);
-    console.error("Use playerToken for Colyseus rooms and /players; token for /auth.");
+    console.error("Use playerToken for Colyseus rooms and /user/players; token for /user/auth.");
 } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(`Check that ${serverUrl} is running and the database is migrated and seeded.`);

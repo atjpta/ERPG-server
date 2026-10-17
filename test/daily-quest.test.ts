@@ -14,7 +14,7 @@ import {
     dailyTierFor,
     generateDailyQuests,
     needsNewDailyQuests,
-} from "@/modules/quests/utils/daily-quest.util.js";
+} from "@/modules/quests/services/daily-quest.service.js";
 
 const config = DEFAULT_DAILY_QUEST_CONFIG;
 

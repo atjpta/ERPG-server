@@ -8,8 +8,8 @@ import {
     freeSlotCount,
     moveInventorySlot,
     removeFromInventory,
-} from "@/modules/player/utils/inventory.util.js";
-import { debitWallet } from "@/modules/player/utils/player-progress.util.js";
+} from "@/modules/player/services/inventory.service.js";
+import { debitWallet } from "@/modules/player/services/player-progress.service.js";
 import { createWallet } from "@/modules/player/schemas/wallet.schema.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 

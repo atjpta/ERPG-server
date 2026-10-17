@@ -8,11 +8,14 @@ import {
 } from "@/modules/party/schemas/party.schema.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
-import { PartyError, PartyModel } from "@/modules/party/party.model.js";
+import { PartyError, PartyModel } from "@/modules/party/services/party.model.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
-import { shareKillReward, withinLevelGap } from "@/modules/party/utils/party-loot.util.js";
-import { splitPartyExp } from "@/modules/party/utils/party-exp.util.js";
-import { checkPartyDungeonEntry, nextLeader } from "@/modules/party/utils/party-rules.util.js";
+import { shareKillReward, withinLevelGap } from "@/modules/party/services/party-loot.service.js";
+import { splitPartyExp } from "@/modules/party/services/party-exp.service.js";
+import {
+    checkPartyDungeonEntry,
+    nextLeader,
+} from "@/modules/party/services/party-rules.service.js";
 
 const member = (id: string, extra: Partial<PartyMemberInfo> = {}): PartyMemberInfo => ({
     playerId: id,

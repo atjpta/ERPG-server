@@ -7,6 +7,7 @@ import { connectPostgres } from "@/configs/postgres.config.js";
 import { applyCorsPolicy } from "@/configs/cors.config.js";
 import { connectRedisCache, createRedisScaling } from "@/configs/redis.config.js";
 import { loadControllers } from "@/core/utils/load-controllers.util.js";
+import { prefixEndpoints } from "@/core/utils/prefix-endpoints.util.js";
 import { createRooms } from "@/rooms/index.room.js";
 import { setCacheDataApp } from "@/cache-data/index.js";
 import { GameMapRepo } from "@/modules/maps/repositories/game-map.repository.js";
@@ -15,7 +16,7 @@ import { warnMapLayouts } from "@/modules/maps/seeds/game-map.seed.js";
 await connectPostgres();
 await connectRedisCache();
 applyCorsPolicy();
-const controllers = await loadControllers();
+const { admin, user } = await loadControllers();
 await setCacheDataApp();
 warnMapLayouts(await GameMapRepo.findIncompleteLayouts());
 await listen(
@@ -40,7 +41,8 @@ await listen(
             health: createEndpoint("/health", { method: "GET" }, async () => {
                 return { message: "OK" };
             }),
-            ...controllers,
+            ...prefixEndpoints("/admin", admin),
+            ...prefixEndpoints("/user", user),
         }),
         transport: new uWebSocketsTransport({}, {}),
     }),

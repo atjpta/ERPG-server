@@ -1,4 +1,4 @@
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { resolvePlayerTargetRule } from "@/modules/master-data/schemas/player-target-config.schema.js";
 

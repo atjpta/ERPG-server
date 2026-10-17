@@ -7,9 +7,9 @@
  * Dùng chung cho SkillSeed (skill `{code}_attack`) và MonsterSeed.
  */
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
-import { monsterAttackMs } from "@/modules/bodies/utils/anim-clip.util.js";
+import { monsterAttackMs } from "@/modules/bodies/services/anim-clip.service.js";
 import { loadResolvedMonsters } from "@/modules/monsters/seeds/monster-file.util.js";
-import { monsterBody } from "@/modules/bodies/utils/entity-body.util.js";
+import { monsterBody } from "@/modules/bodies/services/entity-body.service.js";
 import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";

@@ -23,7 +23,7 @@ import { DEFAULT_MONSTER_AI_CONFIG } from "@/modules/monsters/schemas/monster-ai
 import {
     isUnityMasterDataKey,
     loadUnityMasterData,
-} from "@/modules/master-data/utils/unity-master-data.util.js";
+} from "@/modules/master-data/services/unity-master-data.service.js";
 import type { MasterDataValueMap } from "@/modules/master-data/schemas/master-data-value.schema.js";
 
 const MAX_LEVEL = 100;

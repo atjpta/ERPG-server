@@ -1,7 +1,7 @@
 import { createMiddleware } from "colyseus";
 import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { Response } from "@/core/utils/response.util.js";
-import { adminAuthService } from "@/modules/auth/admin/services/admin.auth.service.js";
+import { adminSessionService } from "@/modules/auth/services/admin-session.service.js";
 import type { AuthAdmin } from "@/modules/auth/types/auth-user.type.js";
 
 /** Xác thực token admin (ký bằng `ADMIN_JWT_SECRET`) — `ctx.context` = `AuthAdmin`. */
@@ -18,7 +18,7 @@ export const adminAuthMiddleware = createMiddleware(
 
         let tokenData: AuthAdmin;
         try {
-            tokenData = adminAuthService.verifyToken(authHeader!.slice(7));
+            tokenData = adminSessionService.verifyToken(authHeader!.slice(7));
         } catch {
             Response.unauthorized(ctx, {
                 message: "🔒 Invalid or expired token",
@@ -27,7 +27,7 @@ export const adminAuthMiddleware = createMiddleware(
         }
 
         // Luôn đọc lại DB — admin bị vô hiệu hoá thì token cũ mất hiệu lực ngay.
-        const admin = await adminAuthService.getActiveById(tokenData!.adminId);
+        const admin = await adminSessionService.getActiveById(tokenData!.adminId);
         if (!admin) {
             Response.forbidden(ctx, {
                 message: "🚫 Admin access required",

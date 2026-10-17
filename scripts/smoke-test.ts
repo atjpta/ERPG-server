@@ -26,18 +26,22 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const client = { platform: "android", clientVersion: "0.0.1", device: "smoke-test" };
 const email = `smoke_${Date.now()}@erpg.local`;
 
-await api("GET", "/game-servers");
-await api("GET", "/maps");
+await api("GET", "/user/game-servers");
+await api("GET", "/user/maps");
 
-const registered = await api("POST", "/auth/register", { email, password: "123456", ...client });
-await api("GET", "/auth/me", undefined, registered.token);
+const registered = await api("POST", "/user/auth/register", {
+    email,
+    password: "123456",
+    ...client,
+});
+await api("GET", "/user/auth/me", undefined, registered.token);
 if (registered.player !== null || registered.playerToken !== null) {
-    throw new Error("new account must not have a player before POST /players");
+    throw new Error("new account must not have a player before POST /user/players");
 }
-const starterClasses = await api<{ code: string }[]>("GET", "/classes/starter");
+const starterClasses = await api<{ code: string }[]>("GET", "/user/classes/starter");
 const auth = await api(
     "POST",
-    "/players",
+    "/user/players",
     { name: `Smoke${Date.now() % 100000}`, classCode: starterClasses[0].code },
     registered.token
 );
@@ -46,11 +50,16 @@ if (!Object.values(auth.player.equipments).every(Boolean)) {
 }
 
 // Login khách: cùng IP → cùng tài khoản.
-const guest = await api("POST", "/auth/guest/login", client);
-const guestAgain = await api("POST", "/auth/guest/login", client);
+const guest = await api("POST", "/user/auth/guest/login", client);
+const guestAgain = await api("POST", "/user/auth/guest/login", client);
 if (guest.userId !== guestAgain.userId)
     throw new Error("guest login must map the same IP to the same user");
-await api("PUT", "/players/me/name", { name: `Smoke${Date.now() % 100000}` }, auth.playerToken);
+await api(
+    "PUT",
+    "/user/players/me/name",
+    { name: `Smoke${Date.now() % 100000}` },
+    auth.playerToken
+);
 
 const sdk = new Client(SERVER_URL);
 sdk.auth.token = auth.playerToken;
@@ -74,7 +83,7 @@ if (!(moved.x > startX)) throw new Error("Player did not move");
 
 // ---- NPC, thoại, quest, vật thể ---------------------------------------------------------------
 // Chỉ chạy khi map hiện tại có NPC `village_chief` (greenfield_village).
-const content = await api("GET", `/maps/${auth.player.mapCode}/content`);
+const content = await api("GET", `/user/maps/${auth.player.mapCode}/content`);
 if (!content.contentHash) throw new Error("map content must carry contentHash");
 if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chief")) {
     const chief = content.npcs.find((npc: { npcCode: string }) => npc.npcCode === "village_chief");
@@ -158,7 +167,7 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
 
     // Người chơi thứ hai: tài khoản + nhân vật + world room cùng map.
     const email2 = `smoke2_${Date.now()}@erpg.local`;
-    const reg2 = await api("POST", "/auth/register", {
+    const reg2 = await api("POST", "/user/auth/register", {
         email: email2,
         password: "123456",
         ...client,
@@ -166,7 +175,7 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
     const name2 = `Smk${Date.now() % 100000}`;
     const created2 = await api(
         "POST",
-        "/players",
+        "/user/players",
         { name: name2, classCode: starterClasses[0].code },
         reg2.token
     );
@@ -210,7 +219,7 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
 
 await room.leave();
 await sleep(500);
-const saved = await api("GET", "/players/me", undefined, auth.playerToken);
+const saved = await api("GET", "/user/players/me", undefined, auth.playerToken);
 console.info(`✅ saved position x=${saved.x.toFixed(2)} y=${saved.y}`);
 if (Math.abs(saved.x - moved.x) > 0.01) throw new Error("Position was not saved");
 

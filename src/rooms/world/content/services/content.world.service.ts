@@ -1,7 +1,7 @@
 import { itemService } from "@/modules/items/services/item.service.js";
-import type { ConditionContext } from "@/modules/dialogues/utils/condition.util.js";
+import type { ConditionContext } from "@/modules/dialogues/services/condition.service.js";
 import { QuestState } from "@/modules/quests/enums/quest.enum.js";
-import { questStateOf } from "@/modules/quests/utils/quest-progress.util.js";
+import { questStateOf } from "@/modules/quests/services/quest-progress.service.js";
 import { questOf } from "@/rooms/world/content/utils/quest-resolve.world.util.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import { inventoryWorldService } from "@/rooms/world/inventory/services/inventory.world.service.js";

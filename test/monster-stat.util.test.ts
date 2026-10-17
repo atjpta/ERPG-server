@@ -4,7 +4,7 @@ import {
     combineRewardScale,
     computeMonsterStats,
     monsterScales,
-} from "@/modules/monsters/utils/monster-stat.util.js";
+} from "@/modules/monsters/services/monster-stat.service.js";
 import { DEFAULT_MONSTER_SCALE_CONFIG } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";

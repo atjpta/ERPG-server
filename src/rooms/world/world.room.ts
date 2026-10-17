@@ -48,7 +48,7 @@ import type {
 import { playerViewWorldService } from "@/rooms/world/players/services/player-view.world.service.js";
 import { PlayerTargetSchema } from "@/rooms/world/inventory/validators/inventory.world.validator.js";
 import type { PartyLootMode, PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
-import { visitedFlagKey } from "@/modules/maps/utils/teleport.util.js";
+import { visitedFlagKey } from "@/modules/maps/services/teleport.service.js";
 import { dungeonWorldService } from "@/rooms/world/dungeons/services/dungeon.world.service.js";
 import { dialogueWorldService } from "@/rooms/world/content/services/dialogue.world.service.js";
 import { questWorldService } from "@/rooms/world/content/services/quest.world.service.js";

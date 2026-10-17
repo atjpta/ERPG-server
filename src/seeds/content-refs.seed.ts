@@ -6,7 +6,7 @@ import { loadMapDefinitions } from "@/modules/maps/seeds/game-map.seed.js";
 import { Monsters } from "@/modules/monsters/entities/monster.entity.js";
 import { Npcs } from "@/modules/npcs/entities/npc.entity.js";
 import { Quests } from "@/modules/quests/entities/quest.entity.js";
-import { findContentRefErrors } from "@/modules/quests/utils/content-refs.util.js";
+import { findContentRefErrors } from "@/modules/quests/seeds/content-refs.seed-util.js";
 
 /** Chạy sau mọi seed nội dung: tham chiếu code sai (NPC, item, quest, thoại...) thì dừng seed. */
 export const ContentRefsCheck = async () => {

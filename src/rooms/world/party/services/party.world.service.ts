@@ -1,13 +1,13 @@
 import { matchMaker, type Room } from "colyseus";
 import type { PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import type { PartyLootMode } from "@/modules/party/schemas/party.schema.js";
-import { shareKillReward } from "@/modules/party/utils/party-loot.util.js";
+import { shareKillReward } from "@/modules/party/services/party-loot.service.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { Reward } from "@/modules/rewards/types/reward.type.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
-import { mapService } from "@/modules/maps/user/services/map.service.js";
+import { mapService } from "@/modules/maps/services/map.service.js";
 import { dungeonWorldService } from "@/rooms/world/dungeons/services/dungeon.world.service.js";
 import { partyDirectoryService } from "@/modules/party/services/party-directory.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";

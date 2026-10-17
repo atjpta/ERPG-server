@@ -8,7 +8,7 @@ import {
     DamageScalingType,
 } from "@/modules/skills/enums/skill.enum.js";
 import { DEFAULT_PLAYER_TARGET_CONFIG } from "@/modules/master-data/schemas/player-target-config.schema.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import { sendSkillConfigs } from "@/rooms/world/combat/services/skill-config.world.service.js";

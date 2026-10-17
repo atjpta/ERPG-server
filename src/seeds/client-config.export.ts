@@ -9,10 +9,10 @@ import {
     PlayerTargetConfigSchema,
 } from "@/modules/master-data/schemas/player-target-config.schema.js";
 import { loadMapDefinitions } from "@/modules/maps/seeds/game-map.seed.js";
-import { mapMarkerList } from "@/modules/maps/utils/map-build.util.js";
+import { mapMarkerList } from "@/modules/maps/seeds/map-build.seed-util.js";
 import { NpcRepo } from "@/modules/npcs/repositories/npc.repository.js";
 import { QuestRepo } from "@/modules/quests/repositories/quest.repository.js";
-import { collectLocaleKeys } from "@/modules/quests/utils/locale-keys.util.js";
+import { collectLocaleKeys } from "@/modules/quests/seeds/locale-keys.seed-util.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
 import { buildClientSkillConfig } from "@/rooms/world/combat/utils/skill-config.world.util.js";
 

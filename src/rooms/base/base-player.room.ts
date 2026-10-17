@@ -5,8 +5,8 @@ import {
     playerKickService,
     userKickTopic,
     type KickMessage,
-} from "@/modules/auth/user/services/player-kick.service.js";
-import { playerAuthService } from "@/modules/auth/user/services/player-auth.service.js";
+} from "@/modules/auth/services/player-kick.service.js";
+import { playerAuthService } from "@/modules/auth/services/player-auth.service.js";
 
 export type PlayerClient = Client<{ auth: AuthPlayer }>;
 

@@ -1,5 +1,5 @@
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import { buildClientSkillConfig } from "@/rooms/world/combat/utils/skill-config.world.util.js";

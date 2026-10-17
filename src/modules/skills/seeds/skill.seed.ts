@@ -1,6 +1,6 @@
 import { Skills } from "@/modules/skills/entities/skill.entity.js";
 import { loadSkillFiles, skillFileToRow } from "@/modules/skills/seeds/skill-file.util.js";
-import { skillClipWarnings } from "@/modules/bodies/utils/anim-clip.util.js";
+import { skillClipWarnings } from "@/modules/bodies/services/anim-clip.service.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
 
 /**

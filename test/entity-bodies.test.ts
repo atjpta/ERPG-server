@@ -1,6 +1,10 @@
 import { strict as assert } from "node:assert";
 import { EntityBodiesSchema } from "@/modules/bodies/schemas/entity-bodies.schema.js";
-import { classBody, monsterBody, npcCollider } from "@/modules/bodies/utils/entity-body.util.js";
+import {
+    classBody,
+    monsterBody,
+    npcCollider,
+} from "@/modules/bodies/services/entity-body.service.js";
 import { NPCS } from "@/modules/npcs/seeds/npc.seed-data.js";
 import { MONSTER_DEFINITIONS } from "@/modules/monsters/seeds/monster.seed-data.js";
 

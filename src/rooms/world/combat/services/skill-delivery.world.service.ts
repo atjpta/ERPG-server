@@ -9,7 +9,7 @@ import {
     SkillEffectType,
 } from "@/modules/skills/enums/skill.enum.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
-import { PlayerStatService } from "@/modules/player/user/services/player-stat.service.js";
+import { PlayerStatService } from "@/modules/player/services/player-stat.service.js";
 import { AuraWorldState } from "@/rooms/world/schema/aura.world.state.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import {

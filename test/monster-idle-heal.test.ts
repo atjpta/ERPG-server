@@ -4,7 +4,7 @@ import type { MonsterChainContext } from "@/rooms/world/monsters/chains/monster.
 import { MapSpawnKind } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { MapDefinitionSchema } from "@/modules/maps/schemas/map-definition.schema.js";
-import { expandMonsterGroup } from "@/modules/maps/utils/map-build.util.js";
+import { expandMonsterGroup } from "@/modules/maps/seeds/map-build.seed-util.js";
 
 const TICK_RATE = 20;
 

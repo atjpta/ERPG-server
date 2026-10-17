@@ -61,7 +61,7 @@ init project mới thì làm theo đúng thứ tự này.
 | `entities/base.entity.ts`              | `baseColumns()` (id UUID v7, createdAt, updatedAt), `baseWithCodeColumns()`                                                                       |
 | `repositories/base.repository.ts`      | CRUD chung, **mọi method nhận 1 object param** (`{ id, data, dbOrTx }`), `withTransaction()`                                                      |
 | `services/base.service.ts`             | Mirror 1-1 các hàm của `BaseRepository` (cùng tên, cùng param) — service kế thừa để có sẵn CRUD                                                   |
-| `utils/load-controllers.util.ts`       | Quét `*.controller.ts` trong `modules/` + `rooms/`, gom export tên kết thúc `Controller` (báo lỗi nếu trùng key endpoint)                         |
+| `utils/load-controllers.util.ts`       | Quét `*.controller.ts` trong `api/admin/` + `api/user/`, gom export tên kết thúc `Controller` (báo lỗi nếu trùng key endpoint)                    |
 | `utils/response.util.ts`               | `Response.ok/created/badRequest/...` + `RouterContainer` (bắt ZodError → 422, `serviceError` → đúng status)                                       |
 | `utils/service-error.ts`               | `serviceError(message, status, ResponseCode)` — throw trong service                                                                               |
 | `utils/rate-limit.util.ts`             | `assertRateLimit(rule, identity)` — fixed window qua `cacheService.incr`, vượt → 429. `getClientIp()` chỉ tin header proxy khi `TRUST_PROXY=true` |
@@ -76,17 +76,16 @@ init project mới thì làm theo đúng thứ tự này.
 
 ## 5. Module pattern (`src/modules/<module>/`)
 
-```
-<module>/
-├── entities/  enums/  repositories/  constants/  types/  middlewares/  seeds/   # dùng chung
-├── user/
-│   ├── controllers/<name>.controller.ts        # export `<name>Controller`
-│   ├── services/<name>.service.ts
-│   └── validators/<name>.validator.ts
-└── admin/
-    ├── controllers/admin.<name>.controller.ts  # export `admin<Name>Controller`, prefix `/admin/...`
-    ├── services/admin.<name>.service.ts
-    └── validators/admin.<name>.validator.ts
+```text
+src/modules/<module>/       # shared business/data categories; see docs/module-pattern.md
+src/apis/user/<module>/
+|-- controllers/user.<name>.controller.ts
+|-- services/user.<name>.service.ts
+`-- validators/user.<name>.validator.ts
+src/apis/admin/<module>/
+|-- controllers/admin.<name>.controller.ts
+|-- services/admin.<name>.service.ts
+`-- validators/admin.<name>.validator.ts
 ```
 
 Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
@@ -97,20 +96,20 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
     - User: đăng ký/đăng nhập email, session theo thiết bị (platform + clientVersion), logout 1/tất cả thiết bị.
     - Đăng nhập Google — **không có "Play Games v3"** (09/2026 bản mới nhất là Play Games Services **v2 SDK**,
       plugin Unity `play-games-plugin-for-unity` v2.2.x; Google Sign-In cũ đã deprecated):
-        - Android: `POST /auth/oauth/play-games/login` `{ serverAuthCode }` — server đổi code (Web Client ID +
+        - Android: `POST /user/auth/oauth/play-games/login` `{ serverAuthCode }` — server đổi code (Web Client ID +
           Secret, `redirect_uri` rỗng) rồi gọi `games/v1/players/me`. Client xin thêm scope `OPEN_ID` →
           có idToken → liên kết luôn danh tính Google (`sub`) để PC đăng nhập ra cùng tài khoản.
-        - PC: `POST /auth/oauth/google/login` `{ idToken, nonce? }`.
+        - PC: `POST /user/auth/oauth/google/login` `{ idToken, nonce? }`.
         - 1 user nhiều danh tính (`user_oauth_accounts`): `findOrCreateOauthUser()` tìm theo bất kỳ danh tính
           nào, gắn thêm danh tính còn thiếu.
-    - **Xoá tài khoản (bắt buộc theo Google Play)**: trong app `DELETE /auth/account` (xoá ngay), web
-      `GET /account-deletion` (trang HTML khai báo trên Play Console) → admin xử lý ở
+    - **Xoá tài khoản (bắt buộc theo Google Play)**: trong app `DELETE /user/auth/account` (xoá ngay), web
+      `GET /user/account-deletion` (trang HTML khai báo trên Play Console) → admin xử lý ở
       `/admin/account-deletion-requests`. Xoá = xoá dữ liệu game + liên kết + session, ẩn danh `users`
       (`AccountDeletionService.purgeUserData` — **thêm bảng dữ liệu người chơi mới thì phải xoá ở đây**).
     - Rate limit: đăng ký/đăng nhập theo IP + số lần thử mật khẩu theo email (`constants/rate-limit.constant.ts`).
     - Player: user 1:N player, tối đa `player_config.maxCharacters` (độ dài tên `nameMinLength` /
-      `nameMaxLength`). `GET /players` liệt kê + giới hạn, `GET /players/random-name`, `POST /players`
-      tạo, `POST /players/:id/select` lấy `playerToken`; login trả sẵn token của nhân vật đầu tiên.
+      `nameMaxLength`). `GET /user/players` liệt kê + giới hạn, `GET /user/players/random-name`, `POST /user/players`
+      tạo, `POST /user/players/:id/select` lấy `playerToken`; login trả sẵn token của nhân vật đầu tiên.
     - 3 loại token: user (`authMiddleware`), player (`playerAuthMiddleware`, join room), admin (`adminAuthMiddleware`, secret riêng).
 - `master-data/` — config key-value, `value` validate bằng zod theo từng key (`MasterDataValueSchemas`);
   check phiên bản client (`GET /master-data/client-version`, login bị chặn 426 nếu dưới `minVersion`).

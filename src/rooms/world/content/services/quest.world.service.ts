@@ -17,8 +17,8 @@ import {
     newQuestEntry,
     objectiveCurrent,
     type QuestEvent,
-} from "@/modules/quests/utils/quest-progress.util.js";
-import { resolveRewardSpec } from "@/modules/rewards/utils/reward-spec.util.js";
+} from "@/modules/quests/services/quest-progress.service.js";
+import { resolveRewardSpec } from "@/modules/rewards/services/reward-spec.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import { contentWorldService } from "@/rooms/world/content/services/content.world.service.js";
@@ -27,14 +27,14 @@ import { rewardWorldService } from "@/rooms/world/rewards/services/reward.world.
 import { worldService } from "@/rooms/world/core/services/world.service.js";
 import { TIME_ZONE } from "@/configs/time.config.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
 import {
     dailyDateKey,
     generateDailyQuests,
     needsNewDailyQuests,
-} from "@/modules/quests/utils/daily-quest.util.js";
-import { unlockedFeatures, unlockFlagKey } from "@/modules/quests/utils/unlock.util.js";
+} from "@/modules/quests/services/daily-quest.service.js";
+import { unlockedFeatures, unlockFlagKey } from "@/modules/quests/services/unlock.service.js";
 import { worldEvents } from "@/rooms/world/core/utils/world-events.js";
 import {
     WorldMessage,

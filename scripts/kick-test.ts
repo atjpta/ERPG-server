@@ -29,14 +29,14 @@ async function api<T = any>(method: string, path: string, body?: unknown, token?
 async function register() {
     const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const email = `kick_${suffix}@erpg.local`;
-    const registered = await api("POST", "/auth/register", {
+    const registered = await api("POST", "/user/auth/register", {
         email,
         password: "123456",
         ...CLIENT,
     });
     const created = await api(
         "POST",
-        "/players",
+        "/user/players",
         { name: `Kick${suffix.slice(-8)}`, classCode: "swordsman" },
         registered.token
     );
@@ -97,7 +97,7 @@ const adminToken = (await api("POST", "/admin/auth/login", ADMIN)).token;
 {
     const auth = await register();
     const a = await join(auth.playerToken, auth.player.mapCode);
-    await api("POST", "/auth/logout", {}, auth.token);
+    await api("POST", "/user/auth/logout", {}, auth.token);
     await expectKicked("Logout", a.left, 4004);
 }
 
@@ -105,7 +105,7 @@ const adminToken = (await api("POST", "/admin/auth/login", ADMIN)).token;
 {
     const auth = await register();
     const a = await join(auth.playerToken, auth.player.mapCode);
-    await api("DELETE", "/auth/account", {}, auth.token);
+    await api("DELETE", "/user/auth/account", {}, auth.token);
     await expectKicked("Xoá tài khoản", a.left, 4003);
 }
 

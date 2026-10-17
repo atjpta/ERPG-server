@@ -13,7 +13,7 @@
 
 ## 1. Bản đồ & level hiển thị
 
-Server: `GET /maps` và `GET /maps/:code/content` trả `minLevel` (chỉ map `active`; map placeholder chưa có file Unity là `inactive` nên không trả).
+Server: `GET /user/maps` và `GET /user/maps/:code/content` trả `minLevel` (chỉ map `active`; map placeholder chưa có file Unity là `inactive` nên không trả).
 
 - [ ] Hiển thị **"Lv X+"** theo `minLevel` ở: tên map khi vào, loading, cổng/portal (tooltip khi đứng gần), world map/minimap header.
     - Greenfield Village (town, không level) · Greenfield Plains **Lv1+** · Whispering Forest **Lv10+** · Deep Evergrowth **Lv20+**. Dungeon: Slime Hollow Lv1+ (cap quái 10), Werewolf Den Lv10+ (cap 20), Sanctuary of Life Lv20+ (cap 30).
@@ -65,7 +65,7 @@ Server: join room `dungeon` (khác `world`), instance riêng mỗi lượt; chi 
 | `none`       | không hiện |                                                         |
 
 - [ ] Vẽ icon trên đầu NPC (sprite `!`/`?`, tint theo bảng). Cập nhật mỗi lần nhận `npcMarkers` (server gửi khi vào room, nhận/trả/bỏ quest, tiến độ đổi).
-- [ ] Hiện cùng icon trên **minimap** tại vị trí NPC (lấy từ `/maps/:code/content` hoặc `state.npcs`).
+- [ ] Hiện cùng icon trên **minimap** tại vị trí NPC (lấy từ `/user/maps/:code/content` hoặc `state.npcs`).
 
 ### 3.3 Chữ Q đánh dấu mục tiêu (message `questTargets`)
 

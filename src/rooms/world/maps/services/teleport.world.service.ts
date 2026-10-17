@@ -1,5 +1,5 @@
-import { teleportStatus, type TeleportStatus } from "@/modules/maps/utils/teleport.util.js";
-import { mapService } from "@/modules/maps/user/services/map.service.js";
+import { teleportStatus, type TeleportStatus } from "@/modules/maps/services/teleport.service.js";
+import { mapService } from "@/modules/maps/services/map.service.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import { contentWorldService } from "@/rooms/world/content/services/content.world.service.js";

@@ -1,6 +1,6 @@
 import { Command } from "@colyseus/command";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
-import { playerService } from "@/modules/player/user/services/player.service.js";
+import { playerService } from "@/modules/player/services/player.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 

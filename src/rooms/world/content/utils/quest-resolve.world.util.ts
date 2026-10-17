@@ -1,6 +1,6 @@
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
 import { questService } from "@/modules/quests/services/quest.service.js";
-import { dailyQuestToQuest } from "@/modules/quests/utils/daily-quest.util.js";
+import { dailyQuestToQuest } from "@/modules/quests/services/daily-quest.service.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 
 /** Quest theo code của riêng player: quest trong DB, hoặc quest hằng ngày đã sinh cho player này. */

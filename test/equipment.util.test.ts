@@ -21,15 +21,18 @@ import {
     dropLevelOf,
     rollEquipmentInstance,
     type Rng,
-} from "@/modules/equipment/utils/equipment-roll.util.js";
-import { equipmentBonuses, setBonuses } from "@/modules/equipment/utils/equipment-stat.util.js";
+} from "@/modules/equipment/services/equipment-roll.service.js";
+import {
+    equipmentBonuses,
+    setBonuses,
+} from "@/modules/equipment/services/equipment-stat.service.js";
 import {
     applyEnhance,
     applyRefine,
     disassembleYield,
     enhanceCost,
     refineCost,
-} from "@/modules/equipment/utils/equipment-upgrade.util.js";
+} from "@/modules/equipment/services/equipment-upgrade.service.js";
 import { EquipmentGroup, ItemEquipmentType } from "@/modules/items/enums/item-equipment.enum.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";

@@ -4,10 +4,10 @@ import {
     pickWeighted,
     dropLevelOf,
     type Rng,
-} from "@/modules/equipment/utils/equipment-roll.util.js";
+} from "@/modules/equipment/services/equipment-roll.service.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import type { Monster } from "@/modules/monsters/entities/monster.entity.js";
-import { scaleDropsToLevel } from "@/modules/monsters/utils/monster-spawn.util.js";
+import { scaleDropsToLevel } from "@/modules/monsters/services/monster-spawn.service.js";
 import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import type {
     EquipmentDrop,
@@ -17,11 +17,14 @@ import {
     combineRewardScale,
     monsterScales,
     type MonsterVariant,
-} from "@/modules/monsters/utils/monster-stat.util.js";
+} from "@/modules/monsters/services/monster-stat.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import type { ItemReward, Reward } from "@/modules/rewards/types/reward.type.js";
-import { rollDropRarity, rollMonsterReward } from "@/modules/rewards/utils/reward-roll.util.js";
+import {
+    rollDropRarity,
+    rollMonsterReward,
+} from "@/modules/rewards/services/reward-roll.service.js";
 
 /**
  * Roll phần thưởng khi giết monster, kể cả trang bị biome (cần catalog item + master data); exp,

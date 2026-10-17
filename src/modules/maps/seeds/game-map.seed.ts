@@ -11,8 +11,8 @@ import {
     buildPlaceholderRow,
     validateDefinitionRefs,
     validateLayoutAgainstDefinition,
-} from "@/modules/maps/utils/map-build.util.js";
-import { hashMapLayout, parseMapLayout } from "@/modules/maps/utils/map-file.util.js";
+} from "@/modules/maps/seeds/map-build.seed-util.js";
+import { hashMapLayout, parseMapLayout } from "@/modules/maps/services/map-file.service.js";
 
 const DATA_DIR = new URL("../data/", import.meta.url);
 
@@ -31,7 +31,7 @@ export const loadMapLayouts = (): MapLayout[] =>
             return layout;
         });
 
-const DEFINITIONS_DIR = new URL("../definitions/", import.meta.url);
+const DEFINITIONS_DIR = new URL("../data/definitions/", import.meta.url);
 
 /** Mọi `definitions/<code>.json` (mỗi map một file, do Map Lab của Unity ghi ra), đã kiểm schema. */
 export const loadMapDefinitionFiles = (): MapDefinition[] =>

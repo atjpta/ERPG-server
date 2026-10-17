@@ -10,7 +10,7 @@ import {
     rollMonsterLevel,
     rollMonsterVariant,
     scaleDropsToLevel,
-} from "@/modules/monsters/utils/monster-spawn.util.js";
+} from "@/modules/monsters/services/monster-spawn.service.js";
 
 const config = DEFAULT_MONSTER_SPAWN_CONFIG;
 const always = () => 0;

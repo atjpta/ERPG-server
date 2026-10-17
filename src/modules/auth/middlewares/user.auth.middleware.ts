@@ -2,7 +2,7 @@ import { createMiddleware } from "colyseus";
 import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { Response } from "@/core/utils/response.util.js";
 import type { AuthUser } from "@/modules/auth/types/auth-user.type.js";
-import { authService } from "@/modules/auth/user/services/auth.service.js";
+import { userSessionService } from "@/modules/auth/services/user-session.service.js";
 
 /** Xác thực token tài khoản (user) — `ctx.context` = `AuthUser`. */
 export const userAuthMiddleware = createMiddleware(
@@ -17,7 +17,7 @@ export const userAuthMiddleware = createMiddleware(
         }
 
         try {
-            return await authService.verifyToken(authHeader!.slice(7));
+            return await userSessionService.verifyToken(authHeader!.slice(7));
         } catch {
             Response.unauthorized(ctx, {
                 message: "🔒 Invalid or expired token",

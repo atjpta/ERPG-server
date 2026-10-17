@@ -3,7 +3,7 @@ import {
     creditWallet,
     gainExp,
     levelUpPoints,
-} from "@/modules/player/utils/player-progress.util.js";
+} from "@/modules/player/services/player-progress.service.js";
 import type { Reward } from "@/modules/rewards/types/reward.type.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";
 import {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
 import { createAttributes } from "@/modules/player/schemas/stat.schema.js";
-import { computeStats } from "@/modules/player/utils/player-stat.util.js";
+import { computeStats } from "@/modules/player/services/player-stat-calculation.service.js";
 
 describe("player-stat.util — computeStats", () => {
     it("cộng tỉ lệ không bị sai số float (0.1 + 0.2 = 0.3)", () => {

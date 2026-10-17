@@ -2,37 +2,75 @@
 
 Stack: **Colyseus 0.18** (better-call router) · **PostgreSQL + Drizzle ORM** · **Zod 4** · **TypeScript 6**
 
-## Cấu trúc
+## Structure and dependencies
 
-Mỗi module tách phần **user** (API cho game client) và **admin** (API cho trang quản trị), mỗi phần
-có `controllers/ services/ validators/` riêng. Entity/repository/enum dùng chung đặt ở gốc module.
+`src/modules` contains business logic and data shared by HTTP APIs and realtime rooms.
+HTTP adapters live in `src/apis/admin/<module>` and `src/apis/user/<module>`.
 
+```text
+src/
+|-- apis/
+|   |-- admin/foo/
+|   |   |-- controllers/admin.foo.controller.ts
+|   |   |-- services/admin.foo.service.ts
+|   |   `-- validators/admin.foo.validator.ts
+|   `-- user/foo/
+|       |-- controllers/user.foo.controller.ts
+|       |-- services/user.foo.service.ts
+|       `-- validators/user.foo.validator.ts
+|-- modules/foo/
+|   |-- constants/
+|   |-- entities/
+|   |-- enums/
+|   |-- repositories/
+|   |-- middlewares/
+|   |-- schemas/
+|   |-- seeds/
+|   |-- types/
+|   |-- data/
+|   `-- services/
+`-- rooms/
 ```
-src/modules/foo/
-├── enums/foo.enum.ts
-├── entities/foo.entity.ts
-├── repositories/foo.repository.ts
-├── seeds/foo.seed.ts
-├── user/
-│   ├── controllers/foo.controller.ts
-│   ├── services/foo.service.ts
-│   └── validators/foo.validator.ts
-└── admin/
-    ├── controllers/admin.foo.controller.ts
-    ├── services/admin.foo.service.ts
-    └── validators/admin.foo.validator.ts
+
+Create folders only when needed. A module may keep a `README.md` documenting its business rules.
+Pure business functions belong in `services`; seed-only helpers belong in `seeds`.
+Unity-authored map definitions live in `src/modules/maps/data/definitions/<code>.json`.
+
+- API and rooms import modules. Modules must not import API or rooms, including type-only imports.
+- Admin and user APIs share business logic through modules, not by importing the other API role.
+- API services coordinate HTTP requests and shape responses; module services own shared business rules.
+- API validators validate request bodies, queries and params. Shared Zod data schemas belong in modules.
+- Infer types from Zod alongside their schema. Other shared types belong in `modules/<module>/types`.
+- Module middleware calls shared token/session services; API login services handle HTTP login flows.
+
+`loadControllers()` scans only `src/apis` (or `build/apis`). Operational `/health` and Colyseus protocol
+endpoints remain managed by the entrypoint. Application endpoints use `/admin/...` or `/user/...`.
+
+`loadControllers()` returns `{ admin, user }` as separate endpoint maps. Controllers declare local
+resource paths such as `/maps` or `/auth/login`. Only `src/index.ts` mounts the groups:
+
+```ts
+const { admin, user } = await loadControllers();
+const routes = createRouter({
+    ...prefixEndpoints("/admin", admin),
+    ...prefixEndpoints("/user", user),
+});
 ```
 
-## Quy tắc đặt tên
+`prefixEndpoints` preserves endpoint handlers, middleware and validation without mutating the
+controller definitions. Do not repeat `/admin` or `/user` in controller paths.
 
-- Phần admin: chữ **`admin` luôn đứng đầu** ở mọi layer — file `admin.foo.service.ts`, export
-  `adminFooService`, `AdminFooQuerySchema`, endpoint key `adminFooIndex`, path `/admin/foos`.
-- Controller export tên kết thúc bằng `Controller` (`fooController`, `adminFooController`) — đây là
-  điều kiện để `loadControllers()` tự đăng ký. Key endpoint phải unique toàn project (trùng sẽ throw lúc boot).
-- Enum: key IN HOA, value snake_case.
-- Table: biến PascalCase số nhiều (`Foos`), tên bảng snake_case số nhiều (`foos`), export
-  `type Foo = typeof Foos.$inferSelect` và `NewFoo`.
-- Repository: export instance `FooRepo`; service: export instance `fooService`.
+## Naming
+
+- Admin: `admin.foo.service.ts`, `AdminFooService`, `adminFooService`, `AdminFooQuerySchema`,
+  endpoint key `adminFooIndex`, URL `/admin/foos`.
+- User: `user.foo.service.ts`, `UserFooService`, `userFooService`, `UserFooQuerySchema`,
+  endpoint key `userFooIndex`, URL `/user/foos`.
+- Controller export names end in `Controller`; endpoint keys must be globally unique.
+- Enum keys use UPPER_CASE and values use snake_case.
+- Table variables use plural PascalCase (`Foos`); table names use plural snake_case (`foos`).
+- Repositories export `FooRepo`; shared services export `fooService`.
+- `yarn test` enforces folder boundaries, API naming, dependency direction and the route contract.
 
 ## 1. Entity
 
@@ -98,7 +136,7 @@ export const adminFooService = new AdminFooService();
 
 ```ts
 const adminEndpoint = createEndpoint.create({ use: [adminAuthMiddleware] });
-const prefix = "/admin/foos";
+const prefix = "/foos";
 
 export const adminFooController = {
     adminFooIndex: adminEndpoint(

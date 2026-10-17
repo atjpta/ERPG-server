@@ -1,6 +1,6 @@
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { STARTER_CLASS_CODES } from "@/modules/classes/constants/class.constant.js";
-import { equipmentItemCode } from "@/modules/equipment/utils/equipment-code.util.js";
+import { equipmentItemCode } from "@/modules/equipment/services/equipment-code.service.js";
 import type { NewItem } from "@/modules/items/entities/item.entity.js";
 import {
     EQUIPMENT_GROUP_BY_TYPE,

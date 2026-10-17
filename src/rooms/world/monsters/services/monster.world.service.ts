@@ -1,13 +1,13 @@
 import type { GameMap, MonsterSpawn } from "@/modules/maps/entities/game-map.entity.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import {
     rollMonsterLevel,
     rollMonsterVariant,
-} from "@/modules/monsters/utils/monster-spawn.util.js";
-import { monsterService } from "@/modules/monsters/user/services/monster.service.js";
+} from "@/modules/monsters/services/monster-spawn.service.js";
+import { monsterService } from "@/modules/monsters/services/monster.service.js";
 import { MonsterWorldState } from "@/rooms/world/schema/monster.world.state.js";
 import { worldService } from "@/rooms/world/core/services/world.service.js";
 import {

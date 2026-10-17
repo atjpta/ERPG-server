@@ -1,8 +1,8 @@
 import { big, bigToNumber } from "@/core/utils/big-number.util.js";
 import { classService } from "@/modules/classes/services/class.service.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
-import type { Rng } from "@/modules/equipment/utils/equipment-roll.util.js";
-import { mainStatMultiplier } from "@/modules/equipment/utils/equipment-stat.util.js";
+import type { Rng } from "@/modules/equipment/services/equipment-roll.service.js";
+import { mainStatMultiplier } from "@/modules/equipment/services/equipment-stat.service.js";
 import {
     applyEnhance,
     applyRefine,
@@ -11,7 +11,7 @@ import {
     refineCost,
     type MaterialCost,
     type UpgradeCost,
-} from "@/modules/equipment/utils/equipment-upgrade.util.js";
+} from "@/modules/equipment/services/equipment-upgrade.service.js";
 import type { Item } from "@/modules/items/entities/item.entity.js";
 import {
     EQUIPMENT_GROUP_BY_TYPE,
@@ -26,7 +26,7 @@ import type {
 } from "@/modules/items/schemas/item-metadata.schema.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/user/services/master-data-cache.service.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import type {
     EquippedItem,
@@ -42,8 +42,8 @@ import {
     moveInventorySlot,
     removeFromInventory,
     takeInstance,
-} from "@/modules/player/utils/inventory.util.js";
-import { debitWallet } from "@/modules/player/utils/player-progress.util.js";
+} from "@/modules/player/services/inventory.service.js";
+import { debitWallet } from "@/modules/player/services/player-progress.service.js";
 import type { ItemReward } from "@/modules/rewards/types/reward.type.js";
 import type { PlayerClient } from "@/rooms/base/base-player.room.js";
 import type { PlayerWorldState } from "@/rooms/world/schema/player.world.state.js";

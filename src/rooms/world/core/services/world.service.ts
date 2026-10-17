@@ -1,4 +1,4 @@
-import { playerService } from "@/modules/player/user/services/player.service.js";
+import { playerService } from "@/modules/player/services/player.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 interface WorldChainState {

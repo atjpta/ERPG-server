@@ -5,7 +5,7 @@ import { MonsterDropsSchema } from "@/modules/monsters/schemas/monster-drop.sche
 import { MONSTER_DEFINITIONS } from "@/modules/monsters/seeds/monster.seed-data.js";
 import { loadResolvedMonsters } from "@/modules/monsters/seeds/monster-file.util.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { loadUnityMasterData } from "@/modules/master-data/utils/unity-master-data.util.js";
+import { loadUnityMasterData } from "@/modules/master-data/services/unity-master-data.service.js";
 import { resolveMonsterAi } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
 import type { MonsterDropsFile } from "@/modules/monsters/schemas/monster-file.schema.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
