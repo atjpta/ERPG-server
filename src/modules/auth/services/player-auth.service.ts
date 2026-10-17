@@ -5,7 +5,7 @@ import { serviceError } from "@/core/utils/service-error.js";
 import { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { UserSessionRepo } from "@/modules/auth/repositories/user-session.repository.js";
-import type { AuthPlayer } from "@/modules/auth/types/auth-user.type.js";
+import type { AuthPlayer } from "@/core/types/auth-player.type.js";
 
 const PLAYER_TOKEN_EXPIRES_IN = "30d";
 

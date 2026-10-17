@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
     EquipmentDisassembleConfigSchema,
     EquipmentDropConfigSchema,
@@ -8,15 +7,16 @@ import {
     EquipmentStatConfigSchema,
 } from "@/modules/equipment/schemas/equipment-config.schema.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
-import { MonsterLevelConfigSchema } from "@/modules/monsters/schemas/monster-level-config.schema.js";
-import { MonsterSpawnConfigSchema } from "@/modules/monsters/schemas/monster-spawn-config.schema.js";
-import { MonsterScaleConfigSchema } from "@/modules/monsters/schemas/monster-scale-config.schema.js";
-import { PartyConfigSchema } from "@/modules/party/schemas/party.schema.js";
-import { DailyQuestConfigSchema } from "@/modules/quests/schemas/daily-quest.schema.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { NpcConfigSchema } from "@/modules/npcs/schemas/npc-config.schema.js";
-import { MonsterAiConfigSchema } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
+import { PartyConfigSchema } from "@/modules/master-data/schemas/party-config.schema.js";
 import { PlayerTargetConfigSchema } from "@/modules/master-data/schemas/player-target-config.schema.js";
+import { MonsterAiConfigSchema } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
+import { MonsterLevelConfigSchema } from "@/modules/monsters/schemas/monster-level-config.schema.js";
+import { MonsterScaleConfigSchema } from "@/modules/monsters/schemas/monster-scale-config.schema.js";
+import { MonsterSpawnConfigSchema } from "@/modules/monsters/schemas/monster-spawn-config.schema.js";
+import { NpcConfigSchema } from "@/modules/npcs/schemas/npc-config.schema.js";
+import { DailyQuestConfigSchema } from "@/modules/quests/schemas/daily-quest.schema.js";
+import { z } from "zod";
 
 /** Bật `singleSessionPerUser` để mỗi lần login mới tự revoke các session cũ (chặn đăng nhập nhiều máy). */
 export const AuthSessionConfigSchema = z.object({

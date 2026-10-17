@@ -1,10 +1,17 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { findRoomSchemaFiles } from "./lib/find-room-schemas.mjs";
 import { normalizeCSharpSchemas } from "./lib/normalize-csharp-schemas.mjs";
 import { join, relative, resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const roomsDirectory = join(projectRoot, "src", "rooms");
+// Shared client contracts are explicit inputs rather than incidental imports through room implementations.
+const sharedContractFiles = [
+    join(projectRoot, "src", "rooms", "world", "types", "world-message.type.ts"),
+    join(projectRoot, "src", "modules", "auth", "enums", "admin.enum.ts"),
+    join(projectRoot, "src", "rooms", "party", "types", "party-message.type.ts"),
+];
 const codegen = join(projectRoot, "node_modules", "@colyseus", "schema", "bin", "schema-codegen");
 const unitySchemaOutput = resolve(
     projectRoot,
@@ -30,7 +37,9 @@ if (schemaFiles.length === 0) {
 for (const output of outputs) mkdirSync(output.directory, { recursive: true });
 
 for (const output of outputs) {
-    const sources = schemaFiles.map((file) => relative(projectRoot, file).replaceAll("\\", "/"));
+    const sources = [...schemaFiles, ...sharedContractFiles].map((file) =>
+        relative(projectRoot, file).replaceAll("\\", "/")
+    );
     console.log(`Generating room schemas -> ${output.directory}`);
 
     const result = spawnSync(
@@ -58,21 +67,6 @@ for (const output of outputs) {
     for (const [name, source] of normalizeCSharpSchemas(files)) {
         writeFileSync(join(output.directory, name), source);
     }
-}
-
-function findRoomSchemaFiles(directory) {
-    return readdirSync(directory, { withFileTypes: true }).flatMap((roomEntry) => {
-        if (!roomEntry.isDirectory()) return [];
-
-        const schemaDirectory = join(directory, roomEntry.name, "schema");
-        if (!existsSync(schemaDirectory)) return [];
-
-        return readdirSync(schemaDirectory, { withFileTypes: true }).flatMap((schemaEntry) => {
-            if (!schemaEntry.isFile() || !/\.(state|input|message)\.ts$/.test(schemaEntry.name))
-                return [];
-            return [join(schemaDirectory, schemaEntry.name)];
-        });
-    });
 }
 
 // Code catalogs are also used outside room payloads. Respect every configured schema output.

@@ -7,24 +7,24 @@ import {
     DEFAULT_EQUIPMENT_STAT_CONFIG,
 } from "@/modules/equipment/seeds/equipment-config.seed-data.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
+import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { PartyLootMode } from "@/modules/master-data/enums/party-loot-mode.enum.js";
+import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
+import type { MasterDataValueMap } from "@/modules/master-data/schemas/master-data-value.schema.js";
+import { DEFAULT_PLAYER_TARGET_CONFIG } from "@/modules/master-data/schemas/player-target-config.schema.js";
+import {
+    isUnityMasterDataKey,
+    loadUnityMasterData,
+} from "@/modules/master-data/services/unity-master-data.service.js";
+import { DEFAULT_MONSTER_AI_CONFIG } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
 import {
     DEFAULT_MONSTER_LEVEL_CONFIG,
     DEFAULT_MONSTER_SCALE_CONFIG,
     DEFAULT_MONSTER_SPAWN_CONFIG,
 } from "@/modules/monsters/seeds/monster.seed-data.js";
-import { DEFAULT_DAILY_QUEST_CONFIG } from "@/modules/quests/seeds/daily-quest-config.seed-data.js";
-import { PartyLootMode } from "@/modules/party/schemas/party.schema.js";
-import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.js";
-import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
-import { DEFAULT_PLAYER_TARGET_CONFIG } from "@/modules/master-data/schemas/player-target-config.schema.js";
 import { DEFAULT_NPC_CONFIG } from "@/modules/npcs/schemas/npc-config.schema.js";
-import { DEFAULT_MONSTER_AI_CONFIG } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
-import {
-    isUnityMasterDataKey,
-    loadUnityMasterData,
-} from "@/modules/master-data/services/unity-master-data.service.js";
-import type { MasterDataValueMap } from "@/modules/master-data/schemas/master-data-value.schema.js";
+import { DEFAULT_DAILY_QUEST_CONFIG } from "@/modules/quests/seeds/daily-quest-config.seed-data.js";
 
 const MAX_LEVEL = 100;
 /** Tạm: exp lên level kế tiếp = 100 × level^1.5 (làm tròn). Chỉnh lại khi cân bằng game. */

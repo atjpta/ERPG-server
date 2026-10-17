@@ -12,8 +12,8 @@ import { UserOauthAccountRepo } from "@/modules/auth/repositories/user-oauth-acc
 import { UserSessionRepo } from "@/modules/auth/repositories/user-session.repository.js";
 import { UserRepo } from "@/modules/auth/repositories/user.repository.js";
 import type { AccountDeletionRequestInput } from "@/modules/auth/types/account-deletion.type.js";
-import { playerKickService } from "@/modules/auth/services/player-kick.service.js";
-import { KickReason } from "@/modules/auth/enums/kick-reason.enum.js";
+import { playerKickService } from "@/core/services/player-kick.service.js";
+import { KickReason } from "@/core/enums/kick-reason.enum.js";
 
 /**
  * Xoá tài khoản theo chính sách Google Play (https://support.google.com/googleplay/android-developer/answer/13327111):

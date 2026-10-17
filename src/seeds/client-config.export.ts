@@ -14,7 +14,7 @@ import { NpcRepo } from "@/modules/npcs/repositories/npc.repository.js";
 import { QuestRepo } from "@/modules/quests/repositories/quest.repository.js";
 import { collectLocaleKeys } from "@/modules/quests/seeds/locale-keys.seed-util.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
-import { buildClientSkillConfig } from "@/rooms/world/combat/utils/skill-config.world.util.js";
+import { buildClientSkillConfig } from "@/rooms/world/world.shared.js";
 
 /** Exports offline authoring data to ServerData. Runtime clients request skill config from their world room. */
 export async function exportClientConfig(outputDir: string): Promise<void> {

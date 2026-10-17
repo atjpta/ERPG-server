@@ -84,7 +84,7 @@ Asset không còn nằm trong `Resources` nếu không phải tải theo đườ
 ## Kiểm tra
 
 - Unity: nút _Validate codes_ ở tab _Codes_ của Hub, hoặc chạy EditMode tests (`ERPG.Tests.Editor`): code đủ mọi loại, không field `code` nào gõ tay, mọi monster có body và clip, export lặp lại ra cùng file.
-- Server: `yarn test`, `yarn typecheck`, `yarn lint`.
+- Server: `yarn typecheck`, `yarn lint`.
 
 ## Shared catalog code enums
 

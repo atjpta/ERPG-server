@@ -1,5 +1,5 @@
 import { GameServerCode } from "@/modules/auth/enums/game-server-code.enum.js";
-import { integer, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, pgEnum, pgTable } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import { GameServerStatus } from "@/modules/auth/enums/game-server.enum.js";
 

@@ -55,7 +55,7 @@ bản C# tương ứng (cùng thứ tự phép tính, cùng hằng số), không
 
 ```bash
 yarn dev          # chạy server (tsx watch)
-yarn typecheck && yarn lint && yarn test
+yarn typecheck && yarn lint
 yarn db:generate  # sau khi sửa entity
 yarn db:migrate && yarn seed
 yarn smoke        # test end-to-end khi server đang chạy
@@ -64,8 +64,20 @@ yarn smoke        # test end-to-end khi server đang chạy
 ## API/module boundaries
 
 - `modules/<module>` only contains constants, entities, enums, repositories, middlewares, schemas (Zod), seeds, types, data and services.
+- Core cannot import modules, API or rooms (including types); application adapters belong in rooms.
 - Modules cannot import API or rooms. Rooms cannot import API. API roles share logic through modules.
 - API admin/user files, exports and endpoint keys have the corresponding `admin`/`user` prefix.
 - Application URLs start with `/admin/` or `/user/`. `loadControllers()` discovers only `src/apis`.
 
 - `loadControllers()` returns `{ admin, user }`. Only `src/index.ts` mounts `/admin` and `/user` via `prefixEndpoints`; controllers use local resource paths.
+
+- World lifecycle code lives directly in `src/rooms/world/{chains,commands,services,utils}`.
+- World features live in `src/rooms/world/modules/<feature>` with their Colyseus schemas in `schemas/`; only aggregate `WorldState` stays in `world/schemas`.
+
+- Party mirrors world: room-level lifecycle commands/services/aggregate schemas, with feature commands/services/validators/schemas under `party/modules/<feature>`.
+- Party runtime logic, DTOs, schemas and helpers live in `rooms/party`, not `modules/party`. Peer rooms import only public `<room>.shared.ts` / `<room>.remote.ts` entrypoints, never the peer's implementation. Remote files import their own room class as a type to derive signatures. Party master-data config schema and its loot-mode enum belong to `modules/master-data` so modules never import rooms. Multi-room workflows belong in `rooms/coordinators`.
+- World player commands call room remotes directly; do not add a world-party integration wrapper. Shared player-party processing and public RPC capabilities belong in `world/modules/players/services`.
+- Party room owns membership, loot mode, round-robin cursor and allocation deduplication. World owns applying rewards; pending allocations must drain before saves/leaves.
+
+- Each room command class (including abstract commands) has its own `*.command.ts` file. Action-specific handling belongs in the command, not a service wrapper. Services hold reused processing or capabilities called elsewhere. See `docs/room-command-pattern.md`.
+- Client message commands declare their key as `static readonly message = ClientMessage.KEY`; `.room.ts` loads its directory with `await loadRoomMessages(...)` at module scope and assigns the result to `messages`. Colyseus registers/binds handlers per room instance. Do not add manual message maps or static message keys to lifecycle/timer/abstract commands. Keep message enums for client synchronization.

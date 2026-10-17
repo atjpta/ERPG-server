@@ -91,7 +91,7 @@ marker NPC theo quest của riêng player đến qua message `npcMarkers`.
 
 ## Phía Unity cần làm theo
 
-- Port `applyMove` mới ([movement.step.ts](../src/rooms/world/players/simulation/movement.step.ts)) — va chạm theo `colliders` của map (NPC không chặn) + hình chân `collider` của entity.
+- Port `applyMove` mới ([movement.step.ts](../src/rooms/world/modules/players/simulation/movement.step.ts)) — va chạm theo `colliders` của map (NPC không chặn) + hình chân `collider` của entity.
 - Khớp `contentHash` của `.map.json` trong build với hash server trả.
 - UI thoại / quest / marker; bảng locale theo `locale-keys.json`.
 

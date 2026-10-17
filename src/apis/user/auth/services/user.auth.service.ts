@@ -29,8 +29,8 @@ import type {
 } from "@/apis/user/auth/validators/user.auth.validator.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataService } from "@/modules/master-data/services/master-data.service.js";
-import { playerKickService } from "@/modules/auth/services/player-kick.service.js";
-import { KickReason } from "@/modules/auth/enums/kick-reason.enum.js";
+import { playerKickService } from "@/core/services/player-kick.service.js";
+import { KickReason } from "@/core/enums/kick-reason.enum.js";
 
 const USER_TOKEN_EXPIRES_IN = "30d";
 

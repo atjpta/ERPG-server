@@ -10,8 +10,8 @@ import { Users } from "@/modules/auth/entities/user.entity.js";
 import { UserStatus } from "@/modules/auth/enums/user.enum.js";
 import { UserSessionRepo } from "@/modules/auth/repositories/user-session.repository.js";
 import { UserRepo } from "@/modules/auth/repositories/user.repository.js";
-import { playerKickService } from "@/modules/auth/services/player-kick.service.js";
-import { KickReason } from "@/modules/auth/enums/kick-reason.enum.js";
+import { playerKickService } from "@/core/services/player-kick.service.js";
+import { KickReason } from "@/core/enums/kick-reason.enum.js";
 
 /** Bỏ `password` trước khi trả về cho admin. */
 const omitPassword = <T extends { password?: string | null }>(user: T | null) => {

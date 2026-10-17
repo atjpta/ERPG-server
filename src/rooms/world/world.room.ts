@@ -1,72 +1,52 @@
-import { Dispatcher } from "@colyseus/command";
-import type { Rewind } from "colyseus";
-import type { DungeonRuntime } from "@/rooms/world/dungeons/services/dungeon.world.service.js";
+import type { WorldRoomOptions } from "@/rooms/world/types/world-room.type.js";
+import type { PlayerClient } from "@/core/rooms/base-player.room.js";
+import { dispatchForResult } from "@/core/utils/dispatch-result.util.js";
+import { loadRoomMessages } from "@/core/utils/load-room-messages.util.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
-import { BasePlayerRoom, type PlayerClient } from "@/rooms/base/base-player.room.js";
-import {
-    OnCreateWorldCommand,
-    WorldRoomOptions,
-} from "@/rooms/world/core/commands/on-create.world.command.js";
-import { JoinPlayerWorldCommand } from "@/rooms/world/core/commands/on-join.world.command.js";
-import { LeavePlayerWorldCommand } from "@/rooms/world/core/commands/on-leave.world.command.js";
-import {
-    AllocateAttributesWorldCommand,
-    PreviewAttributesWorldCommand,
-} from "@/rooms/world/players/commands/allocate-attributes.world.command.js";
-import {
-    DisassembleItemsWorldCommand,
-    EnhanceEquipmentWorldCommand,
-    EquipItemWorldCommand,
-    LockItemWorldCommand,
-    UseItemWorldCommand,
-    MoveItemWorldCommand,
-    PreviewDisassembleWorldCommand,
-    PreviewUpgradeWorldCommand,
-    RefineEquipmentWorldCommand,
-    UnequipItemWorldCommand,
-} from "@/rooms/world/inventory/commands/inventory.world.command.js";
-import {
-    DialogueChooseWorldCommand,
-    DialogueCloseWorldCommand,
-    InteractNpcWorldCommand,
-    InteractWorldCommand,
-    QuestAbandonWorldCommand,
-    QuestListWorldCommand,
-    QuestPreviewWorldCommand,
-    TeleportToWorldCommand,
-} from "@/rooms/world/content/commands/content.world.command.js";
-import type { MoveBounds } from "@/rooms/world/players/simulation/movement.step.js";
-import {
-    PartyCreateWorldCommand,
-    PartyDeclineWorldCommand,
-} from "@/rooms/world/party/commands/party.world.command.js";
-import { partyWorldService } from "@/rooms/world/party/services/party.world.service.js";
+import { visitedFlagKey } from "@/modules/maps/services/teleport.service.js";
+import { AuthenticatedPlayerRoom } from "@/rooms/index.room.js";
+import type { PartyMembershipEvent } from "@/rooms/party/party.shared.js";
+import { OnCreateWorldCommand } from "@/rooms/world/commands/on-create.world.command.js";
+import { JoinPlayerWorldCommand } from "@/rooms/world/commands/on-join.world.command.js";
+import { LeavePlayerWorldCommand } from "@/rooms/world/commands/on-leave.world.command.js";
+import { dialogueWorldService } from "@/rooms/world/modules/content/services/dialogue.world.service.js";
+import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
+import type { DungeonRuntime } from "@/rooms/world/modules/dungeons/services/dungeon.world.service.js";
+import { dungeonWorldService } from "@/rooms/world/modules/dungeons/services/dungeon.world.service.js";
+import { PartyCheckDungeonWorldCommand } from "@/rooms/world/modules/dungeons/commands/party-check-dungeon.world.command.js";
+import { PartyEnterDungeonWorldCommand } from "@/rooms/world/modules/dungeons/commands/party-enter-dungeon.world.command.js";
+import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
+import type { MonsterWorldState } from "@/rooms/world/modules/monsters/schemas/monster.world.state.js";
+import { PartyAttachWorldCommand } from "@/rooms/world/modules/players/commands/party-attach.world.command.js";
+import { PartyDeliverInviteWorldCommand } from "@/rooms/world/modules/players/commands/party-deliver-invite.world.command.js";
+import { PartyDeliverJoinRequestWorldCommand } from "@/rooms/world/modules/players/commands/party-deliver-join-request.world.command.js";
+import { PartyDetachWorldCommand } from "@/rooms/world/modules/players/commands/party-detach.world.command.js";
+import { PartySetPlayerPartyWorldCommand } from "@/rooms/world/modules/players/commands/party-set-player-party.world.command.js";
+import { MoveWorldInput } from "@/rooms/world/modules/players/schemas/move.world.input.js";
+import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import { attributeWorldService } from "@/rooms/world/modules/players/services/attribute.world.service.js";
+import type { MoveBounds } from "@/rooms/world/modules/players/simulation/movement.step.js";
+import { monsterKillWorldService } from "@/rooms/world/modules/rewards/services/monster-kill.world.service.js";
+import { rewardTasksWorldService } from "@/rooms/world/modules/rewards/services/reward-tasks.world.service.js";
+import { WorldState } from "@/rooms/world/schemas/world.state.js";
+import { worldService } from "@/rooms/world/services/world.service.js";
+import { WORLD_TICK_RATE } from "@/rooms/world/utils/tick.world.util.js";
 import type {
     PartyInviteReceivedMessage,
     PartyJoinRequestMessage,
-} from "@/rooms/world/world.message.js";
-import { playerViewWorldService } from "@/rooms/world/players/services/player-view.world.service.js";
-import { PlayerTargetSchema } from "@/rooms/world/inventory/validators/inventory.world.validator.js";
-import type { PartyLootMode, PartyMemberInfo } from "@/modules/party/schemas/party.schema.js";
-import { visitedFlagKey } from "@/modules/maps/services/teleport.service.js";
-import { dungeonWorldService } from "@/rooms/world/dungeons/services/dungeon.world.service.js";
-import { dialogueWorldService } from "@/rooms/world/content/services/dialogue.world.service.js";
-import { questWorldService } from "@/rooms/world/content/services/quest.world.service.js";
-import { attributeWorldService } from "@/rooms/world/players/services/attribute.world.service.js";
-import { inventoryWorldService } from "@/rooms/world/inventory/services/inventory.world.service.js";
-import { WorldClientMessage } from "@/rooms/world/world.message.js";
-import { MoveWorldInput } from "@/rooms/world/schema/move.world.input.js";
-import { WorldState } from "@/rooms/world/schema/world.state.js";
-import { worldService } from "@/rooms/world/core/services/world.service.js";
-import { WORLD_TICK_RATE } from "@/rooms/world/core/utils/tick.world.util.js";
-import { sendSkillConfigs } from "@/rooms/world/combat/services/skill-config.world.service.js";
+} from "@/rooms/world/types/world-message.type.js";
+import { Dispatcher } from "@colyseus/command";
+import type { Rewind } from "colyseus";
 const RECONNECT_SECONDS = 20;
 
-export class WorldRoom extends BasePlayerRoom<{
+const messages = await loadRoomMessages(new URL(".", import.meta.url));
+
+export class WorldRoom extends AuthenticatedPlayerRoom<{
     state: WorldState;
     client: PlayerClient;
     input: MoveWorldInput;
 }> {
+    messages = messages;
     dispatcher = new Dispatcher(this);
     state = new WorldState();
     readonly tickRate = WORLD_TICK_RATE;
@@ -77,102 +57,6 @@ export class WorldRoom extends BasePlayerRoom<{
         // Sanitize sửa giá trị sai thành giá trị hợp lệ, không reject input.
         sanitize: { moveX: [-1, 1], moveY: [-1, 1] },
     });
-
-    messages = {
-        [WorldClientMessage.REQUEST_SKILL_CONFIGS]: (client: PlayerClient) => {
-            sendSkillConfigs(client);
-        },
-        [WorldClientMessage.ALLOCATE_ATTRIBUTES]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new AllocateAttributesWorldCommand(), {
-                client,
-                payload,
-            });
-        },
-        [WorldClientMessage.PREVIEW_ATTRIBUTES]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new PreviewAttributesWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.EQUIP_ITEM]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new EquipItemWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.UNEQUIP_ITEM]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new UnequipItemWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.MOVE_ITEM]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new MoveItemWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.LOCK_ITEM]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new LockItemWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.VIEW_PLAYER]: (client: PlayerClient, payload: unknown) => {
-            const parsed = PlayerTargetSchema.safeParse(payload);
-            if (parsed.success) playerViewWorldService.view(this, client, parsed.data.playerId);
-        },
-        [WorldClientMessage.PARTY_REQUEST_JOIN]: (client: PlayerClient, payload: unknown) => {
-            const parsed = PlayerTargetSchema.safeParse(payload);
-            const player = this.state.players.get(client.sessionId);
-            if (parsed.success && player) {
-                void partyWorldService.requestJoin(this, client, player, parsed.data.playerId);
-            }
-        },
-        [WorldClientMessage.USE_ITEM]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new UseItemWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.ENHANCE_EQUIPMENT]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new EnhanceEquipmentWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.REFINE_EQUIPMENT]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new RefineEquipmentWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.DISASSEMBLE_ITEMS]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new DisassembleItemsWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.PREVIEW_UPGRADE]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new PreviewUpgradeWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.INTERACT]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new InteractWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.INTERACT_NPC]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new InteractNpcWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.DIALOGUE_CHOOSE]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new DialogueChooseWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.DIALOGUE_CLOSE]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new DialogueCloseWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.QUEST_LIST]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new QuestListWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.QUEST_PREVIEW]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new QuestPreviewWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.QUEST_ABANDON]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new QuestAbandonWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.TELEPORT_TO]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new TeleportToWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.PARTY_CREATE]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new PartyCreateWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.PARTY_DECLINE]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new PartyDeclineWorldCommand(), { client, payload });
-        },
-        [WorldClientMessage.DUNGEON_LEAVE]: (client: PlayerClient) => {
-            if (this.isDungeon) void dungeonWorldService.leaveByClient(this, client);
-        },
-        [WorldClientMessage.DUNGEON_RETRY]: (client: PlayerClient) => {
-            const player = this.state.players.get(client.sessionId);
-            if (this.isDungeon && player) void partyWorldService.retryDungeon(this, client, player);
-        },
-        [WorldClientMessage.PREVIEW_DISASSEMBLE]: (client: PlayerClient, payload: unknown) => {
-            void this.dispatcher.dispatch(new PreviewDisassembleWorldCommand(), {
-                client,
-                payload,
-            });
-        },
-    };
 
     map!: GameMap;
     /** Chỉ có ở room dungeon. */
@@ -188,6 +72,10 @@ export class WorldRoom extends BasePlayerRoom<{
     }
     rewind!: Rewind;
     private readonly leavingSessions = new Set<string>();
+
+    onMonsterKilled(sessionId: string, player: PlayerWorldState, monster: MonsterWorldState): void {
+        monsterKillWorldService.grant(this, sessionId, player, monster);
+    }
 
     async onCreate(options: WorldRoomOptions) {
         await this.dispatcher.dispatch(new OnCreateWorldCommand(), options);
@@ -207,7 +95,7 @@ export class WorldRoom extends BasePlayerRoom<{
             // Đã đến map này → về sau teleport tới được.
             player.flags[visitedFlagKey(this.map.code)] = true;
             if (this.isDungeon) dungeonWorldService.onPlayerJoined(this, player);
-            await partyWorldService.onJoin(this, player);
+            await this.dispatcher.dispatch(new PartyAttachWorldCommand(), { player });
             inventoryWorldService.send(client, player);
             attributeWorldService.send(client, player);
             questWorldService.sendInitial(this, client, player);
@@ -227,8 +115,10 @@ export class WorldRoom extends BasePlayerRoom<{
     async onLeave(client: PlayerClient) {
         this.leavingSessions.add(client.sessionId);
         dialogueWorldService.drop(this, client.sessionId);
+        await rewardTasksWorldService.wait(this, client.sessionId);
         const leaving = this.state.players.get(client.sessionId);
-        if (leaving) await partyWorldService.onLeave(this, leaving);
+        if (leaving)
+            await this.dispatcher.dispatch(new PartyDetachWorldCommand(), { player: leaving });
         await this.unregisterOnlinePlayer(client);
         await worldService.waitForCheckpoint(this);
         await this.dispatcher.dispatch(new LeavePlayerWorldCommand(), {
@@ -238,6 +128,7 @@ export class WorldRoom extends BasePlayerRoom<{
 
     async onDispose() {
         for (const sessionId of this.state.players.keys()) this.leavingSessions.add(sessionId);
+        await rewardTasksWorldService.wait(this);
         await worldService.waitForCheckpoint(this);
         await Promise.all(
             [...this.state.players.keys()].map((sessionId) =>
@@ -247,42 +138,44 @@ export class WorldRoom extends BasePlayerRoom<{
         this.dispatcher.stop();
     }
 
-    // ---- Gọi từ xa bởi party room (matchMaker.remoteRoomCall) ----------------------------------
+    // ---- RPC: gọi từ room khác qua matchMaker.remoteRoomCall; mỗi RPC chạy trong một command ----
 
-    partySetPlayerParty(
-        playerId: string,
-        partyRoomId: string | null,
-        lootMode?: PartyLootMode
-    ): void {
-        partyWorldService.setPlayerParty(this, playerId, partyRoomId, lootMode);
+    async partySetPlayerParty(event: PartyMembershipEvent) {
+        await this.dispatcher.dispatch(new PartySetPlayerPartyWorldCommand(), event);
     }
-
+    partyCheckDungeon(playerId: string, dungeonCode: string, retry: boolean) {
+        return dispatchForResult(this.dispatcher, new PartyCheckDungeonWorldCommand(), {
+            playerId,
+            dungeonCode,
+            retry,
+        });
+    }
     partyEnterDungeon(
         playerId: string,
         dungeonCode: string,
         instanceId: string,
         spawnId: string,
         retry = false
-    ): Promise<string | undefined> {
-        return partyWorldService.enterDungeon(
-            this,
+    ) {
+        return dispatchForResult(this.dispatcher, new PartyEnterDungeonWorldCommand(), {
             playerId,
             dungeonCode,
             instanceId,
             spawnId,
-            retry
-        );
+            retry,
+        });
     }
-
-    partyDeliverJoinRequest(playerId: string, payload: PartyJoinRequestMessage): boolean {
-        return partyWorldService.deliverJoinRequest(this, playerId, payload);
+    partyDeliverJoinRequest(leaderId: string, message: PartyJoinRequestMessage) {
+        return dispatchForResult(this.dispatcher, new PartyDeliverJoinRequestWorldCommand(), {
+            leaderId,
+            message,
+        });
     }
-
-    partyDeliverInvite(
-        playerId: string,
-        payload: PartyInviteReceivedMessage
-    ): PartyMemberInfo | null {
-        return partyWorldService.deliverInvite(this, playerId, payload);
+    partyDeliverInvite(playerId: string, message: PartyInviteReceivedMessage) {
+        return dispatchForResult(this.dispatcher, new PartyDeliverInviteWorldCommand(), {
+            playerId,
+            message,
+        });
     }
 
     isLeavingSession(sessionId: string): boolean {

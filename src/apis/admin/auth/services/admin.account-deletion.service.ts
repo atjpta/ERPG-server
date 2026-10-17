@@ -14,8 +14,8 @@ import { AccountDeletionRequests } from "@/modules/auth/entities/account-deletio
 import { AccountDeletionStatus } from "@/modules/auth/enums/account-deletion.enum.js";
 import { AccountDeletionRequestRepo } from "@/modules/auth/repositories/account-deletion-request.repository.js";
 import { accountDeletionService } from "@/modules/auth/services/account-deletion.service.js";
-import { playerKickService } from "@/modules/auth/services/player-kick.service.js";
-import { KickReason } from "@/modules/auth/enums/kick-reason.enum.js";
+import { playerKickService } from "@/core/services/player-kick.service.js";
+import { KickReason } from "@/core/enums/kick-reason.enum.js";
 
 export class AdminAccountDeletionService extends BaseService<typeof AccountDeletionRequests> {
     constructor() {

@@ -1,5 +1,5 @@
 import { ClassCode } from "@/modules/classes/enums/class-code.enum.js";
-import { integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgTable } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import type { Attributes, StatBonus, Stats } from "@/modules/player/schemas/stat.schema.js";
 import type { OwnedSkill } from "@/modules/skills/schemas/skill-config.schema.js";

@@ -1,7 +1,7 @@
 import { createMiddleware } from "colyseus";
 import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { Response } from "@/core/utils/response.util.js";
-import type { AuthPlayer } from "@/modules/auth/types/auth-user.type.js";
+import type { AuthPlayer } from "@/core/types/auth-player.type.js";
 import { playerAuthService } from "@/modules/auth/services/player-auth.service.js";
 
 /** Xác thực player token — `ctx.context` = `AuthPlayer`. Dùng cho API gắn với player đang chơi. */

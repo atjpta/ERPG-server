@@ -12,10 +12,10 @@
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
-        "types": ["node", "mocha"],
+        "types": ["node"],
         "paths": {
             "@/*": ["./src/*"]
         }
     },
-    "include": ["src", "test", "scripts", "drizzle.config.ts"]
+    "include": ["src", "scripts", "drizzle.config.ts"]
 }

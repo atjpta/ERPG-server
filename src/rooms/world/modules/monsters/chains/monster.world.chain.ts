@@ -1,0 +1,342 @@
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
+import {
+    DEFAULT_MONSTER_AI_CONFIG,
+    resolveMonsterAi,
+    type MonsterAiRule,
+} from "@/modules/monsters/schemas/monster-ai-config.schema.js";
+import { MonsterWorldState } from "@/rooms/world/modules/monsters/schemas/monster.world.state.js";
+import { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import { Direction } from "@/modules/player/enums/player.enum.js";
+import {
+    applyDirectedMove,
+    applyWorldMove,
+} from "@/rooms/world/modules/players/simulation/movement.step.js";
+import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
+import { distanceSquared } from "@/rooms/world/utils/world.util.js";
+import { skillService } from "@/modules/skills/services/skill.service.js";
+import { skillDeliveryWorldService } from "@/rooms/world/modules/combat/services/skill-delivery.world.service.js";
+import { monsterSkillOwner } from "@/rooms/world/modules/combat/utils/skill-owner.world.util.js";
+import type { WorldRoom } from "@/rooms/world/world.room.js";
+import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
+import {
+    HorizontalDirection,
+    PendingSkillHit,
+    buildPendingSkillHits,
+    getSkillDurationTicks,
+    skillReachesTarget,
+    tickPendingSkillHits,
+} from "@/rooms/world/modules/combat/utils/skill-attack.world.util.js";
+
+/** Ranges authored in Unity (master data `monster_ai_config`); the defaults when the room runs without the cache (tests). */
+const monsterAi = (monster: MonsterWorldState): MonsterAiRule => {
+    try {
+        return resolveMonsterAi(
+            masterDataCacheService.get(MasterDataKey.MONSTER_AI_CONFIG),
+            monster.code
+        );
+    } catch {
+        return resolveMonsterAi(DEFAULT_MONSTER_AI_CONFIG, monster.code);
+    }
+};
+interface RoamTarget {
+    x: number;
+    y: number;
+}
+
+interface PendingAttack {
+    target: PlayerWorldState;
+    ticks: number;
+    hitEvents: PendingSkillHit[];
+    cooldownTicks: number;
+}
+
+export interface MonsterChainContext {
+    room: WorldRoom;
+    monster: MonsterWorldState;
+    dt: number;
+    scheduleRespawn: (monster: MonsterWorldState) => void;
+    target?: PlayerWorldState;
+    dx?: number;
+    dy?: number;
+    distance?: number;
+}
+
+export class MonsterDeathChain implements WorldChainAction<MonsterChainContext> {
+    execute({ monster, scheduleRespawn }: MonsterChainContext): WorldChainResult {
+        if (monster.hp > 0) return WorldChainResult.CONTINUE;
+        monster.setDead();
+        scheduleRespawn(monster);
+        return WorldChainResult.STOP;
+    }
+}
+
+/**
+ * Đang choáng (hoặc bị đẩy lùi, khi đó dời vị trí mỗi tick): không tìm mục tiêu, không đi, không đánh (đòn đang vung bị huỷ), chỉ đếm lùi. Client thấy `stunTicks` > 0 thì giữ
+ * nguyên anim đang chạy, hết choáng thì về idle.
+ */
+export class MonsterStunChain implements WorldChainAction<MonsterChainContext> {
+    constructor(private readonly attackChain: MonsterAttackChain) {}
+
+    execute({ room, monster }: MonsterChainContext): WorldChainResult {
+        if (monster.stunTicks <= 0) return WorldChainResult.CONTINUE;
+        monster.stunTicks--;
+        if (monster.knockbackTicks > 0) {
+            monster.knockbackTicks--;
+            applyDirectedMove(
+                monster,
+                monster.knockbackStepX,
+                monster.knockbackStepY,
+                room.moveBounds,
+                monster.collider
+            );
+        }
+        monster.moving = false;
+        monster.attacking = false;
+        this.attackChain.cancelPendingAttack(monster);
+        return WorldChainResult.STOP;
+    }
+}
+
+export class MonsterFindTargetChain implements WorldChainAction<MonsterChainContext> {
+    execute(context: MonsterChainContext): WorldChainResult {
+        const { room, monster } = context;
+        const aggroTargetId = monster.getAggroTargetId();
+        let target = aggroTargetId
+            ? [...room.state.players.values()].find((player) => player.id === aggroTargetId)
+            : undefined;
+        if (
+            target &&
+            (target.hp <= 0 ||
+                distanceSquared(monster.spawnX, monster.spawnY, target.x, target.y) >
+                    monsterAi(monster).leashRadius ** 2)
+        ) {
+            monster.clearAggroTarget();
+            target = undefined;
+        }
+        if (!target) {
+            target = [...room.state.players.values()]
+                .filter((player) => player.hp > 0)
+                .filter(
+                    (player) =>
+                        distanceSquared(monster.x, monster.y, player.x, player.y) <=
+                            monsterAi(monster).detectionRadius ** 2 &&
+                        distanceSquared(monster.spawnX, monster.spawnY, player.x, player.y) <=
+                            monsterAi(monster).leashRadius ** 2
+                )
+                .sort(
+                    (a, b) =>
+                        distanceSquared(monster.x, monster.y, a.x, a.y) -
+                        distanceSquared(monster.x, monster.y, b.x, b.y)
+                )[0];
+            if (target) monster.setAggroTarget(target.id);
+        }
+        if (!target) {
+            context.target = undefined;
+            context.dx = undefined;
+            context.dy = undefined;
+            context.distance = undefined;
+            return WorldChainResult.CONTINUE;
+        }
+
+        context.target = target;
+        context.dx = target.x - monster.x;
+        context.dy = target.y - monster.y;
+        context.distance = Math.hypot(context.dx, context.dy);
+        return WorldChainResult.CONTINUE;
+    }
+}
+
+export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
+    private readonly roamTargets = new WeakMap<MonsterWorldState, RoamTarget>();
+    private readonly idleTicks = new WeakMap<MonsterWorldState, number>();
+
+    constructor(private readonly attackChain: MonsterAttackChain) {}
+
+    execute(context: MonsterChainContext): WorldChainResult {
+        const { room, monster, target, distance, dx, dy, dt } = context;
+        if (this.attackChain.hasPendingAttack(monster)) {
+            monster.moving = false;
+            return WorldChainResult.CONTINUE;
+        }
+        if (target) {
+            this.roamTargets.delete(monster);
+            this.idleTicks.delete(monster);
+            if (distance === undefined || dx === undefined || dy === undefined) {
+                return WorldChainResult.STOP;
+            }
+            monster.lookAt(dx);
+            if (monster.attackCooldownTicks > 0) {
+                monster.moving = false;
+                return WorldChainResult.STOP;
+            }
+            if (isMonsterSkillHitboxInRange(monster, target, distance)) {
+                monster.moving = false;
+                return WorldChainResult.CONTINUE;
+            }
+
+            this.move(room, monster, dx, dy, dt);
+            monster.lookAt(dx);
+            return WorldChainResult.STOP;
+        }
+
+        const remainingIdleTicks = this.idleTicks.get(monster) ?? 0;
+        if (remainingIdleTicks > 0) {
+            monster.moving = false;
+            if (remainingIdleTicks === 1) this.idleTicks.delete(monster);
+            else this.idleTicks.set(monster, remainingIdleTicks - 1);
+            return WorldChainResult.STOP;
+        }
+
+        const roamTarget = this.getRoamTarget(room, monster);
+        const roamDx = roamTarget.x - monster.x;
+        const roamDy = roamTarget.y - monster.y;
+        if (Math.hypot(roamDx, roamDy) <= monsterAi(monster).roamArrivalDistance) {
+            monster.moving = false;
+            this.roamTargets.delete(monster);
+            this.idleTicks.set(monster, randomIdleTicks(monster, room.tickRate));
+            return WorldChainResult.STOP;
+        }
+
+        this.move(room, monster, roamDx, roamDy, dt);
+        return WorldChainResult.STOP;
+    }
+
+    private move(
+        room: WorldRoom,
+        monster: MonsterWorldState,
+        dx: number,
+        dy: number,
+        dt: number
+    ): void {
+        // Quái tốc độ 0 (slime tập) đứng yên: không đặt `moving`, client không chạy animation đi.
+        if (monster.moveSpeed <= 0) {
+            monster.moving = false;
+            return;
+        }
+        const moveX = Math.abs(dx) > 0.1 ? Math.sign(dx) : 0;
+        const moveY = Math.abs(dy) > 0.1 ? Math.sign(dy) : 0;
+        applyWorldMove(monster, { moveX, moveY }, room.moveBounds, dt);
+    }
+
+    private getRoamTarget(room: WorldRoom, monster: MonsterWorldState): RoamTarget {
+        const current = this.roamTargets.get(monster);
+        if (current) return current;
+
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.sqrt(Math.random()) * monsterAi(monster).roamRadius;
+        const target = {
+            x: clamp(monster.spawnX + Math.cos(angle) * radius, 0, room.map.width),
+            y: clamp(monster.spawnY + Math.sin(angle) * radius, 0, room.map.height),
+        };
+        this.roamTargets.set(monster, target);
+        return target;
+    }
+}
+
+export class MonsterAttackChain implements WorldChainAction<MonsterChainContext> {
+    private readonly pendingAttacks = new WeakMap<MonsterWorldState, PendingAttack>();
+
+    hasPendingAttack(monster: MonsterWorldState): boolean {
+        return this.pendingAttacks.has(monster);
+    }
+
+    cancelPendingAttack(monster: MonsterWorldState): void {
+        this.pendingAttacks.delete(monster);
+    }
+
+    execute({ room, monster, target, dx, dy }: MonsterChainContext): WorldChainResult {
+        const pending = this.pendingAttacks.get(monster);
+        if (pending) {
+            monster.startAttackWindup();
+            tickPendingSkillHits(pending.hitEvents, (hit) =>
+                skillDeliveryWorldService.deliver(room, {
+                    owner: monsterSkillOwner(monster),
+                    skill: hit.skill,
+                    hit,
+                    originX: monster.x,
+                    originY: monster.y,
+                    aim: pending.target.hp > 0 ? pending.target : undefined,
+                })
+            );
+            pending.ticks--;
+            if (pending.ticks > 0) return WorldChainResult.STOP;
+
+            this.pendingAttacks.delete(monster);
+            monster.startAttack(pending.cooldownTicks);
+            return WorldChainResult.STOP;
+        }
+
+        if (!target || dx === undefined || dy === undefined) return WorldChainResult.STOP;
+
+        monster.faceTarget(dx);
+        if (monster.attackCooldownTicks > 0) return WorldChainResult.STOP;
+        // Monster đánh bằng skill `basicAttack` của nó (tầm/hitbox/thời lượng nằm trong skill).
+        const skill = getMonsterAttackSkill(monster);
+        if (!skill) return WorldChainResult.STOP;
+
+        const attackDirection: HorizontalDirection =
+            dx < 0
+                ? Direction.LEFT
+                : dx > 0
+                  ? Direction.RIGHT
+                  : monster.direction === Direction.LEFT
+                    ? Direction.LEFT
+                    : Direction.RIGHT;
+        monster.direction = attackDirection;
+        monster.startAttackWindup();
+        monster.attackSerial++;
+        this.pendingAttacks.set(monster, {
+            target,
+            ticks: getSkillDurationTicks(skill, room.tickRate),
+            hitEvents: buildPendingSkillHits(
+                skill,
+                monster.attackSerial,
+                attackDirection,
+                room.tickRate,
+                monster.scale
+            ),
+            cooldownTicks: millisecondsToTicks(
+                skill.cooldownMs > 0 ? skill.cooldownMs : monster.attackCooldownMs,
+                room.tickRate
+            ),
+        });
+        return WorldChainResult.STOP;
+    }
+}
+
+/** Đòn đánh thường của monster = skill `basicAttack` đầu tiên trong cột `skills` của nó. */
+function getMonsterAttackSkill(monster: MonsterWorldState) {
+    return skillService.getBasicAttackCombo(monster.skills)[0];
+}
+
+function isMonsterSkillHitboxInRange(
+    monster: MonsterWorldState,
+    target: PlayerWorldState,
+    distance: number
+): boolean {
+    const skill = getMonsterAttackSkill(monster);
+    if (!skill) return false;
+    if (skill.skillHitEvents.length === 0) return distance <= skill.castRange * monster.scale;
+
+    const direction =
+        target.x < monster.x
+            ? Direction.LEFT
+            : target.x > monster.x
+              ? Direction.RIGHT
+              : monster.direction;
+    return skillReachesTarget(
+        skill,
+        { x: monster.x, y: monster.y, direction },
+        target,
+        monster.scale
+    );
+}
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const randomIdleTicks = (monster: MonsterWorldState, tickRate: number) => {
+    const { idleMinMs, idleMaxMs } = monsterAi(monster);
+    const idleMs = idleMinMs + Math.random() * (idleMaxMs - idleMinMs);
+    return millisecondsToTicks(idleMs, tickRate);
+};

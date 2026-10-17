@@ -21,7 +21,7 @@ Cùng với `{monster}_attack` của monster. Mỗi class chỉ có 1 đòn đá
 - `AREA` + `area { delayMs, untargetedDistance }`: tại `triggerTicks` đặt vùng (`shape`/`radius` của event) đúng vị trí (x, y) của mục tiêu, kéo về trong `castRange`; không có mục tiêu → cách `untargetedDistance` ô trước mặt. Sau `delayMs` gây damage cho mọi mục tiêu chạm vùng.
 - Hình `ELLIPSE` (mọi `delivery`): `width` = đường kính theo hướng đánh (X), `height` = đường kính theo trục dọc (Y), tâm đúng gốc của hit event — dùng cho vùng dẹt kiểu top-down. Server tính ở `skill-hitbox.world.util.ts`, client ở `SkillHitboxWorldUtil.cs` (cùng công thức).
 
-Room xử lý ở `src/rooms/world/combat/services/skill-delivery.world.service.ts`; đạn và vùng nằm trong world state (`projectiles`, `areas`) để client vẽ, bị xoá khi hết. Player đánh monster luôn theo vị trí monster mà client đó đang vẽ (`rewind.lastSeenBy`), kể cả với đạn đang bay. Bên đánh là player hay monster đều dùng chung (`SkillOwner`), nên monster đánh xa có thể chuyển sang PROJECTILE/AREA chỉ bằng dữ liệu.
+Room xử lý ở `src/rooms/world/modules/combat/services/skill-delivery.world.service.ts`; đạn và vùng nằm trong world state (`projectiles`, `areas`) để client vẽ, bị xoá khi hết. Player đánh monster luôn theo vị trí monster mà client đó đang vẽ (`rewind.lastSeenBy`), kể cả với đạn đang bay. Bên đánh là player hay monster đều dùng chung (`SkillOwner`), nên monster đánh xa có thể chuyển sang PROJECTILE/AREA chỉ bằng dữ liệu.
 
 ## Dữ liệu cho client
 

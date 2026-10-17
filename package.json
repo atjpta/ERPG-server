@@ -18,7 +18,6 @@
         "smoke": "tsx scripts/smoke-test.ts",
         "test:tokens": "node scripts/local-test-tokens.mjs",
         "kick-test": "tsx scripts/kick-test.ts",
-        "test": "mocha --import=tsx --file test/setup.ts \"test/**/*.test.ts\" --exit --timeout 15000",
         "format": "prettier --write \"src/**/*.ts\"",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",

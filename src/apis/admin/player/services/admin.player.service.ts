@@ -4,10 +4,10 @@ import { withTransaction } from "@/core/repositories/base.repository.js";
 import { BaseService } from "@/core/services/base.service.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import { Players } from "@/modules/auth/entities/player.entity.js";
-import { KickReason } from "@/modules/auth/enums/kick-reason.enum.js";
+import { KickReason } from "@/core/enums/kick-reason.enum.js";
 import { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
-import { playerKickService } from "@/modules/auth/services/player-kick.service.js";
+import { playerKickService } from "@/core/services/player-kick.service.js";
 import type {
     AdminBanPlayerBody,
     AdminListPlayersQuery,

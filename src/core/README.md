@@ -58,6 +58,7 @@ init project mới thì làm theo đúng thứ tự này.
 
 | Thành phần                             | Vai trò                                                                                                                                           |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rooms/base-player.room.ts`            | Base Colyseus room: identity contract, reconnect hook and online/kick subscriptions; no module dependencies.                                      |
 | `entities/base.entity.ts`              | `baseColumns()` (id UUID v7, createdAt, updatedAt), `baseWithCodeColumns()`                                                                       |
 | `repositories/base.repository.ts`      | CRUD chung, **mọi method nhận 1 object param** (`{ id, data, dbOrTx }`), `withTransaction()`                                                      |
 | `services/base.service.ts`             | Mirror 1-1 các hàm của `BaseRepository` (cùng tên, cùng param) — service kế thừa để có sẵn CRUD                                                   |
@@ -73,6 +74,10 @@ init project mới thì làm theo đúng thứ tự này.
 | `validators/`                          | `IdParamSchema` (uuidv7), `PaginationSchema`, `LocalizedStringSchema`                                                                             |
 
 **Không** làm generic CRUD controller factory — controller luôn viết tường minh từng endpoint.
+
+Core must not import `modules`, `apis` or `rooms`, including type-only imports.
+`AuthPlayer` lives in `core/types/auth-player.type.ts` without JWT types.
+Authentication and reconnect policies are supplied by application adapters.
 
 ## 5. Module pattern (`src/modules/<module>/`)
 
@@ -117,7 +122,7 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
 
 ## 7. Realtime (`src/rooms/`)
 
-- `BasePlayerRoom` — `onAuth` verify player token + quản lý kết nối online qua **presence pub/sub**
+- `BasePlayerRoom` (`src/core/rooms/base-player.room.ts`), wired to account policies by `AuthenticatedPlayerRoom` (`src/rooms/index.room.ts`) — `onAuth` verify player token + quản lý kết nối online qua **presence pub/sub**
   (memory 1 process, `RedisPresence` nhiều process — không đổi code):
     - Room con gọi `registerOnlinePlayer` (cuối `onJoin`), `unregisterOnlinePlayer` (`onLeave`),
       `verifyReconnect` (`onReconnect` — reconnect không đi qua `onAuth` nên phải kiểm tra lại DB).

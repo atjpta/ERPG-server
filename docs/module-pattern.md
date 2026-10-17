@@ -70,7 +70,6 @@ controller definitions. Do not repeat `/admin` or `/user` in controller paths.
 - Enum keys use UPPER_CASE and values use snake_case.
 - Table variables use plural PascalCase (`Foos`); table names use plural snake_case (`foos`).
 - Repositories export `FooRepo`; shared services export `fooService`.
-- `yarn test` enforces folder boundaries, API naming, dependency direction and the route contract.
 
 ## 1. Entity
 

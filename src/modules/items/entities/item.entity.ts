@@ -1,5 +1,5 @@
 import { ItemCode } from "@/modules/items/enums/item-code.enum.js";
-import { boolean, integer, jsonb, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgEnum, pgTable } from "drizzle-orm/pg-core";
 import { baseWithCodeColumns } from "@/core/entities/base.entity.js";
 import { ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
 import type { ItemMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
