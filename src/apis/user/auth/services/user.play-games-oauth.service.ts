@@ -1,6 +1,6 @@
+import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
 import { OAuth2Client } from "google-auth-library";
 import { env } from "@/configs/env.config.js";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { serviceError } from "@/core/utils/service-error.js";
 
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
@@ -34,7 +34,7 @@ export class UserPlayGamesOauthService {
             serviceError(
                 "Play Games login is not enabled",
                 400,
-                ResponseCode.OAUTH_PROVIDER_DISABLED
+                AuthErrorCode.OAUTH_PROVIDER_DISABLED
             );
         }
 
@@ -62,7 +62,7 @@ export class UserPlayGamesOauthService {
             serviceError(
                 "Invalid Play Games server auth code",
                 400,
-                ResponseCode.OAUTH_INVALID_CREDENTIAL
+                AuthErrorCode.OAUTH_INVALID_CREDENTIAL
             );
         }
         return (await res.json()) as { access_token: string; id_token?: string };
@@ -73,11 +73,11 @@ export class UserPlayGamesOauthService {
             headers: { authorization: `Bearer ${accessToken}` },
         });
         if (!res.ok) {
-            serviceError("Cannot fetch Play Games player", 502, ResponseCode.OAUTH_PROVIDER_ERROR);
+            serviceError("Cannot fetch Play Games player", 502, AuthErrorCode.OAUTH_PROVIDER_ERROR);
         }
         const player = (await res.json()) as { playerId?: string; displayName?: string };
         if (!player.playerId) {
-            serviceError("Cannot fetch Play Games player", 502, ResponseCode.OAUTH_PROVIDER_ERROR);
+            serviceError("Cannot fetch Play Games player", 502, AuthErrorCode.OAUTH_PROVIDER_ERROR);
         }
         return player as { playerId: string; displayName?: string };
     }
@@ -95,7 +95,7 @@ export class UserPlayGamesOauthService {
                 email: payload.email_verified ? (payload.email ?? null) : null,
             };
         } catch {
-            serviceError("Invalid Google idToken", 400, ResponseCode.OAUTH_INVALID_CREDENTIAL);
+            serviceError("Invalid Google idToken", 400, AuthErrorCode.OAUTH_INVALID_CREDENTIAL);
         }
     }
 }

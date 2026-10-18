@@ -1,5 +1,5 @@
+import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
 import { ilike } from "drizzle-orm";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { BaseService } from "@/core/services/base.service.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import type {
@@ -26,7 +26,7 @@ export class AdminNpcService extends BaseService<typeof Npcs> {
 
     async createNpc(body: AdminCreateNpcBody) {
         if (await NpcRepo.findByCode({ code: body.code })) {
-            serviceError("NPC code is existed", 409, ResponseCode.NPC_CODE_EXISTS);
+            serviceError("NPC code is existed", 409, NpcErrorCode.NPC_CODE_EXISTS);
         }
         const npc = await this.create({ data: body });
         await npcService.setCacheData();

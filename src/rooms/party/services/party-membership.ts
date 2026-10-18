@@ -1,11 +1,12 @@
+import { callRoom } from "@/core/rooms/room.integration.js";
+import { PartySetPlayerPartyWorldCommand } from "@/rooms/world/modules/players/commands/party-set-player-party.world.command.js";
 import type { PartyRoom } from "@/rooms/party/party.room.js";
 import { partyDirectoryService } from "@/rooms/party/services/party-directory.service.js";
 import type { PartyMembershipEvent } from "@/rooms/party/types/party-room.type.js";
-import { worldRoomRemote } from "@/rooms/world/world.remote.js";
 import { randomUUID } from "node:crypto";
 
 /** Báo world room biết player thuộc party nào (hoặc `null` = đã rời). */
-export function publishMembership(
+export async function publishMembership(
     room: PartyRoom,
     worldRoomId: string,
     playerId: string,
@@ -19,7 +20,7 @@ export function publishMembership(
         partyRoomId,
         lootMode: room.state.lootMode,
     };
-    return worldRoomRemote(worldRoomId).partySetPlayerParty(event);
+    await callRoom(worldRoomId, PartySetPlayerPartyWorldCommand, event);
 }
 
 /** Xoá con trỏ party và báo world room bỏ party của player. */

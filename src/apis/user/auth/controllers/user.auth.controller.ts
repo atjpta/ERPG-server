@@ -92,14 +92,14 @@ export const userAuthController = {
     userAuthLogout: authEndpoint(`${prefix}/logout`, { method: "POST" }, (ctx) =>
         RouterContainer(ctx, async () => {
             await userAuthService.logout(ctx.context.userId, ctx.context.userSessionId);
-            return Response.ok({ message: "🔒 Logged out" });
+            return Response.ok({ message: "Logged out" });
         })
     ),
 
     userAuthLogoutAll: authEndpoint(`${prefix}/logout-all`, { method: "POST" }, (ctx) =>
         RouterContainer(ctx, async () => {
             await userAuthService.logoutAll(ctx.context.userId);
-            return Response.ok({ message: "🔒 Logged out from all devices" });
+            return Response.ok({ message: "Logged out from all devices" });
         })
     ),
 
@@ -119,7 +119,7 @@ export const userAuthController = {
                     userId: ctx.context.userId,
                     sessionId: ctx.params.id,
                 });
-                return Response.ok({ message: "🔒 Session revoked" });
+                return Response.ok({ message: "Session revoked" });
             })
     ),
 };

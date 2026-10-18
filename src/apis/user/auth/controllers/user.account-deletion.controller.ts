@@ -24,7 +24,7 @@ export const userAccountDeletionController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 await accountDeletionService.deleteMyAccount(ctx.context.userId, ctx.body?.reason);
-                return Response.ok({ message: "🗑️ Account deleted" });
+                return Response.ok({ message: "Account deleted" });
             })
     ),
 

@@ -1,3 +1,4 @@
+import { ok } from "@/core/utils/result.util.js";
 import type { PartyRoom } from "@/rooms/party/party.room.js";
 import type { PartyMemberInfo } from "@/rooms/party/schemas/party.schema.js";
 import { Command } from "@colyseus/command";
@@ -10,7 +11,7 @@ interface Payload {
 
 /** RPC từ world: báo HP / level / map thành viên (gộp, tối đa ~1 lần/giây); bản cũ bị bỏ qua. */
 export class ReportPartyCommand extends Command<PartyRoom, Payload> {
-    result = true;
+    result = ok();
 
     execute({ worldRoomId, revision, updates }: Payload) {
         const { room } = this;

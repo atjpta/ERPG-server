@@ -3,7 +3,6 @@
 ```text
 party/
   party.room.ts
-  party.remote.ts           # Public typed RPC client
   party.shared.ts           # Public DTOs, enums and pure helpers/directory access
   constants/
   types/                    # RPC and client message DTOs
@@ -28,7 +27,7 @@ Party keeps lightweight member snapshots, not live player/world schemas.
 
 Party has no database entity/repository, so its logic and DTOs live here rather
 than in `src/modules`. Peer rooms use `party.shared.ts` for DTOs, enums and pure
-helpers/directory access, and `party.remote.ts` for RPC. They cannot import this
+helpers/directory access, and the RPC command classes (called with `callRoom`). They cannot import this
 room's runtime, state or private services directly. Requests have a three-second
 timeout through `src/core/rooms/room.integration.ts`.
 

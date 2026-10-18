@@ -43,8 +43,10 @@ export interface DungeonPartyMember {
     name: string;
     worldRoomId: string | null;
 }
-export type DungeonPartyPlan =
-    { ok: false; error: string } | { ok: true; members: DungeonPartyMember[] };
+/** `data` của `prepareDungeon` khi thành công. */
+export interface DungeonPartyPlan {
+    members: DungeonPartyMember[];
+}
 export type DungeonFailure = PartyDungeonDeniedMessage["failures"][number];
 export interface KillRewardRequest {
     eventId: string;

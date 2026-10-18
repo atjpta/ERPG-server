@@ -1,9 +1,12 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
+import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
 import { dungeonWorldService } from "@/rooms/world/modules/dungeons/services/dungeon.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import { MapTransferError } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 import { dungeonPartyCoordinator } from "@/rooms/coordinators/dungeon-party.coordinator.js";
@@ -20,9 +23,9 @@ export class PartyDungeonWorldService {
         player: PlayerWorldState,
         dungeon: GameMap,
         spawnId: string
-    ): Promise<string | undefined> {
+    ): Promise<ErrorCode | undefined> {
         const partyRoomId = await playerPartyWorldService.ensureParty(room, player);
-        if (!partyRoomId) return MapTransferError.MAP_NOT_OPEN;
+        if (!partyRoomId) return MapErrorCode.MAP_NOT_OPEN;
         const result = await dungeonPartyCoordinator.launch(partyRoomId, {
             leaderPlayerId: player.id,
             code: dungeon.code,
@@ -30,11 +33,10 @@ export class PartyDungeonWorldService {
             spawnId,
             retry: false,
         });
-        if (result.error === "unavailable") return MapTransferError.MAP_NOT_OPEN;
-        if (result.ok) return undefined;
-        return result.error === "not_leader"
-            ? MapTransferError.PARTY_NOT_LEADER
-            : MapTransferError.PARTY_DENIED;
+        if (result.success) return undefined;
+        return result.code === CommonCode.ROOM_UNAVAILABLE
+            ? MapErrorCode.MAP_NOT_OPEN
+            : result.code;
     }
 
     /**
@@ -43,20 +45,20 @@ export class PartyDungeonWorldService {
      */
     private async validate(room: WorldRoom, playerId: string, dungeonCode: string, retry: boolean) {
         const found = playerPartyWorldService.findPlayer(room, playerId);
-        if (!found) return { error: "offline" };
+        if (!found) return { error: PlayerErrorCode.PLAYER_OFFLINE };
         const { player } = found;
         // Đang trong dungeon thì chỉ được sang instance mới của chính dungeon này sau khi đã clear ("đi lại").
         const canRetry = retry && room.dungeon?.cleared && room.map.code === dungeonCode;
-        if (room.isDungeon && !canRetry) return { error: "in_dungeon" };
-        if (player.hp <= 0) return { error: "dead" };
-        if (player.pendingMapCode) return { error: "offline" };
+        if (room.isDungeon && !canRetry) return { error: MapErrorCode.DUNGEON_ALREADY_IN };
+        if (player.hp <= 0) return { error: PlayerErrorCode.PLAYER_DEAD };
+        if (player.pendingMapCode) return { error: PlayerErrorCode.PLAYER_OFFLINE };
         let dungeon: GameMap;
         try {
             dungeon = await mapService.getActiveByCodeOrFail(dungeonCode);
         } catch {
-            return { error: MapTransferError.MAP_NOT_OPEN };
+            return { error: MapErrorCode.MAP_NOT_OPEN };
         }
-        if (player.level < dungeon.minLevel) return { error: MapTransferError.LEVEL_TOO_LOW };
+        if (player.level < dungeon.minLevel) return { error: PlayerErrorCode.LEVEL_TOO_LOW };
         return { ...found, dungeon };
     }
 
@@ -68,7 +70,7 @@ export class PartyDungeonWorldService {
         instanceId: string,
         spawnId: string,
         retry = false
-    ): Promise<string | undefined> {
+    ): Promise<ErrorCode | undefined> {
         const checked = await this.validate(room, playerId, dungeonCode, retry);
         if ("error" in checked) return checked.error;
         const { client, player, dungeon } = checked;
@@ -81,7 +83,7 @@ export class PartyDungeonWorldService {
         playerId: string,
         dungeonCode: string,
         retry = false
-    ): Promise<string | undefined> {
+    ): Promise<ErrorCode | undefined> {
         return (await this.validate(room, playerId, dungeonCode, retry)).error;
     }
 }

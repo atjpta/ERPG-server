@@ -1,3 +1,4 @@
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import type {
     PlayerWithState,
     PlayerSnapshot,
@@ -6,7 +7,6 @@ import type {
 } from "@/modules/player/types/player.type.js";
 import { DateTime } from "luxon";
 import type { Queryable } from "@/configs/postgres.config.js";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
 import { BaseService } from "@/core/services/base.service.js";
 import { classBody } from "@/modules/bodies/services/entity-body.service.js";
@@ -77,7 +77,7 @@ export class PlayerService extends BaseService<typeof Players> {
     async getOwnedOrFail(userId: string, playerId: string): Promise<PlayerIdentity> {
         const player = await this.assertPlayableOrFail(playerId);
         if (player.userId !== userId) {
-            serviceError("Player not found", 404, ResponseCode.PLAYER_NOT_FOUND);
+            serviceError("Player not found", 404, PlayerErrorCode.PLAYER_NOT_FOUND);
         }
         return player;
     }
@@ -98,7 +98,7 @@ export class PlayerService extends BaseService<typeof Players> {
             });
             if (!taken) return name;
         }
-        serviceError("Could not find a free name", 409, ResponseCode.PLAYER_NAME_EXISTS);
+        serviceError("Could not find a free name", 409, PlayerErrorCode.PLAYER_NAME_EXISTS);
     }
 
     /** Độ dài tên theo master data; sai → lỗi PLAYER_NAME_INVALID. */
@@ -108,7 +108,7 @@ export class PlayerService extends BaseService<typeof Players> {
             serviceError(
                 `Name must be ${limits.nameMinLength}-${limits.nameMaxLength} characters`,
                 400,
-                ResponseCode.PLAYER_NAME_INVALID
+                PlayerErrorCode.PLAYER_NAME_INVALID
             );
         }
     }
@@ -135,14 +135,14 @@ export class PlayerService extends BaseService<typeof Players> {
             characterClass.tier !== 1 ||
             !(STARTER_CLASS_CODES as readonly string[]).includes(classCode)
         ) {
-            serviceError("Class is not available", 400, ResponseCode.CLASS_NOT_AVAILABLE);
+            serviceError("Class is not available", 400, PlayerErrorCode.CLASS_NOT_AVAILABLE);
         }
         return withTransaction(async (tx) => {
             const limits = await this.getCharacterLimits(tx);
             this.assertNameLength(name, limits);
             const existing = await PlayerIdentityRepo.findByUserId({ userId, dbOrTx: tx });
             if (existing.length >= limits.maxCharacters) {
-                serviceError("Character limit reached", 409, ResponseCode.PLAYER_LIMIT_REACHED);
+                serviceError("Character limit reached", 409, PlayerErrorCode.PLAYER_LIMIT_REACHED);
             }
             const server = await gameServerService.getDefaultOnlineOrFail(tx);
             const duplicated = await PlayerIdentityRepo.findByServerAndName({
@@ -151,7 +151,7 @@ export class PlayerService extends BaseService<typeof Players> {
                 dbOrTx: tx,
             });
             if (duplicated) {
-                serviceError("Player name is existed", 409, ResponseCode.PLAYER_NAME_EXISTS);
+                serviceError("Player name is existed", 409, PlayerErrorCode.PLAYER_NAME_EXISTS);
             }
             const config = await masterDataService.getValue(MasterDataKey.PLAYER_CONFIG, tx);
             const startMap = await mapService.getActiveByCodeOrFail(config.startMapCode, tx);
@@ -193,7 +193,7 @@ export class PlayerService extends BaseService<typeof Players> {
         const player = await PlayerIdentityRepo.findByIdOrFail({
             id: playerId,
             message: "Player not found",
-            code: ResponseCode.PLAYER_NOT_FOUND,
+            code: PlayerErrorCode.PLAYER_NOT_FOUND,
         });
         const duplicated = await PlayerIdentityRepo.findByServerAndName({
             serverId: player.serverId,
@@ -201,7 +201,7 @@ export class PlayerService extends BaseService<typeof Players> {
             excludeId: player.id,
         });
         if (duplicated) {
-            serviceError("Player name is existed", 409, ResponseCode.PLAYER_NAME_EXISTS);
+            serviceError("Player name is existed", 409, PlayerErrorCode.PLAYER_NAME_EXISTS);
         }
         await PlayerIdentityRepo.updateById({ id: playerId, data: { name } });
         return this.findWithStateById(playerId);
@@ -223,10 +223,10 @@ export class PlayerService extends BaseService<typeof Players> {
         const player = await PlayerIdentityRepo.findByIdOrFail({
             id,
             message: "Player not found",
-            code: ResponseCode.PLAYER_NOT_FOUND,
+            code: PlayerErrorCode.PLAYER_NOT_FOUND,
         });
         if (player.status === PlayerStatus.BANNED) {
-            serviceError("Player is banned", 403, ResponseCode.PLAYER_BANNED);
+            serviceError("Player is banned", 403, PlayerErrorCode.PLAYER_BANNED);
         }
         return player;
     }

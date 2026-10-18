@@ -1,3 +1,5 @@
+import { WorldErrorCode } from "@/rooms/world/types/world-error-code.type.js";
+import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
@@ -16,13 +18,10 @@ export class RequestSkillConfigsWorldCommand extends Command<WorldRoom, { client
                 skillService.getAll(),
                 masterDataCacheService.get(MasterDataKey.PLAYER_TARGET_CONFIG)
             );
-            client.send(WorldMessage.SKILL_CONFIGS, JSON.stringify(config));
+            sendOk(client, WorldMessage.SKILL_CONFIGS, JSON.stringify(config));
         } catch (error) {
             console.error("[World] Could not build client skill configuration", error);
-            client.send(
-                WorldMessage.SKILL_CONFIGS,
-                JSON.stringify({ error: "Skill configuration unavailable." })
-            );
+            sendFail(client, WorldMessage.SKILL_CONFIGS, WorldErrorCode.SKILL_CONFIG_UNAVAILABLE);
         }
     }
 }

@@ -42,7 +42,8 @@ bản C# tương ứng (cùng thứ tự phép tính, cùng hằng số), không
 - `BaseService` mirror 1-1 các hàm của `BaseRepository` (cùng tên, cùng object param).
 - Mọi method repository nhận 1 object param; `.from(table)` chỉ viết trong repo sở hữu bảng đó.
 - ≥ 2 thao tác ghi DB → `withTransaction`, truyền `tx` vào mọi lệnh.
-- Lỗi nghiệp vụ trong service: `serviceError(message, status, ResponseCode.X)`.
+- Lỗi nghiệp vụ trong service: `serviceError(message, status, <Domain>ErrorCode.X)`.
+- Mọi thứ trả cho client (API, message room, RPC giữa room) dùng envelope `Result` `{ success, data, code, message, error }`; lỗi chỉ trả mã lỗi (enum theo domain: `CommonCode` ở core, `AuthErrorCode`, `PartyErrorCode`...), không text tự do; room gửi qua `sendOk`/`sendFail` — xem `docs/response-format.md`.
 - Phần admin: chữ `admin` đứng đầu tên file/export/endpoint key, path `/admin/...`.
 - Luxon cho thời gian (`DateTime.now()`), không `new Date()` rải rác.
 - Thêm bảng chứa dữ liệu người chơi → cập nhật `AccountDeletionService.purgeUserData` (xoá tài khoản).
@@ -75,8 +76,8 @@ yarn smoke        # test end-to-end khi server đang chạy
 - World features live in `src/rooms/world/modules/<feature>` with their Colyseus schemas in `schemas/`; only aggregate `WorldState` stays in `world/schemas`.
 
 - Party mirrors world: room-level lifecycle commands/services/aggregate schemas, with feature commands/services/validators/schemas under `party/modules/<feature>`.
-- Party runtime logic, DTOs, schemas and helpers live in `rooms/party`, not `modules/party`. Peer rooms import only public `<room>.shared.ts` / `<room>.remote.ts` entrypoints, never the peer's implementation. Remote files import their own room class as a type to derive signatures. Party master-data config schema and its loot-mode enum belong to `modules/master-data` so modules never import rooms. Multi-room workflows belong in `rooms/coordinators`.
-- World player commands call room remotes directly; do not add a world-party integration wrapper. Shared player-party processing and public RPC capabilities belong in `world/modules/players/services`.
+- Party runtime logic, DTOs, schemas and helpers live in `rooms/party`, not `modules/party`. Peer rooms import only public `<room>.shared.ts` entrypoints and the peer's RPC **command classes** (to call `callRoom(roomId, XCommand, payload)`), never the peer's services, schemas or other implementation. Party master-data config schema and its loot-mode enum belong to `modules/master-data` so modules never import rooms. Multi-room workflows belong in `rooms/coordinators`.
+- World player commands call `callRoom(...)` directly; do not add a world-party integration wrapper. Shared player-party processing and public RPC capabilities belong in `world/modules/players/services`.
 - Party room owns membership, loot mode, round-robin cursor and allocation deduplication. World owns applying rewards; pending allocations must drain before saves/leaves.
 
 - Each room command class (including abstract commands) has its own `*.command.ts` file. Action-specific handling belongs in the command, not a service wrapper. Services hold reused processing or capabilities called elsewhere. See `docs/room-command-pattern.md`.

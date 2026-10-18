@@ -1,11 +1,10 @@
 import type { WorldRoomOptions } from "@/rooms/world/types/world-room.type.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { dispatchForResult } from "@/core/utils/dispatch-result.util.js";
+import { createRpcRunner } from "@/core/rooms/room.integration.js";
 import { loadRoomMessages } from "@/core/utils/load-room-messages.util.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { visitedFlagKey } from "@/modules/maps/services/teleport.service.js";
-import { AuthenticatedPlayerRoom } from "@/rooms/index.room.js";
-import type { PartyMembershipEvent } from "@/rooms/party/party.shared.js";
+import { AuthenticatedPlayerRoom } from "@/rooms/authenticated-player.room.js";
 import { OnCreateWorldCommand } from "@/rooms/world/commands/on-create.world.command.js";
 import { JoinPlayerWorldCommand } from "@/rooms/world/commands/on-join.world.command.js";
 import { LeavePlayerWorldCommand } from "@/rooms/world/commands/on-leave.world.command.js";
@@ -31,10 +30,6 @@ import { rewardTasksWorldService } from "@/rooms/world/modules/rewards/services/
 import { WorldState } from "@/rooms/world/schemas/world.state.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 import { WORLD_TICK_RATE } from "@/rooms/world/utils/tick.world.util.js";
-import type {
-    PartyInviteReceivedMessage,
-    PartyJoinRequestMessage,
-} from "@/rooms/world/types/world-message.type.js";
 import { Dispatcher } from "@colyseus/command";
 import type { Rewind } from "colyseus";
 const RECONNECT_SECONDS = 20;
@@ -138,45 +133,15 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
         this.dispatcher.stop();
     }
 
-    // ---- RPC: gọi từ room khác qua matchMaker.remoteRoomCall; mỗi RPC chạy trong một command ----
+    // ---- RPC: room khác gọi bằng `callRoom(roomId, XCommand, payload)`; chỉ command trong danh sách chạy được ----
 
-    async partySetPlayerParty(event: PartyMembershipEvent) {
-        await this.dispatcher.dispatch(new PartySetPlayerPartyWorldCommand(), event);
-    }
-    partyCheckDungeon(playerId: string, dungeonCode: string, retry: boolean) {
-        return dispatchForResult(this.dispatcher, new PartyCheckDungeonWorldCommand(), {
-            playerId,
-            dungeonCode,
-            retry,
-        });
-    }
-    partyEnterDungeon(
-        playerId: string,
-        dungeonCode: string,
-        instanceId: string,
-        spawnId: string,
-        retry = false
-    ) {
-        return dispatchForResult(this.dispatcher, new PartyEnterDungeonWorldCommand(), {
-            playerId,
-            dungeonCode,
-            instanceId,
-            spawnId,
-            retry,
-        });
-    }
-    partyDeliverJoinRequest(leaderId: string, message: PartyJoinRequestMessage) {
-        return dispatchForResult(this.dispatcher, new PartyDeliverJoinRequestWorldCommand(), {
-            leaderId,
-            message,
-        });
-    }
-    partyDeliverInvite(playerId: string, message: PartyInviteReceivedMessage) {
-        return dispatchForResult(this.dispatcher, new PartyDeliverInviteWorldCommand(), {
-            playerId,
-            message,
-        });
-    }
+    readonly runRpc = createRpcRunner(this, [
+        PartySetPlayerPartyWorldCommand,
+        PartyCheckDungeonWorldCommand,
+        PartyEnterDungeonWorldCommand,
+        PartyDeliverJoinRequestWorldCommand,
+        PartyDeliverInviteWorldCommand,
+    ]);
 
     isLeavingSession(sessionId: string): boolean {
         return this.leavingSessions.has(sessionId);

@@ -56,22 +56,25 @@ init project mới thì làm theo đúng thứ tự này.
 
 ## 4. `src/core/` — hạ tầng dùng chung
 
-| Thành phần                             | Vai trò                                                                                                                                           |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rooms/base-player.room.ts`            | Base Colyseus room: identity contract, reconnect hook and online/kick subscriptions; no module dependencies.                                      |
-| `entities/base.entity.ts`              | `baseColumns()` (id UUID v7, createdAt, updatedAt), `baseWithCodeColumns()`                                                                       |
-| `repositories/base.repository.ts`      | CRUD chung, **mọi method nhận 1 object param** (`{ id, data, dbOrTx }`), `withTransaction()`                                                      |
-| `services/base.service.ts`             | Mirror 1-1 các hàm của `BaseRepository` (cùng tên, cùng param) — service kế thừa để có sẵn CRUD                                                   |
-| `utils/load-controllers.util.ts`       | Quét `*.controller.ts` trong `api/admin/` + `api/user/`, gom export tên kết thúc `Controller` (báo lỗi nếu trùng key endpoint)                    |
-| `utils/response.util.ts`               | `Response.ok/created/badRequest/...` + `RouterContainer` (bắt ZodError → 422, `serviceError` → đúng status)                                       |
-| `utils/service-error.ts`               | `serviceError(message, status, ResponseCode)` — throw trong service                                                                               |
-| `utils/rate-limit.util.ts`             | `assertRateLimit(rule, identity)` — fixed window qua `cacheService.incr`, vượt → 429. `getClientIp()` chỉ tin header proxy khi `TRUST_PROXY=true` |
-| `utils/big-number.util.ts`             | `Big`/`big()` (bignumber.js, 20 chữ số thập phân), `clampBig`, `floorBig` — mọi phép tính stat/damage, tránh sai số float                         |
-| `middlewares/rate-limit.middleware.ts` | `createRateLimitMiddleware(rule)` — giới hạn theo IP, gắn vào `use: [...]` của endpoint                                                           |
-| `enums/response-code.enum.ts`          | Mã lỗi trả về client (client map sang text đa ngôn ngữ)                                                                                           |
-| `enums/client-platform.enum.ts`        | `android` (Google Play), `pc`                                                                                                                     |
-| `cache/`                               | `cacheService` (Memory mặc định, đổi sang `RedisCacheStore` khi chạy nhiều process)                                                               |
-| `validators/`                          | `IdParamSchema` (uuidv7), `PaginationSchema`, `LocalizedStringSchema`                                                                             |
+| Thành phần                                              | Vai trò                                                                                                                                                                    |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rooms/base-player.room.ts`                             | Base Colyseus room: identity contract, reconnect hook and online/kick subscriptions; no module dependencies.                                                               |
+| `entities/base.entity.ts`                               | `baseColumns()` (id UUID v7, createdAt, updatedAt), `baseWithCodeColumns()`                                                                                                |
+| `repositories/base.repository.ts`                       | CRUD chung, **mọi method nhận 1 object param** (`{ id, data, dbOrTx }`), `withTransaction()`                                                                               |
+| `services/base.service.ts`                              | Mirror 1-1 các hàm của `BaseRepository` (cùng tên, cùng param) — service kế thừa để có sẵn CRUD                                                                            |
+| `utils/load-controllers.util.ts`                        | Quét `*.controller.ts` trong `api/admin/` + `api/user/`, gom export tên kết thúc `Controller` (báo lỗi nếu trùng key endpoint)                                             |
+| `utils/response.util.ts`                                | `Response.ok/created/badRequest/...` + `RouterContainer` (bắt ZodError → 422, `serviceError` → đúng status) + `routerErrorHandler` (lỗi validate của framework → envelope) |
+| `types/result.type.ts`, `utils/result.util.ts`          | Envelope chung `Result` `{ success, data, code, message, error }`, `Paginated`, `ErrorCode`, helper `ok/okPage/fail/isFail` — xem `docs/response-format.md`                |
+| `utils/room-send.util.ts`                               | `sendOk/sendFail/sendResult/broadcastOk/broadcastResult` — mọi message room gửi xuống client                                                                               |
+| `utils/dispatch-result.util.ts`                         | `dispatchForResult` — chạy command và đọc `result`; `callRoom` / `createRpcRunner` (trong `rooms/room.integration.ts`) — gọi và nhận RPC giữa các room                     |
+| `utils/service-error.ts`                                | `serviceError(message, status, code)` — throw trong service                                                                                                                |
+| `utils/rate-limit.util.ts`                              | `assertRateLimit(rule, identity)` — fixed window qua `cacheService.incr`, vượt → 429. `getClientIp()` chỉ tin header proxy khi `TRUST_PROXY=true`                          |
+| `utils/big-number.util.ts`                              | `Big`/`big()` (bignumber.js, 20 chữ số thập phân), `clampBig`, `floorBig` — mọi phép tính stat/damage, tránh sai số float                                                  |
+| `middlewares/rate-limit.middleware.ts`                  | `createRateLimitMiddleware(rule)` — giới hạn theo IP, gắn vào `use: [...]` của endpoint                                                                                    |
+| `enums/common-code.enum.ts`, `utils/error-code.util.ts` | `CommonCode` (mã lỗi chung) + `registerErrorCodes` (kiểm tra mã unique); mã theo domain nằm ở module / room — xem `docs/response-format.md`                                |
+| `enums/client-platform.enum.ts`                         | `android` (Google Play), `pc`                                                                                                                                              |
+| `cache/`                                                | `cacheService` (Memory mặc định, đổi sang `RedisCacheStore` khi chạy nhiều process)                                                                                        |
+| `validators/`                                           | `IdParamSchema` (uuidv7), `PaginationSchema`, `LocalizedStringSchema`                                                                                                      |
 
 **Không** làm generic CRUD controller factory — controller luôn viết tường minh từng endpoint.
 
@@ -122,7 +125,7 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
 
 ## 7. Realtime (`src/rooms/`)
 
-- `BasePlayerRoom` (`src/core/rooms/base-player.room.ts`), wired to account policies by `AuthenticatedPlayerRoom` (`src/rooms/index.room.ts`) — `onAuth` verify player token + quản lý kết nối online qua **presence pub/sub**
+- `BasePlayerRoom` (`src/core/rooms/base-player.room.ts`), wired to account policies by `AuthenticatedPlayerRoom` (`src/rooms/authenticated-player.room.ts`) — `onAuth` verify player token + quản lý kết nối online qua **presence pub/sub**
   (memory 1 process, `RedisPresence` nhiều process — không đổi code):
     - Room con gọi `registerOnlinePlayer` (cuối `onJoin`), `unregisterOnlinePlayer` (`onLeave`),
       `verifyReconnect` (`onReconnect` — reconnect không đi qua `onAuth` nên phải kiểm tra lại DB).

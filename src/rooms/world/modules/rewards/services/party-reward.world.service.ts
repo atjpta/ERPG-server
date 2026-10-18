@@ -1,8 +1,9 @@
+import { callRoom } from "@/core/rooms/room.integration.js";
+import { AllocateKillRewardPartyCommand } from "@/rooms/party/modules/loot/commands/allocate-kill-reward.party.command.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { Reward } from "@/modules/rewards/types/reward.type.js";
-import { partyRoomRemote } from "@/rooms/party/party.remote.js";
 import { PartyLootMode, shareKillReward } from "@/rooms/party/party.shared.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
@@ -65,11 +66,11 @@ export class PartyRewardWorldService {
                 level: player.level,
             })),
         };
-        let allocation = await partyRoomRemote(partyRoomId).allocateKillReward(request);
-        if (!allocation)
-            allocation = await partyRoomRemote(partyRoomId).allocateKillReward(request);
-        const rewards = allocation
-            ? new Map(allocation.map((share) => [share.playerId, share.reward]))
+        let allocation = await callRoom(partyRoomId, AllocateKillRewardPartyCommand, request);
+        if (!allocation.success)
+            allocation = await callRoom(partyRoomId, AllocateKillRewardPartyCommand, request);
+        const rewards = allocation.success
+            ? new Map(allocation.data.map((share) => [share.playerId, share.reward]))
             : shareKillReward(reward, attacker.id, request.participants, target.level, {
                   expBonusPerExtraMember: config.expBonusPerExtraMember,
                   maxLevelGap: config.maxLevelGap,

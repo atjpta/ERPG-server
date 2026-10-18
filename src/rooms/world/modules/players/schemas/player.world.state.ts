@@ -1,3 +1,4 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
 import { playerSnapshotWorldService } from "@/rooms/world/modules/players/services/player-snapshot.world.service.js";
 import { playerStatsWorldService } from "@/rooms/world/modules/players/services/player-stats.world.service.js";
 import { ArraySchema, Schema, type } from "@colyseus/schema";
@@ -187,13 +188,15 @@ export class PlayerWorldState extends Schema {
         return playerStatsWorldService.refreshStats(this);
     }
 
-    /** Cộng điểm tiềm năng; trả lỗi (string) nếu không hợp lệ, `undefined` khi thành công. */
-    allocateAttributes(request: Partial<Record<AttributeKey, number>>): string | undefined {
+    /** Cộng điểm tiềm năng; trả `ErrorCode` lỗi nếu không hợp lệ, `undefined` khi thành công. */
+    allocateAttributes(request: Partial<Record<AttributeKey, number>>): ErrorCode | undefined {
         return playerStatsWorldService.allocateAttributes(this, request);
     }
 
-    /** Kết quả nếu cộng điểm như `request` — không đổi state; trả lỗi (string) nếu không hợp lệ. */
-    previewAttributes(request: Partial<Record<AttributeKey, number>>): AttributeSummary | string {
+    /** Kết quả nếu cộng điểm như `request` — không đổi state; trả `ErrorCode` lỗi nếu không hợp lệ. */
+    previewAttributes(
+        request: Partial<Record<AttributeKey, number>>
+    ): AttributeSummary | ErrorCode {
         return playerStatsWorldService.previewAttributes(this, request);
     }
 

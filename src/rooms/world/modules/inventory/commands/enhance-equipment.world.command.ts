@@ -1,3 +1,5 @@
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { fail, isFail, ok } from "@/core/utils/result.util.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
 import {
     applyEnhance,
@@ -5,11 +7,7 @@ import {
 } from "@/modules/equipment/services/equipment-upgrade.service.js";
 import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 import { UpgradeWorldCommand } from "@/rooms/world/modules/inventory/commands/upgrade.world.command.js";
-import {
-    done,
-    equipmentUpgradeWorldService,
-    fail,
-} from "@/rooms/world/modules/inventory/services/equipment-upgrade.world.service.js";
+import { equipmentUpgradeWorldService } from "@/rooms/world/modules/inventory/services/equipment-upgrade.world.service.js";
 import { UpgradeEquipmentSchema } from "@/rooms/world/modules/inventory/validators/inventory.world.validator.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import {
@@ -31,19 +29,19 @@ export class EnhanceEquipmentWorldCommand extends UpgradeWorldCommand<
     ) {
         const rng = Math.random;
         const owned = equipmentUpgradeWorldService.findOwned(player, instanceId);
-        if (!owned) return fail("Equipment not found");
+        if (!owned) return fail(ItemErrorCode.EQUIPMENT_NOT_FOUND);
         const cost = enhanceCost(owned.metadata, owned.group, equipmentConfigService.enhance);
-        if ("reason" in cost) return fail(cost.reason);
-        const paid = equipmentUpgradeWorldService.pay(player, cost.value);
-        if (!paid.ok) return paid;
+        if (isFail(cost)) return cost;
+        const paid = equipmentUpgradeWorldService.pay(player, cost.data);
+        if (isFail(paid)) return paid;
 
-        const success = equipmentUpgradeWorldService.rollSuccess(cost.value.rate, rng);
+        const success = equipmentUpgradeWorldService.rollSuccess(cost.data.rate, rng);
         equipmentUpgradeWorldService.update(
             player,
             owned,
-            applyEnhance(owned.metadata, cost.value.step, success)
+            applyEnhance(owned.metadata, cost.data.step, success)
         );
-        return done({
+        return ok({
             action: EquipmentUpgradeAction.ENHANCE,
             success,
             instanceIds: [instanceId],

@@ -1,36 +1,45 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
+import { fail } from "@/core/utils/result.util.js";
+import { broadcastOk, broadcastResult, sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import type { PartyRoom } from "@/rooms/party/party.room.js";
 import {
     PartyMessage,
-    PartyNoticeCode,
     type PartyDungeonDeniedMessage,
+    type PartyNotice,
     type PartyNoticeMessage,
 } from "@/rooms/party/types/party-message.type.js";
+import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import type { DungeonFailure } from "@/rooms/party/types/party-room.type.js";
 
-const noticeMessage = (code: PartyNoticeCode, playerName?: string): PartyNoticeMessage => ({
-    code,
+const noticeData = (notice: PartyNotice, playerName?: string): PartyNoticeMessage => ({
+    notice,
     ...(playerName ? { playerName } : {}),
 });
 
-export const notice = (client: PlayerClient, code: PartyNoticeCode, playerName?: string) =>
-    client.send(PartyMessage.NOTICE, noticeMessage(code, playerName));
+/** Gửi một sự kiện thành công cho một client. */
+export const notice = (client: PlayerClient, notice: PartyNotice, playerName?: string) =>
+    sendOk(client, PartyMessage.NOTICE, noticeData(notice, playerName));
 
-export function notifyLeader(room: PartyRoom, code: PartyNoticeCode, playerName?: string) {
+/** Gửi lỗi thao tác (`code` là `ErrorCode`) cho một client. */
+export const noticeError = (client: PlayerClient, code: ErrorCode, playerName?: string) =>
+    sendFail(client, PartyMessage.NOTICE, code, playerName ? { playerName } : null);
+
+export function notifyLeader(room: PartyRoom, notice: PartyNotice, playerName?: string) {
     const sessionId = room.sessionOf.get(room.state.leaderPlayerId);
     const client = sessionId ? room.clients.getById(sessionId) : undefined;
-    if (client) notice(client, code, playerName);
+    if (client) sendOk(client, PartyMessage.NOTICE, noticeData(notice, playerName));
 }
 
 export function broadcastNotice(
     room: PartyRoom,
-    code: PartyNoticeCode,
+    notice: PartyNotice,
     playerName?: string,
     exceptPlayerId?: string
 ) {
     const exceptSession = exceptPlayerId ? room.sessionOf.get(exceptPlayerId) : undefined;
     const except = exceptSession ? room.clients.getById(exceptSession) : undefined;
-    room.broadcast(PartyMessage.NOTICE, noticeMessage(code, playerName), { except });
+    broadcastOk(room, PartyMessage.NOTICE, noticeData(notice, playerName), { except });
 }
 
 export function broadcastDungeonDenied(
@@ -38,6 +47,10 @@ export function broadcastDungeonDenied(
     dungeonCode: string,
     failures: DungeonFailure[]
 ) {
-    const message: PartyDungeonDeniedMessage = { dungeonCode, failures };
-    room.broadcast(PartyMessage.DUNGEON_DENIED, message);
+    const denied: PartyDungeonDeniedMessage = { dungeonCode, failures };
+    broadcastResult(
+        room,
+        PartyMessage.DUNGEON_DENIED,
+        fail(MapErrorCode.DUNGEON_DENIED, undefined, { ...denied })
+    );
 }

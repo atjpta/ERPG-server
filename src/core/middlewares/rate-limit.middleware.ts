@@ -1,5 +1,5 @@
+import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { createMiddleware } from "colyseus";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { Response } from "@/core/utils/response.util.js";
 import { assertRateLimit, getClientIp, type RateLimitRule } from "@/core/utils/rate-limit.util.js";
 
@@ -11,7 +11,7 @@ export const createRateLimitMiddleware = (rule: RateLimitRule) =>
             await assertRateLimit(rule, clientIp);
         } catch {
             Response.tooManyRequests(ctx, {
-                code: ResponseCode.TOO_MANY_REQUESTS,
+                code: CommonCode.TOO_MANY_REQUESTS,
                 retryAfterSeconds: rule.windowSeconds,
             });
         }

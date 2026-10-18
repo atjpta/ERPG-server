@@ -1,7 +1,7 @@
+import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { env } from "@/configs/env.config.js";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { assertRateLimit } from "@/core/utils/rate-limit.util.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import type { AdminLoginBody } from "@/apis/admin/auth/validators/admin.auth.validator.js";
@@ -21,7 +21,7 @@ export class AdminAuthService {
             admin.status === AdminStatus.ACTIVE &&
             (await bcrypt.compare(password, admin.password));
         if (!valid) {
-            serviceError("Invalid credentials", 400, ResponseCode.ADMIN_INVALID_CREDENTIALS);
+            serviceError("Invalid credentials", 400, AuthErrorCode.ADMIN_INVALID_CREDENTIALS);
         }
 
         const payload: Pick<AuthAdmin, "typ" | "adminId" | "role"> = {

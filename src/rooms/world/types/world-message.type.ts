@@ -123,7 +123,7 @@ export enum WorldMessage {
     DUNGEON_CHAMBER_CLEAR = "dungeonChamberClear",
     /** Hạ boss, clear dungeon — sắp bị đưa ra ngoài. */
     DUNGEON_CLEAR = "dungeonClear",
-    /** Trả lời `dungeonRetry`: `{ ok: false, error }` khi không đi lại được (xem `DungeonRetryResultMessage`). */
+    /** Trả lời `dungeonRetry` khi không đi lại được: `Result` thất bại (`DUNGEON_UNAVAILABLE`, `PARTY_NOT_LEADER`, `DUNGEON_NOT_TOGETHER`, `DUNGEON_DENIED`). Thành công thì không có reply, `mapChange` đến thay. */
     DUNGEON_RETRY_RESULT = "dungeonRetryResult",
     /** Có người vừa uống bình: số HP / MP thực sự hồi được (client hiện "+N" trên đầu người đó). */
     POTION_USED = "potionUsed",
@@ -141,23 +141,6 @@ export enum WorldMessage {
 export enum WorldRoomName {
     WORLD = "world",
     DUNGEON = "dungeon",
-}
-
-/** Mã lỗi của `interactResult.error` khi chuyển map. */
-export enum MapTransferError {
-    LEVEL_TOO_LOW = "level_too_low",
-    MAP_NOT_OPEN = "map_not_open",
-    EXIT_LOCKED = "exit_locked",
-    /** `teleportTo` khi không đứng gần bệ teleport / không ở trạng thái dùng được. */
-    NOT_AT_TELEPORT = "not_at_teleport",
-    /** `teleportTo` tới map không có bệ teleport (hoặc không mở). */
-    NO_DESTINATION = "no_destination",
-    /** `teleportTo` tới map người chơi chưa từng đến. */
-    MAP_NOT_DISCOVERED = "map_not_discovered",
-    /** Vào dungeon theo party: chỉ chủ party được bấm. */
-    PARTY_NOT_LEADER = "party_not_leader",
-    /** Vào dungeon theo party: có thành viên không đủ điều kiện (cả party nhận `dungeonDenied`). */
-    PARTY_DENIED = "party_denied",
 }
 
 /**
@@ -220,10 +203,8 @@ export interface InventoryEntryMessage {
     mana?: number;
 }
 
+/** `data` của `playerView`; người đó không ở cùng map thì `Result` thất bại `PLAYER_NOT_HERE`. */
 export interface PlayerViewMessage {
-    ok: boolean;
-    /** `not_here` — người đó không ở cùng map. */
-    error?: string;
     playerId: string;
     name: string;
     level: number;
@@ -359,8 +340,6 @@ export interface AttributeSummary {
 }
 
 export interface AttributesMessage {
-    ok: boolean;
-    error?: string;
     attributePoints: number;
     allocatedAttributes: AttributeValuesMessage;
     attributes: AttributeValuesMessage;
@@ -375,8 +354,6 @@ export interface InventorySizesMessage {
 }
 
 export interface InventoryMessage {
-    ok: boolean;
-    error?: string;
     inventories: InventoriesMessage;
     /** Sức chứa từng túi — client vẽ đủ ô, ô trống để nền. */
     sizes: InventorySizesMessage;
@@ -398,10 +375,8 @@ export interface EquipmentUpgradeMessage {
 }
 
 export interface DisassemblePreviewMessage {
-    ok: boolean;
-    error?: string;
     instanceIds: string[];
-    /** Nguyên liệu sẽ nhận (rỗng khi lỗi). */
+    /** Nguyên liệu sẽ nhận. */
     materials: MaterialAmountMessage[];
 }
 
@@ -413,10 +388,8 @@ export interface MaterialRequirementMessage {
     owned: number;
 }
 
+/** `data` của `upgradePreview`; món không nâng được nữa thì `Result` thất bại (`error` mang `action`, `instanceId`). */
 export interface UpgradePreviewMessage {
-    /** `false` khi món không nâng được nữa (`error` là lý do) — chi phí khi đó để trống. */
-    ok: boolean;
-    error?: string;
     action: EquipmentUpgradeAction;
     instanceId: string;
     /** Tỉ lệ thành công 0 → 1. */
@@ -444,10 +417,9 @@ export interface InventoryFullMessage {
     lostItems: ItemRewardMessage[];
 }
 
+/** `data` của `interactResult`; thất bại thì `error` mang `id`. */
 export interface InteractResultMessage {
-    ok: boolean;
-    error?: string;
-    /** Id vật thể (hoặc npcCode) đã tương tác. */
+    /** Id vật thể (hoặc npcCode / mapCode) đã tương tác. */
     id: string;
 }
 
@@ -475,9 +447,9 @@ export interface DialogueMessage {
     offerQuestCodes: string[];
 }
 
+/** `data` của `dialogueEnd`; kết thúc vì lỗi thì `Result` thất bại và `error` mang `sourceCode`. */
 export interface DialogueEndMessage {
     sourceCode: string;
-    error?: string;
 }
 
 export interface NpcFunctionOpenMessage {
@@ -522,12 +494,6 @@ export interface DungeonClearMessage {
     members: DungeonRewardMemberMessage[];
     /** Chủ nhóm — chỉ người này được bấm "đi lại" (rỗng = không rõ, ai cũng thử được và server quyết). */
     leaderPlayerId: string;
-}
-
-export interface DungeonRetryResultMessage {
-    ok: boolean;
-    /** `not_leader`: không phải chủ party; `not_together`: có thành viên đã thoát / không còn ở dungeon này; `unavailable`. */
-    error?: string;
 }
 
 export interface PartyRoomMessage {

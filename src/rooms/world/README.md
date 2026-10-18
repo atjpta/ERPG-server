@@ -43,7 +43,7 @@ Room entry points stay at the World root. Public message enums/DTOs live in
 `types/world-message.type.ts`; room creation options live in `types/world-room.type.ts`.
 `world.shared.ts` exports those types/enums and the reusable `buildClientSkillConfig`
 builder used by client config exports. External consumers use this public entrypoint
-instead of importing feature implementation files. `world.remote.ts` exposes RPC.
+instead of importing feature implementation files. Its RPC commands are listed in `createRpcRunner` in `world.room.ts`.
 Room lifecycle, tick orchestration and world helpers live directly under this folder.
 Feature implementations live under `modules/<feature>/`. These are world-runtime modules;
 `src/modules` remains the shared business/data layer used by both HTTP APIs and rooms.
@@ -64,7 +64,7 @@ Update server import paths and client source-reference comments when moving shar
 
 World and party implementations must not import each other's internal files.
 World consumes public party DTOs/helpers through `src/rooms/party/party.shared.ts`
-and RPC through `party.remote.ts`. Transport lives in `src/core/rooms/room.integration.ts`.
+and RPC through party's command classes with `callRoom`. Transport lives in `src/core/rooms/room.integration.ts`.
 Party discovery/creation belongs to the world
 player-party service; dungeon launch coordination lives in `src/rooms/coordinators`.
 World-side party actions are player commands. Dungeon admission belongs to the

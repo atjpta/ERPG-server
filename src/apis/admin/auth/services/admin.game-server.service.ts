@@ -1,5 +1,5 @@
+import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
 import { and, eq, ilike } from "drizzle-orm";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { BaseService } from "@/core/services/base.service.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import type {
@@ -26,7 +26,7 @@ export class AdminGameServerService extends BaseService<typeof GameServers> {
 
     async createServer(body: AdminCreateGameServerBody) {
         if (await GameServerRepo.findByCode({ code: body.code })) {
-            serviceError("Game server code is existed", 409, ResponseCode.GAME_SERVER_CODE_EXISTS);
+            serviceError("Game server code is existed", 409, AuthErrorCode.GAME_SERVER_CODE_EXISTS);
         }
         return this.create({ data: body });
     }

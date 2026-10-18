@@ -1,7 +1,7 @@
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import type { PartyRoom } from "@/rooms/party/party.room.js";
 import { partyDirectoryService } from "@/rooms/party/services/party-directory.service.js";
-import { PartyNoticeCode } from "@/rooms/party/types/party-message.type.js";
+import { PartyNotice } from "@/rooms/party/types/party-message.type.js";
 import { Command } from "@colyseus/command";
 import { publishMembership } from "@/rooms/party/services/party-membership.js";
 import { broadcastNotice } from "@/rooms/party/services/party-notify.js";
@@ -34,7 +34,7 @@ export class OnJoinPartyCommand extends Command<PartyRoom, { client: PlayerClien
         if (!isFounder) {
             broadcastNotice(
                 this.room,
-                PartyNoticeCode.MEMBER_JOINED,
+                PartyNotice.MEMBER_JOINED,
                 this.room.state.nameOf(playerId),
                 playerId
             );

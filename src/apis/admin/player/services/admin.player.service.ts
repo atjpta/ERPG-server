@@ -1,5 +1,5 @@
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { and, eq, ilike } from "drizzle-orm";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
 import { BaseService } from "@/core/services/base.service.js";
 import { serviceError } from "@/core/utils/service-error.js";
@@ -69,7 +69,7 @@ export class AdminPlayerService extends BaseService<typeof Players> {
                 excludeId: id,
             });
             if (duplicated) {
-                serviceError("Player name is existed", 409, ResponseCode.PLAYER_NAME_EXISTS);
+                serviceError("Player name is existed", 409, PlayerErrorCode.PLAYER_NAME_EXISTS);
             }
         }
 

@@ -128,7 +128,7 @@ export const adminFooService = new AdminFooService();
 
 - `BaseService` có sẵn các hàm trùng tên/param với `BaseRepository` (`findById({ id })`,
   `create({ data })`, `updateById({ id, data })`, `paginate(...)`...).
-- Lỗi nghiệp vụ: `serviceError(message, status, ResponseCode.X)`.
+- Lỗi nghiệp vụ: `serviceError(message, status, <Domain>ErrorCode.X)`.
 - **≥ 2 thao tác ghi** → bọc `withTransaction(async (tx) => ...)`, truyền `tx` vào mọi lệnh repo.
 
 ## 4. Controller
@@ -156,6 +156,8 @@ export const adminFooController = {
 - Param path không phải `:id` (vd `:key` enum) → `Schema.parse(ctx.params)` để có đúng kiểu.
 
 ## Response helpers
+
+Mọi response là envelope `Result` `{ success, data, code, message, error }` — xem [định dạng trả về chung](response-format.md).
 
 | Helper                                        | HTTP | Dùng khi          |
 | --------------------------------------------- | ---- | ----------------- |

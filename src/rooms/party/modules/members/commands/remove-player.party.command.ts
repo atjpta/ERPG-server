@@ -1,12 +1,12 @@
 import { releasePlayer } from "@/rooms/party/services/party-membership.js";
 import { broadcastNotice } from "@/rooms/party/services/party-notify.js";
 import type { PartyRoom } from "@/rooms/party/party.room.js";
-import { PartyNoticeCode } from "@/rooms/party/types/party-message.type.js";
+import { PartyNotice } from "@/rooms/party/types/party-message.type.js";
 import { Command } from "@colyseus/command";
 
 interface Payload {
     playerId: string;
-    code: PartyNoticeCode;
+    code: PartyNotice;
     /** Đá kết nối party của player (false khi chính kết nối đó vừa rớt). */
     kickSocket?: boolean;
 }
@@ -33,7 +33,7 @@ export class RemovePlayerPartyCommand extends Command<PartyRoom, Payload> {
         }
         broadcastNotice(room, code, name, playerId);
         if (newLeaderId) {
-            broadcastNotice(room, PartyNoticeCode.LEADER_CHANGED, state.nameOf(newLeaderId));
+            broadcastNotice(room, PartyNotice.LEADER_CHANGED, state.nameOf(newLeaderId));
         }
     }
 }

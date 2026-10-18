@@ -40,7 +40,7 @@ For the installed `@colyseus/command` implementation:
 - RPC methods (called through `matchMaker.remoteRoomCall`) also run in commands. A
   command that must return data declares a `result` field and assigns it in
   `execute()` (which still returns `void`); the room method uses
-  `dispatchForResult(this.dispatcher, new XCommand(), payload)` from
+  `callRoom(roomId, XCommand, payload)`; the target room lists its RPC commands in `createRpcRunner(this, [...])`, which uses `dispatchForResult` from
   `core/utils/dispatch-result.util.ts` to read it back. RPC commands have no
   `static message`, so `loadRoomMessages()` ignores them.
 

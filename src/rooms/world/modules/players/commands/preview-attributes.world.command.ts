@@ -1,12 +1,8 @@
+import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import { AllocateAttributesSchema } from "@/rooms/world/modules/players/validators/allocate-attributes.world.validator.js";
-import {
-    WorldClientMessage,
-    WorldMessage,
-    type AttributeSummary,
-    type AttributesMessage,
-} from "@/rooms/world/types/world-message.type.js";
+import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { Command } from "@colyseus/command";
 
@@ -24,20 +20,10 @@ export class PreviewAttributesWorldCommand extends Command<WorldRoom, AllocateAt
         if (!player) return;
 
         const parsed = AllocateAttributesSchema.safeParse(payload);
-        const preview = parsed.success ? player.previewAttributes(parsed.data) : "Invalid payload";
-        this.sendPreview(client, player, preview);
-    }
-
-    /** Trả lời `previewAttributes`: kết quả tính thử, hoặc lỗi kèm chỉ số hiện tại. */
-    private sendPreview(
-        client: PlayerClient,
-        player: PlayerWorldState,
-        preview: AttributeSummary | string
-    ) {
-        const message: AttributesMessage =
-            typeof preview === "string"
-                ? { ok: false, error: preview, ...player.getAttributeSummary() }
-                : { ok: true, ...preview };
-        client.send(WorldMessage.ATTRIBUTES_PREVIEW, message);
+        const preview = parsed.success
+            ? player.previewAttributes(parsed.data)
+            : CommonCode.INVALID_INPUT;
+        if (typeof preview === "string") sendFail(client, WorldMessage.ATTRIBUTES_PREVIEW, preview);
+        else sendOk(client, WorldMessage.ATTRIBUTES_PREVIEW, preview);
     }
 }

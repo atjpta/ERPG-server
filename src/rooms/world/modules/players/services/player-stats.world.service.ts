@@ -1,3 +1,4 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import type { AttributeKey } from "@/modules/player/schemas/stat.schema.js";
@@ -35,11 +36,11 @@ export class PlayerStatsWorldService {
         }
     }
 
-    /** Cộng điểm tiềm năng; trả lỗi (string) nếu không hợp lệ, `undefined` khi thành công. */
+    /** Cộng điểm tiềm năng; trả `ErrorCode` lỗi nếu không hợp lệ, `undefined` khi thành công. */
     allocateAttributes(
         state: PlayerWorldState,
         request: Partial<Record<AttributeKey, number>>
-    ): string | undefined {
+    ): ErrorCode | undefined {
         const result = allocateAttributePoints(
             state.allocatedAttributes,
             state.attributePoints,
@@ -52,11 +53,11 @@ export class PlayerStatsWorldService {
         return undefined;
     }
 
-    /** Kết quả nếu cộng điểm như `request` — không đổi state; trả lỗi (string) nếu không hợp lệ. */
+    /** Kết quả nếu cộng điểm như `request` — không đổi state; trả `ErrorCode` lỗi nếu không hợp lệ. */
     previewAttributes(
         state: PlayerWorldState,
         request: Partial<Record<AttributeKey, number>>
-    ): AttributeSummary | string {
+    ): AttributeSummary | ErrorCode {
         const result = allocateAttributePoints(
             state.allocatedAttributes,
             state.attributePoints,

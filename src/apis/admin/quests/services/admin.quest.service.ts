@@ -1,5 +1,5 @@
+import { QuestErrorCode } from "@/modules/quests/enums/quest-error-code.enum.js";
 import { ilike } from "drizzle-orm";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { BaseService } from "@/core/services/base.service.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import type {
@@ -26,7 +26,7 @@ export class AdminQuestService extends BaseService<typeof Quests> {
 
     async createQuest(body: AdminCreateQuestBody) {
         if (await QuestRepo.findByCode({ code: body.code })) {
-            serviceError("Quest code is existed", 409, ResponseCode.QUEST_CODE_EXISTS);
+            serviceError("Quest code is existed", 409, QuestErrorCode.QUEST_CODE_EXISTS);
         }
         const quest = await this.create({ data: body });
         await questService.setCacheData();

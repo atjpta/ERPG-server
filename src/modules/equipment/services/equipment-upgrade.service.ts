@@ -1,3 +1,6 @@
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import type { Result } from "@/core/types/result.type.js";
+import { fail, ok } from "@/core/utils/result.util.js";
 import { Big, big, floorBig } from "@/core/utils/big-number.util.js";
 import type {
     EnhanceStep,
@@ -30,7 +33,7 @@ export interface UpgradeCost {
 }
 
 /** Lỗi nghiệp vụ trả về client (không throw). */
-export type UpgradeCheck<T> = { ok: true; value: T } | { ok: false; reason: string };
+export type UpgradeCheck<T> = Result<T>;
 
 const levelScale = (scales: Record<string, number>, level: number) =>
     big(scales[String(level)] ?? 1);
@@ -54,25 +57,22 @@ export function enhanceCost(
     config: EquipmentEnhanceConfig
 ): UpgradeCheck<UpgradeCost & { step: EnhanceStep }> {
     if (instance.enhanceLevel >= MAX_ENHANCE_LEVEL) {
-        return { ok: false, reason: "Equipment is at max enhance level" };
+        return fail(ItemErrorCode.EQUIPMENT_MAX_ENHANCE);
     }
     if (instance.enhanceLevel >= config.maxByRarity[instance.rarity]) {
-        return { ok: false, reason: "Refine the equipment to enhance further" };
+        return fail(ItemErrorCode.EQUIPMENT_NEEDS_REFINE);
     }
     const step = config.steps[instance.enhanceLevel];
     const scale = levelScale(config.levelCostScale, instance.level);
-    return {
-        ok: true,
-        value: {
-            step,
-            rate: step.rate,
-            gold: scaled(step.gold, scale),
-            materials: mergeMaterials([
-                { code: step.stoneCode, quantity: scaled(step.stoneQty, scale) },
-                { code: config.dustCodeByGroup[group], quantity: scaled(step.dustQty, scale) },
-            ]),
-        },
-    };
+    return ok({
+        step,
+        rate: step.rate,
+        gold: scaled(step.gold, scale),
+        materials: mergeMaterials([
+            { code: step.stoneCode, quantity: scaled(step.stoneQty, scale) },
+            { code: config.dustCodeByGroup[group], quantity: scaled(step.dustQty, scale) },
+        ]),
+    });
 }
 
 /** Kết quả cường hoá: thành công +1; thất bại tụt 1 cấp nếu bậc đó `downgradeOnFail`. */
@@ -96,20 +96,17 @@ export function refineCost(
 ): UpgradeCheck<UpgradeCost & { step: RefineStep; target: ItemRarity }> {
     const target = nextRarity(instance.rarity);
     const step = target ? config.steps[target] : undefined;
-    if (!target || !step) return { ok: false, reason: "Equipment is at max rarity" };
+    if (!target || !step) return fail(ItemErrorCode.EQUIPMENT_MAX_RARITY);
     const scale = levelScale(config.levelCostScale, instance.level);
-    return {
-        ok: true,
-        value: {
-            step,
-            target,
-            rate: step.rate,
-            gold: scaled(step.gold, scale),
-            materials: mergeMaterials([
-                { code: config.spiritCode, quantity: scaled(step.spiritQty, scale) },
-            ]),
-        },
-    };
+    return ok({
+        step,
+        target,
+        rate: step.rate,
+        gold: scaled(step.gold, scale),
+        materials: mergeMaterials([
+            { code: config.spiritCode, quantity: scaled(step.spiritQty, scale) },
+        ]),
+    });
 }
 
 /**

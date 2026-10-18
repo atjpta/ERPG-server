@@ -1,6 +1,9 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { PartyErrorCode } from "@/rooms/party/types/party-error-code.type.js";
+import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import { PartyMemberState } from "@/rooms/party/modules/members/schemas/member.party.state.js";
 import {
-    PartyDungeonDenyReason,
     PartyLootMode,
     type PartyConfig,
     type PartyMemberInfo,
@@ -8,15 +11,6 @@ import {
 import type { PartyInvite } from "@/rooms/party/types/party-invite.type.js";
 import type { DungeonFailure } from "@/rooms/party/types/party-room.type.js";
 import { MapSchema, Schema, type } from "@colyseus/schema";
-
-/** Lỗi thao tác party (gửi cho client dưới dạng notice). */
-export enum PartyError {
-    NOT_LEADER = "not_leader",
-    PARTY_FULL = "party_full",
-    SELF_TARGET = "self_target",
-    ALREADY_MEMBER = "already_member",
-    NOT_MEMBER = "not_member",
-}
 
 /**
  * State của party room: phần có `@type` được đồng bộ cho client; `config` và lời mời chỉ ở server.
@@ -60,14 +54,14 @@ export class PartyState extends Schema {
     }
 
     /** Chủ có mời được `targetId` không (chưa tính online / party khác — phần đó do command kiểm). */
-    canInvite(byId: string, targetId: string, nowMs: number): PartyError | undefined {
-        if (!this.isLeader(byId)) return PartyError.NOT_LEADER;
-        if (byId === targetId) return PartyError.SELF_TARGET;
-        if (this.has(targetId)) return PartyError.ALREADY_MEMBER;
+    canInvite(byId: string, targetId: string, nowMs: number): ErrorCode | undefined {
+        if (!this.isLeader(byId)) return PartyErrorCode.PARTY_NOT_LEADER;
+        if (byId === targetId) return PartyErrorCode.PARTY_SELF_TARGET;
+        if (this.has(targetId)) return PartyErrorCode.PARTY_ALREADY_MEMBER;
         // Lời mời còn hạn cũng giữ chỗ, tránh mời quá số chỗ.
         this.pruneInvites(nowMs);
         const pending = [...this.invites.keys()].filter((id) => id !== targetId).length;
-        if (this.size + pending >= this.config.maxMembers) return PartyError.PARTY_FULL;
+        if (this.size + pending >= this.config.maxMembers) return PartyErrorCode.PARTY_FULL;
         return undefined;
     }
 
@@ -89,11 +83,11 @@ export class PartyState extends Schema {
     }
 
     /** Vào party bằng lời mời còn hạn (tiêu thụ lời mời). */
-    joinWithInvite(playerId: string, nowMs: number): PartyError | "no_invite" | undefined {
-        if (this.has(playerId)) return PartyError.ALREADY_MEMBER;
+    joinWithInvite(playerId: string, nowMs: number): ErrorCode | undefined {
+        if (this.has(playerId)) return PartyErrorCode.PARTY_ALREADY_MEMBER;
         const invite = this.invites.get(playerId);
-        if (!invite || invite.expiresAt <= nowMs) return "no_invite";
-        if (this.size >= this.config.maxMembers) return PartyError.PARTY_FULL;
+        if (!invite || invite.expiresAt <= nowMs) return PartyErrorCode.PARTY_NO_INVITE;
+        if (this.size >= this.config.maxMembers) return PartyErrorCode.PARTY_FULL;
         this.invites.delete(playerId);
         this.members.set(playerId, new PartyMemberState({ ...invite.snapshot, inWorld: true }));
         return undefined;
@@ -111,14 +105,14 @@ export class PartyState extends Schema {
         return this.leaderPlayerId;
     }
 
-    promote(byId: string, targetId: string): PartyError | undefined {
+    promote(byId: string, targetId: string): ErrorCode | undefined {
         const error = this.checkTarget(byId, targetId);
         if (!error) this.leaderPlayerId = targetId;
         return error;
     }
 
-    setLootMode(byId: string, mode: PartyLootMode): PartyError | undefined {
-        if (!this.isLeader(byId)) return PartyError.NOT_LEADER;
+    setLootMode(byId: string, mode: PartyLootMode): ErrorCode | undefined {
+        if (!this.isLeader(byId)) return PartyErrorCode.PARTY_NOT_LEADER;
         this.lootMode = mode;
         return undefined;
     }
@@ -136,13 +130,13 @@ export class PartyState extends Schema {
         const failures: DungeonFailure[] = [];
         for (const { playerId, name, inWorld, inDungeon, hp, level } of this.members.values()) {
             const reason = !inWorld
-                ? PartyDungeonDenyReason.OFFLINE
+                ? PlayerErrorCode.PLAYER_OFFLINE
                 : inDungeon
-                  ? PartyDungeonDenyReason.IN_DUNGEON
+                  ? MapErrorCode.DUNGEON_ALREADY_IN
                   : hp <= 0
-                    ? PartyDungeonDenyReason.DEAD
+                    ? PlayerErrorCode.PLAYER_DEAD
                     : level < minLevel
-                      ? PartyDungeonDenyReason.LEVEL_TOO_LOW
+                      ? PlayerErrorCode.LEVEL_TOO_LOW
                       : undefined;
             if (reason) failures.push({ playerId, name, reason });
         }
@@ -150,10 +144,10 @@ export class PartyState extends Schema {
     }
 
     /** Thao tác của chủ (kick / promote) lên một thành viên khác có hợp lệ không. */
-    checkTarget(byId: string, targetId: string): PartyError | undefined {
-        if (!this.isLeader(byId)) return PartyError.NOT_LEADER;
-        if (byId === targetId) return PartyError.SELF_TARGET;
-        if (!this.has(targetId)) return PartyError.NOT_MEMBER;
+    checkTarget(byId: string, targetId: string): ErrorCode | undefined {
+        if (!this.isLeader(byId)) return PartyErrorCode.PARTY_NOT_LEADER;
+        if (byId === targetId) return PartyErrorCode.PARTY_SELF_TARGET;
+        if (!this.has(targetId)) return PartyErrorCode.PARTY_NOT_MEMBER;
         return undefined;
     }
 }

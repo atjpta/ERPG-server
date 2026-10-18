@@ -1,3 +1,4 @@
+import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { big, bigToNumber } from "@/core/utils/big-number.util.js";
 import { classService } from "@/modules/classes/services/class.service.js";
@@ -98,9 +99,6 @@ export const toEquipmentsMessage = (equipments: Equipments): EquipmentsMessage =
         ])
     ) as EquipmentsMessage;
 
-export const fail = (error: string): { ok: false; error: string } => ({ ok: false, error });
-export const done = <T>(value: T): { ok: true; value: T } => ({ ok: true, value });
-
 /** Hồi chiêu của bình HP và của bình MP (tính riêng từng loại). */
 export const POTION_COOLDOWN_MS = 10_000;
 
@@ -117,10 +115,8 @@ export class InventoryWorldService {
         return this.playerConfig.inventorySize[type];
     }
 
-    send(client: PlayerClient, player: PlayerWorldState, error?: string) {
+    send(client: PlayerClient, player: PlayerWorldState) {
         const message: InventoryMessage = {
-            ok: !error,
-            ...(error ? { error } : {}),
             inventories: {
                 equipment: player.inventories[ItemType.EQUIPMENT].map(toEntryMessage),
                 consumable: player.inventories[ItemType.CONSUMABLE].map(toEntryMessage),
@@ -135,7 +131,7 @@ export class InventoryWorldService {
             usableClassCodes: classService.getUsableItemClassCodes(player.classCode),
             wallet: player.wallet,
         };
-        client.send(WorldMessage.INVENTORY, message);
+        sendOk(client, WorldMessage.INVENTORY, message);
         worldEvents.emitInventoryChanged(client, player);
     }
 
@@ -207,13 +203,13 @@ export class InventoryWorldService {
             const lostItems = lostByType.get(type);
             if (lostItems) {
                 const message: InventoryFullMessage = { type, lostItems };
-                client.send(WorldMessage.INVENTORY_FULL, message);
+                sendOk(client, WorldMessage.INVENTORY_FULL, message);
                 continue;
             }
             const freeSlots = freeSlotCount(player.inventories[type], this.inventorySize(type));
             if (freeSlots <= this.playerConfig.inventoryNearlyFullThreshold) {
                 const message: InventoryNearlyFullMessage = { type, freeSlots };
-                client.send(WorldMessage.INVENTORY_NEARLY_FULL, message);
+                sendOk(client, WorldMessage.INVENTORY_NEARLY_FULL, message);
             }
         }
         this.send(client, player);

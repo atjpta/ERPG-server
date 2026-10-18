@@ -1,10 +1,7 @@
+import { fail, ok } from "@/core/utils/result.util.js";
 import { moveInventorySlot } from "@/modules/player/services/inventory.service.js";
 import { InventoryWorldCommand } from "@/rooms/world/modules/inventory/commands/inventory.world.command.js";
-import {
-    done,
-    fail,
-    inventoryWorldService,
-} from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
+import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import { MoveItemSchema } from "@/rooms/world/modules/inventory/validators/inventory.world.validator.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
@@ -24,6 +21,6 @@ export class MoveItemWorldCommand extends InventoryWorldCommand<typeof MoveItemS
             fromSlot,
             toSlot
         );
-        return error ? fail(error) : done(undefined);
+        return error ? fail(error) : ok(undefined);
     }
 }

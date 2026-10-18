@@ -1,7 +1,8 @@
+import { CommonCode } from "@/core/enums/common-code.enum.js";
+import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
 import { and, eq, ilike, or } from "drizzle-orm";
 import { DateTime } from "luxon";
 import type { Queryable } from "@/configs/postgres.config.js";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
 import { BaseService } from "@/core/services/base.service.js";
 import { serviceError } from "@/core/utils/service-error.js";
@@ -46,7 +47,7 @@ export class AdminAccountDeletionService extends BaseService<typeof AccountDelet
                 serviceError(
                     "userId is required — request is not matched to any account",
                     400,
-                    ResponseCode.INVALID_INPUT
+                    CommonCode.INVALID_INPUT
                 );
             }
 
@@ -88,13 +89,13 @@ export class AdminAccountDeletionService extends BaseService<typeof AccountDelet
             id,
             dbOrTx,
             message: "Account deletion request not found",
-            code: ResponseCode.ACCOUNT_DELETION_REQUEST_NOT_FOUND,
+            code: AuthErrorCode.ACCOUNT_DELETION_REQUEST_NOT_FOUND,
         });
         if (request.status !== AccountDeletionStatus.PENDING) {
             serviceError(
                 "Account deletion request is already processed",
                 409,
-                ResponseCode.ACCOUNT_DELETION_REQUEST_PROCESSED
+                AuthErrorCode.ACCOUNT_DELETION_REQUEST_PROCESSED
             );
         }
         return request;

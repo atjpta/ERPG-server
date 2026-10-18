@@ -1,4 +1,4 @@
-import type { PartyDungeonDenyReason } from "@/rooms/party/schemas/party.schema.js";
+import type { ErrorCode } from "@/core/types/result.type.js";
 
 /*
  * Payload message của party room — `yarn schema:generate` sinh C# (xem ghi chú ở types/world-message.type.ts:
@@ -23,13 +23,17 @@ export enum PartyClientMessage {
 
 /** Message server → client của party room (ngoài state). */
 export enum PartyMessage {
-    /** Sự kiện / lỗi thao tác — client dịch `code` sang thông báo. */
+    /** Sự kiện (`data.notice`) hoặc lỗi thao tác (`code`) — client dịch sang thông báo. */
     NOTICE = "notice",
-    /** Chủ bấm vào dungeon nhưng có người không đủ điều kiện — không ai vào. */
+    /** Chủ bấm vào dungeon nhưng có người không đủ điều kiện — không ai vào. `Result` thất bại `DUNGEON_DENIED`, `error` là `PartyDungeonDeniedMessage`. */
     DUNGEON_DENIED = "dungeonDenied",
 }
 
-export enum PartyNoticeCode {
+/**
+ * Thông báo thành công (sự kiện) của party — `data.notice` của `PartyMessage.NOTICE`. Lỗi thao tác không nằm
+ * ở đây mà là `Result` thất bại với `ErrorCode` (`PARTY_*`).
+ */
+export enum PartyNotice {
     INVITE_SENT = "invite_sent",
     INVITE_DECLINED = "invite_declined",
     INVITE_EXPIRED = "invite_expired",
@@ -38,25 +42,13 @@ export enum PartyNoticeCode {
     KICKED = "kicked",
     LEADER_CHANGED = "leader_changed",
     DISBANDED = "disbanded",
-    NOT_LEADER = "not_leader",
-    PARTY_FULL = "party_full",
-    TARGET_OFFLINE = "target_offline",
-    TARGET_NOT_FOUND = "target_not_found",
-    TARGET_IN_PARTY = "target_in_party",
-    SELF_TARGET = "self_target",
-    ALREADY_MEMBER = "already_member",
-    NOT_MEMBER = "not_member",
-    INVITE_LIMIT = "invite_limit",
     /** Xin vào party: đã gửi tới chủ party. */
     JOIN_REQUEST_SENT = "join_request_sent",
-    /** Xin vào party nhưng người kia không ở trong party nào. */
-    TARGET_NOT_IN_PARTY = "target_not_in_party",
-    /** Người kia không ở cùng map (không xem được thông tin). */
-    TARGET_NOT_HERE = "target_not_here",
 }
 
+/** `data` của `PartyMessage.NOTICE` khi thành công; khi thất bại `error` mang `playerName` (nếu có). */
 export interface PartyNoticeMessage {
-    code: PartyNoticeCode;
+    notice: PartyNotice;
     /** Người liên quan (được mời, rời, bị kick, chủ mới...). */
     playerName?: string;
 }
@@ -64,7 +56,8 @@ export interface PartyNoticeMessage {
 export interface PartyDungeonFailureMessage {
     playerId: string;
     name: string;
-    reason: PartyDungeonDenyReason;
+    /** `LEVEL_TOO_LOW`, `PLAYER_OFFLINE`, `PLAYER_DEAD` hoặc `DUNGEON_ALREADY_IN`. */
+    reason: ErrorCode;
 }
 
 export interface PartyDungeonDeniedMessage {

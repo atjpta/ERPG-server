@@ -1,3 +1,7 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
+import { broadcastOk, sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
@@ -41,7 +45,6 @@ import type { MoveBounds } from "@/rooms/world/modules/players/simulation/moveme
 import { rewardWorldService } from "@/rooms/world/modules/rewards/services/reward.world.service.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 import {
-    MapTransferError,
     WorldMessage,
     WorldRoomName,
     type DungeonChamberClearMessage,
@@ -247,10 +250,10 @@ export class DungeonWorldService {
         dungeon: GameMap,
         spawnId: string,
         instanceId: string = randomUUID()
-    ): Promise<string | undefined> {
-        if (player.level < dungeon.minLevel) return MapTransferError.LEVEL_TOO_LOW;
+    ): Promise<ErrorCode | undefined> {
+        if (player.level < dungeon.minLevel) return PlayerErrorCode.LEVEL_TOO_LOW;
         if (!dungeon.dungeon || dungeon.dungeon.chambers.length === 0) {
-            return MapTransferError.MAP_NOT_OPEN;
+            return MapErrorCode.MAP_NOT_OPEN;
         }
         // Đi lại từ trong dungeon: chỗ trở về vẫn là chỗ đứng trước lần vào đầu tiên.
         const previous = room.dungeon ? player.dungeonSession : undefined;
@@ -272,7 +275,7 @@ export class DungeonWorldService {
             instanceId: session.instanceId,
         };
         await worldService.savePlayer(room, client.sessionId);
-        client.send(WorldMessage.MAP_CHANGE, message);
+        sendOk(client, WorldMessage.MAP_CHANGE, message);
         return undefined;
     }
 
@@ -293,9 +296,9 @@ export class DungeonWorldService {
         client: PlayerClient,
         player: PlayerWorldState,
         destination: "return" | "town"
-    ): Promise<string | undefined> {
+    ): Promise<ErrorCode | undefined> {
         const session = player.dungeonSession;
-        if (!session) return "Not in a dungeon";
+        if (!session) return MapErrorCode.DUNGEON_NOT_IN;
         const config = masterDataCacheService.get(MasterDataKey.PLAYER_CONFIG);
         let mapCode = session.returnMapCode;
         let spawn = { x: session.returnX, y: session.returnY };
@@ -320,7 +323,7 @@ export class DungeonWorldService {
             roomName: WorldRoomName.WORLD,
         };
         await worldService.savePlayer(room, client.sessionId);
-        client.send(WorldMessage.MAP_CHANGE, message);
+        sendOk(client, WorldMessage.MAP_CHANGE, message);
         return undefined;
     }
 
@@ -429,7 +432,7 @@ export class DungeonWorldService {
             chamberIndex: runtime.chamberIndex,
             chamberCount: runtime.config.chambers.length,
         };
-        room.broadcast(WorldMessage.DUNGEON_CHAMBER_CLEAR, message);
+        broadcastOk(room, WorldMessage.DUNGEON_CHAMBER_CLEAR, message);
 
         if (!chamber.isBoss) return;
         runtime.cleared = true;
@@ -447,7 +450,7 @@ export class DungeonWorldService {
             members: [...runtime.rewards.values()].map(toMemberMessage),
             leaderPlayerId: runtime.leaderPlayerId,
         };
-        room.broadcast(WorldMessage.DUNGEON_CLEAR, clear);
+        broadcastOk(room, WorldMessage.DUNGEON_CLEAR, clear);
         room.clock.setTimeout(() => {
             void this.leaveAll(room);
         }, DUNGEON_LEAVE_DELAY_SEC * 1000);

@@ -1,5 +1,5 @@
+import { MasterDataErrorCode } from "@/modules/master-data/enums/master-data-error-code.enum.js";
 import type { Queryable } from "@/configs/postgres.config.js";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
@@ -16,7 +16,7 @@ export class MasterDataService {
             serviceError(
                 `Master data "${key}" chưa được seed`,
                 404,
-                ResponseCode.MASTER_DATA_NOT_FOUND
+                MasterDataErrorCode.MASTER_DATA_NOT_FOUND
             );
         }
         return row.value as MasterDataValueMap[K];

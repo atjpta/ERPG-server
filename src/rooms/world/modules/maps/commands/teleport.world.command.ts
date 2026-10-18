@@ -1,3 +1,7 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
+import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
 import { teleportStatus } from "@/modules/maps/services/teleport.service.js";
@@ -6,7 +10,6 @@ import { transferWorldService } from "@/rooms/world/modules/maps/services/transf
 import { TeleportToSchema } from "@/rooms/world/modules/maps/validators/teleport.world.validator.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import {
-    MapTransferError,
     WorldClientMessage,
     WorldMessage,
     type InteractResultMessage,
@@ -28,12 +31,9 @@ export class TeleportToWorldCommand extends Command<WorldRoom, MapPayload> {
         const parsed = TeleportToSchema.safeParse(payload);
         if (!player || !parsed.success) return;
         const error = await this.travel(this.room, client, player, parsed.data.mapCode);
-        const message: InteractResultMessage = {
-            ok: !error,
-            id: parsed.data.mapCode,
-            ...(error ? { error } : {}),
-        };
-        client.send(WorldMessage.INTERACT_RESULT, message);
+        const id = parsed.data.mapCode;
+        if (error) sendFail(client, WorldMessage.INTERACT_RESULT, error, { id });
+        else sendOk(client, WorldMessage.INTERACT_RESULT, { id } satisfies InteractResultMessage);
     }
 
     /** Chọn điểm đến. Trả mã lỗi hoặc `undefined` khi đã dịch chuyển / gửi `mapChange`. */
@@ -42,20 +42,20 @@ export class TeleportToWorldCommand extends Command<WorldRoom, MapPayload> {
         client: PlayerClient,
         player: PlayerWorldState,
         mapCode: string
-    ): Promise<string | undefined> {
-        if (player.hp <= 0 || room.dungeon) return MapTransferError.NOT_AT_TELEPORT;
+    ): Promise<ErrorCode | undefined> {
+        if (player.hp <= 0 || room.dungeon) return MapErrorCode.TELEPORT_NOT_AT_PAD;
         const atPad = room.map.interactables.some(
             (it) =>
                 it.type === "teleport" && contentWorldService.isNear(player, it.x, it.y, it.radius)
         );
-        if (!atPad) return MapTransferError.NOT_AT_TELEPORT;
+        if (!atPad) return MapErrorCode.TELEPORT_NOT_AT_PAD;
 
         const destinations = await mapService.listTeleportDestinations(room.map.code);
         const destination = destinations.find((d) => d.mapCode === mapCode);
-        if (!destination?.open) return MapTransferError.NO_DESTINATION;
+        if (!destination?.open) return MapErrorCode.TELEPORT_NO_DESTINATION;
         const status = teleportStatus(destination, player.level, player.flags);
-        if (!status.discovered) return MapTransferError.MAP_NOT_DISCOVERED;
-        if (!status.levelOk) return MapTransferError.LEVEL_TOO_LOW;
+        if (!status.discovered) return MapErrorCode.TELEPORT_NOT_DISCOVERED;
+        if (!status.levelOk) return PlayerErrorCode.LEVEL_TOO_LOW;
         return transferWorldService.transfer(
             room,
             client,

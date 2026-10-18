@@ -1,5 +1,8 @@
+import { callRoom } from "@/core/rooms/room.integration.js";
+import { AttachWorldPartyCommand } from "@/rooms/party/commands/attach-world.party.command.js";
+import { CommonCode } from "@/core/enums/common-code.enum.js";
+import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { partyRoomRemote } from "@/rooms/party/party.remote.js";
 import type {
     PartyMemberInfo,
     PartyMembershipEvent,
@@ -29,7 +32,8 @@ export class PlayerPartyWorldService {
     }
     private tellParty(room: WorldRoom, playerId: string, partyRoomId: string | null): void {
         const message: PartyRoomMessage = { roomId: partyRoomId ?? "" };
-        this.findPlayer(room, playerId)?.client.send(WorldMessage.PARTY, message);
+        const found = this.findPlayer(room, playerId);
+        if (found) sendOk(found.client, WorldMessage.PARTY, message);
     }
     findPlayer(
         room: WorldRoom,
@@ -48,13 +52,13 @@ export class PlayerPartyWorldService {
             leaderWorldRoomId: room.roomId,
         });
         if (!partyRoomId) return undefined;
-        const snapshot = await partyRoomRemote(partyRoomId).attachWorld(
-            player.id,
-            room.roomId,
-            this.toMemberInfo(room, player)
-        );
-        if (!snapshot) return undefined;
-        this.applySnapshot(room, player, snapshot);
+        const attached = await callRoom(partyRoomId, AttachWorldPartyCommand, {
+            playerId: player.id,
+            worldRoomId: room.roomId,
+            info: this.toMemberInfo(room, player),
+        });
+        if (!attached.success) return undefined;
+        this.applySnapshot(room, player, attached.data);
         return partyRoomId;
     }
     async setPlayerParty(room: WorldRoom, event: PartyMembershipEvent): Promise<void> {
@@ -103,13 +107,14 @@ export class PlayerPartyWorldService {
         const playerId = options.leader.playerId;
         const existing = await partyDirectoryService.getPartyRoomId(playerId);
         if (existing && (await this.isPartyRoomListed(existing))) {
-            const snapshot = await partyRoomRemote(existing).attachWorld(
+            const attached = await callRoom(existing, AttachWorldPartyCommand, {
                 playerId,
-                options.leaderWorldRoomId,
-                options.leader
-            );
-            if (snapshot === undefined) return undefined;
-            if (snapshot !== null) return existing;
+                worldRoomId: options.leaderWorldRoomId,
+                info: options.leader,
+            });
+            if (attached.success) return existing;
+            // Không gọi được room (khác với "không còn là thành viên"): không tạo party mới.
+            if (attached.code === CommonCode.ROOM_UNAVAILABLE) return undefined;
         }
         try {
             const id = (await matchMaker.createRoom("party", options)).roomId;

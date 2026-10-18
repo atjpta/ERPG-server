@@ -1,3 +1,8 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { DialogueErrorCode } from "@/modules/dialogues/enums/dialogue-error-code.enum.js";
+import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import type { Action } from "@/modules/dialogues/schemas/condition.schema.js";
 import type { DialogueNode } from "@/modules/dialogues/schemas/dialogue.schema.js";
@@ -55,8 +60,9 @@ export class DialogueWorldService {
         client: PlayerClient,
         player: PlayerWorldState,
         source: { id: string; x: number; y: number; radius: number; dialogueCode: string }
-    ): string | undefined {
-        if (!dialogueService.getByCode(source.dialogueCode)) return "No dialogue";
+    ): ErrorCode | undefined {
+        if (!dialogueService.getByCode(source.dialogueCode))
+            return DialogueErrorCode.DIALOGUE_NOT_FOUND;
         this.begin(room, client, player, {
             sourceCode: source.id,
             dialogueCode: source.dialogueCode,
@@ -116,7 +122,7 @@ export class DialogueWorldService {
     ) {
         const node = dialogueService.getNode(session.dialogueCode, nodeId);
         if (!node) {
-            this.end(room, client, session.sourceCode, "Dialogue not found");
+            this.end(room, client, session.sourceCode, DialogueErrorCode.DIALOGUE_NOT_FOUND);
             return;
         }
         session.nodeId = nodeId;
@@ -162,13 +168,13 @@ export class DialogueWorldService {
                 )
             ),
         };
-        client.send(WorldMessage.DIALOGUE, message);
+        sendOk(client, WorldMessage.DIALOGUE, message);
     }
 
-    end(room: WorldRoom, client: PlayerClient, sourceCode: string, error?: string) {
+    end(room: WorldRoom, client: PlayerClient, sourceCode: string, error?: ErrorCode) {
         this.sessionsOf(room).delete(client.sessionId);
-        const message: DialogueEndMessage = { sourceCode, ...(error ? { error } : {}) };
-        client.send(WorldMessage.DIALOGUE_END, message);
+        if (error) sendFail(client, WorldMessage.DIALOGUE_END, error, { sourceCode });
+        else sendOk(client, WorldMessage.DIALOGUE_END, { sourceCode } satisfies DialogueEndMessage);
     }
 
     /** Chạy lần lượt; action lỗi thì dừng và trả lỗi (các action trước đó giữ nguyên hiệu lực). */
@@ -178,7 +184,7 @@ export class DialogueWorldService {
         player: PlayerWorldState,
         session: DialogueSession,
         actions: readonly Action[] | undefined
-    ): string | undefined {
+    ): ErrorCode | undefined {
         for (const action of actions ?? []) {
             const error = this.runAction(room, client, player, session, action);
             if (error) return error;
@@ -192,7 +198,7 @@ export class DialogueWorldService {
         player: PlayerWorldState,
         session: DialogueSession,
         action: Action
-    ): string | undefined {
+    ): ErrorCode | undefined {
         switch (action.type) {
             case "start_quest":
                 return questWorldService.start(room, client, player, action.questCode);
@@ -207,15 +213,16 @@ export class DialogueWorldService {
                 );
             case "give_item": {
                 const item = itemService.getByCode(action.itemCode);
-                if (!item) return "Item not found";
+                if (!item) return ItemErrorCode.ITEM_NOT_FOUND;
                 const items = [{ itemId: item.id, quantity: action.quantity }];
-                if (!inventoryWorldService.canFit(player, items)) return "Inventory full";
+                if (!inventoryWorldService.canFit(player, items))
+                    return ItemErrorCode.INVENTORY_FULL;
                 inventoryWorldService.grantItems(client, player, items, ItemSource.QUEST);
                 return undefined;
             }
             case "take_item": {
                 if (!inventoryWorldService.takeByCode(player, action.itemCode, action.quantity)) {
-                    return "Not enough items";
+                    return ItemErrorCode.ITEM_NOT_ENOUGH;
                 }
                 inventoryWorldService.send(client, player);
                 return undefined;
@@ -232,10 +239,10 @@ export class DialogueWorldService {
                 const wallet = debitWallet(player.wallet, [
                     { code: action.currency, amount: action.amount },
                 ]);
-                if (!wallet) return "Not enough currency";
+                if (!wallet) return ItemErrorCode.CURRENCY_NOT_ENOUGH;
                 player.wallet = wallet;
                 const message: WalletMessage = player.wallet;
-                client.send(WorldMessage.WALLET, message);
+                sendOk(client, WorldMessage.WALLET, message);
                 return undefined;
             }
             case "set_flag":
@@ -254,14 +261,14 @@ export class DialogueWorldService {
                 const fn = npcService
                     .getByCode(session.npcCode ?? "")
                     ?.functions.find((f) => f.id === action.function);
-                if (!fn || !session.npcCode) return "Function not found";
+                if (!fn || !session.npcCode) return NpcErrorCode.NPC_FUNCTION_NOT_FOUND;
                 const message: NpcFunctionOpenMessage = {
                     npcCode: session.npcCode,
                     functionId: fn.id,
                     type: fn.type,
                     config: JSON.stringify(fn.config),
                 };
-                client.send(WorldMessage.NPC_FUNCTION_OPEN, message);
+                sendOk(client, WorldMessage.NPC_FUNCTION_OPEN, message);
                 return undefined;
             }
             case "talk":

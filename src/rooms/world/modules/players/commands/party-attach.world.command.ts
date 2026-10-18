@@ -1,4 +1,5 @@
-import { partyRoomRemote } from "@/rooms/party/party.remote.js";
+import { callRoom } from "@/core/rooms/room.integration.js";
+import { AttachWorldPartyCommand } from "@/rooms/party/commands/attach-world.party.command.js";
 import { partyDirectoryService } from "@/rooms/party/party.shared.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { playerPartyWorldService } from "@/rooms/world/modules/players/services/player-party.world.service.js";
@@ -12,13 +13,13 @@ export class PartyAttachWorldCommand extends Command<WorldRoom, { player: Player
         await partyDirectoryService.setWorldRoomId(player.id, room.roomId);
         const partyRoomId = await partyDirectoryService.getPartyRoomId(player.id);
         if (!partyRoomId) return;
-        const snapshot = await partyRoomRemote(partyRoomId).attachWorld(
-            player.id,
-            room.roomId,
-            playerPartyWorldService.toMemberInfo(room, player)
-        );
+        const attached = await callRoom(partyRoomId, AttachWorldPartyCommand, {
+            playerId: player.id,
+            worldRoomId: room.roomId,
+            info: playerPartyWorldService.toMemberInfo(room, player),
+        });
         // RPC lỗi hoặc không còn là thành viên: giữ directory để lần sau đối soát.
-        if (!snapshot) return;
-        playerPartyWorldService.applySnapshot(room, player, snapshot);
+        if (!attached.success) return;
+        playerPartyWorldService.applySnapshot(room, player, attached.data);
     }
 }

@@ -1,3 +1,4 @@
+import { sendOk } from "@/core/utils/room-send.util.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
 import {
@@ -64,10 +65,10 @@ export class RewardWorldService {
         const tally = recordInDungeon ? room.dungeon?.rewards.get(player.id) : undefined;
         if (tally) recordReward(tally, message, progress.level);
         const client = room.clients.getById(sessionId);
-        client?.send(WorldMessage.REWARD, message);
+        if (client) sendOk(client, WorldMessage.REWARD, message);
         if (reward.currency.some((currency) => currency.amount > 0)) {
             const wallet: WalletMessage = player.wallet;
-            client?.send(WorldMessage.WALLET, wallet);
+            if (client) sendOk(client, WorldMessage.WALLET, wallet);
         }
         if (reward.items.length > 0)
             inventoryWorldService.grantItems(client, player, reward.items, reward.source);

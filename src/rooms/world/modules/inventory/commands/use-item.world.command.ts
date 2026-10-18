@@ -1,13 +1,12 @@
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { fail, ok } from "@/core/utils/result.util.js";
+import { broadcastOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { removeFromInventory } from "@/modules/player/services/inventory.service.js";
 import { InventoryWorldCommand } from "@/rooms/world/modules/inventory/commands/inventory.world.command.js";
-import {
-    done,
-    fail,
-    POTION_COOLDOWN_MS,
-} from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
+import { POTION_COOLDOWN_MS } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import { UseItemSchema } from "@/rooms/world/modules/inventory/validators/inventory.world.validator.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import {
@@ -29,23 +28,23 @@ export class UseItemWorldCommand extends InventoryWorldCommand<
         const now = this.clock.elapsedTime;
         const bag = player.inventories[ItemType.CONSUMABLE];
         const entry = bag.find((candidate) => candidate.id === instanceId);
-        if (!entry) return fail("Item not found");
+        if (!entry) return fail(ItemErrorCode.ITEM_NOT_FOUND);
         const item = itemService.getById(entry.itemId);
         const metadata = (item?.metadata ?? {}) as { heal?: unknown; mana?: unknown };
         const heal = typeof metadata.heal === "number" ? metadata.heal : 0;
         const mana = typeof metadata.mana === "number" ? metadata.mana : 0;
-        if (!item || (heal <= 0 && mana <= 0)) return fail("Item not usable");
+        if (!item || (heal <= 0 && mana <= 0)) return fail(ItemErrorCode.ITEM_NOT_USABLE);
         const usefulHp = heal > 0 && player.hp < player.maxHp;
         const usefulMp = mana > 0 && player.mp < player.maxMp;
-        if (!usefulHp && !usefulMp) return fail("Already full");
+        if (!usefulHp && !usefulMp) return fail(ItemErrorCode.ITEM_ALREADY_FULL);
         if (
             (heal > 0 && now < player.hpPotionReadyAt) ||
             (mana > 0 && now < player.mpPotionReadyAt)
         ) {
-            return fail("Potion cooldown");
+            return fail(ItemErrorCode.ITEM_ON_COOLDOWN);
         }
 
-        if (!removeFromInventory(bag, item.id, 1)) return fail("Item not found");
+        if (!removeFromInventory(bag, item.id, 1)) return fail(ItemErrorCode.ITEM_NOT_FOUND);
         if (heal > 0) player.hpPotionReadyAt = now + POTION_COOLDOWN_MS;
         if (mana > 0) player.mpPotionReadyAt = now + POTION_COOLDOWN_MS;
         player.syncPotionCooldowns(now);
@@ -53,7 +52,7 @@ export class UseItemWorldCommand extends InventoryWorldCommand<
         const mpBefore = player.mp;
         if (usefulHp) player.hp = Math.min(player.maxHp, player.hp + heal);
         if (usefulMp) player.mp = Math.min(player.maxMp, player.mp + mana);
-        return done({ hp: player.hp - hpBefore, mp: player.mp - mpBefore });
+        return ok({ hp: player.hp - hpBefore, mp: player.mp - mpBefore });
     }
 
     /** Báo cả room số HP / MP vừa hồi để hiện "+N" trên đầu người uống. */
@@ -63,6 +62,6 @@ export class UseItemWorldCommand extends InventoryWorldCommand<
             hp: gained.hp,
             mp: gained.mp,
         };
-        this.room.broadcast(WorldMessage.POTION_USED, message);
+        broadcastOk(this.room, WorldMessage.POTION_USED, message);
     }
 }

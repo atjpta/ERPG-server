@@ -1,11 +1,9 @@
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { fail, ok } from "@/core/utils/result.util.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { freeSlotIndexes } from "@/modules/player/services/inventory.service.js";
 import { InventoryWorldCommand } from "@/rooms/world/modules/inventory/commands/inventory.world.command.js";
-import {
-    done,
-    fail,
-    inventoryWorldService,
-} from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
+import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import { toInventoryEquipment } from "@/rooms/world/modules/inventory/utils/equipment-instance.world.util.js";
 import { UnequipItemSchema } from "@/rooms/world/modules/inventory/validators/inventory.world.validator.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
@@ -22,16 +20,16 @@ export class UnequipItemWorldCommand extends InventoryWorldCommand<
     protected override readonly changesStats = true;
     protected run(player: PlayerWorldState, { slot }: z.infer<typeof UnequipItemSchema>) {
         const equipped = player.equipments[slot];
-        if (!equipped) return fail("Slot is empty");
+        if (!equipped) return fail(ItemErrorCode.INVENTORY_SLOT_EMPTY);
         const bag = player.inventories[ItemType.EQUIPMENT];
         const [slotIndex] = freeSlotIndexes(
             bag,
             inventoryWorldService.inventorySize(ItemType.EQUIPMENT)
         );
-        if (slotIndex === undefined) return fail("Equipment inventory is full");
+        if (slotIndex === undefined) return fail(ItemErrorCode.INVENTORY_FULL);
         bag.push(toInventoryEquipment(equipped, slotIndex));
         player.equipments[slot] = null;
         player.refreshStats();
-        return done(undefined);
+        return ok(undefined);
     }
 }

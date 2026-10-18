@@ -1,7 +1,10 @@
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { CommonCode } from "@/core/enums/common-code.enum.js";
+import { sendFail } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { attributeWorldService } from "@/rooms/world/modules/players/services/attribute.world.service.js";
 import { AllocateAttributesSchema } from "@/rooms/world/modules/players/validators/allocate-attributes.world.validator.js";
-import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
+import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { Command } from "@colyseus/command";
 
@@ -23,11 +26,12 @@ export class AllocateAttributesWorldCommand extends Command<WorldRoom, AllocateA
 
         const parsed = AllocateAttributesSchema.safeParse(payload);
         const error = !parsed.success
-            ? "Invalid payload"
+            ? CommonCode.INVALID_INPUT
             : player.hp <= 0
-              ? "Player is dead"
+              ? PlayerErrorCode.PLAYER_DEAD
               : player.allocateAttributes(parsed.data);
 
-        attributeWorldService.send(client, player, error);
+        if (error) sendFail(client, WorldMessage.ATTRIBUTES, error);
+        else attributeWorldService.send(client, player);
     }
 }

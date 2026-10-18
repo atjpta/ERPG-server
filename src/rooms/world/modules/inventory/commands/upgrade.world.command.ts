@@ -1,3 +1,4 @@
+import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { InventoryWorldCommand } from "@/rooms/world/modules/inventory/commands/inventory.world.command.js";
 import {
@@ -13,6 +14,6 @@ export abstract class UpgradeWorldCommand<TSchema extends z.ZodType> extends Inv
     protected override readonly saveImmediately = true;
 
     protected override onSuccess(client: PlayerClient, value: EquipmentUpgradeMessage) {
-        client.send(WorldMessage.EQUIPMENT_UPGRADE, value);
+        sendOk(client, WorldMessage.EQUIPMENT_UPGRADE, value);
     }
 }

@@ -1,9 +1,9 @@
+import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { OAuth2Client } from "google-auth-library";
 import { DateTime } from "luxon";
 import { env, googleIdTokenAudiences } from "@/configs/env.config.js";
 import { cacheService } from "@/core/cache/cache.service.js";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { serviceError } from "@/core/utils/service-error.js";
 
 /** Thời gian sống của nonce — cũng là tuổi tối đa của idToken chấp nhận được. */
@@ -40,7 +40,7 @@ export class UserGoogleOauthService {
     async verifyIdToken({ idToken, nonce }: UserOauthCredential): Promise<UserOauthProfile> {
         const audiences = googleIdTokenAudiences();
         if (audiences.length === 0) {
-            serviceError("Google login is not enabled", 400, ResponseCode.OAUTH_PROVIDER_DISABLED);
+            serviceError("Google login is not enabled", 400, AuthErrorCode.OAUTH_PROVIDER_DISABLED);
         }
 
         const parsedNonce = nonce ? this.parseNonce(nonce) : null;
@@ -53,10 +53,10 @@ export class UserGoogleOauthService {
             });
             payload = ticket.getPayload();
         } catch {
-            serviceError("Invalid Google idToken", 400, ResponseCode.OAUTH_INVALID_CREDENTIAL);
+            serviceError("Invalid Google idToken", 400, AuthErrorCode.OAUTH_INVALID_CREDENTIAL);
         }
         if (!payload || (nonce && payload.nonce !== nonce)) {
-            serviceError("Invalid Google idToken", 400, ResponseCode.OAUTH_INVALID_CREDENTIAL);
+            serviceError("Invalid Google idToken", 400, AuthErrorCode.OAUTH_INVALID_CREDENTIAL);
         }
 
         if (parsedNonce) {
@@ -76,7 +76,7 @@ export class UserGoogleOauthService {
         const ttl = Math.max(Math.ceil(exp - DateTime.now().toSeconds()), 1);
         const fresh = await cacheService.setIfAbsent(`oauth:id-token:${hash}`, true, ttl);
         if (!fresh) {
-            serviceError("idToken already used", 400, ResponseCode.OAUTH_INVALID_CREDENTIAL);
+            serviceError("idToken already used", 400, AuthErrorCode.OAUTH_INVALID_CREDENTIAL);
         }
     }
 
@@ -97,7 +97,7 @@ export class UserGoogleOauthService {
             timingSafeEqual(Buffer.from(signature), Buffer.from(expected)) &&
             Number(expiresAt) > DateTime.now().toSeconds();
 
-        if (!valid) serviceError("Invalid nonce", 400, ResponseCode.OAUTH_INVALID_CREDENTIAL);
+        if (!valid) serviceError("Invalid nonce", 400, AuthErrorCode.OAUTH_INVALID_CREDENTIAL);
         return { id, expiresAt: Number(expiresAt) };
     }
 
@@ -105,7 +105,7 @@ export class UserGoogleOauthService {
     private async consumeNonce({ id, expiresAt }: { id: string; expiresAt: number }) {
         const ttl = Math.max(Math.ceil(expiresAt - DateTime.now().toSeconds()), 1);
         const fresh = await cacheService.setIfAbsent(`oauth:nonce:${id}`, true, ttl);
-        if (!fresh) serviceError("Nonce already used", 400, ResponseCode.OAUTH_INVALID_CREDENTIAL);
+        if (!fresh) serviceError("Nonce already used", 400, AuthErrorCode.OAUTH_INVALID_CREDENTIAL);
     }
 }
 

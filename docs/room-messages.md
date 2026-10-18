@@ -78,7 +78,7 @@ command con. Lỗi bất đồng bộ được trả về handler của Colyseus
   Không dùng arrow function phụ thuộc `this` trong object handler trả về. Thêm/sửa file cần restart
   process; chế độ `yarn dev` dùng watch để restart khi source thay đổi.
 - Hàm này đăng ký message từ client, không đăng ký RPC giữa room. RPC vẫn dùng
-  `worldRoomRemote`/`partyRoomRemote` và method công khai trên room.
+  `callRoom` và command RPC trong danh sách `createRpcRunner` của room.
 
 Xem thêm [quy tắc command](room-command-pattern.md) và
 [tương tác giữa các room](room-interactions.md).

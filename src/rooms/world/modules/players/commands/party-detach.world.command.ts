@@ -1,4 +1,6 @@
-import { partyRoomRemote } from "@/rooms/party/party.remote.js";
+import { callRoom } from "@/core/rooms/room.integration.js";
+import { DetachWorldPartyCommand } from "@/rooms/party/commands/detach-world.party.command.js";
+import { RemoveMemberPartyCommand } from "@/rooms/party/modules/members/commands/remove-member.party.command.js";
 import { partyDirectoryService } from "@/rooms/party/party.shared.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
@@ -12,9 +14,15 @@ export class PartyDetachWorldCommand extends Command<WorldRoom, { player: Player
         const partyRoomId = player.partyRoomId;
         if (!partyRoomId) return;
         if (player.pendingMapCode) {
-            await partyRoomRemote(partyRoomId).detachWorld(player.id, room.roomId);
+            await callRoom(partyRoomId, DetachWorldPartyCommand, {
+                playerId: player.id,
+                worldRoomId: room.roomId,
+            });
         } else {
-            await partyRoomRemote(partyRoomId).removeMember(player.id, room.roomId);
+            await callRoom(partyRoomId, RemoveMemberPartyCommand, {
+                playerId: player.id,
+                worldRoomId: room.roomId,
+            });
         }
     }
 }

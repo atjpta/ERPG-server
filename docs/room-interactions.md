@@ -16,9 +16,8 @@ không lấy instance của room đích để đọc hoặc sửa state trực t
 
 Toàn bộ logic runtime và DTO party nằm trong `src/rooms/party`. World chỉ dùng
 entrypoint công khai `party.shared.ts` (DTO, enum, hàm thuần và directory) hoặc
-`party.remote.ts` (RPC), không import trực tiếp implementation bên trong party.
-Mỗi file `<room>.remote.ts` dùng `import type` từ class room tương ứng để suy ra
-chữ ký method. Không cần interface Contract khai báo lại các method.
+các **command RPC** của party (để gọi bằng `callRoom`), không import service, schema hay implementation khác bên trong party.
+Kiểu payload và kết quả suy ra từ chính class command, không cần interface Contract.
 
 Riêng `party_config` được lưu trong master data, nên schema Zod và enum loot-mode
 nằm trong `src/modules/master-data`. Module master-data không phụ thuộc room.
@@ -39,16 +38,16 @@ Các đường dẫn dưới đây tính từ thư mục gốc project.
 | File                                                                     | Vai trò                                                              |
 | ------------------------------------------------------------------------ | -------------------------------------------------------------------- |
 | `src/rooms/party/types/party-room.type.ts`                               | DTO dùng chung cho yêu cầu và kết quả RPC                            |
-| `src/rooms/party/party.remote.ts`, `src/rooms/world/world.remote.ts`     | Remote có kiểu và fallback cho từng method                           |
+| `src/rooms/<room>/commands/*.command.ts` (command RPC)                   | Mỗi RPC là một command: payload vào, `Result` ra                     |
 | `src/rooms/party/party.shared.ts`                                        | Entry point DTO, enum, hàm thuần và directory cho room khác          |
-| `src/core/rooms/room.integration.ts`                                     | Kiểu RPC dùng chung, gọi Colyseus, timeout, log và fallback          |
+| `src/core/rooms/room.integration.ts`                                     | `callRoom`, `createRpcRunner`, gọi Colyseus, timeout và log          |
 | `src/rooms/world/modules/players/services/player-party.world.service.ts` | Capability RPC, tìm player, tạo/áp dụng snapshot và xử lý dùng chung |
 | `src/rooms/coordinators/dungeon-party.coordinator.ts`                    | Kiểm tra các thành viên và điều phối vào dungeon                     |
 | `src/rooms/party/services/party-directory.service.ts`                    | Tra cứu vị trí world, party và thông tin nhóm dự kiến vào dungeon    |
 
 ## 3. Một lời gọi đi như thế nào?
 
-Command gọi trực tiếp `partyRoomRemote`/`worldRoomRemote` khi xử lý một hành động.
+Command gọi trực tiếp `callRoom(roomId, XCommand, payload)` khi xử lý một hành động.
 Không có lớp `world-party.integration.ts` trung gian. Phía world phân chia như sau:
 
 | Xử lý                                                         | Nơi sở hữu                                                     |
@@ -66,7 +65,7 @@ Các command trên nằm trong `world/modules/players/commands`, service nằm t
 tương ứng. Coordinator giữ quy trình phối hợp party và world như vào dungeon.
 
 Tìm/tạo party thuộc `playerPartyWorldService.ensureParty()` phía world vì luồng này
-chỉ gọi `partyRoomRemote`. Nếu đã có party, service xác nhận thành viên qua RPC.
+chỉ gọi `callRoom` tới party. Nếu đã có party, service xác nhận thành viên qua RPC.
 Nếu cần tạo mới, service gọi matchmaking vì chưa có room đích để gọi remote.
 Các yêu cầu tạo đồng thời cho cùng player dùng chung Promise trong một process.
 `isPartyRoomListed()` chỉ kiểm tra listing matchmaking, không bảo đảm room còn phản hồi RPC.
@@ -74,12 +73,12 @@ Các yêu cầu tạo đồng thời cho cùng player dùng chung Promise trong 
 ```mermaid
 sequenceDiagram
     participant P as PartyRoom
-    participant C as worldRoomRemote
+    participant C as callRoom
     participant T as requestRoom / Colyseus
     participant W as WorldRoom đích
-    P->>C: partyDeliverInvite(playerId, payload)
-    C->>T: roomId, tên method, danh sách tham số
-    T->>W: gọi method công khai
+    P->>C: PartyDeliverInviteWorldCommand, payload
+    C->>T: roomId, "runRpc", tên command, payload
+    T->>W: runRpc chạy command trong danh sách
     W-->>T: DTO người chơi hoặc null
     T-->>C: kết quả hoặc fallback khi lỗi
     C-->>P: Promise kết quả
@@ -88,27 +87,31 @@ sequenceDiagram
 Ví dụ đang dùng trong lệnh mời party:
 
 ```ts
-import { worldRoomRemote } from "@/rooms/world/world.remote.js";
+import { callRoom } from "@/core/rooms/room.integration.js";
+import { PartyDeliverInviteWorldCommand } from "@/rooms/world/modules/players/commands/party-deliver-invite.world.command.js";
 
-const snapshot = await worldRoomRemote(worldRoomId).partyDeliverInvite(target.id, {
-    partyRoomId: context.room.roomId,
-    fromName: context.nameOf(leaderId),
-    expiresInSec: 30,
+const delivered = await callRoom(worldRoomId, PartyDeliverInviteWorldCommand, {
+    playerId: target.id,
+    message: {
+        partyRoomId: this.room.roomId,
+        fromName: this.room.state.nameOf(leaderId),
+        expiresInSec: 30,
+    },
 });
 
-if (!snapshot) {
-    // Không nhận được snapshot: có thể player đã rời room hoặc RPC bị lỗi.
+if (!delivered.success) {
+    // `delivered.code`: PLAYER_OFFLINE (đã rời room) hoặc ROOM_UNAVAILABLE (RPC lỗi / timeout).
     return;
 }
+const snapshot = delivered.data;
 ```
 
-`context`, `target`, `leaderId` trong ví dụ là dữ liệu của command đang xử lý.
+`target`, `leaderId` trong ví dụ là dữ liệu của command đang xử lý.
 `worldRoomId` là ID instance room đích, không phải tên đăng ký `"world"`.
 
-Hàm `partyDeliverInvite` trong `world.remote.ts` gọi `matchMaker.remoteRoomCall()` với
-tên method tương ứng. Code nghiệp vụ không cần viết chuỗi tên method hoặc
-truyền mảng tham số thủ công. TypeScript kiểm tra tên method, thứ tự và kiểu tham số
-theo method thực tế trên class room. Mọi lời gọi qua remote đều trả `Promise`, kể cả method đích chạy đồng bộ.
+`callRoom` gọi `matchMaker.remoteRoomCall()` tới method `runRpc` của room đích kèm tên command. Code nghiệp vụ không
+viết chuỗi tên method; TypeScript suy kiểu payload và kết quả từ class command, và Ctrl+click vào tên class nhảy
+thẳng tới logic. Mọi lời gọi đều trả `Promise<Result>`, kể cả khi command chạy đồng bộ.
 
 Remote không tạo kết nối WebSocket mới và không yêu cầu client Unity join room đích.
 Đây là giao tiếp nội bộ giữa các room trên server.
@@ -118,14 +121,18 @@ Remote không tạo kết nối WebSocket mới và không yêu cầu client Uni
 ### World gọi party
 
 ```ts
-import { partyRoomRemote } from "@/rooms/party/party.remote.js";
+import { callRoom } from "@/core/rooms/room.integration.js";
+import { AttachWorldPartyCommand } from "@/rooms/party/commands/attach-world.party.command.js";
 
-const party = partyRoomRemote(partyRoomId);
-const snapshot = await party.attachWorld(player.id, room.roomId, memberInfo);
+const attached = await callRoom(partyRoomId, AttachWorldPartyCommand, {
+    playerId: player.id,
+    worldRoomId: room.roomId,
+    info: memberInfo,
+});
 
-if (snapshot) {
-    player.partyRoomId = snapshot.partyRoomId;
-    player.partyLootMode = snapshot.lootMode;
+if (attached.success) {
+    player.partyRoomId = attached.data.partyRoomId;
+    player.partyLootMode = attached.data.lootMode;
 }
 ```
 
@@ -166,51 +173,60 @@ export interface PartySummary {
 }
 ```
 
-Module chỉ mô tả dữ liệu trao đổi, không import implementation của room.
-Nếu thao tác có thể bị từ chối vì nghiệp vụ, khai báo kết quả rõ ràng, ví dụ
-`{ ok: true; ... } | { ok: false; reason: ... }`.
+Module chỉ mô tả dữ liệu trao đổi (`data` của `Result`), không import implementation của room.
+Thao tác có thể bị từ chối vì nghiệp vụ thì trả `fail(<Domain>ErrorCode.X)`; thêm mã mới vào enum của domain nếu cần
+(xem [định dạng trả về chung](response-format.md)).
 
 ### Bước 2: Cài đặt ở room sở hữu dữ liệu
 
-Ví dụ thêm capability vào `PartyRoom`, với type `PartySummary` import từ file DTO:
+Mỗi RPC là một command nhận **một object payload** và ghi `Result` vào `result`
+(`src/rooms/party/commands/*.party.command.ts`). Ví dụ thêm `getSummary` cho `PartyRoom`, với `PartySummary`
+import từ file DTO:
 
 ```ts
-getSummary(): PartySummary | null {
-    if (this.disbanded) return null;
-    return {
-        partyRoomId: this.roomId,
-        leaderPlayerId: this.state.leaderPlayerId,
-        memberCount: this.state.size,
-    };
+// commands/get-summary.party.command.ts
+export class GetSummaryPartyCommand extends Command<PartyRoom, Record<string, never>> {
+    result: Result<PartySummary> = fail(CommonCode.ROOM_UNAVAILABLE);
+
+    execute() {
+        const { room } = this;
+        this.result = room.disbanded
+            ? fail(PartyErrorCode.PARTY_NOT_MEMBER)
+            : ok({
+                  partyRoomId: room.roomId,
+                  leaderPlayerId: room.state.leaderPlayerId,
+                  memberCount: room.state.size,
+              });
+    }
 }
 ```
 
-Remote suy ra kiểu từ `PartyRoom`, nên method RPC phải là method công khai của room đích.
-Nếu logic dài, tách thành service riêng và để method trên room gọi service đó. Không cần thêm interface Contract.
+Command không cần trả dữ liệu thì gán `result = ok()`.
 
-### Bước 3: Khai báo hàm trong remote
+### Bước 3: Cho phép gọi từ room khác
 
-Trong `party.remote.ts`, thêm tên method vào `PartyRpc` (danh sách `Pick<PartyRoom, ...>`) và một dòng vào `partyRoomRemote`:
+Thêm command vào danh sách của room (`party.room.ts`):
 
 ```ts
-getSummary: (...args) => call(roomId, "getSummary", args, null),
+readonly runRpc = createRpcRunner(this, [
+    // ...
+    GetSummaryPartyCommand,
+]);
 ```
 
-Tham số thứ tư của `call` là fallback khi timeout hoặc room không còn (bỏ trống = `undefined`).
-Kiểu tham số/kết quả suy ra từ `PartyRoom`, nên đổi chữ ký method trên room thì typecheck báo lỗi.
-`PartyRemote` là mapped type theo `keyof PartyRpc`, nên click vào tên ở chỗ gọi sẽ nhảy thẳng tới method trên room.
+Chỉ command trong danh sách mới chạy được; tên lạ trả `fail(CommonCode.NOT_FOUND)`. Tên class là một phần giao
+thức giữa hai room, nên đổi tên command RPC thì cập nhật cả hai phía (typecheck báo ở chỗ gọi).
 
 ### Bước 4: Gọi từ nơi cần dùng
 
 ```ts
-const summary = await partyRoomRemote(partyRoomId).getSummary();
-if (!summary) return;
-// Dùng summary.memberCount, summary.leaderPlayerId...
+const summary = await callRoom(partyRoomId, GetSummaryPartyCommand, {});
+if (!summary.success) return; // summary.code: PARTY_NOT_MEMBER hoặc ROOM_UNAVAILABLE
+// Dùng summary.data.memberCount, summary.data.leaderPlayerId...
 ```
 
-Nếu cần phân biệt rõ “party không tồn tại” với “không gọi được room”, thiết kế kết quả
-nghiệp vụ thành DTO riêng và dùng `undefined` làm fallback. Kiểm tra tường minh theo
-thiết kế đó; không dùng chung một giá trị cho cả hai tình huống rồi suy luận nguyên nhân.
+`code` phân biệt “party không tồn tại / không còn” (lỗi nghiệp vụ) với “không gọi được room”
+(`ROOM_UNAVAILABLE`), nên không cần giá trị fallback riêng.
 
 ### Bước 5: Kiểm tra
 
@@ -226,20 +242,20 @@ Chạy `yarn typecheck` và `yarn lint`.
   có thể nằm trong service. Method công khai trên room là điểm vào của RPC, và nên chỉ dispatch command.
 - Method RPC trên room cũng chạy trong command. Command cần trả dữ liệu thì khai báo field
   `result`, gán trong `execute()` (vẫn trả `void`), và room đọc lại bằng
-  `dispatchForResult(...)`. Không trả DTO từ `Command.execute()`: dispatcher coi giá trị
+  `createRpcRunner(this, [XCommand])`. Không trả DTO từ `Command.execute()`: dispatcher coi giá trị
   trả về là command con.
 
 Chi tiết: [Quy tắc command](room-command-pattern.md).
 
-## 7. Timeout, fallback và xử lý lặp
+## 7. Timeout, lỗi và xử lý lặp
 
 `requestRoom()` giới hạn chờ 3 giây, đồng thời truyền cùng giới hạn cho Colyseus IPC.
-Khi có lỗi, hàm ghi log và trả fallback của method. Giá trị trả về hiện không chứa
-metadata cho biết đó là kết quả thật hay fallback.
+Khi có lỗi (timeout, room không còn), hàm ghi log và `callRoom` trả
+`fail(CommonCode.ROOM_UNAVAILABLE)`, nên bên gọi luôn phân biệt được với lỗi nghiệp vụ qua `code`.
 
-Ví dụ `partySetPlayerParty()` thành công trả `undefined`, fallback cũng là `undefined`.
-Vì vậy `await` lời gọi này chưa chứng minh cập nhật đã được áp dụng. Khi cần xác nhận,
-thiết kế DTO xác nhận hoặc cơ chế đồng bộ lại trạng thái.
+`partySetPlayerParty()` thành công trả `ok()` (không có `data`). Thành công chỉ nghĩa là room đích đã nhận và
+xử lý lời gọi; việc bỏ qua bản cũ / trùng vẫn trả `ok()`. Khi cần xác nhận kết quả thật, đặt nó vào `data`
+hoặc dùng cơ chế đồng bộ lại trạng thái.
 
 Timeout dừng chờ ở bên gọi, không hủy công việc ở room đích. Không tự động retry mọi
 mutation. Với cộng thưởng, trừ tiền, tạo instance hoặc chuyển map, dùng `eventId`/
@@ -259,7 +275,7 @@ Khi cần vòng đời và state riêng, tạo room mới cùng DTO và remote r
 1. Khai báo DTO trong `src/rooms/chat/types/` nếu chat là tính năng runtime của room.
 2. Tạo `ChatRoom` cùng cấu trúc commands/modules/schemas và các method RPC công khai.
 3. Đăng ký room tại `src/rooms/index.room.ts` và cung cấp class từ entrypoint.
-4. Tạo `src/rooms/chat/chat.remote.ts`, import type `ChatRoom` và khai báo `chatRoomRemote` theo mẫu của `partyRoomRemote` (mỗi RPC một hàm gọi `requestRoom`). Nếu cần chia sẻ DTO/hàm thuần, xuất qua `chat.shared.ts`.
+4. Khai báo command RPC của chat và `readonly runRpc = createRpcRunner(this, [...])`; nơi gọi dùng `callRoom(chatRoomId, XCommand, payload)`. Nếu cần chia sẻ DTO/hàm thuần, xuất qua `chat.shared.ts`.
 5. Xác định cách tra cứu instance chat đích, ví dụ theo server/shard; không dùng tên
    đăng ký room thay cho `roomId` khi gọi RPC.
 6. Đặt quy trình cần nhiều room vào coordinator và bổ sung test ranh giới import.

@@ -1,3 +1,7 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
+import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
@@ -9,7 +13,6 @@ import { partyDungeonWorldService } from "@/rooms/world/modules/dungeons/service
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 import {
-    MapTransferError,
     WorldMessage,
     WorldRoomName,
     type MapChangeMessage,
@@ -27,26 +30,26 @@ export class TransferWorldService {
         spawnId: string,
         /** Đặt player đúng toạ độ này thay vì tra spawn point (dịch chuyển tới bệ teleport). */
         point?: { x: number; y: number }
-    ): Promise<string | undefined> {
-        if (player.pendingMapCode) return "Already changing map";
+    ): Promise<ErrorCode | undefined> {
+        if (player.pendingMapCode) return MapErrorCode.MAP_ALREADY_CHANGING;
         const sameMap = mapCode === room.map.code;
         let target: GameMap;
         try {
             target = sameMap ? room.map : await mapService.getActiveByCodeOrFail(mapCode);
         } catch {
-            return MapTransferError.MAP_NOT_OPEN;
+            return MapErrorCode.MAP_NOT_OPEN;
         }
-        if (!sameMap && player.level < target.minLevel) return MapTransferError.LEVEL_TOO_LOW;
+        if (!sameMap && player.level < target.minLevel) return PlayerErrorCode.LEVEL_TOO_LOW;
         // Dungeon: instance riêng + lưu chỗ đứng cũ, không dùng chuyển map thường.
         if (target.type === MapType.DUNGEON) {
-            if (room.isDungeon) return MapTransferError.MAP_NOT_OPEN;
+            if (room.isDungeon) return MapErrorCode.MAP_NOT_OPEN;
             if (!target.spawnPoints.some((point) => point.id === spawnId)) {
-                return "Spawn point not found";
+                return MapErrorCode.MAP_SPAWN_NOT_FOUND;
             }
             return partyDungeonWorldService.startDungeon(room, client, player, target, spawnId);
         }
         const spawn = point ?? target.spawnPoints.find((p) => p.id === spawnId);
-        if (!spawn) return "Spawn point not found";
+        if (!spawn) return MapErrorCode.MAP_SPAWN_NOT_FOUND;
 
         player.placeAt(spawn.x, spawn.y);
         if (sameMap) return undefined;
@@ -55,7 +58,7 @@ export class TransferWorldService {
         player.beginMapChange(mapCode);
         const message: MapChangeMessage = { mapCode, spawnId, roomName: WorldRoomName.WORLD };
         await worldService.savePlayer(room, client.sessionId);
-        client.send(WorldMessage.MAP_CHANGE, message);
+        sendOk(client, WorldMessage.MAP_CHANGE, message);
         return undefined;
     }
 
@@ -91,7 +94,7 @@ export class TransferWorldService {
             roomName: WorldRoomName.WORLD,
         };
         await worldService.savePlayer(room, client.sessionId);
-        client.send(WorldMessage.MAP_CHANGE, message);
+        sendOk(client, WorldMessage.MAP_CHANGE, message);
     }
 }
 

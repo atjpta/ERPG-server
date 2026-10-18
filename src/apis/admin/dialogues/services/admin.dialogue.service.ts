@@ -1,5 +1,5 @@
+import { DialogueErrorCode } from "@/modules/dialogues/enums/dialogue-error-code.enum.js";
 import { ilike } from "drizzle-orm";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { BaseService } from "@/core/services/base.service.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import type {
@@ -15,7 +15,7 @@ import { validateDialogueGraph } from "@/modules/dialogues/services/dialogue-gra
 
 const assertGraph = (nodes: readonly DialogueNode[]) => {
     const errors = validateDialogueGraph(nodes);
-    if (errors.length > 0) serviceError(errors.join("; "), 422, ResponseCode.DIALOGUE_INVALID);
+    if (errors.length > 0) serviceError(errors.join("; "), 422, DialogueErrorCode.DIALOGUE_INVALID);
 };
 
 export class AdminDialogueService extends BaseService<typeof Dialogues> {
@@ -33,7 +33,7 @@ export class AdminDialogueService extends BaseService<typeof Dialogues> {
 
     async createDialogue(body: AdminCreateDialogueBody) {
         if (await DialogueRepo.findByCode({ code: body.code })) {
-            serviceError("Dialogue code is existed", 409, ResponseCode.DIALOGUE_CODE_EXISTS);
+            serviceError("Dialogue code is existed", 409, DialogueErrorCode.DIALOGUE_CODE_EXISTS);
         }
         assertGraph(body.nodes);
         const dialogue = await this.create({ data: body });

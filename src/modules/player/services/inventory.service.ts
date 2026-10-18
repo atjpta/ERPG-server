@@ -1,3 +1,5 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import type { ItemSource } from "@/modules/items/enums/item.enum.js";
 import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 import {
@@ -112,10 +114,10 @@ export function moveInventorySlot(
     size: number,
     fromSlot: number,
     toSlot: number
-): string | undefined {
-    if (toSlot < 0 || toSlot >= size) return "Invalid target slot";
+): ErrorCode | undefined {
+    if (toSlot < 0 || toSlot >= size) return ItemErrorCode.INVENTORY_SLOT_INVALID;
     const from = inventory.find((entry) => entry.slotIndex === fromSlot);
-    if (!from) return "Slot is empty";
+    if (!from) return ItemErrorCode.INVENTORY_SLOT_EMPTY;
     if (fromSlot === toSlot) return undefined;
     const to = inventory.find((entry) => entry.slotIndex === toSlot);
     from.slotIndex = toSlot;

@@ -1,3 +1,5 @@
+import { WorldErrorCode } from "@/rooms/world/types/world-error-code.type.js";
+import { DialogueErrorCode } from "@/modules/dialogues/enums/dialogue-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { evaluateConditions } from "@/modules/dialogues/services/condition.service.js";
 import { dialogueService } from "@/modules/dialogues/services/dialogue.service.js";
@@ -44,7 +46,12 @@ export class DialogueChooseWorldCommand extends Command<WorldRoom, ContentPayloa
         }
         const node = dialogueService.getNode(session.dialogueCode, session.nodeId);
         if (!node) {
-            dialogueWorldService.end(room, client, session.sourceCode, "Dialogue not found");
+            dialogueWorldService.end(
+                room,
+                client,
+                session.sourceCode,
+                DialogueErrorCode.DIALOGUE_NOT_FOUND
+            );
             return;
         }
 
@@ -59,7 +66,12 @@ export class DialogueChooseWorldCommand extends Command<WorldRoom, ContentPayloa
         const ctx = contentWorldService.conditionContext(room, player);
         // Không tin client: option phải có thật và còn thoả điều kiện ở thời điểm chọn.
         if (!option || !evaluateConditions(ctx, option.conditions)) {
-            dialogueWorldService.end(room, client, session.sourceCode, "Option not available");
+            dialogueWorldService.end(
+                room,
+                client,
+                session.sourceCode,
+                WorldErrorCode.INTERACT_NOT_AVAILABLE
+            );
             return;
         }
         const error = dialogueWorldService.runActions(

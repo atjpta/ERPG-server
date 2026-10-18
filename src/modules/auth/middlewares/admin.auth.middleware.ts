@@ -1,5 +1,6 @@
+import { CommonCode } from "@/core/enums/common-code.enum.js";
+import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
 import { createMiddleware } from "colyseus";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { Response } from "@/core/utils/response.util.js";
 import { adminSessionService } from "@/modules/auth/services/admin-session.service.js";
 import type { AuthAdmin } from "@/modules/auth/types/auth-user.type.js";
@@ -11,8 +12,8 @@ export const adminAuthMiddleware = createMiddleware(
         const authHeader = ctx.getHeader("authorization");
         if (!authHeader?.startsWith("Bearer ")) {
             Response.unauthorized(ctx, {
-                message: "🔒 Missing token",
-                code: ResponseCode.MISSING_TOKEN,
+                message: "Missing token",
+                code: CommonCode.MISSING_TOKEN,
             });
         }
 
@@ -21,8 +22,8 @@ export const adminAuthMiddleware = createMiddleware(
             tokenData = adminSessionService.verifyToken(authHeader!.slice(7));
         } catch {
             Response.unauthorized(ctx, {
-                message: "🔒 Invalid or expired token",
-                code: ResponseCode.INVALID_TOKEN,
+                message: "Invalid or expired token",
+                code: CommonCode.INVALID_TOKEN,
             });
         }
 
@@ -30,8 +31,8 @@ export const adminAuthMiddleware = createMiddleware(
         const admin = await adminSessionService.getActiveById(tokenData!.adminId);
         if (!admin) {
             Response.forbidden(ctx, {
-                message: "🚫 Admin access required",
-                code: ResponseCode.ADMIN_ACCESS_REQUIRED,
+                message: "Admin access required",
+                code: AuthErrorCode.ADMIN_ACCESS_REQUIRED,
             });
         }
 

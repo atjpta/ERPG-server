@@ -1,5 +1,5 @@
+import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { createMiddleware } from "colyseus";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { Response } from "@/core/utils/response.util.js";
 import type { AuthPlayer } from "@/core/types/auth-player.type.js";
 import { playerAuthService } from "@/modules/auth/services/player-auth.service.js";
@@ -11,8 +11,8 @@ export const playerAuthMiddleware = createMiddleware(
         const authHeader = ctx.getHeader("authorization");
         if (!authHeader?.startsWith("Bearer ")) {
             Response.unauthorized(ctx, {
-                message: "🔒 Missing token",
-                code: ResponseCode.MISSING_TOKEN,
+                message: "Missing token",
+                code: CommonCode.MISSING_TOKEN,
             });
         }
 
@@ -20,8 +20,8 @@ export const playerAuthMiddleware = createMiddleware(
             return await playerAuthService.verifyToken(authHeader!.slice(7));
         } catch {
             Response.unauthorized(ctx, {
-                message: "🔒 Invalid or expired token",
-                code: ResponseCode.INVALID_TOKEN,
+                message: "Invalid or expired token",
+                code: CommonCode.INVALID_TOKEN,
             });
         }
         throw new Error("unreachable");

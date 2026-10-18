@@ -1,3 +1,4 @@
+import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
 import { questOf } from "@/rooms/world/modules/content/utils/quest-resolve.world.util.js";
@@ -31,6 +32,6 @@ export class QuestPreviewWorldCommand extends Command<WorldRoom, ContentPayload>
         const quest = questOf(player, questCode);
         if (!quest) return;
         const message: QuestPreviewMessage = { quest: questWorldService.toMessage(player, quest) };
-        client.send(WorldMessage.QUEST_PREVIEW, message);
+        sendOk(client, WorldMessage.QUEST_PREVIEW, message);
     }
 }

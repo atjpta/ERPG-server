@@ -64,7 +64,7 @@ export const adminUsersController = {
             RouterContainer(ctx, async () => {
                 const user = await adminUsersService.forceLogout(ctx.params.id);
                 if (!user) return Response.notFound(ctx);
-                return Response.ok({ message: "🔒 User logged out from all devices" });
+                return Response.ok({ message: "User logged out from all devices" });
             })
     ),
 
@@ -86,7 +86,7 @@ export const adminUsersController = {
                 const { id, sessionId } = ctx.params;
                 const session = await adminUsersService.revokeSession(id, sessionId);
                 if (!session) return Response.notFound(ctx);
-                return Response.ok({ message: "🔒 Session revoked" });
+                return Response.ok({ message: "Session revoked" });
             })
     ),
 };

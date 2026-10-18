@@ -1,10 +1,10 @@
+import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
 import type { ClientInfo } from "@/modules/auth/schemas/client-info.schema.js";
 import { createHash } from "node:crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { DateTime } from "luxon";
 import { env } from "@/configs/env.config.js";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
 import { assertRateLimit } from "@/core/utils/rate-limit.util.js";
 import { serviceError } from "@/core/utils/service-error.js";
@@ -46,7 +46,7 @@ export class UserAuthService {
 
         const exist = await UserRepo.findByEmail({ email });
         if (exist) {
-            serviceError("Email is existed", 409, ResponseCode.AUTH_EMAIL_EXISTS);
+            serviceError("Email is existed", 409, AuthErrorCode.AUTH_EMAIL_EXISTS);
         }
 
         const hashed = await bcrypt.hash(password, 10);
@@ -61,7 +61,11 @@ export class UserAuthService {
         const user = await UserRepo.findByEmail({ email });
         const valid = !!user?.password && (await bcrypt.compare(password, user.password));
         if (!valid) {
-            serviceError("Incorrect email or password", 400, ResponseCode.AUTH_INVALID_CREDENTIALS);
+            serviceError(
+                "Incorrect email or password",
+                400,
+                AuthErrorCode.AUTH_INVALID_CREDENTIALS
+            );
         }
 
         return this.issueSession(await this.resolveActiveUser(user), client);
@@ -158,7 +162,7 @@ export class UserAuthService {
                     serviceError(
                         "An account with this email already exists — log in with your password",
                         409,
-                        ResponseCode.AUTH_EMAIL_EXISTS
+                        AuthErrorCode.AUTH_EMAIL_EXISTS
                     );
                 }
                 user = await UserRepo.create({
@@ -210,7 +214,7 @@ export class UserAuthService {
         const { userId, sessionId } = params;
         const session = await UserSessionRepo.findById({ id: sessionId });
         if (!session || session.userId !== userId) {
-            serviceError("Session not found", 404, ResponseCode.AUTH_SESSION_NOT_FOUND);
+            serviceError("Session not found", 404, AuthErrorCode.AUTH_SESSION_NOT_FOUND);
         }
         const revoked = await UserSessionRepo.revoke({ id: sessionId });
         playerKickService.kickSession(userId, sessionId);
@@ -288,14 +292,14 @@ export class UserAuthService {
                     ? `Account banned until ${DateTime.fromJSDate(user.banExpiresAt).toISO()}`
                     : "Account banned",
                 403,
-                ResponseCode.AUTH_ACCOUNT_BANNED
+                AuthErrorCode.AUTH_ACCOUNT_BANNED
             );
         }
         if (user.status === UserStatus.DELETED) {
-            serviceError("Account has been deleted", 403, ResponseCode.AUTH_ACCOUNT_DELETED);
+            serviceError("Account has been deleted", 403, AuthErrorCode.AUTH_ACCOUNT_DELETED);
         }
         if (user.status !== UserStatus.ACTIVE) {
-            serviceError("Account is inactive", 403, ResponseCode.AUTH_ACCOUNT_INACTIVE);
+            serviceError("Account is inactive", 403, AuthErrorCode.AUTH_ACCOUNT_INACTIVE);
         }
         return user;
     }

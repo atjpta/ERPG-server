@@ -1,3 +1,4 @@
+import type { Result } from "@/core/types/result.type.js";
 import type { Item } from "@/modules/items/entities/item.entity.js";
 import {
     type EquipmentGroup,
@@ -9,8 +10,8 @@ import type {
 } from "@/modules/items/schemas/item-metadata.schema.js";
 import type { EquippedItem, InventoryItem } from "@/modules/player/schemas/inventory.schema.js";
 
-/** Lỗi nghiệp vụ trả về client (chuỗi) hoặc kết quả. */
-export type InventoryResult<T = undefined> = { ok: true; value: T } | { ok: false; error: string };
+/** Kết quả một thao tác túi đồ: dữ liệu hoặc `ErrorCode` lỗi. */
+export type InventoryResult<T = null> = Result<T>;
 
 /** Một trang bị của player — đang nằm trong túi hoặc đang mặc. */
 export interface OwnedEquipment {

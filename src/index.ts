@@ -1,3 +1,4 @@
+import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { listen } from "@colyseus/tools";
 import { uWebSocketsTransport } from "@colyseus/uwebsockets-transport";
 import { createEndpoint, createRouter, defineServer, monitor, playground } from "colyseus";
@@ -6,6 +7,8 @@ import { env } from "@/configs/env.config.js";
 import { connectPostgres } from "@/configs/postgres.config.js";
 import { applyCorsPolicy } from "@/configs/cors.config.js";
 import { connectRedisCache, createRedisScaling } from "@/configs/redis.config.js";
+import { routerErrorHandler } from "@/core/utils/response.util.js";
+import { fail, ok } from "@/core/utils/result.util.js";
 import { loadControllers } from "@/core/utils/load-controllers.util.js";
 import { prefixEndpoints } from "@/core/utils/prefix-endpoints.util.js";
 import { createRooms } from "@/rooms/index.room.js";
@@ -29,21 +32,19 @@ await listen(
                 app.use("/", playground());
             }
             app.use((_req, res) => {
-                res.status(404).json({
-                    data: null,
-                    message: "🔍 Not found page",
-                    error: "Not found",
-                    code: null,
-                });
+                res.status(404).json(fail(CommonCode.NOT_FOUND, "Not found"));
             });
         },
-        routes: createRouter({
-            health: createEndpoint("/health", { method: "GET" }, async () => {
-                return { message: "OK" };
-            }),
-            ...prefixEndpoints("/admin", admin),
-            ...prefixEndpoints("/user", user),
-        }),
+        routes: createRouter(
+            {
+                health: createEndpoint("/health", { method: "GET" }, async () => {
+                    return ok();
+                }),
+                ...prefixEndpoints("/admin", admin),
+                ...prefixEndpoints("/user", user),
+            },
+            { onError: routerErrorHandler }
+        ),
         transport: new uWebSocketsTransport({}, {}),
     }),
     env.PORT

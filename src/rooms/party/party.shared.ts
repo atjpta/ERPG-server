@@ -4,3 +4,4 @@ export { partyDirectoryService } from "@/rooms/party/services/party-directory.se
 export { shareKillReward } from "@/rooms/party/services/party-loot.js";
 export * from "@/rooms/party/types/party-message.type.js";
 export type * from "@/rooms/party/types/party-room.type.js";
+export { PartyErrorCode } from "@/rooms/party/types/party-error-code.type.js";

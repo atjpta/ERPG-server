@@ -1,6 +1,6 @@
+import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { env } from "@/configs/env.config.js";
 import { cacheService } from "@/core/cache/cache.service.js";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { serviceError } from "@/core/utils/service-error.js";
 
 export interface RateLimitRule {
@@ -25,7 +25,7 @@ export async function assertRateLimit(rule: RateLimitRule, identity: string) {
         serviceError(
             `Too many requests, try again in ${rule.windowSeconds}s`,
             429,
-            ResponseCode.TOO_MANY_REQUESTS
+            CommonCode.TOO_MANY_REQUESTS
         );
     }
 }

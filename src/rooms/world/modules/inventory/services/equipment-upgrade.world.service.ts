@@ -1,3 +1,5 @@
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { fail, ok } from "@/core/utils/result.util.js";
 import { big } from "@/core/utils/big-number.util.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
 import type { Rng } from "@/modules/equipment/services/equipment-roll.service.js";
@@ -28,9 +30,6 @@ import { toOwnedEquipment } from "@/rooms/world/modules/inventory/utils/equipmen
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { type MaterialAmountMessage } from "@/rooms/world/types/world-message.type.js";
 
-export const fail = (error: string): { ok: false; error: string } => ({ ok: false, error });
-export const done = <T>(value: T): { ok: true; value: T } => ({ ok: true, value });
-
 export class EquipmentUpgradeWorldService {
     private inventorySize(type: ItemType): number {
         return masterDataCacheService.get(MasterDataKey.PLAYER_CONFIG).inventorySize[type];
@@ -50,10 +49,10 @@ export class EquipmentUpgradeWorldService {
         const yields: MaterialCost[] = [];
         for (const id of ids) {
             const entry = bag.find((candidate) => candidate.id === id);
-            if (!entry) return fail("Item not found");
-            if (entry.isLocked) return fail("Item is locked");
+            if (!entry) return fail(ItemErrorCode.ITEM_NOT_FOUND);
+            if (entry.isLocked) return fail(ItemErrorCode.ITEM_LOCKED);
             const owned = toOwnedEquipment(entry);
-            if (!owned) return fail("Item is not equipment");
+            if (!owned) return fail(ItemErrorCode.ITEM_NOT_EQUIPMENT);
             yields.push(
                 ...disassembleYield(owned.metadata, owned.group, equipmentConfigService.disassemble)
             );
@@ -63,7 +62,7 @@ export class EquipmentUpgradeWorldService {
         const received = new Map<string, { itemId: string; code: string; quantity: number }>();
         for (const { code, quantity } of yields) {
             const item = itemService.getByCode(code);
-            if (!item) return fail(`Material "${code}" is missing`);
+            if (!item) return fail(ItemErrorCode.ITEM_NOT_ENOUGH, undefined, { code });
             const { overflow } = addToInventory(
                 materials,
                 this.inventorySize(ItemType.MATERIAL),
@@ -71,12 +70,12 @@ export class EquipmentUpgradeWorldService {
                 quantity,
                 { source: ItemSource.CRAFT }
             );
-            if (overflow > 0) return fail("Material inventory is full");
+            if (overflow > 0) return fail(ItemErrorCode.INVENTORY_FULL);
             const current = received.get(code) ?? { itemId: item.id, code, quantity: 0 };
             current.quantity += quantity;
             received.set(code, current);
         }
-        return done({ ids, materials, received: [...received.values()] });
+        return ok({ ids, materials, received: [...received.values()] });
     }
 
     // ---- Nội bộ ---------------------------------------------------------------------------------
@@ -88,20 +87,21 @@ export class EquipmentUpgradeWorldService {
     /** Trừ vàng + nguyên liệu (kiểm tra đủ hết rồi mới trừ). */
     pay(player: PlayerWorldState, cost: UpgradeCost): InventoryResult {
         const wallet = debitWallet(player.wallet, [{ code: CurrencyCode.GOLD, amount: cost.gold }]);
-        if (!wallet) return fail("Not enough gold");
+        if (!wallet) return fail(ItemErrorCode.CURRENCY_NOT_ENOUGH);
         const materials = player.inventories[ItemType.MATERIAL];
         const resolved: { itemId: string; quantity: number }[] = [];
         for (const { code, quantity } of cost.materials) {
             const item = itemService.getByCode(code);
-            if (!item) return fail(`Material "${code}" is missing`);
-            if (countItem(materials, item.id) < quantity) return fail("Not enough materials");
+            if (!item) return fail(ItemErrorCode.ITEM_NOT_ENOUGH, undefined, { code });
+            if (countItem(materials, item.id) < quantity)
+                return fail(ItemErrorCode.ITEM_NOT_ENOUGH);
             resolved.push({ itemId: item.id, quantity });
         }
         for (const { itemId, quantity } of resolved) {
             removeFromInventory(materials, itemId, quantity);
         }
         player.wallet = wallet;
-        return done(undefined);
+        return ok(undefined);
     }
 
     update(

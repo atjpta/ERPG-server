@@ -1,3 +1,7 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { QuestErrorCode } from "@/modules/quests/enums/quest-error-code.enum.js";
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { sendOk } from "@/core/utils/room-send.util.js";
 import { TIME_ZONE } from "@/configs/time.config.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
@@ -48,7 +52,7 @@ import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { DateTime } from "luxon";
 
 /** Lỗi nghiệp vụ trả về dạng chuỗi (giống các world service khác) hoặc `undefined` khi thành công. */
-export type QuestError = string | undefined;
+export type QuestError = ErrorCode | undefined;
 
 /**
  * Quest của player đang online: nhận, tiến độ, trả thưởng. Trạng thái nằm ở `player.quests` (lưu
@@ -92,12 +96,12 @@ export class QuestWorldService {
             return quest && entry.status === "active" ? [this.toMessage(player, quest)] : [];
         });
         const message: QuestListMessage = { quests };
-        client.send(WorldMessage.QUEST_LIST, message);
+        sendOk(client, WorldMessage.QUEST_LIST, message);
     }
 
     sendUpdate(client: PlayerClient, player: PlayerWorldState, quest: Quest) {
         const message: QuestUpdateMessage = { quest: this.toMessage(player, quest) };
-        client.send(WorldMessage.QUEST_UPDATE, message);
+        sendOk(client, WorldMessage.QUEST_UPDATE, message);
     }
 
     /** Dấu trên đầu NPC của riêng player này (màu theo loại quest) — cũng dùng cho minimap. */
@@ -130,7 +134,7 @@ export class QuestWorldService {
             return { npcCode: npc.code, marker, ...(category ? { category } : {}) };
         });
         const message: NpcMarkersMessage = { markers };
-        client.send(WorldMessage.NPC_MARKERS, message);
+        sendOk(client, WorldMessage.NPC_MARKERS, message);
     }
 
     /** Quái / item / vật thể liên quan quest đang làm — client đánh chữ Q. */
@@ -150,7 +154,7 @@ export class QuestWorldService {
                 ];
             })
         );
-        client.send(WorldMessage.QUEST_TARGETS, targets);
+        sendOk(client, WorldMessage.QUEST_TARGETS, targets);
     }
 
     /**
@@ -176,7 +180,7 @@ export class QuestWorldService {
     /** Chức năng đã mở khoá (từ quest hero) — client bật/tắt menu tương ứng. */
     sendFeatures(client: PlayerClient, player: PlayerWorldState) {
         const message: FeaturesMessage = { features: unlockedFeatures(player.flags) };
-        client.send(WorldMessage.FEATURES, message);
+        sendOk(client, WorldMessage.FEATURES, message);
     }
 
     /** Vào room: gửi quest đang làm + dấu NPC. */
@@ -196,12 +200,12 @@ export class QuestWorldService {
         questCode: string
     ): QuestError {
         const quest = questOf(player, questCode);
-        if (!quest) return "Quest not found";
+        if (!quest) return QuestErrorCode.QUEST_NOT_FOUND;
         // Quest hằng ngày được giao tự động, không nhận qua thoại.
-        if (quest.category === QuestCategory.DAILY) return "Quest not available";
+        if (quest.category === QuestCategory.DAILY) return QuestErrorCode.QUEST_NOT_AVAILABLE;
         const ctx = contentWorldService.conditionContext(room, player);
         if (!canAcceptQuest(quest, player.quests[questCode], ctx, DateTime.now())) {
-            return "Quest not available";
+            return QuestErrorCode.QUEST_NOT_AVAILABLE;
         }
         player.quests[questCode] = newQuestEntry(DateTime.now());
         this.sendUpdate(client, player, quest);
@@ -223,15 +227,16 @@ export class QuestWorldService {
     ): QuestError {
         const quest = questOf(player, questCode);
         const entry = player.quests[questCode];
-        if (!quest || !entry) return "Quest not active";
-        if (quest.turnInNpcCode !== turnInNpcCode) return "Wrong NPC";
+        if (!quest || !entry) return QuestErrorCode.QUEST_NOT_ACTIVE;
+        if (quest.turnInNpcCode !== turnInNpcCode) return QuestErrorCode.QUEST_WRONG_NPC;
         if (contentWorldService.questState(player, questCode) !== QuestState.READY) {
-            return "Quest not completed";
+            return QuestErrorCode.QUEST_NOT_COMPLETED;
         }
 
         const reward = resolveRewardSpec(quest.rewards, ItemSource.QUEST);
         // Túi đầy thì giữ quest để trả lại sau, thay vì làm mất đồ thưởng.
-        if (!inventoryWorldService.canFit(player, reward.items)) return "Inventory full";
+        if (!inventoryWorldService.canFit(player, reward.items))
+            return ItemErrorCode.INVENTORY_FULL;
 
         for (const objective of quest.objectives) {
             if (objective.type !== QuestObjectiveType.COLLECT) continue;

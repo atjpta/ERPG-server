@@ -1,6 +1,16 @@
+import { callRoom } from "@/core/rooms/room.integration.js";
+import { RequestJoinPartyCommand } from "@/rooms/party/commands/request-join.party.command.js";
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { partyRoomRemote } from "@/rooms/party/party.remote.js";
-import { PartyNoticeCode, type PartyNoticeMessage } from "@/rooms/party/party.shared.js";
+import { isFail } from "@/core/utils/result.util.js";
+import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
+import {
+    PartyErrorCode,
+    PartyNotice,
+    type PartyNoticeMessage,
+} from "@/rooms/party/party.shared.js";
 import { playerPartyWorldService } from "@/rooms/world/modules/players/services/player-party.world.service.js";
 import { PlayerTargetSchema } from "@/rooms/world/modules/players/validators/player-target.world.validator.js";
 import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
@@ -19,30 +29,35 @@ export class PartyRequestJoinWorldCommand extends Command<WorldRoom, PartyPayloa
         const parsed = PlayerTargetSchema.safeParse(payload);
         const player = this.room.state.players.get(client.sessionId);
         if (!parsed.success || !player) return;
-        const room = this.room;
         const targetPlayerId = parsed.data.playerId;
 
-        const notice = (code: PartyNoticeCode) => {
-            const message: PartyNoticeMessage = { code };
-            client.send(WorldMessage.PARTY_NOTICE, message);
-        };
+        const refuse = (code: ErrorCode) => sendFail(client, WorldMessage.PARTY_NOTICE, code);
         if (
             player.partyRoomId &&
             (await playerPartyWorldService.isPartyRoomListed(player.partyRoomId))
         ) {
-            return notice(PartyNoticeCode.ALREADY_MEMBER);
+            return refuse(PartyErrorCode.PARTY_ALREADY_MEMBER);
         }
-        const target = [...room.state.players.values()].find(
+        const target = [...this.room.state.players.values()].find(
             (other) => other.id === targetPlayerId
         );
-        if (!target) return notice(PartyNoticeCode.TARGET_NOT_HERE);
-        if (target.id === player.id) return notice(PartyNoticeCode.SELF_TARGET);
-        if (!target.partyRoomId) return notice(PartyNoticeCode.TARGET_NOT_IN_PARTY);
+        if (!target) return refuse(PlayerErrorCode.PLAYER_NOT_HERE);
+        if (target.id === player.id) return refuse(PartyErrorCode.PARTY_SELF_TARGET);
+        if (!target.partyRoomId) return refuse(PartyErrorCode.PARTY_TARGET_NOT_IN_PARTY);
 
-        const result = await partyRoomRemote(target.partyRoomId).requestJoin(
-            player.id,
-            player.name
-        );
-        notice(result ?? PartyNoticeCode.TARGET_NOT_IN_PARTY);
+        const result = await callRoom(target.partyRoomId, RequestJoinPartyCommand, {
+            fromPlayerId: player.id,
+            fromName: player.name,
+        });
+        if (isFail(result)) {
+            refuse(
+                result.code === CommonCode.ROOM_UNAVAILABLE
+                    ? PartyErrorCode.PARTY_TARGET_NOT_IN_PARTY
+                    : result.code
+            );
+            return;
+        }
+        const message: PartyNoticeMessage = { notice: PartyNotice.JOIN_REQUEST_SENT };
+        sendOk(client, WorldMessage.PARTY_NOTICE, message);
     }
 }

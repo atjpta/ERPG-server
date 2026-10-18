@@ -1,3 +1,6 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { CurrencyReward } from "@/modules/rewards/types/reward.type.js";
 import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
 import { ATTRIBUTE_POINTS_PER_LEVEL } from "@/modules/player/services/player-stat-calculation.service.js";
@@ -69,21 +72,21 @@ export interface AttributeAllocationResult {
 
 /**
  * Cộng điểm tiềm năng vào attribute: mỗi giá trị là số nguyên ≥ 0, tổng > 0 và không vượt số điểm
- * đang có. Trả lỗi (string) thay vì throw để room trả về cho client.
+ * đang có. Trả `ErrorCode` lỗi thay vì throw để room trả về cho client.
  */
 export function allocateAttributePoints(
     allocated: Attributes,
     available: number,
     request: Partial<Record<AttributeKey, number>>
-): AttributeAllocationResult | string {
+): AttributeAllocationResult | ErrorCode {
     let total = 0;
     for (const key of ATTRIBUTE_KEYS) {
         const value = request[key] ?? 0;
-        if (!Number.isInteger(value) || value < 0) return `Invalid points for ${key}`;
+        if (!Number.isInteger(value) || value < 0) return CommonCode.INVALID_INPUT;
         total += value;
     }
-    if (total <= 0) return "No attribute points to allocate";
-    if (total > available) return "Not enough attribute points";
+    if (total <= 0) return PlayerErrorCode.ATTRIBUTE_NO_POINTS;
+    if (total > available) return PlayerErrorCode.ATTRIBUTE_POINTS_NOT_ENOUGH;
 
     const allocatedAttributes = { ...allocated };
     for (const key of ATTRIBUTE_KEYS) allocatedAttributes[key] += request[key] ?? 0;

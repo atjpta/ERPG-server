@@ -1,4 +1,5 @@
-import { partyRoomRemote } from "@/rooms/party/party.remote.js";
+import { callRoom } from "@/core/rooms/room.integration.js";
+import { ReportPartyCommand } from "@/rooms/party/commands/report.party.command.js";
 import type { PartyMemberInfo } from "@/rooms/party/party.shared.js";
 import { playerPartyWorldService } from "@/rooms/world/modules/players/services/player-party.world.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
@@ -40,28 +41,30 @@ export class PartyReportWorldCommand extends Command<WorldRoom, void> {
             byParty.set(player.partyRoomId, list);
         }
         for (const [partyRoomId, updates] of byParty) {
-            void partyRoomRemote(partyRoomId)
-                .report(room.roomId, revision, updates)
-                .then((accepted) => {
-                    if (!accepted) return;
-                    for (const update of updates) {
-                        const player = playerPartyWorldService.findPlayer(
-                            room,
-                            update.playerId
-                        )?.player;
-                        if (player?.partyRoomId === partyRoomId)
-                            playerPartyWorldService.lastReport.set(
-                                player,
-                                JSON.stringify([
-                                    update.level,
-                                    update.hp,
-                                    update.maxHp,
-                                    update.mapCode,
-                                    update.inDungeon,
-                                ])
-                            );
-                    }
-                });
+            void callRoom(partyRoomId, ReportPartyCommand, {
+                worldRoomId: room.roomId,
+                revision,
+                updates,
+            }).then((reported) => {
+                if (!reported.success) return;
+                for (const update of updates) {
+                    const player = playerPartyWorldService.findPlayer(
+                        room,
+                        update.playerId
+                    )?.player;
+                    if (player?.partyRoomId === partyRoomId)
+                        playerPartyWorldService.lastReport.set(
+                            player,
+                            JSON.stringify([
+                                update.level,
+                                update.hp,
+                                update.maxHp,
+                                update.mapCode,
+                                update.inDungeon,
+                            ])
+                        );
+                }
+            });
         }
     }
 }

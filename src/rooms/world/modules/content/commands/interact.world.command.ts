@@ -1,3 +1,9 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { WorldErrorCode } from "@/rooms/world/types/world-error-code.type.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { CommonCode } from "@/core/enums/common-code.enum.js";
+import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { evaluateConditions } from "@/modules/dialogues/services/condition.service.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
@@ -40,8 +46,7 @@ export class InteractWorldCommand extends Command<WorldRoom, ContentPayload> {
         if (!player) return;
         const parsed = InteractSchema.safeParse(payload);
         if (!parsed.success) {
-            const message: InteractResultMessage = { ok: false, error: "Invalid payload", id: "" };
-            client.send(WorldMessage.INTERACT_RESULT, message);
+            sendFail(client, WorldMessage.INTERACT_RESULT, CommonCode.INVALID_INPUT, { id: "" });
             return;
         }
         await this.interact(this.room, client, player, parsed.data.id);
@@ -54,8 +59,8 @@ export class InteractWorldCommand extends Command<WorldRoom, ContentPayload> {
         id: string
     ): Promise<void> {
         const error = await this.run(room, client, player, id);
-        const message: InteractResultMessage = { ok: !error, id, ...(error ? { error } : {}) };
-        client.send(WorldMessage.INTERACT_RESULT, message);
+        if (error) sendFail(client, WorldMessage.INTERACT_RESULT, error, { id });
+        else sendOk(client, WorldMessage.INTERACT_RESULT, { id } satisfies InteractResultMessage);
     }
 
     private async run(
@@ -63,15 +68,16 @@ export class InteractWorldCommand extends Command<WorldRoom, ContentPayload> {
         client: PlayerClient,
         player: PlayerWorldState,
         id: string
-    ): Promise<string | undefined> {
-        if (player.hp <= 0) return "Player is dead";
+    ): Promise<ErrorCode | undefined> {
+        if (player.hp <= 0) return PlayerErrorCode.PLAYER_DEAD;
         const def = room.map.interactables.find((it) => it.id === id);
         const state = room.state.interactables.find((it) => it.id === id);
-        if (!def || !state) return "Not found";
-        if (!state.active) return "Not available";
-        if (!contentWorldService.isNear(player, def.x, def.y, def.radius)) return "Too far";
+        if (!def || !state) return CommonCode.NOT_FOUND;
+        if (!state.active) return WorldErrorCode.INTERACT_NOT_AVAILABLE;
+        if (!contentWorldService.isNear(player, def.x, def.y, def.radius))
+            return PlayerErrorCode.TOO_FAR;
         const ctx = contentWorldService.conditionContext(room, player);
-        if (!evaluateConditions(ctx, def.conditions)) return "Requirements not met";
+        if (!evaluateConditions(ctx, def.conditions)) return PlayerErrorCode.REQUIREMENTS_NOT_MET;
 
         switch (def.type) {
             case "portal":
@@ -104,10 +110,11 @@ export class InteractWorldCommand extends Command<WorldRoom, ContentPayload> {
         player: PlayerWorldState,
         def: Extract<MapInteractable, { type: "gather" }>,
         state: InteractableWorldState
-    ): string | undefined {
+    ): ErrorCode | undefined {
         const reward = resolveRewardSpec(def.reward, ItemSource.SYSTEM);
         // Túi đầy thì không cho nhặt (thay vì nhặt xong mất đồ).
-        if (!inventoryWorldService.canFit(player, reward.items)) return "Inventory full";
+        if (!inventoryWorldService.canFit(player, reward.items))
+            return ItemErrorCode.INVENTORY_FULL;
         state.active = false;
         room.clock.setTimeout(() => {
             state.active = true;
@@ -144,6 +151,6 @@ export class InteractWorldCommand extends Command<WorldRoom, ContentPayload> {
                 ...pickStatus(teleportStatus(destination, player.level, player.flags)),
             })),
         };
-        client.send(WorldMessage.TELEPORT_LIST, message);
+        sendOk(client, WorldMessage.TELEPORT_LIST, message);
     }
 }

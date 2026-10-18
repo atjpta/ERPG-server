@@ -1,3 +1,4 @@
+import { broadcastOk } from "@/core/utils/room-send.util.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import { PlayerStatService } from "@/modules/player/services/player-stat.service.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
@@ -230,7 +231,7 @@ export class SkillDeliveryWorldService {
         );
         if (healed.length === 0) return;
         const message: SkillEffectMessage = { skillId: skill.id, sessionIds: healed };
-        room.broadcast(WorldMessage.SKILL_EFFECT, message);
+        broadcastOk(room, WorldMessage.SKILL_EFFECT, message);
     }
 
     /**
@@ -255,7 +256,7 @@ export class SkillDeliveryWorldService {
             }
             ally.heal(amount);
             const message: PotionUsedMessage = { sessionId, hp: amount, mp: 0 };
-            room.broadcast(WorldMessage.POTION_USED, message);
+            broadcastOk(room, WorldMessage.POTION_USED, message);
             healed.push(sessionId);
         }
         return healed;

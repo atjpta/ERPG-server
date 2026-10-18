@@ -17,25 +17,23 @@ qua `static readonly message`; room không cần bảng `messages` thủ công.
   dungeon dùng lại world room với bộ lọc matchmaking khác.
 
 Tìm/tạo party nằm trong `playerPartyWorldService.ensureParty()` phía world. Service
-dùng matchmaking để tạo room khi cần, rồi gọi `partyRoomRemote` để gắn thành viên.
+dùng matchmaking để tạo room khi cần, rồi gọi `callRoom` tới command của party để gắn thành viên.
 
 Hạ tầng room dùng chung nằm trong `src/core/rooms`; service nghiệp vụ/dữ liệu dùng
 chung nằm trong `src/modules`. Tính năng riêng của world nằm trong
 `world/modules/<feature>`, gồm cả Colyseus `schemas/` của tính năng đó.
 
 Logic và DTO party nằm trong `src/rooms/party`, không có module DB party.
-World chỉ import phần công khai qua `party.shared.ts` và `party.remote.ts`;
+World chỉ import phần công khai qua `party.shared.ts` và các command RPC của party;
 không import trực tiếp room, state hoặc service implementation của party.
 World cũng có `world.shared.ts` cho enum/DTO và hàm dựng cấu hình skill dùng chung;
 message và options của world nằm trong `world/types`.
 Test kiến trúc kiểm tra ranh giới này. Schema `party_config` và enum chế độ loot
 thuộc `modules/master-data` vì cấu hình đó được lưu trong master data.
 
-Gọi room khác bằng `partyRoomRemote(roomId).method(...)` hoặc
-`worldRoomRemote(roomId).method(...)`. Mỗi file `<room>.remote.ts` import type từ
-class room tương ứng để suy ra chữ ký method. Mỗi RPC là một hàm tường minh trong
-remote (kèm fallback), nên click vào tên method nhảy tới method trên room; danh sách
-`PartyRpc`/`WorldRpc` cũng giới hạn các method được gọi từ room khác.
+Gọi room khác bằng `callRoom(roomId, XCommand, payload)`: kiểu payload và kết quả suy ra từ chính class command,
+click vào tên class nhảy thẳng tới logic. Room đích liệt kê command được phép gọi trong
+`createRpcRunner(this, [...])`.
 
 Lời gọi giới hạn chờ 3 giây và trả fallback khi lỗi; timeout không hủy công việc
 ở room đích. Membership mang `eventId`, party nguồn và revision. Báo cáo world mang

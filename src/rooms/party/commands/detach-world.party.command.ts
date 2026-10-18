@@ -1,3 +1,5 @@
+import { ok } from "@/core/utils/result.util.js";
+import type { Result } from "@/core/types/result.type.js";
 import type { PartyRoom } from "@/rooms/party/party.room.js";
 import { Command } from "@colyseus/command";
 
@@ -6,6 +8,8 @@ export class DetachWorldPartyCommand extends Command<
     PartyRoom,
     { playerId: string; worldRoomId: string }
 > {
+    result: Result = ok();
+
     execute({ playerId, worldRoomId }: { playerId: string; worldRoomId: string }) {
         const { room } = this;
         if (!room.state.has(playerId) || room.worldRoomOf.get(playerId) !== worldRoomId) return;

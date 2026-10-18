@@ -15,10 +15,24 @@ async function api<T = any>(method: string, path: string, body?: unknown, token?
         },
         body: body ? JSON.stringify(body) : undefined,
     });
-    const json = (await res.json()) as { data: T; message: string; code: string | null };
+    const json = (await res.json()) as {
+        success: boolean;
+        data: T;
+        message: string;
+        code: string | null;
+    };
     if (!res.ok) throw new Error(`${method} ${path} → ${res.status} ${JSON.stringify(json)}`);
     console.info(`✅ ${method} ${path} → ${res.status}`);
     return json.data;
+}
+
+/** Envelope chung của mọi message room (xem `src/core/types/result.type.ts`). */
+interface RoomResult<T> {
+    success: boolean;
+    data: T;
+    code: string | null;
+    message: string;
+    error: unknown;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -100,9 +114,9 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
         });
 
     // Đứng xa NPC / portal thì bị từ chối.
-    const far = waitFor<{ ok: boolean; error?: string }>("interactResult");
+    const far = waitFor<RoomResult<{ id: string }>>("interactResult");
     room.send("interact", { id: "south_gate" });
-    if ((await far).ok) throw new Error("portal must reject a player standing far away");
+    if ((await far).success) throw new Error("portal must reject a player standing far away");
     console.info("✅ interact far portal rejected");
 
     // Đi tới sát Trưởng làng — từ vị trí hiện tại, lái từng step theo vị trí server.
@@ -120,26 +134,26 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
     await sleep(300);
     console.info(`✅ walked next to the village chief at (${me.x.toFixed(2)}, ${me.y.toFixed(2)})`);
 
-    const offer = waitFor<{ nodeId: string; options: { id: string }[] }>("dialogue");
+    const offer = waitFor<RoomResult<{ nodeId: string; options: { id: string }[] }>>("dialogue");
     room.send("interactNpc", { npcCode: "village_chief" });
-    const first = await offer;
+    const first = (await offer).data;
     if (first.nodeId !== "start" || !first.options.some((o) => o.id === "accept")) {
         throw new Error(`unexpected first dialogue node ${JSON.stringify(first)}`);
     }
     console.info("✅ village chief offers the quest");
 
-    const updated = waitFor<{ quest: { code: string; state: string } }>("questUpdate");
+    const updated = waitFor<RoomResult<{ quest: { code: string; state: string } }>>("questUpdate");
     room.send("dialogueChoose", { optionId: "accept" });
-    const { quest } = await updated;
+    const { quest } = (await updated).data;
     if (quest.code !== "adventurer_registration" || quest.state !== "active") {
         throw new Error(`quest not accepted: ${JSON.stringify(quest)}`);
     }
     console.info("✅ quest accepted via dialogue");
 
     // Option bịa → server đóng thoại và báo lỗi, không chạy gì.
-    const ended = waitFor<{ error?: string }>("dialogueEnd");
+    const ended = waitFor<RoomResult<{ sourceCode: string }>>("dialogueEnd");
     room.send("dialogueChoose", { optionId: "does_not_exist" });
-    if (!(await ended).error) throw new Error("unknown dialogue option must be rejected");
+    if ((await ended).success) throw new Error("unknown dialogue option must be rejected");
     console.info("✅ unknown dialogue option rejected");
 }
 
@@ -185,17 +199,17 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
     await sleep(500);
 
     // Người 1 tạo party rồi join party room.
-    const created = once<{ roomId: string }>(room, "party");
+    const created = once<RoomResult<{ roomId: string }>>(room, "party");
     room.send("partyCreate");
-    const { roomId: partyId } = await created;
+    const { roomId: partyId } = (await created).data;
     const party1 = await sdk.joinById(partyId);
     await until(() => (party1.state as any).members?.size === 1, "party with 1 member");
     console.info("✅ party created, leader joined the party room");
 
     // Mời người 2: nhận lời mời ở world room, chấp nhận bằng joinById.
-    const invited = once<{ partyRoomId: string }>(world2, "partyInviteReceived");
+    const invited = once<RoomResult<{ partyRoomId: string }>>(world2, "partyInviteReceived");
     party1.send("invite", { playerName: name2 });
-    const invite = await invited;
+    const invite = (await invited).data;
     const party2 = await sdk2.joinById(invite.partyRoomId);
     await until(() => (party1.state as any).members.size === 2, "2 members");
     console.info("✅ invite accepted, party has 2 members");
@@ -206,9 +220,9 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
     console.info("✅ member left the party");
 
     // Mời lại, vào lại; rồi người 2 thoát game (rời world room) → bị loại khỏi party ngay.
-    const invitedAgain = once<{ partyRoomId: string }>(world2, "partyInviteReceived");
+    const invitedAgain = once<RoomResult<{ partyRoomId: string }>>(world2, "partyInviteReceived");
     party1.send("invite", { playerName: name2 });
-    const second = await invitedAgain;
+    const second = (await invitedAgain).data;
     await sdk2.joinById(second.partyRoomId);
     await until(() => (party1.state as any).members.size === 2, "2 members again");
     await world2.leave();

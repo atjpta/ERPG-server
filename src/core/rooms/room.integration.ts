@@ -1,32 +1,51 @@
+import { CommonCode } from "@/core/enums/common-code.enum.js";
+import type { Result } from "@/core/types/result.type.js";
+import { fail } from "@/core/utils/result.util.js";
+import { dispatchForResult } from "@/core/utils/dispatch-result.util.js";
+import type { Command, Dispatcher } from "@colyseus/command";
 import { matchMaker, type Room } from "colyseus";
 
 const ROOM_REQUEST_TIMEOUT_MS = 3000;
 
-type RoomMethod = (...args: never[]) => unknown;
-/** Tham số / kết quả của một method RPC công khai trên room `T`. */
-export type RpcArgs<T, K extends keyof T> = Parameters<Extract<T[K], RoomMethod>>;
-export type RpcResult<T, K extends keyof T> = Awaited<ReturnType<Extract<T[K], RoomMethod>>>;
-/**
- * Kiểu của remote: mapped type theo `keyof Pick<T, K>` để "Go to Definition" nhảy thẳng tới method
- * trên room; mỗi RPC có thể trả `undefined` khi timeout / room không còn.
- */
-export type RoomRemote<T, K extends keyof T> = {
-    [P in keyof Pick<T, K>]: (...args: RpcArgs<T, P>) => Promise<RpcResult<T, P> | undefined>;
-};
+/** Command RPC: nhận một object payload `P`, ghi `Result<T>` vào `result`. */
+export type RpcCommandClass<P = any, T = any> = new () => Command<any, P> & { result: Result<T> };
+
+/** Tên method RPC duy nhất trên room (xem `createRpcRunner`). */
+const RPC_METHOD = "runRpc";
 
 /**
- * Tạo hàm gọi RPC cho room `T`: `call(roomId, "method", args, fallback)`. Kiểu tham số / kết quả suy ra từ
- * method trên `T`; timeout hoặc room không còn thì trả `fallback` (bỏ trống = `undefined`).
+ * Gọi một command RPC của room khác theo room id: `callRoom(partyRoomId, PrepareDungeonPartyCommand, payload)`.
+ * Kiểu payload / kết quả suy ra từ chính class command, và click vào tên class nhảy thẳng tới command.
+ * Timeout hoặc room không còn thì trả `fail(CommonCode.ROOM_UNAVAILABLE)`.
  */
-export const roomCaller =
-    <T>() =>
-    <K extends keyof T>(
-        roomId: string,
-        method: K & string,
-        args: RpcArgs<T, K>,
-        fallback?: RpcResult<T, K>
-    ) =>
-        requestRoom<RpcResult<T, K> | undefined>(roomId, method, args, fallback);
+export function callRoom<P, T>(
+    roomId: string,
+    CommandClass: RpcCommandClass<P, T>,
+    payload: P
+): Promise<Result<T>> {
+    return requestRoom<Result<T>>(
+        roomId,
+        RPC_METHOD,
+        [CommandClass.name, payload],
+        fail(CommonCode.ROOM_UNAVAILABLE)
+    );
+}
+
+/**
+ * Phía room nhận RPC: `readonly runRpc = createRpcRunner(this, [AttachWorldPartyCommand, ...])`. Chỉ command
+ * trong danh sách mới chạy được (tra theo tên class); tên lạ trả `fail(NOT_FOUND)`.
+ */
+export function createRpcRunner(
+    room: { dispatcher: Dispatcher<any> },
+    commands: readonly RpcCommandClass[]
+) {
+    const byName = new Map(commands.map((CommandClass) => [CommandClass.name, CommandClass]));
+    return async (name: string, payload: unknown): Promise<Result<unknown>> => {
+        const CommandClass = byName.get(name);
+        if (!CommandClass) return fail(CommonCode.NOT_FOUND, `Unknown RPC "${name}"`);
+        return dispatchForResult(room.dispatcher, new CommandClass(), payload);
+    };
+}
 
 /** Bounded request/response; mutations that may be retried carry an idempotency key. */
 export async function requestRoom<T>(

@@ -1,4 +1,4 @@
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
+import { MasterDataErrorCode } from "@/modules/master-data/enums/master-data-error-code.enum.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import { isUnityMasterDataKey } from "@/modules/master-data/services/unity-master-data.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
@@ -22,12 +22,16 @@ export class AdminMasterDataService {
             serviceError(
                 `Master data "${key}" is authored in Unity (Ranges tab of the Authoring Hub) and synced from there`,
                 409,
-                ResponseCode.MASTER_DATA_READ_ONLY
+                MasterDataErrorCode.MASTER_DATA_READ_ONLY
             );
         }
         const row = await MasterDataRepo.findByKey({ key });
         if (!row) {
-            serviceError(`Master data "${key}" not found`, 404, ResponseCode.MASTER_DATA_NOT_FOUND);
+            serviceError(
+                `Master data "${key}" not found`,
+                404,
+                MasterDataErrorCode.MASTER_DATA_NOT_FOUND
+            );
         }
         // Sai cấu trúc → ZodError → RouterContainer trả 422.
         const value = MasterDataValueSchemas[key].parse(body.value);

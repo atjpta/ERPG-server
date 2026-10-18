@@ -1,5 +1,6 @@
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { PartyNoticeCode, type PartyNoticeMessage } from "@/rooms/party/party.shared.js";
 import { toEquipmentsMessage } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import { PlayerTargetSchema } from "@/rooms/world/modules/players/validators/player-target.world.validator.js";
 import {
@@ -25,13 +26,11 @@ export class ViewPlayerWorldCommand extends Command<
             (player) => player.id === targetPlayerId
         );
         if (!target) {
-            const notice: PartyNoticeMessage = { code: PartyNoticeCode.TARGET_NOT_HERE };
-            client.send(WorldMessage.PARTY_NOTICE, notice);
+            sendFail(client, WorldMessage.PLAYER_VIEW, PlayerErrorCode.PLAYER_NOT_HERE);
             return;
         }
         const summary = target.getAttributeSummary();
         const message: PlayerViewMessage = {
-            ok: true,
             playerId: target.id,
             name: target.name,
             level: target.level,
@@ -41,6 +40,6 @@ export class ViewPlayerWorldCommand extends Command<
             attributes: summary.attributes,
             stats: summary.stats,
         };
-        client.send(WorldMessage.PLAYER_VIEW, message);
+        sendOk(client, WorldMessage.PLAYER_VIEW, message);
     }
 }

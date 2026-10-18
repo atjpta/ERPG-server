@@ -1,71 +1,99 @@
-import { partyRoomRemote } from "@/rooms/party/party.remote.js";
+import { callRoom } from "@/core/rooms/room.integration.js";
+import { PrepareDungeonPartyCommand } from "@/rooms/party/commands/prepare-dungeon.party.command.js";
+import { NotifyDungeonDeniedPartyCommand } from "@/rooms/party/commands/notify-dungeon-denied.party.command.js";
+import { PartyCheckDungeonWorldCommand } from "@/rooms/world/modules/dungeons/commands/party-check-dungeon.world.command.js";
+import { PartyEnterDungeonWorldCommand } from "@/rooms/world/modules/dungeons/commands/party-enter-dungeon.world.command.js";
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
+import type { Result } from "@/core/types/result.type.js";
+import { fail, isFail, ok } from "@/core/utils/result.util.js";
 import { partyDirectoryService } from "@/rooms/party/services/party-directory.service.js";
-import type { DungeonFailure, DungeonPartyRequest } from "@/rooms/party/types/party-room.type.js";
-import { worldRoomRemote } from "@/rooms/world/world.remote.js";
+import type {
+    DungeonPartyMember,
+    DungeonPartyRequest,
+} from "@/rooms/party/types/party-room.type.js";
 import { randomUUID } from "node:crypto";
 
-const failureReason = (error: string): DungeonFailure["reason"] =>
-    error === "dead" || error === "level_too_low" || error === "in_dungeon"
-        ? (error as DungeonFailure["reason"])
-        : ("offline" as DungeonFailure["reason"]);
+const DENY_REASONS = new Set<ErrorCode>([
+    PlayerErrorCode.LEVEL_TOO_LOW,
+    PlayerErrorCode.PLAYER_DEAD,
+    MapErrorCode.DUNGEON_ALREADY_IN,
+]);
+
+/** Lý do báo cho party: ngoài 3 lý do rõ ràng thì coi như thành viên không có mặt. */
+const failureReason = (code: ErrorCode) =>
+    DENY_REASONS.has(code) ? code : PlayerErrorCode.PLAYER_OFFLINE;
 
 /** Coordinates room-owned checks; neither room knows its peer's implementation. */
 export class DungeonPartyCoordinator {
-    constructor(
-        private readonly party = partyRoomRemote,
-        private readonly world = worldRoomRemote
-    ) {}
-    async launch(
-        partyRoomId: string,
-        request: DungeonPartyRequest
-    ): Promise<{ ok: boolean; error?: string }> {
-        const plan = await this.party(partyRoomId).prepareDungeon(request);
-        if (!plan) return { ok: false, error: "unavailable" };
-        if (!plan.ok) return plan;
+    /**
+     * Cả party vào dungeon: party kiểm tra nhóm, world của từng thành viên kiểm lại rồi mới ra lệnh vào.
+     * Thành công = đã ra lệnh `mapChange` cho cả nhóm; thất bại = `code` (xem `ErrorCode`).
+     */
+    async launch(partyRoomId: string, request: DungeonPartyRequest): Promise<Result> {
+        const plan = await callRoom(partyRoomId, PrepareDungeonPartyCommand, request);
+        if (isFail(plan)) return plan;
+        const { members } = plan.data;
+
         const checks = await Promise.all(
-            plan.members.map(async (member) => ({
+            members.map(async (member) => ({
                 member,
-                error: member.worldRoomId
-                    ? await this.world(member.worldRoomId).partyCheckDungeon(
-                          member.playerId,
-                          request.code,
-                          request.retry
-                      )
-                    : "offline",
+                result: member.worldRoomId
+                    ? await callRoom(member.worldRoomId, PartyCheckDungeonWorldCommand, {
+                          playerId: member.playerId,
+                          dungeonCode: request.code,
+                          retry: request.retry,
+                      })
+                    : fail(PlayerErrorCode.PLAYER_OFFLINE),
             }))
         );
-        const denied = async (results: typeof checks) => {
-            const failures = results
-                .filter(({ error }) => error)
-                .map(({ member, error }) => ({
-                    playerId: member.playerId,
-                    name: member.name,
-                    reason: failureReason(error!),
-                }));
-            if (!failures.length) return false;
-            await this.party(partyRoomId).notifyDungeonDenied(request.code, failures);
-            return true;
-        };
-        if (await denied(checks)) return { ok: false, error: "denied" };
+        if (await this.denied(partyRoomId, request.code, checks))
+            return fail(MapErrorCode.DUNGEON_DENIED);
+
         const instanceId = randomUUID();
         await partyDirectoryService.setDungeonExpectation(instanceId, {
             dungeonCode: request.code,
             leaderPlayerId: request.leaderPlayerId,
-            expected: plan.members.map((m) => m.playerId),
+            expected: members.map((m) => m.playerId),
         });
         const results = await Promise.all(
-            plan.members.map(async (member) => ({
+            members.map(async (member) => ({
                 member,
-                error: await this.world(member.worldRoomId!).partyEnterDungeon(
-                    member.playerId,
-                    request.code,
+                result: await callRoom(member.worldRoomId!, PartyEnterDungeonWorldCommand, {
+                    playerId: member.playerId,
+                    dungeonCode: request.code,
                     instanceId,
-                    request.spawnId,
-                    request.retry
-                ),
+                    spawnId: request.spawnId,
+                    retry: request.retry,
+                }),
             }))
         );
-        return { ok: !(await denied(results)) };
+        if (await this.denied(partyRoomId, request.code, results))
+            return fail(MapErrorCode.DUNGEON_DENIED);
+        return ok();
+    }
+
+    /** Có ai không đạt thì báo cả party và trả `true`. */
+    private async denied(
+        partyRoomId: string,
+        dungeonCode: string,
+        results: { member: DungeonPartyMember; result: Result }[]
+    ) {
+        const failures = results.flatMap(({ member, result }) =>
+            result.success
+                ? []
+                : [
+                      {
+                          playerId: member.playerId,
+                          name: member.name,
+                          reason: failureReason(result.code),
+                      },
+                  ]
+        );
+        if (!failures.length) return false;
+        await callRoom(partyRoomId, NotifyDungeonDeniedPartyCommand, { dungeonCode, failures });
+        return true;
     }
 }
 export const dungeonPartyCoordinator = new DungeonPartyCoordinator();

@@ -1,5 +1,5 @@
+import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import { and, eq, ilike, or } from "drizzle-orm";
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
 import { BaseService } from "@/core/services/base.service.js";
 import { serviceError } from "@/core/utils/service-error.js";
 import type {
@@ -29,7 +29,7 @@ export class AdminMapService extends BaseService<typeof GameMaps> {
 
     async createMap(body: AdminCreateMapBody) {
         if (await GameMapRepo.findByCode({ code: body.code })) {
-            serviceError("Map code is existed", 409, ResponseCode.MAP_CODE_EXISTS);
+            serviceError("Map code is existed", 409, MapErrorCode.MAP_CODE_EXISTS);
         }
         return this.create({ data: body });
     }

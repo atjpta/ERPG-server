@@ -1,3 +1,4 @@
+import { QuestErrorCode } from "@/modules/quests/enums/quest-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { QuestCategory } from "@/modules/quests/enums/quest.enum.js";
 import {
@@ -34,8 +35,8 @@ export class QuestAbandonWorldCommand extends Command<WorldRoom, ContentPayload>
     ): QuestError {
         const quest = questOf(player, questCode);
         const entry = player.quests[questCode];
-        if (!quest || entry?.status !== "active") return "Quest not active";
-        if (quest.category === QuestCategory.DAILY) return "Cannot abandon a daily quest";
+        if (!quest || entry?.status !== "active") return QuestErrorCode.QUEST_NOT_ACTIVE;
+        if (quest.category === QuestCategory.DAILY) return QuestErrorCode.QUEST_CANNOT_ABANDON;
         delete player.quests[questCode];
         questWorldService.sendUpdate(client, player, quest);
         questWorldService.sendMarkers(room, client, player);

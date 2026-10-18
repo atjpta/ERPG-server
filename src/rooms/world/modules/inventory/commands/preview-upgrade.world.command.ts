@@ -1,4 +1,9 @@
+import type { ErrorCode } from "@/core/types/result.type.js";
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { CommonCode } from "@/core/enums/common-code.enum.js";
+import { isFail } from "@/core/utils/result.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
+import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
 import {
     enhanceCost,
@@ -37,16 +42,7 @@ export class PreviewUpgradeWorldCommand extends Command<WorldRoom, InventoryComm
 
         const parsed = PreviewUpgradeSchema.safeParse(payload);
         if (!parsed.success) {
-            const { action, instanceId } = (payload ?? {}) as Record<string, unknown>;
-            this.sendUpgradePreview(
-                client,
-                player,
-                action === EquipmentUpgradeAction.REFINE
-                    ? EquipmentUpgradeAction.REFINE
-                    : EquipmentUpgradeAction.ENHANCE,
-                typeof instanceId === "string" ? instanceId : "",
-                "Invalid payload"
-            );
+            sendFail(client, WorldMessage.UPGRADE_PREVIEW, CommonCode.INVALID_INPUT);
             return;
         }
         this.sendUpgradePreview(client, player, parsed.data.action, parsed.data.instanceId);
@@ -57,26 +53,20 @@ export class PreviewUpgradeWorldCommand extends Command<WorldRoom, InventoryComm
         client: PlayerClient,
         player: PlayerWorldState,
         action: EquipmentUpgradeAction.ENHANCE | EquipmentUpgradeAction.REFINE,
-        instanceId: string,
-        error?: string
+        instanceId: string
     ) {
-        const empty = {
-            rate: 0,
-            gold: 0,
-            materials: [] as MaterialRequirementMessage[],
-            affordable: false,
-        };
         const ownedGold = player.wallet[CurrencyCode.GOLD]?.balance ?? 0;
         const reply = (
             preview: Omit<UpgradePreviewMessage, "action" | "instanceId" | "ownedGold">
         ) => {
             const message: UpgradePreviewMessage = { action, instanceId, ownedGold, ...preview };
-            client.send(WorldMessage.UPGRADE_PREVIEW, message);
+            sendOk(client, WorldMessage.UPGRADE_PREVIEW, message);
         };
-        if (error) return reply({ ok: false, error, ...empty });
+        const refuse = (code: ErrorCode) =>
+            sendFail(client, WorldMessage.UPGRADE_PREVIEW, code, { action, instanceId });
 
         const owned = equipmentUpgradeWorldService.findOwned(player, instanceId);
-        if (!owned) return reply({ ok: false, error: "Equipment not found", ...empty });
+        if (!owned) return refuse(ItemErrorCode.EQUIPMENT_NOT_FOUND);
 
         const bag = player.inventories[ItemType.MATERIAL];
         const requirements = (cost: UpgradeCost): MaterialRequirementMessage[] =>
@@ -92,7 +82,6 @@ export class PreviewUpgradeWorldCommand extends Command<WorldRoom, InventoryComm
         const priced = (cost: UpgradeCost) => {
             const materials = requirements(cost);
             return {
-                ok: true,
                 rate: cost.rate,
                 gold: cost.gold,
                 materials,
@@ -104,15 +93,15 @@ export class PreviewUpgradeWorldCommand extends Command<WorldRoom, InventoryComm
 
         if (action === EquipmentUpgradeAction.ENHANCE) {
             const cost = enhanceCost(owned.metadata, owned.group, equipmentConfigService.enhance);
-            if ("reason" in cost) return reply({ ok: false, error: cost.reason, ...empty });
+            if (isFail(cost)) return refuse(cost.code);
             return reply({
-                ...priced(cost.value),
+                ...priced(cost.data),
                 enhanceLevel: owned.metadata.enhanceLevel + 1,
-                downgradeOnFail: cost.value.step.downgradeOnFail,
+                downgradeOnFail: cost.data.step.downgradeOnFail,
             });
         }
         const cost = refineCost(owned.metadata, equipmentConfigService.refine);
-        if ("reason" in cost) return reply({ ok: false, error: cost.reason, ...empty });
-        return reply({ ...priced(cost.value), rarity: cost.value.target });
+        if (isFail(cost)) return refuse(cost.code);
+        return reply({ ...priced(cost.data), rarity: cost.data.target });
     }
 }

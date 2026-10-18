@@ -1,5 +1,5 @@
-import { ResponseCode } from "@/core/enums/response-code.enum.js";
+import type { ErrorCode } from "@/core/types/result.type.js";
 
-export function serviceError(message: string, statusCode: number, code: ResponseCode): never {
+export function serviceError(message: string, statusCode: number, code: ErrorCode): never {
     throw Object.assign(new Error(message), { statusCode, code });
 }
