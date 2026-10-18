@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { findRoomSchemaFiles } from "./lib/find-room-schemas.mjs";
+import { buildRoomIndex, distributeSchemas } from "./lib/distribute-schemas.mjs";
 import { normalizeCSharpSchemas } from "./lib/normalize-csharp-schemas.mjs";
 import { join, relative, resolve } from "node:path";
 
@@ -13,9 +14,10 @@ const sharedContractFiles = [
     join(projectRoot, "src", "rooms", "party", "types", "party-message.type.ts"),
 ];
 const codegen = join(projectRoot, "node_modules", "@colyseus", "schema", "bin", "schema-codegen");
-const unitySchemaOutput = resolve(
+// Thư mục Network của Unity: schema được xếp theo room (Room/<Room>/Schema, Common) sau khi codegen.
+const unityNetworkOutput = resolve(
     projectRoot,
-    process.argv[2] ?? process.env.UNITY_SCHEMA_OUTPUT ?? "../ERPG/Assets/ERPG/Scripts/Schema"
+    process.argv[2] ?? process.env.UNITY_NETWORK_OUTPUT ?? "../ERPG/Assets/Src/Scripts/Network"
 );
 
 const outputs = [
@@ -24,7 +26,8 @@ const outputs = [
         namespace: "ERPG.Schema",
     },
     {
-        directory: unitySchemaOutput,
+        // Thư mục phẳng trung gian; phân phối vào Network/ ở cuối.
+        directory: join(projectRoot, "generated", "schema", "unity"),
         namespace: "ERPG.Schema",
     },
 ];
@@ -34,7 +37,10 @@ if (schemaFiles.length === 0) {
     throw new Error("No room schema files were found");
 }
 
-for (const output of outputs) mkdirSync(output.directory, { recursive: true });
+for (const output of outputs) {
+    rmSync(output.directory, { recursive: true, force: true });
+    mkdirSync(output.directory, { recursive: true });
+}
 
 for (const output of outputs) {
     const sources = [...schemaFiles, ...sharedContractFiles].map((file) =>
@@ -78,3 +84,12 @@ for (const output of outputs) {
     );
     if (catalogResult.status !== 0) process.exit(catalogResult.status ?? 1);
 }
+
+const distributed = distributeSchemas({
+    flatDirectory: outputs[1].directory,
+    networkDirectory: unityNetworkOutput,
+    roomIndex: buildRoomIndex(roomsDirectory),
+});
+console.log(
+    `Schema -> ${unityNetworkOutput}: ${distributed.total} file, ghi ${distributed.written}, xoá ${distributed.removed}`
+);

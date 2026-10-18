@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
@@ -33,6 +34,20 @@ interface InventoryCommandPayload {
 }
 
 /** Chi phí / tỉ lệ cường hoá hoặc tinh hoá (cho client hiện modal nâng cấp) — không đổi state. */
+@SdkMessage({
+    replies: [WorldMessage.UPGRADE_PREVIEW],
+    errors: [
+        CommonCode.INVALID_INPUT,
+        ItemErrorCode.EQUIPMENT_NOT_FOUND,
+        ItemErrorCode.EQUIPMENT_CONFIG_MISSING,
+        ItemErrorCode.EQUIPMENT_MAX_ENHANCE,
+        ItemErrorCode.EQUIPMENT_NEEDS_REFINE,
+        ItemErrorCode.EQUIPMENT_MAX_RARITY,
+        ItemErrorCode.ITEM_NOT_ENOUGH,
+        ItemErrorCode.CURRENCY_NOT_ENOUGH,
+    ],
+    note: "Lỗi có `error: { action, instanceId }`.",
+})
 export class PreviewUpgradeWorldCommand extends Command<WorldRoom, InventoryCommandPayload> {
     static readonly message = WorldClientMessage.PREVIEW_UPGRADE;
 

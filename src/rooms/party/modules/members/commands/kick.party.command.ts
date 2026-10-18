@@ -1,3 +1,6 @@
+import { PartyErrorCode } from "@/rooms/party/types/party-error-code.type.js";
+import { PartyMessage } from "@/rooms/party/types/party-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { PartyTargetSchema } from "@/rooms/party/modules/members/validators/member.party.validator.js";
 import { RemovePlayerPartyCommand } from "@/rooms/party/modules/members/commands/remove-player.party.command.js";
@@ -11,6 +14,15 @@ interface Payload {
     payload?: unknown;
 }
 
+@SdkMessage({
+    replies: [PartyMessage.NOTICE],
+    errors: [
+        PartyErrorCode.PARTY_NOT_LEADER,
+        PartyErrorCode.PARTY_SELF_TARGET,
+        PartyErrorCode.PARTY_NOT_MEMBER,
+    ],
+    note: "Thành công: notice `kicked`.",
+})
 export class KickPartyCommand extends Command<PartyRoom, Payload> {
     static readonly message = PartyClientMessage.KICK;
 

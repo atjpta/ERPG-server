@@ -1,7 +1,5 @@
-import type { ErrorCode } from "@/core/types/result.type.js";
-
 /*
- * Payload message của party room — `yarn schema:generate` sinh C# (xem ghi chú ở types/world-message.type.ts:
+ * Payload message của party room — `yarn unity:network` sinh C# (xem ghi chú ở types/world-message.type.ts:
  * chỉ interface có chữ "Message" trong tên + enum, khai báo từng field).
  */
 
@@ -56,8 +54,8 @@ export interface PartyNoticeMessage {
 export interface PartyDungeonFailureMessage {
     playerId: string;
     name: string;
-    /** `LEVEL_TOO_LOW`, `PLAYER_OFFLINE`, `PLAYER_DEAD` hoặc `DUNGEON_ALREADY_IN`. */
-    reason: ErrorCode;
+    /** Mã lỗi (`ErrorCode`): `LEVEL_TOO_LOW`, `PLAYER_OFFLINE`, `PLAYER_DEAD` hoặc `DUNGEON_ALREADY_IN`. */
+    reason: string;
 }
 
 export interface PartyDungeonDeniedMessage {

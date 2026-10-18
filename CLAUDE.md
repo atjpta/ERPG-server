@@ -44,6 +44,7 @@ bản C# tương ứng (cùng thứ tự phép tính, cùng hằng số), không
 - ≥ 2 thao tác ghi DB → `withTransaction`, truyền `tx` vào mọi lệnh.
 - Lỗi nghiệp vụ trong service: `serviceError(message, status, <Domain>ErrorCode.X)`.
 - Mọi thứ trả cho client (API, message room, RPC giữa room) dùng envelope `Result` `{ success, data, code, message, error }`; lỗi chỉ trả mã lỗi (enum theo domain: `CommonCode` ở core, `AuthErrorCode`, `PartyErrorCode`...), không text tự do; room gửi qua `sendOk`/`sendFail` — xem `docs/response-format.md`.
+- Client Unity gọi server qua SDK sinh tự động (`yarn unity:network`): endpoint khai báo option `sdk`, room tự suy từ command (thêm `@SdkMessage` / `@SdkRoom` để ghi reply, mã lỗi, cách join), mã lỗi có JSDoc từng member — xem `docs/client-sdk.md`.
 - Phần admin: chữ `admin` đứng đầu tên file/export/endpoint key, path `/admin/...`.
 - Luxon cho thời gian (`DateTime.now()`), không `new Date()` rải rác.
 - Thêm bảng chứa dữ liệu người chơi → cập nhật `AccountDeletionService.purgeUserData` (xoá tài khoản).

@@ -1,3 +1,7 @@
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
+import { CommonCode } from "@/core/enums/common-code.enum.js";
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { fail, isFail, ok } from "@/core/utils/result.util.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
@@ -16,6 +20,25 @@ import {
 } from "@/rooms/world/types/world-message.type.js";
 import type { z } from "zod";
 
+@SdkMessage({
+    replies: [WorldMessage.INVENTORY, WorldMessage.ATTRIBUTES],
+    errors: [
+        CommonCode.INVALID_INPUT,
+        PlayerErrorCode.PLAYER_DEAD,
+        ItemErrorCode.ITEM_NOT_FOUND,
+        ItemErrorCode.INVENTORY_FULL,
+        ItemErrorCode.INVENTORY_SLOT_INVALID,
+        ItemErrorCode.INVENTORY_SLOT_EMPTY,
+        ItemErrorCode.EQUIPMENT_NOT_FOUND,
+        ItemErrorCode.EQUIPMENT_CONFIG_MISSING,
+        ItemErrorCode.EQUIPMENT_MAX_ENHANCE,
+        ItemErrorCode.EQUIPMENT_NEEDS_REFINE,
+        ItemErrorCode.EQUIPMENT_MAX_RARITY,
+        ItemErrorCode.ITEM_NOT_ENOUGH,
+        ItemErrorCode.CURRENCY_NOT_ENOUGH,
+    ],
+    note: "Thành công trả `equipmentUpgrade`; mọi lỗi trả trên `inventory` (không phải `equipmentUpgrade`).",
+})
 export class EnhanceEquipmentWorldCommand extends UpgradeWorldCommand<
     typeof UpgradeEquipmentSchema
 > {

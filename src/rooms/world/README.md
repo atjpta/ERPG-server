@@ -56,7 +56,7 @@ Colyseus schemas belong to their feature in `modules/<feature>/schemas/`:
 player/input/owned skills in players, monsters in monsters, NPCs/interactables in content,
 dungeon state in dungeons, and hitboxes/projectiles/areas/auras in combat.
 Only the aggregate `WorldState` belongs in the room-level `schemas/` folder.
-`scripts/generate-room-schemas.mjs` discovers schemas recursively. Generated Unity schemas stay in `Assets/ERPG/Scripts/Schema`.
+`scripts/generate-room-schemas.mjs` discovers schemas recursively. Generated Unity schemas stay in `Assets/ERPG/Scripts/Network/Schema`.
 Do not manually move or edit generated C# schemas to match feature folders.
 
 C# namespaces stay `ERPG.Rooms.World`; moving scripts must preserve their `.meta` GUIDs.

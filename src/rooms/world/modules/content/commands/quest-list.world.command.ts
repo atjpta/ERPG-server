@@ -1,3 +1,5 @@
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
@@ -9,6 +11,14 @@ interface ContentPayload {
     payload: unknown;
 }
 
+@SdkMessage({
+    replies: [
+        WorldMessage.QUEST_LIST,
+        WorldMessage.NPC_MARKERS,
+        WorldMessage.QUEST_TARGETS,
+        WorldMessage.FEATURES,
+    ],
+})
 export class QuestListWorldCommand extends Command<WorldRoom, ContentPayload> {
     static readonly message = WorldClientMessage.QUEST_LIST;
 

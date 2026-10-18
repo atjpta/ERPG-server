@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
@@ -23,6 +24,18 @@ interface ContentPayload {
 }
 
 /** Bắt đầu nói chuyện với NPC. */
+@SdkMessage({
+    replies: [WorldMessage.DIALOGUE, WorldMessage.DIALOGUE_END],
+    errors: [
+        CommonCode.INVALID_INPUT,
+        PlayerErrorCode.PLAYER_DEAD,
+        PlayerErrorCode.TOO_FAR,
+        NpcErrorCode.NPC_NOT_FOUND,
+        NpcErrorCode.NPC_NOT_IN_MAP,
+        DialogueErrorCode.DIALOGUE_NOT_FOUND,
+    ],
+    note: "Thành công trả `dialogue`; thất bại trả `dialogueEnd` (lỗi có `error: { sourceCode }`).",
+})
 export class InteractNpcWorldCommand extends Command<WorldRoom, ContentPayload> {
     static readonly message = WorldClientMessage.INTERACT_NPC;
 

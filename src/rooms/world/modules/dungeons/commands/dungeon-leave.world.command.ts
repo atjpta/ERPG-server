@@ -1,9 +1,15 @@
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { dungeonWorldService } from "@/rooms/world/modules/dungeons/services/dungeon.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { Command } from "@colyseus/command";
 
+@SdkMessage({
+    replies: [WorldMessage.MAP_CHANGE],
+    note: "Không ở trong dungeon thì không có reply.",
+})
 export class DungeonLeaveWorldCommand extends Command<WorldRoom, { client: PlayerClient }> {
     static readonly message = WorldClientMessage.DUNGEON_LEAVE;
 

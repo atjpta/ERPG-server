@@ -1,3 +1,5 @@
+import { PartyErrorCode } from "@/rooms/party/types/party-error-code.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
@@ -11,6 +13,16 @@ import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-mess
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { Command } from "@colyseus/command";
 
+@SdkMessage({
+    replies: [WorldMessage.DUNGEON_RETRY_RESULT, WorldMessage.MAP_CHANGE],
+    errors: [
+        MapErrorCode.DUNGEON_UNAVAILABLE,
+        MapErrorCode.DUNGEON_NOT_TOGETHER,
+        MapErrorCode.DUNGEON_DENIED,
+        PartyErrorCode.PARTY_NOT_LEADER,
+    ],
+    note: "Chỉ lỗi mới trả `dungeonRetryResult`; thành công thì `mapChange` đến thay.",
+})
 export class DungeonRetryWorldCommand extends Command<WorldRoom, { client: PlayerClient }> {
     static readonly message = WorldClientMessage.DUNGEON_RETRY;
 

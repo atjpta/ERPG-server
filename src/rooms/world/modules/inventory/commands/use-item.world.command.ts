@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { fail, ok } from "@/core/utils/result.util.js";
 import { broadcastOk } from "@/core/utils/room-send.util.js";
@@ -17,6 +18,14 @@ import {
 import type { z } from "zod";
 
 /** Dùng bình: HP/MP đổi theo state của player (vitals tự đồng bộ), túi gửi lại như mọi thao tác túi đồ. */
+@SdkMessage({
+    replies: [WorldMessage.POTION_USED],
+    errors: [
+        ItemErrorCode.ITEM_NOT_USABLE,
+        ItemErrorCode.ITEM_ALREADY_FULL,
+        ItemErrorCode.ITEM_ON_COOLDOWN,
+    ],
+})
 export class UseItemWorldCommand extends InventoryWorldCommand<
     typeof UseItemSchema,
     { hp: number; mp: number }

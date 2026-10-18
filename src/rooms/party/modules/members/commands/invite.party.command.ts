@@ -1,3 +1,5 @@
+import { PartyMessage } from "@/rooms/party/types/party-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { callRoom } from "@/core/rooms/room.integration.js";
 import { PartyDeliverInviteWorldCommand } from "@/rooms/world/modules/players/commands/party-deliver-invite.world.command.js";
 import { PartyErrorCode } from "@/rooms/party/types/party-error-code.type.js";
@@ -16,6 +18,20 @@ interface Payload {
     payload?: unknown;
 }
 
+@SdkMessage({
+    replies: [PartyMessage.NOTICE],
+    errors: [
+        PartyErrorCode.PARTY_NOT_LEADER,
+        PartyErrorCode.PARTY_INVITE_LIMIT,
+        PartyErrorCode.PARTY_TARGET_NOT_FOUND,
+        PartyErrorCode.PARTY_SELF_TARGET,
+        PartyErrorCode.PARTY_ALREADY_MEMBER,
+        PartyErrorCode.PARTY_FULL,
+        PartyErrorCode.PARTY_TARGET_IN_PARTY,
+        PartyErrorCode.PARTY_TARGET_OFFLINE,
+    ],
+    note: "Thành công: notice `invite_sent`. Payload sai thì server im lặng.",
+})
 export class InvitePartyCommand extends Command<PartyRoom, Payload> {
     static readonly message = PartyClientMessage.INVITE;
 

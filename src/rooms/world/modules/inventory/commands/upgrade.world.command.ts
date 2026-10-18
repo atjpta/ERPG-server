@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { InventoryWorldCommand } from "@/rooms/world/modules/inventory/commands/inventory.world.command.js";
@@ -7,6 +8,9 @@ import {
 } from "@/rooms/world/types/world-message.type.js";
 import type { z } from "zod";
 
+@SdkMessage({
+    replies: [WorldMessage.EQUIPMENT_UPGRADE],
+})
 export abstract class UpgradeWorldCommand<TSchema extends z.ZodType> extends InventoryWorldCommand<
     TSchema,
     EquipmentUpgradeMessage

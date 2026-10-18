@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
@@ -11,6 +12,10 @@ import {
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { Command } from "@colyseus/command";
 
+@SdkMessage({
+    replies: [WorldMessage.PLAYER_VIEW],
+    errors: [PlayerErrorCode.PLAYER_NOT_HERE],
+})
 export class ViewPlayerWorldCommand extends Command<
     WorldRoom,
     { client: PlayerClient; payload: unknown }

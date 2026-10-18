@@ -1,3 +1,5 @@
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { dialogueWorldService } from "@/rooms/world/modules/content/services/dialogue.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
@@ -9,6 +11,9 @@ interface ContentPayload {
     payload: unknown;
 }
 
+@SdkMessage({
+    replies: [WorldMessage.DIALOGUE_END],
+})
 export class DialogueCloseWorldCommand extends Command<WorldRoom, ContentPayload> {
     static readonly message = WorldClientMessage.DIALOGUE_CLOSE;
 

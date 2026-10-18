@@ -48,7 +48,7 @@ export class PartyCreateWorldCommand extends Command<WorldRoom, PartyPayload> {
 ```
 
 Không phải sửa `world.room.ts` để thêm handler. Nếu enum/DTO thay đổi, chạy quy trình
-sinh schema/message cho Unity bằng `yarn schema:generate` như trước.
+sinh schema/message cho Unity bằng `yarn unity:network` như trước.
 
 ## Luồng xử lý
 

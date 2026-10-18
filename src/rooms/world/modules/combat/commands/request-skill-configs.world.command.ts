@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { WorldErrorCode } from "@/rooms/world/types/world-error-code.type.js";
 import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
@@ -9,6 +10,10 @@ import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-mess
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { Command } from "@colyseus/command";
 
+@SdkMessage({
+    replies: [WorldMessage.SKILL_CONFIGS],
+    errors: [WorldErrorCode.SKILL_CONFIG_UNAVAILABLE],
+})
 export class RequestSkillConfigsWorldCommand extends Command<WorldRoom, { client: PlayerClient }> {
     static readonly message = WorldClientMessage.REQUEST_SKILL_CONFIGS;
 

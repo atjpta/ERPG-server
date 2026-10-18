@@ -35,6 +35,11 @@ export function normalizeCSharpSchemas(files) {
                     /(\t)(public class \w+ \{)/g,
                     "$1[global::System.Serializable]\n$1[global::UnityEngine.Scripting.Preserve]\n$1$2"
                 );
+                // Unity bỏ qua field Dictionary public nếu thiếu [SerializeField] (analyzer UAC1015).
+                source = source.replace(
+                    /^(\t+)public (global::System\.Collections\.Generic\.Dictionary<[^;(]*?> @?\w+;)/gm,
+                    "$1[global::UnityEngine.SerializeField] public $2"
+                );
             }
             return [name, source];
         })

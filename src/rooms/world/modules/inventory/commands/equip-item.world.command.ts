@@ -1,3 +1,5 @@
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { fail, ok } from "@/core/utils/result.util.js";
@@ -16,6 +18,14 @@ import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/pla
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
 import type { z } from "zod";
 
+@SdkMessage({
+    replies: [WorldMessage.ATTRIBUTES],
+    errors: [
+        ItemErrorCode.ITEM_NOT_EQUIPMENT,
+        ItemErrorCode.ITEM_CLASS_MISMATCH,
+        PlayerErrorCode.LEVEL_TOO_LOW,
+    ],
+})
 export class EquipItemWorldCommand extends InventoryWorldCommand<
     typeof EquipItemSchema,
     undefined

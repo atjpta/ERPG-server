@@ -1,3 +1,4 @@
+import { SdkRoom } from "@/core/rooms/sdk-room.decorator.js";
 import { KickReason } from "@/core/enums/kick-reason.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { createRpcRunner } from "@/core/rooms/room.integration.js";
@@ -21,6 +22,15 @@ import type { PartyRoomOptions } from "@/rooms/party/types/party-room.type.js";
 import { Dispatcher } from "@colyseus/command";
 const messages = await loadRoomMessages(new URL(".", import.meta.url));
 
+@SdkRoom({
+    joins: [
+        {
+            room: "party",
+            options: null,
+            doc: "Vào bằng `JoinById(roomId)`: `roomId` lấy từ message `party` của world room hoặc `partyRoomId` của lời mời.",
+        },
+    ],
+})
 export class PartyRoom extends AuthenticatedPlayerRoom<{
     state: PartyState;
     client: PlayerClient;

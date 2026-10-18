@@ -4,7 +4,7 @@ import type { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import type { StatKey, StatType } from "@/modules/player/enums/stat.enum.js";
 
 /*
- * Payload message được `yarn schema:generate` sinh ra C# (namespace ERPG.Schema). Codegen chỉ sinh
+ * Payload message được `yarn unity:network` sinh ra C# (namespace ERPG.Schema). Codegen chỉ sinh
  * interface có chữ "Message" trong tên + enum, không hiểu `extends` / type alias / kiểu inline /
  * `| null` — mọi kiểu lồng nhau phải là interface `...Message` hoặc enum, khai báo từng field.
  */
@@ -329,16 +329,6 @@ export interface RewardMessage {
 }
 
 /** Điểm + attribute + stat sau khi tính lại (PlayerWorldState.getAttributeSummary). */
-export interface AttributeSummary {
-    attributePoints: number;
-    /** Điểm player đã tự cộng. */
-    allocatedAttributes: AttributeValuesMessage;
-    /** Attribute cuối cùng (class + đã cộng + trang bị). */
-    attributes: AttributeValuesMessage;
-    /** StatKey → giá trị (chỉ có stat khác 0). */
-    stats: Record<string, number>;
-}
-
 export interface AttributesMessage {
     attributePoints: number;
     allocatedAttributes: AttributeValuesMessage;

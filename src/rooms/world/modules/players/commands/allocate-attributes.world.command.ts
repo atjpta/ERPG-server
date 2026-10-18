@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { sendFail } from "@/core/utils/room-send.util.js";
@@ -17,6 +18,15 @@ interface AllocateAttributesPayload {
  * Player cộng điểm tiềm năng (`attributePoints`) vào attribute. Chỉ đổi state trong room — checkpoint /
  * lúc rời room lưu DB; stat (HP, attack…) tính lại ngay. Kết quả (hoặc lỗi) gửi lại riêng cho client đó.
  */
+@SdkMessage({
+    replies: [WorldMessage.ATTRIBUTES],
+    errors: [
+        CommonCode.INVALID_INPUT,
+        PlayerErrorCode.PLAYER_DEAD,
+        PlayerErrorCode.ATTRIBUTE_NO_POINTS,
+        PlayerErrorCode.ATTRIBUTE_POINTS_NOT_ENOUGH,
+    ],
+})
 export class AllocateAttributesWorldCommand extends Command<WorldRoom, AllocateAttributesPayload> {
     static readonly message = WorldClientMessage.ALLOCATE_ATTRIBUTES;
 

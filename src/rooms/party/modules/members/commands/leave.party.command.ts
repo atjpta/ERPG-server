@@ -1,9 +1,15 @@
+import { PartyMessage } from "@/rooms/party/types/party-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { RemovePlayerPartyCommand } from "@/rooms/party/modules/members/commands/remove-player.party.command.js";
 import type { PartyRoom } from "@/rooms/party/party.room.js";
 import { PartyClientMessage, PartyNotice } from "@/rooms/party/types/party-message.type.js";
 import { Command } from "@colyseus/command";
 
+@SdkMessage({
+    replies: [PartyMessage.NOTICE],
+    note: "Thành công: notice `member_left`.",
+})
 export class LeavePartyCommand extends Command<PartyRoom, { client: PlayerClient }> {
     static readonly message = PartyClientMessage.LEAVE;
 

@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { callRoom } from "@/core/rooms/room.integration.js";
 import { RequestJoinPartyCommand } from "@/rooms/party/commands/request-join.party.command.js";
 import type { ErrorCode } from "@/core/types/result.type.js";
@@ -22,6 +23,18 @@ interface PartyPayload {
     payload: unknown;
 }
 
+@SdkMessage({
+    replies: [WorldMessage.PARTY_NOTICE],
+    errors: [
+        PartyErrorCode.PARTY_ALREADY_MEMBER,
+        PartyErrorCode.PARTY_SELF_TARGET,
+        PartyErrorCode.PARTY_TARGET_NOT_IN_PARTY,
+        PartyErrorCode.PARTY_FULL,
+        PlayerErrorCode.PLAYER_NOT_HERE,
+        CommonCode.ROOM_UNAVAILABLE,
+    ],
+    note: "Payload sai thì server im lặng.",
+})
 export class PartyRequestJoinWorldCommand extends Command<WorldRoom, PartyPayload> {
     static readonly message = WorldClientMessage.PARTY_REQUEST_JOIN;
 

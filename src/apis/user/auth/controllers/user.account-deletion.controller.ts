@@ -20,7 +20,16 @@ export const userAccountDeletionController = {
     /** Người chơi tự xoá trong game (Cài đặt → Tài khoản → Xoá) — xử lý ngay, token hết hiệu lực. */
     userAccountDeleteMe: authEndpoint(
         "/auth/account",
-        { method: "DELETE", body: UserDeleteMyAccountSchema.optional() },
+        {
+            method: "DELETE",
+            sdk: {
+                summary:
+                    "Xoá tài khoản ngay trong game (chính sách Google Play); token hết hiệu lực.",
+                auth: "user",
+                response: null,
+            },
+            body: UserDeleteMyAccountSchema.optional(),
+        },
         (ctx) =>
             RouterContainer(ctx, async () => {
                 await accountDeletionService.deleteMyAccount(ctx.context.userId, ctx.body?.reason);
@@ -31,7 +40,15 @@ export const userAccountDeletionController = {
     /** Form trên trang web — chỉ ghi nhận, admin xác minh rồi xử lý. */
     userAccountDeletionWebRequest: webEndpoint(
         "/auth/account-deletion-requests",
-        { method: "POST", body: UserWebAccountDeletionSchema },
+        {
+            method: "POST",
+            sdk: {
+                summary: "Gửi yêu cầu xoá tài khoản từ form web (admin xác minh sau).",
+                auth: "none",
+                response: null,
+            },
+            body: UserWebAccountDeletionSchema,
+        },
         (ctx) =>
             RouterContainer(ctx, async () => {
                 await accountDeletionService.submitWebRequest(ctx.body);
@@ -40,9 +57,21 @@ export const userAccountDeletionController = {
     ),
 
     /** Trang HTML — URL `<PUBLIC_URL>/user/account-deletion` khai báo trên Play Console. */
-    userAccountDeletionPage: createEndpoint("/account-deletion", { method: "GET" }, async () => {
-        return new globalThis.Response(userRenderAccountDeletionPage(), {
-            headers: { "content-type": "text/html; charset=utf-8" },
-        });
-    }),
+    userAccountDeletionPage: createEndpoint(
+        "/account-deletion",
+        {
+            method: "GET",
+            sdk: {
+                summary: "Trang HTML xoá tài khoản.",
+                auth: "none",
+                response: null,
+                hidden: true,
+            },
+        },
+        async () => {
+            return new globalThis.Response(userRenderAccountDeletionPage(), {
+                headers: { "content-type": "text/html; charset=utf-8" },
+            });
+        }
+    ),
 };

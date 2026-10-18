@@ -1,3 +1,5 @@
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { isFail } from "@/core/utils/result.util.js";
@@ -18,6 +20,16 @@ interface InventoryCommandPayload {
 }
 
 /** Tính thử phân rã (cho client hiện bảng xác nhận nguyên liệu nhận được) — không đổi state. */
+@SdkMessage({
+    replies: [WorldMessage.DISASSEMBLE_PREVIEW],
+    errors: [
+        CommonCode.INVALID_INPUT,
+        ItemErrorCode.ITEM_NOT_FOUND,
+        ItemErrorCode.ITEM_LOCKED,
+        ItemErrorCode.ITEM_NOT_EQUIPMENT,
+    ],
+    note: "Lỗi có `error: { instanceIds }`.",
+})
 export class PreviewDisassembleWorldCommand extends Command<WorldRoom, InventoryCommandPayload> {
     static readonly message = WorldClientMessage.PREVIEW_DISASSEMBLE;
 

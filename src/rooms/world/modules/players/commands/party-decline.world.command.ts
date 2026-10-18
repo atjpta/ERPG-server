@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { callRoom } from "@/core/rooms/room.integration.js";
 import { DeclineInvitePartyCommand } from "@/rooms/party/commands/decline-invite.party.command.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
@@ -11,6 +12,9 @@ interface PartyPayload {
     payload: unknown;
 }
 
+@SdkMessage({
+    note: "Không có reply.",
+})
 export class PartyDeclineWorldCommand extends Command<WorldRoom, PartyPayload> {
     static readonly message = WorldClientMessage.PARTY_DECLINE;
 

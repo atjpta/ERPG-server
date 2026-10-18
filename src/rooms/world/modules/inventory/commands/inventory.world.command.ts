@@ -1,3 +1,5 @@
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
@@ -22,6 +24,17 @@ interface InventoryCommandPayload {
  * Khung chung cho thao tác túi đồ: validate payload, chặn khi đã chết, chạy thao tác rồi gửi lại
  * `inventory` (lỗi thì gửi `Result` thất bại trên cùng message). Đổi đồ đang mặc thì gửi thêm `attributes` (stat mới).
  */
+@SdkMessage({
+    replies: [WorldMessage.INVENTORY],
+    errors: [
+        CommonCode.INVALID_INPUT,
+        PlayerErrorCode.PLAYER_DEAD,
+        ItemErrorCode.ITEM_NOT_FOUND,
+        ItemErrorCode.INVENTORY_FULL,
+        ItemErrorCode.INVENTORY_SLOT_INVALID,
+        ItemErrorCode.INVENTORY_SLOT_EMPTY,
+    ],
+})
 export abstract class InventoryWorldCommand<TSchema extends z.ZodType, TValue> extends Command<
     WorldRoom,
     InventoryCommandPayload

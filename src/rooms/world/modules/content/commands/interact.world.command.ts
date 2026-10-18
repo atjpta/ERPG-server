@@ -1,3 +1,5 @@
+import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { WorldErrorCode } from "@/rooms/world/types/world-error-code.type.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
@@ -38,6 +40,24 @@ interface ContentPayload {
 }
 
 /** Tương tác vật thể trong map (portal, thu thập, biển báo). */
+@SdkMessage({
+    replies: [WorldMessage.INTERACT_RESULT],
+    errors: [
+        CommonCode.INVALID_INPUT,
+        CommonCode.NOT_FOUND,
+        PlayerErrorCode.PLAYER_DEAD,
+        PlayerErrorCode.TOO_FAR,
+        PlayerErrorCode.REQUIREMENTS_NOT_MET,
+        ItemErrorCode.INVENTORY_FULL,
+        WorldErrorCode.INTERACT_NOT_AVAILABLE,
+        MapErrorCode.MAP_NOT_FOUND,
+        MapErrorCode.MAP_NOT_OPEN,
+        MapErrorCode.MAP_ALREADY_CHANGING,
+        MapErrorCode.MAP_SPAWN_NOT_FOUND,
+        PlayerErrorCode.LEVEL_TOO_LOW,
+    ],
+    note: "Thành công kèm thêm message hiệu ứng (`mapChange`, `teleportList`, `dialogue`, `reward`...). Lỗi có `error: { id }`.",
+})
 export class InteractWorldCommand extends Command<WorldRoom, ContentPayload> {
     static readonly message = WorldClientMessage.INTERACT;
 

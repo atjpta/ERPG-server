@@ -1,3 +1,5 @@
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { WorldErrorCode } from "@/rooms/world/types/world-error-code.type.js";
 import { DialogueErrorCode } from "@/modules/dialogues/enums/dialogue-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
@@ -19,6 +21,11 @@ interface ContentPayload {
     payload: unknown;
 }
 
+@SdkMessage({
+    replies: [WorldMessage.DIALOGUE, WorldMessage.DIALOGUE_END],
+    errors: [DialogueErrorCode.DIALOGUE_NOT_FOUND, WorldErrorCode.INTERACT_NOT_AVAILABLE],
+    note: '`optionId` rỗng = "Tiếp tục".',
+})
 export class DialogueChooseWorldCommand extends Command<WorldRoom, ContentPayload> {
     static readonly message = WorldClientMessage.DIALOGUE_CHOOSE;
 

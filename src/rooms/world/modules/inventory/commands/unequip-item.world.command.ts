@@ -1,3 +1,5 @@
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { fail, ok } from "@/core/utils/result.util.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
@@ -10,6 +12,9 @@ import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/pla
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
 import type { z } from "zod";
 
+@SdkMessage({
+    replies: [WorldMessage.ATTRIBUTES],
+})
 export class UnequipItemWorldCommand extends InventoryWorldCommand<
     typeof UnequipItemSchema,
     undefined

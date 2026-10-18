@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
@@ -23,6 +24,20 @@ interface MapPayload {
 }
 
 /** Chọn điểm đến teleport; kết quả trả qua `interactResult` (id = mapCode). */
+@SdkMessage({
+    replies: [WorldMessage.INTERACT_RESULT, WorldMessage.MAP_CHANGE],
+    errors: [
+        MapErrorCode.TELEPORT_NOT_AT_PAD,
+        MapErrorCode.TELEPORT_NO_DESTINATION,
+        MapErrorCode.TELEPORT_NOT_DISCOVERED,
+        MapErrorCode.MAP_NOT_FOUND,
+        MapErrorCode.MAP_NOT_OPEN,
+        MapErrorCode.MAP_ALREADY_CHANGING,
+        MapErrorCode.MAP_SPAWN_NOT_FOUND,
+        PlayerErrorCode.LEVEL_TOO_LOW,
+    ],
+    note: "Lỗi có `error: { id }`.",
+})
 export class TeleportToWorldCommand extends Command<WorldRoom, MapPayload> {
     static readonly message = WorldClientMessage.TELEPORT_TO;
 

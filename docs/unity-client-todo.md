@@ -1,6 +1,8 @@
+> Checklist cũ từ trước khi có SDK sinh tự động (`docs/client-sdk.md`): các tên như `PartyNoticeCode`, `ResponseCode`, `ok/error` không còn; message room giờ luôn là `Result<T>` và gọi thẳng `WorldRoomClient` / `PartyRoomClient`.
+
 ## 0. Việc chung đầu tiên
 
-- [ ] Chạy `yarn schema:generate` rồi sửa lỗi compile do đổi tên/thêm kiểu:
+- [ ] Chạy `yarn unity:network` rồi sửa lỗi compile do đổi tên/thêm kiểu:
     - `Biome`: chỉ còn `starter | slime | werewolf | werebear` (bỏ `orc`, `skeleton`, `shapeshifter`).
     - `NpcMarker` thêm `talkTarget`; `QuestObjectiveType` thêm `clear_dungeon`; `QuestCategory` mới (`hero | side | daily`).
     - `MapChangeMessage` thêm `roomName` (`WorldRoomName`) và `instanceId`.
@@ -120,7 +122,7 @@ Server: join room `dungeon` (khác `world`), instance riêng mỗi lượt; chi 
 
 Server: room `party` riêng cho mỗi party (xem `docs/content-authoring.md`, mục Party). Client giữ **2 kết nối**: world room + party room.
 
-- [ ] `yarn schema:generate` để có `PartyState`, `PartyMemberState`, `PartyClientMessage`, `PartyMessage`, `PartyNoticeCode`, `PartyNoticeMessage`, `PartyDungeonDeniedMessage`, `PartyDungeonDenyReason`, `PartyRoomMessage`, `PartyInviteReceivedMessage`.
+- [ ] `yarn unity:network` để có `PartyState`, `PartyMemberState`, `PartyClientMessage`, `PartyMessage`, `PartyNoticeCode`, `PartyNoticeMessage`, `PartyDungeonDeniedMessage`, `PartyDungeonDenyReason`, `PartyRoomMessage`, `PartyInviteReceivedMessage`.
 - [ ] Tạo party: gửi `partyCreate` (world room) → nhận `party {roomId}` → `client.JoinById(roomId)`; giữ kết nối party mở xuyên suốt, **không rời khi đổi map / vào-ra dungeon**.
 - [ ] Mời người chơi (nhập tên) → `invite {playerName}` gửi vào **party room** (chỉ chủ). Hiện thông báo theo `notice.code` (`invite_sent`, `target_offline`, `target_in_party`, `party_full`, `invite_limit`...).
 - [ ] Nhận lời mời: message `partyInviteReceived` ở world room → popup Chấp nhận / Từ chối kèm đếm ngược `expiresInSec`. Chấp nhận = `JoinById(partyRoomId)` (thất bại nếu hết hạn/đầy); Từ chối = gửi `partyDecline {partyRoomId}` ở world room.

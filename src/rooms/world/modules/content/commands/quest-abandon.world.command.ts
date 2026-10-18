@@ -1,3 +1,5 @@
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { QuestErrorCode } from "@/modules/quests/enums/quest-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { QuestCategory } from "@/modules/quests/enums/quest.enum.js";
@@ -17,6 +19,10 @@ interface ContentPayload {
     payload: unknown;
 }
 
+@SdkMessage({
+    replies: [WorldMessage.QUEST_UPDATE, WorldMessage.NPC_MARKERS, WorldMessage.QUEST_TARGETS],
+    note: "Quest không bỏ được (không có / không cho bỏ) thì server im lặng, không có reply.",
+})
 export class QuestAbandonWorldCommand extends Command<WorldRoom, ContentPayload> {
     static readonly message = WorldClientMessage.QUEST_ABANDON;
 

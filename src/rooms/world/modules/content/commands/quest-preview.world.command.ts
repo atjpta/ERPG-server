@@ -1,3 +1,4 @@
+import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
@@ -17,6 +18,10 @@ interface ContentPayload {
     payload: unknown;
 }
 
+@SdkMessage({
+    replies: [WorldMessage.QUEST_PREVIEW],
+    note: "Quest không tồn tại thì server im lặng, không có reply.",
+})
 export class QuestPreviewWorldCommand extends Command<WorldRoom, ContentPayload> {
     static readonly message = WorldClientMessage.QUEST_PREVIEW;
 

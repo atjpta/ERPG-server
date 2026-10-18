@@ -29,7 +29,7 @@ import {
     toOwnedSkillStates,
 } from "@/rooms/world/modules/players/schemas/owned-skill.world.state.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
-import type { AttributeSummary } from "@/rooms/world/types/world-message.type.js";
+import type { AttributesMessage } from "@/rooms/world/types/world-message.type.js";
 
 /** Trần của `dashTicks` / `dashCooldownTicks` (uint8). */
 const MAX_DASH_TICKS = 0xff;
@@ -196,11 +196,11 @@ export class PlayerWorldState extends Schema {
     /** Kết quả nếu cộng điểm như `request` — không đổi state; trả `ErrorCode` lỗi nếu không hợp lệ. */
     previewAttributes(
         request: Partial<Record<AttributeKey, number>>
-    ): AttributeSummary | ErrorCode {
+    ): AttributesMessage | ErrorCode {
         return playerStatsWorldService.previewAttributes(this, request);
     }
 
-    getAttributeSummary(): AttributeSummary {
+    getAttributeSummary(): AttributesMessage {
         return playerStatsWorldService.getAttributeSummary(this);
     }
 

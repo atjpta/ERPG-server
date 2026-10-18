@@ -8,7 +8,7 @@ import {
     playerStatService,
 } from "@/modules/player/services/player-stat.service.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import type { AttributeSummary } from "@/rooms/world/types/world-message.type.js";
+import type { AttributesMessage } from "@/rooms/world/types/world-message.type.js";
 
 export class PlayerStatsWorldService {
     setLevelProgress(state: PlayerWorldState, level: number, exp: number) {
@@ -57,7 +57,7 @@ export class PlayerStatsWorldService {
     previewAttributes(
         state: PlayerWorldState,
         request: Partial<Record<AttributeKey, number>>
-    ): AttributeSummary | ErrorCode {
+    ): AttributesMessage | ErrorCode {
         const result = allocateAttributePoints(
             state.allocatedAttributes,
             state.attributePoints,
@@ -77,7 +77,7 @@ export class PlayerStatsWorldService {
         };
     }
 
-    getAttributeSummary(state: PlayerWorldState): AttributeSummary {
+    getAttributeSummary(state: PlayerWorldState): AttributesMessage {
         return {
             attributePoints: state.attributePoints,
             allocatedAttributes: { ...state.allocatedAttributes },

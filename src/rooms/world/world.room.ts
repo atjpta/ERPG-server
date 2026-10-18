@@ -1,3 +1,5 @@
+import { SdkRoom } from "@/core/rooms/sdk-room.decorator.js";
+import { z } from "zod";
 import type { WorldRoomOptions } from "@/rooms/world/types/world-room.type.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { createRpcRunner } from "@/core/rooms/room.integration.js";
@@ -36,6 +38,20 @@ const RECONNECT_SECONDS = 20;
 
 const messages = await loadRoomMessages(new URL(".", import.meta.url));
 
+@SdkRoom({
+    joins: [
+        {
+            room: "world",
+            options: z.object({ mapCode: z.string() }),
+            doc: "Room kênh của một map thường (`mapCode`).",
+        },
+        {
+            room: "dungeon",
+            options: z.object({ mapCode: z.string(), instanceId: z.string() }),
+            doc: "Room một lượt dungeon; `mapCode` và `instanceId` lấy từ `MapChangeMessage` (server cấp).",
+        },
+    ],
+})
 export class WorldRoom extends AuthenticatedPlayerRoom<{
     state: WorldState;
     client: PlayerClient;

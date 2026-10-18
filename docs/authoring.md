@@ -25,7 +25,7 @@ Quy tắc: thứ cần mắt nhìn và kéo thả (vị trí, kích thước v�
 2. `yarn config:export` — danh sách code mới nhất.
 3. **Validate** mọi code trong Unity so với server (`CodeLinkValidator`); lỗi thì dừng, không đụng server.
 4. Tạo prefab + marker còn thiếu cho map server định nghĩa, rồi export layout map (map còn lỗi bị bỏ qua và được nêu tên).
-5. `yarn db:migrate`, `yarn seed`, `yarn config:export`, `yarn schema:generate`.
+5. `yarn db:migrate`, `yarn seed`, `yarn config:export`, `yarn unity:network`.
 6. Dừng tiến trình đang nghe cổng 2567, chạy lại `yarn dev`, chờ cổng mở. Ghi lại trạng thái đã sync.
 
 Chế độ khác: **Validate** (chỉ kiểm tra), **Sync Seed** (phía server: seed + export lại + restart). Trước khi Play, nếu map / monster / class prefab đã đổi từ lần sync trước thì Unity hỏi (hoặc tự sync nếu bật _Auto Sync Before Play_).
@@ -100,10 +100,10 @@ QuestCode includes the three daily quests.
 
 Run `yarn codes:generate` to sync without a database. It writes
 `../ERPG/Assets/ERPG/ServerData/codes.json` for Editor dropdowns and string constants under
-`../ERPG/Assets/ERPG/Scripts/Schema/` for runtime code, for example
+`../ERPG/Assets/Src/Scripts/Network/Schema/` for runtime code, for example
 `ERPG.Schema.ClassCode.SWORDSMAN` and `ERPG.Schema.SkillCode.DASH`.
 C# constants preserve the string values used by JSON/network payloads.
-Both `yarn config:export` and `yarn schema:generate` also sync these catalogs.
+Both `yarn config:export` and `yarn unity:network` also sync these catalogs.
 
 Client creation forms and skill inspectors select codes exclusively from server lists. Register a new
 code in the server enum, run `yarn codes:generate`, then choose that code when creating its Unity asset.
