@@ -107,7 +107,8 @@ await world.EquipItem(instanceId);           // gửi message (fire-and-forget);
 - **Lỗi tập trung:** `RoomClient.Failed` bắn đúng một lần cho mỗi message thất bại, trước khi handler riêng chạy.
 - **Gửi:** tên hàm theo message (`EquipItem`, `Invite`...); tên trùng thành viên của `RoomClient` được thêm tiền tố `Send` (`SendLeave`). Chưa kết nối thì bỏ qua và ghi cảnh báo. Field `null` không được gửi.
 - **Join:** `JoinWorld(options)` (world), `JoinById(roomId)` (party: `roomId` lấy từ message của world room). Cần player token; trả `false` nếu lỗi, xem `JoinError`.
-- **Sự kiện:** `Left(closeCode)`, `Dropped(closeCode)` (đang tự nối lại), `Reconnected`, `Error(code, message)`, `StateChanged(state, isFirst)`. Có thể gọi `Reconnect()` thủ công; `Leave()` để rời.
+- **Sự kiện:** `Left(closeCode)`, `Dropped(closeCode)` (đang tự nối lại), `Reconnected`, `Error(code, message)`, `StateChanged(state, isFirst)`.
+- **Ping:** client room tự đo mỗi giây khi đang kết nối (không cần gọi gì). `PingMilliseconds` (`double?`, `null` = chưa kết nối / chưa có mẫu / mẫu quá 5 giây) và sự kiện `PingChanged(double?)`; cả hai nằm trong interface `IRoomPing` nên UI chỉ cần nhận `IRoomPing` rồi nghe sự kiện để cập nhật hiển thị. Có thể gọi `Reconnect()` thủ công; `Leave()` để rời.
 - **Bị đá khỏi room** — close code trong `KickCode`:
 
 | Hằng                      | Mã   | Ý nghĩa                            | Client nên làm              |

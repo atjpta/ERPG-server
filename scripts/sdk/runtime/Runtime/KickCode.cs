@@ -16,8 +16,10 @@ namespace ERPG.Network
         public const int SessionRevoked = 4004;
         /// <summary>Admin vừa sửa nhân vật — vào lại để nhận dữ liệu mới (<c>KickReason.PLAYER_UPDATED</c>).</summary>
         public const int PlayerUpdated = 4005;
+        /// <summary>Chủ nhân vừa xoá nhân vật này (<c>KickReason.PLAYER_DELETED</c>).</summary>
+        public const int PlayerDeleted = 4006;
 
-        public static bool IsKick(int closeCode) => closeCode >= DuplicateLogin && closeCode <= PlayerUpdated;
+        public static bool IsKick(int closeCode) => closeCode >= DuplicateLogin && closeCode <= PlayerDeleted;
 
         /// <summary>Có nên vào lại ngay được không (chỉ <see cref="PlayerUpdated"/>); các mã còn lại phải đăng nhập lại.</summary>
         public static bool CanRejoin(int closeCode) => closeCode == PlayerUpdated;
@@ -32,6 +34,7 @@ namespace ERPG.Network
                 case AccountDeleted: return ERPG.Schema.KickReason.ACCOUNT_DELETED;
                 case SessionRevoked: return ERPG.Schema.KickReason.SESSION_REVOKED;
                 case PlayerUpdated: return ERPG.Schema.KickReason.PLAYER_UPDATED;
+                case PlayerDeleted: return ERPG.Schema.KickReason.PLAYER_DELETED;
                 default: return null;
             }
         }

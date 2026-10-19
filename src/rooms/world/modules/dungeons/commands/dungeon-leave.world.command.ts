@@ -19,7 +19,7 @@ export class DungeonLeaveWorldCommand extends Command<WorldRoom, { client: Playe
 
     /** Client chủ động rời dungeon. */
     private async leaveByClient(room: WorldRoom, client: PlayerClient): Promise<void> {
-        const player = room.state.players.get(client.sessionId);
+        const player = room.state.players.get(client.auth.playerId);
         if (player) await dungeonWorldService.leave(room, client, player, "return");
     }
 }

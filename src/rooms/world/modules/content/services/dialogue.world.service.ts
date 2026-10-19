@@ -81,9 +81,9 @@ export class DialogueWorldService {
     tick(room: WorldRoom): void {
         const sessions = this.sessionsOf(room);
         if (sessions.size === 0) return;
-        for (const [sessionId, session] of sessions) {
-            const player = room.state.players.get(sessionId);
-            const client = room.clients.getById(sessionId) as PlayerClient | undefined;
+        for (const [playerId, session] of sessions) {
+            const player = room.state.players.get(playerId);
+            const client = room.clientOf(playerId);
             if (!player || !client) continue;
             if (
                 contentWorldService.isNear(
@@ -99,8 +99,8 @@ export class DialogueWorldService {
     }
 
     /** Player rời room: bỏ phiên thoại. */
-    drop(room: WorldRoom, sessionId: string) {
-        this.sessionsOf(room).delete(sessionId);
+    drop(room: WorldRoom, playerId: string) {
+        this.sessionsOf(room).delete(playerId);
     }
 
     begin(
@@ -109,7 +109,7 @@ export class DialogueWorldService {
         player: PlayerWorldState,
         session: DialogueSession
     ) {
-        this.sessionsOf(room).set(client.sessionId, session);
+        this.sessionsOf(room).set(client.auth.playerId, session);
         this.enter(room, client, player, session, session.nodeId);
     }
 
@@ -131,7 +131,7 @@ export class DialogueWorldService {
             this.end(room, client, session.sourceCode, error);
             return;
         }
-        if (!this.sessionsOf(room).has(client.sessionId)) return;
+        if (!this.sessionsOf(room).has(client.auth.playerId)) return;
         this.send(room, client, player, session, node);
     }
 
@@ -172,7 +172,7 @@ export class DialogueWorldService {
     }
 
     end(room: WorldRoom, client: PlayerClient, sourceCode: string, error?: ErrorCode) {
-        this.sessionsOf(room).delete(client.sessionId);
+        this.sessionsOf(room).delete(client.auth.playerId);
         if (error) sendFail(client, WorldMessage.DIALOGUE_END, error, { sourceCode });
         else sendOk(client, WorldMessage.DIALOGUE_END, { sourceCode } satisfies DialogueEndMessage);
     }
@@ -228,7 +228,7 @@ export class DialogueWorldService {
                 return undefined;
             }
             case "give_currency":
-                rewardWorldService.grant(room, client.sessionId, player, {
+                rewardWorldService.grant(room, client.auth.playerId, player, {
                     exp: 0,
                     currency: [{ code: action.currency, amount: action.amount }],
                     items: [],
@@ -273,7 +273,7 @@ export class DialogueWorldService {
             }
             case "talk":
                 if (session.npcCode) {
-                    questWorldService.onEvent(room, client.sessionId, player, {
+                    questWorldService.onEvent(room, client.auth.playerId, player, {
                         type: QuestObjectiveType.TALK,
                         targetCode: session.npcCode,
                     });

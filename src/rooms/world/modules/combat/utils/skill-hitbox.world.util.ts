@@ -23,13 +23,14 @@ export function intersectsSkillHitEvent(
     const aimed = event.aimed && origin.aim !== undefined;
     const forwardX = aimed ? origin.aim!.x : origin.direction === "left" ? -1 : 1;
     const forwardY = aimed ? origin.aim!.y : 0;
-    // Không ngắm: attack art chỉ lật theo X, "lên" cục bộ là Y âm của world. Ngắm: trục ngang vuông góc với hướng ngắm.
-    const lateralX = aimed ? forwardY : 0;
-    const lateralY = aimed ? -forwardX : -1;
+    // Không ngắm: attack art chỉ lật theo X, "lên" cục bộ là Y dương của world (y hướng lên). Ngắm: trục ngang vuông góc
+    // với hướng ngắm, xoay 90° ngược chiều kim đồng hồ (hướng phải -> lên).
+    const lateralX = aimed ? -forwardY : 0;
+    const lateralY = aimed ? forwardX : 1;
 
     const targetCenterX = targetX + targetCollider.offsetX;
-    // Collider offsets are authored like the client prefab (positive Y up); the world grows down.
-    const targetCenterY = targetY - targetCollider.offsetY;
+    // Collider offsets are authored like the client prefab (positive Y up), and so is the world.
+    const targetCenterY = targetY + targetCollider.offsetY;
     const targetDx = targetCenterX - origin.x;
     const targetDy = targetCenterY - origin.y;
     // Vùng đánh đứng cách người đánh `offsetX` về trước và `offsetY` lên trên: mục tiêu gần tâm vùng thêm chừng đó.
@@ -106,7 +107,7 @@ export function intersectsSkillHitEvent(
 
 /**
  * Chỗ đạn / vùng (AREA) của hit event bắt đầu: vị trí người đánh dời `offsetX` theo hướng mặt và `offsetY` lên trên
- * (toạ độ server, y hướng xuống). Client C# (SkillHitboxWorldUtil.OffsetOrigin) tính y hệt.
+ * (toạ độ server, y hướng lên như Unity). Client C# (SkillHitboxWorldUtil.OffsetOrigin) tính y hệt.
  */
 export const offsetSkillOrigin = (
     x: number,
@@ -115,7 +116,7 @@ export const offsetSkillOrigin = (
     event: Pick<SkillHitEvent, "offsetX" | "offsetY">
 ) => ({
     x: x + (direction === "left" ? -1 : 1) * (event.offsetX ?? 0),
-    y: y - (event.offsetY ?? 0),
+    y: y + (event.offsetY ?? 0),
 });
 
 function getEffectiveRange(range: number, shapeSize: number): number {

@@ -82,10 +82,19 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
         return this.dungeon?.bounds ?? this.map;
     }
     rewind!: Rewind;
-    private readonly leavingSessions = new Set<string>();
+    /** playerId → sessionId của kết nối đang giữ nhân vật. `state.players` khoá theo playerId; `inputs`, `rewind`, `clients` của Colyseus vẫn khoá theo session. */
+    readonly sessionOf = new Map<string, string>();
+    private readonly leavingPlayers = new Set<string>();
 
-    onMonsterKilled(sessionId: string, player: PlayerWorldState, monster: MonsterWorldState): void {
-        monsterKillWorldService.grant(this, sessionId, player, monster);
+    clientOf(playerId: string): PlayerClient | undefined {
+        const sessionId = this.sessionOf.get(playerId);
+        return sessionId
+            ? (this.clients.getById(sessionId) as PlayerClient | undefined)
+            : undefined;
+    }
+
+    onMonsterKilled(playerId: string, player: PlayerWorldState, monster: MonsterWorldState): void {
+        monsterKillWorldService.grant(this, playerId, player, monster);
     }
 
     async onCreate(options: WorldRoomOptions) {
@@ -93,15 +102,21 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
     }
 
     async onJoin(client: PlayerClient) {
-        await this.dispatcher.dispatch(new JoinPlayerWorldCommand(), {
-            sessionId: client.sessionId,
-            playerId: client.auth.playerId,
-        });
+        const { playerId } = client.auth;
+        // Đăng nhập trùng: lưu và gỡ nhân vật của kết nối cũ trước, để `state.players[playerId]` chỉ có một chủ.
+        if (this.sessionOf.has(playerId)) await this.releasePlayer(playerId);
+        this.sessionOf.set(playerId, client.sessionId);
+        try {
+            await this.dispatcher.dispatch(new JoinPlayerWorldCommand(), { playerId });
+        } catch (err) {
+            if (this.sessionOf.get(playerId) === client.sessionId) this.sessionOf.delete(playerId);
+            throw err;
+        }
 
         // Subscribe kick (ban/xoá/logout) + đá kết nối cũ của cùng player ở mọi room/process.
         await this.registerOnlinePlayer(client);
 
-        const player = this.state.players.get(client.sessionId);
+        const player = this.state.players.get(playerId);
         if (player) {
             // Đã đến map này → về sau teleport tới được.
             player.flags[visitedFlagKey(this.map.code)] = true;
@@ -124,26 +139,36 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
     }
 
     async onLeave(client: PlayerClient) {
-        this.leavingSessions.add(client.sessionId);
-        dialogueWorldService.drop(this, client.sessionId);
-        await rewardTasksWorldService.wait(this, client.sessionId);
-        const leaving = this.state.players.get(client.sessionId);
-        if (leaving)
-            await this.dispatcher.dispatch(new PartyDetachWorldCommand(), { player: leaving });
         await this.unregisterOnlinePlayer(client);
-        await worldService.waitForCheckpoint(this);
-        await this.dispatcher.dispatch(new LeavePlayerWorldCommand(), {
-            sessionId: client.sessionId,
-        });
+        // Kết nối đã bị thay bởi lần đăng nhập mới thì nhân vật không còn của nó (đã release lúc join).
+        if (this.sessionOf.get(client.auth.playerId) !== client.sessionId) return;
+        await this.releasePlayer(client.auth.playerId);
+    }
+
+    /** Lưu và gỡ nhân vật khỏi room (rời room hoặc bị đăng nhập trùng thay thế). */
+    private async releasePlayer(playerId: string) {
+        this.leavingPlayers.add(playerId);
+        try {
+            dialogueWorldService.drop(this, playerId);
+            await rewardTasksWorldService.wait(this, playerId);
+            const leaving = this.state.players.get(playerId);
+            if (leaving)
+                await this.dispatcher.dispatch(new PartyDetachWorldCommand(), { player: leaving });
+            await worldService.waitForCheckpoint(this);
+            await this.dispatcher.dispatch(new LeavePlayerWorldCommand(), { playerId });
+        } finally {
+            this.leavingPlayers.delete(playerId);
+            this.sessionOf.delete(playerId);
+        }
     }
 
     async onDispose() {
-        for (const sessionId of this.state.players.keys()) this.leavingSessions.add(sessionId);
+        for (const playerId of this.state.players.keys()) this.leavingPlayers.add(playerId);
         await rewardTasksWorldService.wait(this);
         await worldService.waitForCheckpoint(this);
         await Promise.all(
-            [...this.state.players.keys()].map((sessionId) =>
-                this.dispatcher.dispatch(new LeavePlayerWorldCommand(), { sessionId })
+            [...this.state.players.keys()].map((playerId) =>
+                this.dispatcher.dispatch(new LeavePlayerWorldCommand(), { playerId })
             )
         );
         this.dispatcher.stop();
@@ -159,7 +184,7 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
         PartyDeliverInviteWorldCommand,
     ]);
 
-    isLeavingSession(sessionId: string): boolean {
-        return this.leavingSessions.has(sessionId);
+    isLeavingPlayer(playerId: string): boolean {
+        return this.leavingPlayers.has(playerId);
     }
 }

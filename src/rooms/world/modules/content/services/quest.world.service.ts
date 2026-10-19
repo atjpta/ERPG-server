@@ -161,7 +161,7 @@ export class QuestWorldService {
      * Sang ngày mới (hoặc lần đầu) thì xoá 3 quest hằng ngày cũ và giao 3 quest mới theo level hiện tại.
      * Chỉ giao khi đã mở khoá `daily_quest` (hoàn thành quest đăng ký mạo hiểm giả). Trả `true` nếu có đổi.
      */
-    ensureDaily(room: WorldRoom, sessionId: string, player: PlayerWorldState): boolean {
+    ensureDaily(room: WorldRoom, playerId: string, player: PlayerWorldState): boolean {
         if (!player.flags[unlockFlagKey("daily_quest")]) return false;
         const config = masterDataCacheService.get(MasterDataKey.DAILY_QUEST_CONFIG);
         const now = DateTime.now().setZone(TIME_ZONE);
@@ -173,7 +173,7 @@ export class QuestWorldService {
             quests: generateDailyQuests(config, player.level),
         };
         for (const def of player.dailyQuests.quests) player.quests[def.code] = newQuestEntry(now);
-        void worldService.savePlayer(room, sessionId);
+        void worldService.savePlayer(room, playerId);
         return true;
     }
 
@@ -185,7 +185,7 @@ export class QuestWorldService {
 
     /** Vào room: gửi quest đang làm + dấu NPC. */
     sendInitial(room: WorldRoom, client: PlayerClient, player: PlayerWorldState) {
-        this.ensureDaily(room, client.sessionId, player);
+        this.ensureDaily(room, client.auth.playerId, player);
         this.sendFeatures(client, player);
         this.sendList(client, player);
         this.sendMarkers(room, client, player);
@@ -245,26 +245,26 @@ export class QuestWorldService {
         entry.status = "completed";
         entry.completedAt = DateTime.now().toISO()!;
         for (const feature of quest.unlockFeatures) player.flags[unlockFlagKey(feature)] = true;
-        rewardWorldService.grant(room, client.sessionId, player, reward);
+        rewardWorldService.grant(room, client.auth.playerId, player, reward);
 
         this.sendUpdate(client, player, quest);
         this.sendMarkers(room, client, player);
         this.sendTargets(client, player);
         if (quest.unlockFeatures.length > 0) {
             // Vừa mở quest hằng ngày thì giao luôn, không đợi tới lần đăng nhập sau.
-            if (this.ensureDaily(room, client.sessionId, player)) this.sendList(client, player);
+            if (this.ensureDaily(room, client.auth.playerId, player)) this.sendList(client, player);
             this.sendFeatures(client, player);
         }
         inventoryWorldService.send(client, player);
-        void worldService.savePlayer(room, client.sessionId);
+        void worldService.savePlayer(room, client.auth.playerId);
         return undefined;
     }
 
     /** Giết monster / nói chuyện / tương tác → cộng tiến độ cho quest đang làm. */
-    onEvent(room: WorldRoom, sessionId: string, player: PlayerWorldState, event: QuestEvent) {
+    onEvent(room: WorldRoom, playerId: string, player: PlayerWorldState, event: QuestEvent) {
         const changed = applyQuestEvent(player.quests, (code) => questOf(player, code), event);
         if (changed.length === 0) return;
-        const client = room.clients.getById(sessionId);
+        const client = room.clientOf(playerId);
         if (!client) return;
         for (const code of changed) {
             const quest = questOf(player, code);

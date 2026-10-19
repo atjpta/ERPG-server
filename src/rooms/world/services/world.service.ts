@@ -27,11 +27,11 @@ export class WorldService {
         const runningCheckpoint = this.checkpointPromises.get(room);
         if (runningCheckpoint) return runningCheckpoint;
 
-        const snapshots = [...room.state.players.entries()].flatMap(([sessionId, player]) => {
-            if (room.isLeavingSession(sessionId)) return [];
+        const snapshots = [...room.state.players.entries()].flatMap(([playerId, player]) => {
+            if (room.isLeavingPlayer(playerId)) return [];
             return [
                 {
-                    sessionId,
+                    playerId,
                     player,
                     // Chụp lại ngay (không đợi await) để không lẫn thay đổi của tick sau.
                     data: player.toSavedState(room.map.code),
@@ -48,7 +48,7 @@ export class WorldService {
                         snapshot.data,
                         snapshot.stateRevision
                     );
-                    const current = room.state.players.get(snapshot.sessionId);
+                    const current = room.state.players.get(snapshot.playerId);
                     if (current) current.setStateRevision(saved.revision);
                 } catch (err) {
                     console.error(
@@ -58,7 +58,7 @@ export class WorldService {
                     if (
                         !(err instanceof Error) ||
                         !err.message.includes("Player state changed while online") ||
-                        !room.state.players.has(snapshot.sessionId)
+                        !room.state.players.has(snapshot.playerId)
                     ) {
                         return;
                     }
@@ -66,7 +66,7 @@ export class WorldService {
                         const latest = await playerService.getPlayableSnapshotOrFail(
                             snapshot.player.id
                         );
-                        const current = room.state.players.get(snapshot.sessionId);
+                        const current = room.state.players.get(snapshot.playerId);
                         if (!current) return;
                         current.syncSnapshot(latest);
                     } catch {
@@ -88,8 +88,8 @@ export class WorldService {
      * Lưu ngay 1 player (sau cường hoá / tinh hoá / phân rã — không để thoát game chơi lại kết quả).
      * Chạy nối tiếp với checkpoint của room để không lệch `stateRevision`.
      */
-    async savePlayer(room: WorldRoom, sessionId: string): Promise<void> {
-        await rewardTasksWorldService.wait(room, sessionId);
+    async savePlayer(room: WorldRoom, playerId: string): Promise<void> {
+        await rewardTasksWorldService.wait(room, playerId);
         for (
             let running = this.checkpointPromises.get(room);
             running;
@@ -97,13 +97,13 @@ export class WorldService {
         ) {
             await running;
         }
-        const player = room.state.players.get(sessionId);
-        if (!player || room.isLeavingSession(sessionId)) return;
+        const player = room.state.players.get(playerId);
+        if (!player || room.isLeavingPlayer(playerId)) return;
 
         const save = playerService
             .saveState(player.id, player.toSavedState(room.map.code), player.stateRevision)
             .then((saved) => {
-                room.state.players.get(sessionId)?.setStateRevision(saved.revision);
+                room.state.players.get(playerId)?.setStateRevision(saved.revision);
             })
             .catch((err: unknown) => {
                 console.error(`[WorldRoom] Save player ${player.id} failed:`, err);

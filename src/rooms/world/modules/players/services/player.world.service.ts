@@ -76,21 +76,23 @@ export class PlayerWorldService {
      */
     public chain(room: WorldRoom, ctx: StepContext): void {
         const now = room.clock.elapsedTime;
-        for (const [sessionId, state] of room.state.players) {
+        for (const [playerId, state] of room.state.players) {
+            const sessionId = room.sessionOf.get(playerId);
+            if (!sessionId) continue;
             const inputs = room.inputs.get(sessionId);
             const budget = this.refillInputBudget(state, now, ctx.dtMs);
             let steps = 0;
             while (steps < MAX_INPUT_STEPS_PER_TICK && budget.credit > -MAX_INPUT_STEP_DEBT) {
                 const input = inputs.next();
                 if (!input) break;
-                this.step(room, sessionId, state, input, ctx.dt);
+                this.step(room, playerId, state, input, ctx.dt);
                 budget.credit--;
                 steps++;
             }
             this.trimInputBacklog(room, state, inputs, budget);
 
             // Không có input nhưng đã hết máu (bị monster đánh) → vẫn phải xử lý chết/hồi sinh.
-            if (steps === 0 && state.hp <= 0) this.step(room, sessionId, state, undefined, ctx.dt);
+            if (steps === 0 && state.hp <= 0) this.step(room, playerId, state, undefined, ctx.dt);
             // Regen theo thời gian thực của tick (không theo input), không predict bên client.
             state.regenerate(ctx.dt);
             state.syncPotionCooldowns(now);
@@ -135,7 +137,7 @@ export class PlayerWorldService {
 
     private step(
         room: WorldRoom,
-        sessionId: string,
+        playerId: string,
         state: PlayerWorldState,
         input: MoveWorldInput | undefined,
         dt: number
@@ -155,7 +157,7 @@ export class PlayerWorldService {
         state.attacking = false;
         this.chains.execute({
             room,
-            sessionId,
+            playerId,
             state,
             move,
             attackRequested: input?.attack === true,
@@ -198,9 +200,8 @@ export class PlayerWorldService {
     }
 
     private clientOf(room: WorldRoom, player: PlayerWorldState): PlayerClient | undefined {
-        for (const [sessionId, state] of room.state.players) {
-            if (state === player)
-                return room.clients.getById(sessionId) as PlayerClient | undefined;
+        for (const [playerId, state] of room.state.players) {
+            if (state === player) return room.clientOf(playerId);
         }
         return undefined;
     }

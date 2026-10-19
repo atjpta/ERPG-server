@@ -62,7 +62,7 @@ export class InteractWorldCommand extends Command<WorldRoom, ContentPayload> {
     static readonly message = WorldClientMessage.INTERACT;
 
     async execute({ client, payload }: ContentPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         if (!player) return;
         const parsed = InteractSchema.safeParse(payload);
         if (!parsed.success) {
@@ -139,7 +139,7 @@ export class InteractWorldCommand extends Command<WorldRoom, ContentPayload> {
         room.clock.setTimeout(() => {
             state.active = true;
         }, def.respawnSec * 1000);
-        rewardWorldService.grant(room, client.sessionId, player, reward);
+        rewardWorldService.grant(room, client.auth.playerId, player, reward);
         this.notifyQuest(room, client, player, def.id);
         return undefined;
     }
@@ -150,7 +150,7 @@ export class InteractWorldCommand extends Command<WorldRoom, ContentPayload> {
         player: PlayerWorldState,
         id: string
     ) {
-        questWorldService.onEvent(room, client.sessionId, player, {
+        questWorldService.onEvent(room, client.auth.playerId, player, {
             type: QuestObjectiveType.INTERACT,
             targetCode: id,
         });

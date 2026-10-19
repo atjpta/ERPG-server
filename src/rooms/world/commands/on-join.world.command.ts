@@ -5,12 +5,11 @@ import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { Command } from "@colyseus/command";
 
 interface JoinPlayerWorldPayload {
-    sessionId: string;
     playerId: string;
 }
 
 export class JoinPlayerWorldCommand extends Command<WorldRoom, JoinPlayerWorldPayload> {
-    async execute({ sessionId, playerId }: JoinPlayerWorldPayload) {
+    async execute({ playerId }: JoinPlayerWorldPayload) {
         const player = await playerService.getPlayableSnapshotOrFail(playerId);
         const dungeon = this.room.dungeon;
         if (dungeon) {
@@ -33,6 +32,6 @@ export class JoinPlayerWorldCommand extends Command<WorldRoom, JoinPlayerWorldPa
         state.dungeonSession = dungeon ? (player.dungeonSession ?? undefined) : undefined;
         if (this.room.map.type === MapType.TOWN) state.lastTownMapCode = this.room.map.code;
 
-        this.room.state.players.set(sessionId, state);
+        this.room.state.players.set(playerId, state);
     }
 }

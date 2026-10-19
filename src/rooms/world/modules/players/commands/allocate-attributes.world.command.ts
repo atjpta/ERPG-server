@@ -31,7 +31,7 @@ export class AllocateAttributesWorldCommand extends Command<WorldRoom, AllocateA
     static readonly message = WorldClientMessage.ALLOCATE_ATTRIBUTES;
 
     execute({ client, payload }: AllocateAttributesPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         if (!player) return;
 
         const parsed = AllocateAttributesSchema.safeParse(payload);

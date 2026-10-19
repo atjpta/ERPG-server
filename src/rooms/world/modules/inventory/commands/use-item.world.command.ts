@@ -67,7 +67,7 @@ export class UseItemWorldCommand extends InventoryWorldCommand<
     /** Báo cả room số HP / MP vừa hồi để hiện "+N" trên đầu người uống. */
     protected override onSuccess(client: PlayerClient, gained: { hp: number; mp: number }) {
         const message: PotionUsedMessage = {
-            sessionId: client.sessionId,
+            playerId: client.auth.playerId,
             hp: gained.hp,
             mp: gained.mp,
         };

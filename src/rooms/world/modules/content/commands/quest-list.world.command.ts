@@ -23,7 +23,7 @@ export class QuestListWorldCommand extends Command<WorldRoom, ContentPayload> {
     static readonly message = WorldClientMessage.QUEST_LIST;
 
     execute({ client }: ContentPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         if (player) questWorldService.sendInitial(this.room, client, player);
     }
 }

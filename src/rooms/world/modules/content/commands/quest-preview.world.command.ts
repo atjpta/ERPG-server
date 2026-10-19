@@ -26,7 +26,7 @@ export class QuestPreviewWorldCommand extends Command<WorldRoom, ContentPayload>
     static readonly message = WorldClientMessage.QUEST_PREVIEW;
 
     execute({ client, payload }: ContentPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         const parsed = QuestPreviewSchema.safeParse(payload);
         if (!player || !parsed.success) return;
         this.sendPreview(client, player, parsed.data.questCode);

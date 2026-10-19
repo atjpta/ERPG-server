@@ -8,7 +8,7 @@ import type { SkillOwner } from "@/rooms/world/modules/combat/utils/skill-owner.
 /**
  * Vùng sát thương đặt trên mặt đất (hit event `AREA`): gây damage cho mọi mục tiêu chạm vùng khi
  * `ticksUntilImpact` về 0, rồi bị xoá khỏi `WorldState.areas`. Client vẽ hiệu ứng tại (x, y) — chân
- * mục tiêu — và nổ đúng lúc đó. Toạ độ server: ô, y hướng xuống.
+ * mục tiêu — và nổ đúng lúc đó. Toạ độ server: ô, gốc ở giữa map, y hướng lên.
  */
 export class AreaWorldState extends Schema {
     @type("string") id: string;

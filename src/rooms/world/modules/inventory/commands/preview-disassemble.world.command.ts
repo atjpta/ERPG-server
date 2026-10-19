@@ -34,7 +34,7 @@ export class PreviewDisassembleWorldCommand extends Command<WorldRoom, Inventory
     static readonly message = WorldClientMessage.PREVIEW_DISASSEMBLE;
 
     execute({ client, payload }: InventoryCommandPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         if (!player) return;
 
         const parsed = DisassembleItemsSchema.safeParse(payload);

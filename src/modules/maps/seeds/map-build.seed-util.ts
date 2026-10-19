@@ -21,7 +21,7 @@ const PLACEHOLDER_SIZE = 16;
 
 /**
  * Trải các con của nhóm quanh marker `(x, y)`: hàng ngang tối đa 3 con căn giữa marker, hàng sau nằm
- * phía dưới. Mỗi con thành 1 `MonsterSpawn` (count 1) với vị trí cụ thể và `groupId` = marker.
+ * phía dưới (y hướng lên nên y giảm dần). Mỗi con thành 1 `MonsterSpawn` (count 1) với vị trí cụ thể và `groupId` = marker.
  */
 export const expandMonsterGroup = (
     group: MonsterGroup,
@@ -41,7 +41,7 @@ export const expandMonsterGroup = (
             monsterCode: member.monsterCode,
             count: 1,
             spawnX: round2(x + (column - (inRow - 1) / 2) * MONSTER_GROUP_SPACING),
-            spawnY: round2(y + row * MONSTER_GROUP_SPACING),
+            spawnY: round2(y - row * MONSTER_GROUP_SPACING),
             ...(member.type ? { type: member.type } : {}),
             ...(member.rarity ? { rarity: member.rarity } : {}),
             ...(member.healAfterIdleSec ? { healAfterIdleSec: member.healAfterIdleSec } : {}),
@@ -264,8 +264,8 @@ export const buildPlaceholderRow = (def: MapDefinition): NewGameMap => ({
     status: MapStatus.INACTIVE,
     width: PLACEHOLDER_SIZE,
     height: PLACEHOLDER_SIZE,
-    spawnX: 0.5,
-    spawnY: 0.5,
+    spawnX: 0,
+    spawnY: 0,
     maxPlayersPerChannel: def.maxPlayersPerChannel,
     pvpEnabled: def.pvpEnabled,
     minLevel: def.minLevel,
@@ -277,8 +277,8 @@ export const buildPlaceholderRow = (def: MapDefinition): NewGameMap => ({
             : null,
     spawnPoints: def.spawnPoints.map((point) => ({
         id: point.id,
-        x: 0.5,
-        y: 0.5,
+        x: 0,
+        y: 0,
         kind: point.kind,
     })),
     contentHash: "",

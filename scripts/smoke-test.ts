@@ -121,10 +121,10 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
 
     // Đi tới sát Trưởng làng — từ vị trí hiện tại, lái từng step theo vị trí server.
     const me = (room.state as any).players.get(room.sessionId);
-    for (let i = 0; i < 200 && Math.hypot(me.x - chief.x, me.y - (chief.y + 1)) > 0.5; i++) {
+    for (let i = 0; i < 200 && Math.hypot(me.x - chief.x, me.y - (chief.y - 1)) > 0.5; i++) {
         input.data.moveX = Math.sign(chief.x - me.x) * (Math.abs(chief.x - me.x) > 0.3 ? 1 : 0);
         input.data.moveY =
-            Math.sign(chief.y + 1 - me.y) * (Math.abs(chief.y + 1 - me.y) > 0.3 ? 1 : 0);
+            Math.sign(chief.y - 1 - me.y) * (Math.abs(chief.y - 1 - me.y) > 0.3 ? 1 : 0);
         input.send();
         await sleep(50);
     }

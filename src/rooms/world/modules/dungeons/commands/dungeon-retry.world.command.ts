@@ -27,7 +27,7 @@ export class DungeonRetryWorldCommand extends Command<WorldRoom, { client: Playe
     static readonly message = WorldClientMessage.DUNGEON_RETRY;
 
     async execute({ client }: { client: PlayerClient }) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         if (this.room.isDungeon && player) await this.retryDungeon(this.room, client, player);
     }
 

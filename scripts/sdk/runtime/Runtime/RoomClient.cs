@@ -25,6 +25,19 @@ namespace ERPG.Network
         }
     }
 
+    /// <summary>
+    /// Độ trễ (ping) của một room. Client room tự đo mỗi giây khi đang kết nối; UI chỉ đọc <see cref="PingMilliseconds"/>
+    /// và nghe <see cref="PingChanged"/> để cập nhật hiển thị.
+    /// </summary>
+    public interface IRoomPing
+    {
+        /// <summary>Vòng đi-về tới server (ms) của lần đo gần nhất; <c>null</c> khi chưa kết nối, chưa có mẫu hoặc mẫu quá cũ.</summary>
+        double? PingMilliseconds { get; }
+
+        /// <summary>Bắn khi <see cref="PingMilliseconds"/> đổi (số mới, hoặc <c>null</c> khi mất kết nối / mẫu quá cũ).</summary>
+        event Action<double?> PingChanged;
+    }
+
     /// <summary>Phần không phụ thuộc kiểu state của client room: sự kiện lỗi toàn cục.</summary>
     public abstract class RoomClient
     {
@@ -57,7 +70,7 @@ namespace ERPG.Network
     /// <item>Join cần player token (<see cref="NetworkSettings.PlayerToken"/>).</item>
     /// </list>
     /// </summary>
-    public class RoomClient<TState> : RoomClient
+    public class RoomClient<TState> : RoomClient, IRoomPing
         where TState : Colyseus.Schema.Schema
     {
         private Client client;
@@ -94,6 +107,80 @@ namespace ERPG.Network
 
         /// <summary>State đổi (state, lần đầu).</summary>
         public event Action<TState, bool> StateChanged;
+
+        // ------------------------------------------------------------------ ping
+
+        /// <summary>Đo ping mỗi chừng này (ms) khi đang kết nối.</summary>
+        private const int PingIntervalMs = 1000;
+
+        /// <summary>Mẫu cũ hơn chừng này (giây) thì coi như không có (đường truyền đứng).</summary>
+        private const double PingMaxAgeSeconds = 5;
+
+        private bool pingPending;
+        private double pingSentAt;
+        private double pingReceivedAt;
+        private int pingMilliseconds;
+        private bool pingHasSample;
+        private double? pingPublished;
+
+        /// <inheritdoc/>
+        public double? PingMilliseconds => CurrentPing();
+
+        /// <inheritdoc/>
+        public event Action<double?> PingChanged;
+
+        private double? CurrentPing()
+        {
+            if (!IsConnected || !pingHasSample) return null;
+            return Time.realtimeSinceStartupAsDouble - pingReceivedAt > PingMaxAgeSeconds ? (double?)null : pingMilliseconds;
+        }
+
+        /// <summary>Bắn <see cref="PingChanged"/> nếu số hiển thị đổi so với lần bắn trước.</summary>
+        private void PublishPing()
+        {
+            var value = CurrentPing();
+            if (value == pingPublished) return;
+            pingPublished = value;
+            Raise(() => PingChanged?.Invoke(value));
+        }
+
+        /// <summary>Vòng đo ping của một room: gửi ping mỗi giây tới khi room này không còn là room hiện tại.</summary>
+        private async void RunPingLoop(Room<TState> room)
+        {
+            pingPending = false;
+            pingHasSample = false;
+            try
+            {
+                while (Room == room)
+                {
+                    var now = Time.realtimeSinceStartupAsDouble;
+                    if (room.Connection != null && room.Connection.IsOpen && (!pingPending || now - pingSentAt > PingMaxAgeSeconds))
+                    {
+                        pingPending = true;
+                        pingSentAt = now;
+                        room.Ping(milliseconds =>
+                        {
+                            if (Room != room) return;
+                            pingPending = false;
+                            pingMilliseconds = Math.Max(0, milliseconds);
+                            pingReceivedAt = Time.realtimeSinceStartupAsDouble;
+                            pingHasSample = true;
+                            PublishPing();
+                        });
+                    }
+                    await Task.Delay(PingIntervalMs);
+                    PublishPing(); // mẫu quá cũ -> null
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+            finally
+            {
+                if (Room != room) PublishPing(); // đã rời: IsConnected false -> null
+            }
+        }
 
         // ------------------------------------------------------------------ join / leave
 
@@ -206,6 +293,7 @@ namespace ERPG.Network
             });
 
             foreach (var hub in hubs.Values) hub.Bind(room);
+            RunPingLoop(room);
         }
 
         private void Detach()

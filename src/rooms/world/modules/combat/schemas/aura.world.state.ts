@@ -5,13 +5,13 @@ import type { SkillOwner } from "@/rooms/world/modules/combat/utils/skill-owner.
 
 /**
  * Vùng buff của skill AURA (hit event `AURA`): bám theo người dùng, tồn tại `ticksLeft` tick rồi bị xoá khỏi
- * `WorldState.auras`. Client vẽ prefab tại chân nhân vật `sessionId`, phóng theo `radiusX` so với bán kính gốc trong
- * `skills.json`. Toạ độ server: ô, y hướng xuống. Mỗi `tickEvery` tick hồi đồng đội / gây damage quái trong vùng.
+ * `WorldState.auras`. Client vẽ prefab tại chân nhân vật `playerId`, phóng theo `radiusX` so với bán kính gốc trong
+ * `skills.json`. Toạ độ server: ô, gốc ở giữa map, y hướng lên. Mỗi `tickEvery` tick hồi đồng đội / gây damage quái trong vùng.
  */
 export class AuraWorldState extends Schema {
     @type("string") id: string;
-    /** Session của người dùng skill — khoá của nhân vật bên client. */
-    @type("string") sessionId: string;
+    /** playerId của người dùng skill — khoá của nhân vật bên client. */
+    @type("string") playerId: string;
     @type("string") skillId: string;
     /** Số thứ tự skill chủ động của người dùng (`castSlot`) — để HUD biết nút nào đang có buff. */
     @type("uint8") slot: number;
@@ -33,7 +33,7 @@ export class AuraWorldState extends Schema {
     constructor(props: {
         id: string;
         owner: SkillOwner;
-        sessionId: string;
+        playerId: string;
         skillId: string;
         slot: number;
         aura: SkillAura;
@@ -48,7 +48,7 @@ export class AuraWorldState extends Schema {
         super();
         this.id = props.id;
         this.owner = props.owner;
-        this.sessionId = props.sessionId;
+        this.playerId = props.playerId;
         this.skillId = props.skillId;
         this.slot = props.slot;
         this.aura = props.aura;

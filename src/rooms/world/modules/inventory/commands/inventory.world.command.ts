@@ -54,7 +54,7 @@ export abstract class InventoryWorldCommand<TSchema extends z.ZodType, TValue> e
     protected onSuccess(_client: PlayerClient, _value: TValue): void {}
 
     async execute({ client, payload }: InventoryCommandPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         if (!player) return;
 
         const parsed = this.schema.safeParse(payload);
@@ -71,6 +71,6 @@ export abstract class InventoryWorldCommand<TSchema extends z.ZodType, TValue> e
         this.onSuccess(client, result.data);
         inventoryWorldService.send(client, player);
         if (this.changesStats) attributeWorldService.send(client, player);
-        if (this.saveImmediately) await worldService.savePlayer(this.room, client.sessionId);
+        if (this.saveImmediately) await worldService.savePlayer(this.room, client.auth.playerId);
     }
 }

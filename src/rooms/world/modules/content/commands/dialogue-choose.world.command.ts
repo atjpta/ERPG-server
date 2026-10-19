@@ -30,7 +30,7 @@ export class DialogueChooseWorldCommand extends Command<WorldRoom, ContentPayloa
     static readonly message = WorldClientMessage.DIALOGUE_CHOOSE;
 
     execute({ client, payload }: ContentPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         if (!player) return;
         const parsed = DialogueChooseSchema.safeParse(payload);
         if (!parsed.success) return;
@@ -44,7 +44,7 @@ export class DialogueChooseWorldCommand extends Command<WorldRoom, ContentPayloa
         player: PlayerWorldState,
         optionId: string
     ) {
-        const session = dialogueWorldService.sessionsOf(room).get(client.sessionId);
+        const session = dialogueWorldService.sessionsOf(room).get(client.auth.playerId);
         if (!session) return;
         const range = session.radius + RANGE_MARGIN;
         if (!contentWorldService.isNear(player, session.x, session.y, range)) {
@@ -93,7 +93,7 @@ export class DialogueChooseWorldCommand extends Command<WorldRoom, ContentPayloa
             return;
         }
         // Action `teleport` có thể đã đóng thoại.
-        if (!dialogueWorldService.sessionsOf(room).has(client.sessionId)) return;
+        if (!dialogueWorldService.sessionsOf(room).has(client.auth.playerId)) return;
         if (option.next) dialogueWorldService.enter(room, client, player, session, option.next);
         else dialogueWorldService.end(room, client, session.sourceCode);
     }

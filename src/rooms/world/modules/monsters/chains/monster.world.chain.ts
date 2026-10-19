@@ -27,6 +27,7 @@ import {
     skillReachesTarget,
     tickPendingSkillHits,
 } from "@/rooms/world/modules/combat/utils/skill-attack.world.util.js";
+import { mapExtent } from "@/rooms/world/modules/players/simulation/movement.step.js";
 
 /** Ranges authored in Unity (master data `monster_ai_config`); the defaults when the room runs without the cache (tests). */
 const monsterAi = (monster: MonsterWorldState): MonsterAiRule => {
@@ -225,9 +226,10 @@ export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
 
         const angle = Math.random() * Math.PI * 2;
         const radius = Math.sqrt(Math.random()) * monsterAi(monster).roamRadius;
+        const extent = mapExtent(room.map.width, room.map.height);
         const target = {
-            x: clamp(monster.spawnX + Math.cos(angle) * radius, 0, room.map.width),
-            y: clamp(monster.spawnY + Math.sin(angle) * radius, 0, room.map.height),
+            x: clamp(monster.spawnX + Math.cos(angle) * radius, extent.minX, extent.maxX),
+            y: clamp(monster.spawnY + Math.sin(angle) * radius, extent.minY, extent.maxY),
         };
         this.roamTargets.set(monster, target);
         return target;

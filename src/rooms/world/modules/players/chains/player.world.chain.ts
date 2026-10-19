@@ -41,7 +41,7 @@ import {
 
 export interface PlayerChainContext {
     room: WorldRoom;
-    sessionId: string;
+    playerId: string;
     state: PlayerWorldState;
     move: MoveCommand;
     /**
@@ -223,7 +223,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
 
     execute({
         room,
-        sessionId,
+        playerId,
         state,
         move,
         attackRequested,
@@ -232,7 +232,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         approachingSkill,
         dt,
     }: PlayerChainContext): WorldChainResult {
-        this.processPendingHits(room, sessionId, state);
+        this.processPendingHits(room, playerId, state);
         // Đang lướt tới mục tiêu của skill lướt: chưa ra đòn, mọi đòn khác bị khoá (attackCooldownTicks đang đếm lùi).
         if (state.charging) {
             this.stepCharge(room, state, move, dt);
@@ -246,7 +246,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         if (skillRequested > 0) {
             // Còn đang đi lại gần target cho đủ tầm → giữ yêu cầu, dùng skill khi đã vào tầm.
             if (approachingSkill) return WorldChainResult.CONTINUE;
-            if (this.startSkill(room, sessionId, state, skillRequested)) {
+            if (this.startSkill(room, playerId, state, skillRequested)) {
                 return WorldChainResult.CONTINUE;
             }
         }
@@ -302,7 +302,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
      */
     private startSkill(
         room: WorldRoom,
-        sessionId: string,
+        playerId: string,
         state: PlayerWorldState,
         slot: number
     ): boolean {
@@ -354,7 +354,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         }
 
         state.mp -= skill.manaCost;
-        const aim = this.resolveAim(room, sessionId, state, skill);
+        const aim = this.resolveAim(room, playerId, state, skill);
         const direction = toHorizontalDirection(state.direction);
         state.direction = direction;
         state.attackSerial++;
@@ -366,7 +366,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         // Skill AURA: vùng buff bắt đầu ngay, bám theo người dùng (hit event AURA không nằm trong lịch hit).
         if (getAuraEvent(skill)) {
             skillDeliveryWorldService.startAura(room, {
-                sessionId,
+                playerId,
                 player: state,
                 skill,
                 slot,
@@ -383,7 +383,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
      */
     private resolveAim(
         room: WorldRoom,
-        sessionId: string,
+        playerId: string,
         state: PlayerWorldState,
         skill: { skillHitEvents: { aimed?: boolean }[] }
     ): { x: number; y: number } | undefined {
@@ -391,10 +391,10 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         let aimX = facing;
         let aimY = 0;
         const aimed = skill.skillHitEvents.some((event) => event.aimed);
-        const target = aimed ? findPlayerAimTarget(room, sessionId, state) : undefined;
+        const target = aimed ? findPlayerAimTarget(room, state) : undefined;
         if (target) {
             const dx = target.x + target.hitbox.offsetX - state.x;
-            const dy = target.y - target.hitbox.offsetY - state.y;
+            const dy = target.y + target.hitbox.offsetY - state.y;
             const length = Math.sqrt(dx * dx + dy * dy);
             if (length > AIM_EPSILON) {
                 aimX = dx / length;
@@ -473,29 +473,29 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         state.beginChargeStrike(getSkillDurationTicks(skill, room.tickRate));
     }
 
-    private processPendingHits(room: WorldRoom, sessionId: string, state: PlayerWorldState): void {
+    private processPendingHits(room: WorldRoom, playerId: string, state: PlayerWorldState): void {
         const hits = this.pendingHits.get(state);
         if (!hits) return;
 
-        tickPendingSkillHits(hits, (hit) => this.applyHit(room, sessionId, state, hit));
+        tickPendingSkillHits(hits, (hit) => this.applyHit(room, playerId, state, hit));
         if (hits.length === 0) this.pendingHits.delete(state);
     }
 
     private applyHit(
         room: WorldRoom,
-        sessionId: string,
+        playerId: string,
         state: PlayerWorldState,
         hit: PendingSkillHit
     ): void {
         // HITBOX trúng ngay; đạn / vùng bay hoặc chờ nổ ở SkillDeliveryWorldService. Vị trí monster đọc
         // đúng chỗ client này đang vẽ (rewind) — cả lúc ngắm lẫn lúc trúng.
         skillDeliveryWorldService.deliver(room, {
-            owner: playerSkillOwner(sessionId, state),
+            owner: playerSkillOwner(state),
             skill: hit.skill,
             hit,
             originX: state.x,
             originY: state.y,
-            aim: findPlayerAimTarget(room, sessionId, state),
+            aim: findPlayerAimTarget(room, state),
         });
     }
 }

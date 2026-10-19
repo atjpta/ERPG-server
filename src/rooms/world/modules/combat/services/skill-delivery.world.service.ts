@@ -42,6 +42,7 @@ import {
     type SkillEffectMessage,
 } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
+import { mapExtent } from "@/rooms/world/modules/players/simulation/movement.step.js";
 
 /** Bước kiểm tra va chạm tối đa (ô) của đạn trong 1 tick — đạn nhanh không xuyên qua mục tiêu nhỏ. */
 const PROJECTILE_MAX_SWEEP_STEP = 0.1;
@@ -97,30 +98,29 @@ export class SkillDeliveryWorldService {
     startAura(
         room: WorldRoom,
         params: {
-            sessionId: string;
+            playerId: string;
             player: PlayerWorldState;
             skill: Skill;
             slot: number;
             level: number;
         }
     ): void {
-        const { sessionId, player, skill, slot, level } = params;
+        const { playerId, player, skill, slot, level } = params;
         const found = getAuraEvent(skill);
         if (!found) {
             console.warn(`[Skill] ${skill.code}: AURA hit event without aura config`);
             return;
         }
         for (const aura of [...room.state.auras.values()]) {
-            if (aura.sessionId === sessionId && aura.slot === slot)
-                room.state.auras.delete(aura.id);
+            if (aura.playerId === playerId && aura.slot === slot) room.state.auras.delete(aura.id);
         }
 
         const { radiusX, radiusY } = getAuraRadii(found.aura, level);
         const id = this.newId("a");
         const aura = new AuraWorldState({
             id,
-            owner: playerSkillOwner(sessionId, player),
-            sessionId,
+            owner: playerSkillOwner(player),
+            playerId,
             skillId: skill.id,
             slot,
             aura: found.aura,
@@ -164,7 +164,7 @@ export class SkillDeliveryWorldService {
 
     /** Một tick của vùng buff. `false` = hết thời gian, hoặc người dùng chết / rời room. */
     private stepAura(room: WorldRoom, aura: AuraWorldState): boolean {
-        const player = room.state.players.get(aura.sessionId);
+        const player = room.state.players.get(aura.playerId);
         if (!player || player.id !== aura.owner.id || player.hp <= 0) return false;
 
         if (--aura.ticksToNext <= 0) {
@@ -218,7 +218,7 @@ export class SkillDeliveryWorldService {
             return;
         }
         if (owner.kind !== "player") return;
-        const player = room.state.players.get(owner.sessionId);
+        const player = room.state.players.get(owner.id);
         if (!player || player.id !== owner.id || player.hp <= 0) return;
 
         const magic = PlayerStatService.whole(player.stats, StatKey.MAGIC_ATTACK);
@@ -230,13 +230,13 @@ export class SkillDeliveryWorldService {
             amount
         );
         if (healed.length === 0) return;
-        const message: SkillEffectMessage = { skillId: skill.id, sessionIds: healed };
+        const message: SkillEffectMessage = { skillId: skill.id, playerIds: healed };
         broadcastOk(room, WorldMessage.SKILL_EFFECT, message);
     }
 
     /**
      * Hồi `amount` cho người dùng và đồng đội cùng party còn sống đang đứng trong `zone` (elip tâm tại người dùng). Mỗi người được
-     * hồi nhận "+amount" trên đầu — kể cả khi đã đầy máu, để thấy skill đã trúng. Trả về session của những người đó.
+     * hồi nhận "+amount" trên đầu — kể cả khi đã đầy máu, để thấy skill đã trúng. Trả về playerId của những người đó.
      */
     private healAlliesInZone(
         room: WorldRoom,
@@ -246,7 +246,7 @@ export class SkillDeliveryWorldService {
     ): string[] {
         const origin = { x: player.x, y: player.y, direction: "right" };
         const healed: string[] = [];
-        for (const [sessionId, ally] of room.state.players) {
+        for (const [playerId, ally] of room.state.players) {
             if (ally.hp <= 0) continue;
             const isAlly =
                 ally === player ||
@@ -255,9 +255,9 @@ export class SkillDeliveryWorldService {
                 continue;
             }
             ally.heal(amount);
-            const message: PotionUsedMessage = { sessionId, hp: amount, mp: 0 };
+            const message: PotionUsedMessage = { playerId, hp: amount, mp: 0 };
             broadcastOk(room, WorldMessage.POTION_USED, message);
-            healed.push(sessionId);
+            healed.push(playerId);
         }
         return healed;
     }
@@ -265,7 +265,7 @@ export class SkillDeliveryWorldService {
     /** Vùng buff hết: bỏ khỏi state, và hồi chiêu của skill bắt đầu tính từ bây giờ. */
     private removeAura(room: WorldRoom, aura: AuraWorldState): void {
         room.state.auras.delete(aura.id);
-        const player = room.state.players.get(aura.sessionId);
+        const player = room.state.players.get(aura.playerId);
         if (player && player.id === aura.owner.id) {
             player.setSkillCooldownTicks(aura.slot, aura.cooldownTicks);
         }
@@ -303,7 +303,7 @@ export class SkillDeliveryWorldService {
         let dirY = 0;
         if (aim) {
             const dx = aim.x + aim.hitbox.offsetX - x;
-            const dy = aim.y - aim.hitbox.offsetY - y;
+            const dy = aim.y + aim.hitbox.offsetY - y;
             const length = Math.hypot(dx, dy);
             if (length > 1e-6) {
                 dirX = dx / length;
@@ -359,11 +359,12 @@ export class SkillDeliveryWorldService {
             }
         }
 
+        const extent = mapExtent(room.map.width, room.map.height);
         const inMap =
-            projectile.x >= 0 &&
-            projectile.y >= 0 &&
-            projectile.x <= room.map.width &&
-            projectile.y <= room.map.height;
+            projectile.x >= extent.minX &&
+            projectile.y >= extent.minY &&
+            projectile.x <= extent.maxX &&
+            projectile.y <= extent.maxY;
         return inMap && projectile.traveled < projectile.maxDistance;
     }
 
@@ -393,8 +394,9 @@ export class SkillDeliveryWorldService {
             x = originX + dx * scale;
             y = originY + dy * scale;
         }
-        x = Math.min(Math.max(x, 0), room.map.width);
-        y = Math.min(Math.max(y, 0), room.map.height);
+        const extent = mapExtent(room.map.width, room.map.height);
+        x = Math.min(Math.max(x, extent.minX), extent.maxX);
+        y = Math.min(Math.max(y, extent.minY), extent.maxY);
 
         const delayTicks = area.delayMs > 0 ? millisecondsToTicks(area.delayMs, room.tickRate) : 0;
         const id = this.newId("a");

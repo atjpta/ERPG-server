@@ -20,8 +20,9 @@ export const AdminCreateMapSchema = z.object({
     width: z.number().int().positive(),
     height: z.number().int().positive(),
     tileSize: z.number().int().positive().optional(),
-    spawnX: z.number().min(0),
-    spawnY: z.number().min(0),
+    // Toạ độ gốc ở giữa map nên có thể âm.
+    spawnX: z.number(),
+    spawnY: z.number(),
     maxPlayersPerChannel: z.number().int().positive().optional(),
     pvpEnabled: z.boolean().optional(),
     minLevel: z.number().int().positive().optional(),

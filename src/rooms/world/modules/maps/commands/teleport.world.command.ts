@@ -42,7 +42,7 @@ export class TeleportToWorldCommand extends Command<WorldRoom, MapPayload> {
     static readonly message = WorldClientMessage.TELEPORT_TO;
 
     async execute({ client, payload }: MapPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         const parsed = TeleportToSchema.safeParse(payload);
         if (!player || !parsed.success) return;
         const error = await this.travel(this.room, client, player, parsed.data.mapCode);

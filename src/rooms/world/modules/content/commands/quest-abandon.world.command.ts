@@ -27,7 +27,7 @@ export class QuestAbandonWorldCommand extends Command<WorldRoom, ContentPayload>
     static readonly message = WorldClientMessage.QUEST_ABANDON;
 
     execute({ client, payload }: ContentPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         const parsed = QuestAbandonSchema.safeParse(payload);
         if (!player || !parsed.success) return;
         this.abandon(this.room, client, player, parsed.data.questCode);

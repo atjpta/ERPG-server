@@ -22,6 +22,7 @@ import type { PlayerDailyQuests } from "@/modules/quests/schemas/daily-quest.sch
 import type { PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
 import { DASH_SKILL_CODE, skillService } from "@/modules/skills/services/skill.service.js";
 import { PartyLootMode } from "@/rooms/party/party.shared.js";
+import { mapExtent } from "@/rooms/world/modules/players/simulation/movement.step.js";
 import type { DamageCombatant } from "@/rooms/world/modules/combat/chains/damage.world.chain.js";
 import { HitboxColliderState } from "@/rooms/world/modules/combat/schemas/hitbox-collider.world.state.js";
 import {
@@ -82,7 +83,7 @@ export class PlayerWorldState extends Schema {
     /** Skill chủ động đang được dùng (số thứ tự từ 1); 0 = đòn đánh thường theo `attackCombo`. */
     @type("uint8") castSlot: number = 0;
     /**
-     * Hướng ngắm của skill đang dùng (vector đơn vị, toạ độ server, y hướng xuống): về phía target đang chọn nếu skill có hit
+     * Hướng ngắm của skill đang dùng (vector đơn vị, toạ độ server, y hướng lên): về phía target đang chọn nếu skill có hit
      * `aimed`, còn lại là hướng mặt (±1, 0). Chốt lúc bắt đầu skill; client xoay hiệu ứng / vùng đánh theo hướng này.
      */
     @type("float32") aimX: number = 1;
@@ -328,9 +329,11 @@ export class PlayerWorldState extends Schema {
         this.dashing = false;
     }
 
+    /** Vị trí hỏng hoặc ngoài map (gốc ở giữa map: x ∈ ±width/2, y ∈ ±height/2) thì về điểm spawn. */
     recoverPosition(spawnX: number, spawnY: number, width: number, height: number) {
-        if (!Number.isFinite(this.x) || this.x < 0 || this.x > width) this.x = spawnX;
-        if (!Number.isFinite(this.y) || this.y < 0 || this.y > height) this.y = spawnY;
+        const extent = mapExtent(width, height);
+        if (!Number.isFinite(this.x) || this.x < extent.minX || this.x > extent.maxX) this.x = spawnX;
+        if (!Number.isFinite(this.y) || this.y < extent.minY || this.y > extent.maxY) this.y = spawnY;
     }
 
     /** Bắt đầu đòn: khoá di chuyển `durationTicks`; đòn kế tiếp đợi lâu hơn trong `durationTicks` và `cooldownTicks` (cùng đếm từ lúc bắt đầu). */

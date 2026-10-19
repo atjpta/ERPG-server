@@ -224,8 +224,8 @@ export interface PartyJoinRequestMessage {
 }
 
 export interface PotionUsedMessage {
-    /** Session của người uống / được hồi — khoá của nhân vật bên client. */
-    sessionId: string;
+    /** playerId của người uống / được hồi — khoá của nhân vật bên client. */
+    playerId: string;
     /** HP / MP hồi được. Bình: đã trừ phần vượt trần; hồi của skill: lượng hồi của skill, hiện cả khi đã đầy máu. */
     hp: number;
     mp: number;
@@ -234,8 +234,8 @@ export interface PotionUsedMessage {
 /** Skill gắn hiệu ứng (prefab `Resources/Prefabs/SkillEffects/<code của skill>`) lên các nhân vật này. */
 export interface SkillEffectMessage {
     skillId: string;
-    /** Session của các người chơi nhận hiệu ứng. */
-    sessionIds: string[];
+    /** playerId của các người chơi nhận hiệu ứng. */
+    playerIds: string[];
 }
 
 /** 3 túi theo ItemType. */

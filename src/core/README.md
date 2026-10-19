@@ -121,7 +121,7 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
     - 3 loại token: user (`authMiddleware`), player (`playerAuthMiddleware`, join room), admin (`adminAuthMiddleware`, secret riêng).
 - `master-data/` — config key-value, `value` validate bằng zod theo từng key (`MasterDataValueSchemas`);
   check phiên bản client (`GET /master-data/client-version`, login bị chặn 426 nếu dưới `minVersion`).
-- `maps/` — metadata map (toạ độ đơn vị tile), spawn point, số người/kênh.
+- `maps/` — metadata map (toạ độ đơn vị tile, gốc ở giữa map, y hướng lên như Unity), spawn point, số người/kênh.
 
 ## 7. Realtime (`src/rooms/`)
 

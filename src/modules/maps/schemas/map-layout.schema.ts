@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 const idSchema = z.string().regex(/^[a-z0-9_]+$/);
-const tile = z.number().min(0);
+/** Toạ độ tile, gốc ở giữa map nên có thể âm; có nằm trong map hay không do `superRefine` bên dưới kiểm. */
+const tile = z.number();
 const point = { x: tile, y: tile };
 
 const PositionedSchema = z.object({ id: idSchema, ...point });
@@ -20,7 +21,7 @@ const NpcPlacementSchema = PositionedSchema.extend({
  * (spawn point, nhóm quái, NPC, vật thể tương tác), collider, hình học chamber của dungeon. Loại map, level,
  * quái nào ở marker nào, portal đi đâu... là config phía server (`map-definition.schema.ts`); danh sách marker
  * cần đặt do server xuất ra `map-markers.json` (`yarn config:export`).
- * Toạ độ theo tile, gốc trên-trái, y hướng xuống.
+ * Toạ độ theo tile, gốc ở giữa map, y hướng lên (như Unity). Hình chữ nhật neo ở góc nhỏ nhất (dưới-trái).
  */
 export const MapLayoutSchema = z
     .object({
@@ -58,7 +59,13 @@ export const MapLayoutSchema = z
             .default([]),
     })
     .superRefine((map, ctx) => {
-        const outside = (x: number, y: number) => x > map.width || y > map.height;
+        // Làm tròn float khi Unity export (vd 7.43 - 18) nên chừa sai số nhỏ.
+        const tolerance = 1e-6;
+        const halfW = map.width / 2 + tolerance;
+        const halfH = map.height / 2 + tolerance;
+        const outside = (x: number, y: number) => Math.abs(x) > halfW || Math.abs(y) > halfH;
+        const rectOutside = (r: { x: number; y: number; w: number; h: number }) =>
+            r.x < -halfW || r.y < -halfH || r.x + r.w > halfW || r.y + r.h > halfH;
         const check = (name: string, items: { id: string; x: number; y: number }[]) => {
             const ids = new Set<string>();
             items.forEach((item, i) => {
@@ -80,7 +87,7 @@ export const MapLayoutSchema = z
         check("npcs", map.npcs);
         check("interactables", map.interactables);
         map.colliders.forEach((c, i) => {
-            if (c.x + c.w > map.width || c.y + c.h > map.height) {
+            if (rectOutside(c)) {
                 ctx.addIssue({ code: "custom", path: ["colliders", i], message: "outside map" });
             }
         });
@@ -94,10 +101,7 @@ export const MapLayoutSchema = z
                 });
             }
             chamberIds.add(chamber.id);
-            if (
-                chamber.bounds.x + chamber.bounds.w > map.width ||
-                chamber.bounds.y + chamber.bounds.h > map.height
-            ) {
+            if (rectOutside(chamber.bounds)) {
                 ctx.addIssue({
                     code: "custom",
                     path: ["chambers", i, "bounds"],

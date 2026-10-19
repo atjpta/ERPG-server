@@ -18,7 +18,9 @@ Config chỉnh trong định nghĩa rồi `yarn seed` (admin sửa row `game_map
 
 ## Layout `<mapCode>.map.json`
 
-Toạ độ theo **tile**, gốc trên-trái, y hướng xuống (server). Unity: trừ nửa kích thước map, đảo dấu y. Tên file = `code` + `.map.json`.
+Toạ độ theo **tile**, **cùng hệ với Unity**: gốc (0, 0) ở **giữa map**, x sang phải, **y hướng lên**; biên map là `x ∈ [-width/2, width/2]`, `y ∈ [-height/2, height/2]`.
+Server dùng nguyên giá trị Unity (vị trí của transform, đơn vị = tile), không đổi gì khi export. Hình chữ nhật (`colliders`, `bounds`, cổng) neo ở **góc nhỏ nhất (dưới-trái)**: `x, y` là góc có giá trị nhỏ nhất, vùng trải tới `x + w`, `y + h`
+(từ `BoxCollider2D`: `x = center.x - size.x / 2`, `y = center.y - size.y / 2`). Tên file = `code` + `.map.json`.
 
 ```json
 {
@@ -26,17 +28,17 @@ Toạ độ theo **tile**, gốc trên-trái, y hướng xuống (server). Unity
     "width": 56,
     "height": 64,
     "tileSize": 16,
-    "spawnPoints": [{ "id": "default", "x": 16.5, "y": 4 }],
-    "colliders": [{ "x": 0, "y": 0, "w": 56, "h": 1 }],
-    "monsters": [{ "id": "g01", "x": 7.43, "y": 13.99 }],
-    "npcs": [{ "id": "npc_blacksmith", "x": 32.5, "y": 7.9, "direction": "left" }],
-    "interactables": [{ "id": "to_village", "x": 16.5, "y": 2, "direction": "up" }],
+    "spawnPoints": [{ "id": "default", "x": -11.5, "y": 28 }],
+    "colliders": [{ "x": -28, "y": -32, "w": 56, "h": 1 }],
+    "monsters": [{ "id": "g01", "x": -20.57, "y": 18.01 }],
+    "npcs": [{ "id": "npc_blacksmith", "x": 4.5, "y": 24.1, "direction": "left" }],
+    "interactables": [{ "id": "to_village", "x": -11.5, "y": 30, "direction": "up" }],
     "chambers": [
         {
             "id": "c1",
-            "bounds": { "x": 0, "y": 0, "w": 20, "h": 20 },
-            "entry": { "x": 2, "y": 2 },
-            "exit": { "x": 18, "y": 18 }
+            "bounds": { "x": -28, "y": 12, "w": 20, "h": 20 },
+            "entry": { "x": -26, "y": 30 },
+            "exit": { "x": -10, "y": 14 }
         }
     ]
 }

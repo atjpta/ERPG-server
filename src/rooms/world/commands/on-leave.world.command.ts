@@ -3,13 +3,13 @@ import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { Command } from "@colyseus/command";
 
 interface LeavePlayerWorldPayload {
-    sessionId: string;
+    playerId: string;
 }
 
 export class LeavePlayerWorldCommand extends Command<WorldRoom, LeavePlayerWorldPayload> {
-    async execute({ sessionId }: LeavePlayerWorldPayload) {
-        const player = this.room.state.players.get(sessionId);
-        this.room.state.players.delete(sessionId);
+    async execute({ playerId }: LeavePlayerWorldPayload) {
+        const player = this.room.state.players.get(playerId);
+        this.room.state.players.delete(playerId);
         if (!player) return;
 
         try {

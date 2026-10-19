@@ -26,7 +26,7 @@ export class PreviewAttributesWorldCommand extends Command<WorldRoom, AllocateAt
     static readonly message = WorldClientMessage.PREVIEW_ATTRIBUTES;
 
     execute({ client, payload }: AllocateAttributesPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         if (!player) return;
 
         const parsed = AllocateAttributesSchema.safeParse(payload);

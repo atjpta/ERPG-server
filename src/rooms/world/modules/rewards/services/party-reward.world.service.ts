@@ -17,20 +17,20 @@ export class PartyRewardWorldService {
      */
     killParticipants(
         room: WorldRoom,
-        attackerSessionId: string,
+        attackerPlayerId: string,
         attacker: PlayerWorldState
-    ): { sessionId: string; player: PlayerWorldState }[] {
-        const solo = [{ sessionId: attackerSessionId, player: attacker }];
+    ): { playerId: string; player: PlayerWorldState }[] {
+        const solo = [{ playerId: attackerPlayerId, player: attacker }];
         if (!attacker.partyRoomId) return solo;
-        const members: { sessionId: string; player: PlayerWorldState }[] = [];
-        for (const [sessionId, player] of room.state.players) {
+        const members: { playerId: string; player: PlayerWorldState }[] = [];
+        for (const [playerId, player] of room.state.players) {
             if (
                 player.partyRoomId === attacker.partyRoomId &&
                 player.hp > 0 &&
                 !player.pendingMapCode &&
-                !room.isLeavingSession?.(sessionId)
+                !room.isLeavingPlayer?.(playerId)
             ) {
-                members.push({ sessionId, player });
+                members.push({ playerId, player });
             }
         }
         return members.some((member) => member.player === attacker) ? members : solo;
@@ -44,14 +44,14 @@ export class PartyRewardWorldService {
      */
     async grantKill(
         room: WorldRoom,
-        attackerSessionId: string,
+        attackerPlayerId: string,
         attacker: PlayerWorldState,
         reward: Reward,
         target: { code: string; level: number }
     ): Promise<void> {
-        const participants = this.killParticipants(room, attackerSessionId, attacker);
+        const participants = this.killParticipants(room, attackerPlayerId, attacker);
         if (participants.length <= 1) {
-            rewardWorldService.grant(room, attackerSessionId, attacker, reward);
+            rewardWorldService.grant(room, attackerPlayerId, attacker, reward);
             return;
         }
         const config = masterDataCacheService.get(MasterDataKey.PARTY_CONFIG);
@@ -78,11 +78,11 @@ export class PartyRewardWorldService {
                   lootMode: PartyLootMode.KILLER,
                   cursor: 0,
               }).rewards;
-        for (const { sessionId, player } of participants) {
+        for (const { playerId, player } of participants) {
             const share = rewards.get(player.id);
-            if (share) rewardWorldService.grant(room, sessionId, player, share);
+            if (share) rewardWorldService.grant(room, playerId, player, share);
             if (player === attacker) continue;
-            questWorldService.onEvent(room, sessionId, player, {
+            questWorldService.onEvent(room, playerId, player, {
                 type: QuestObjectiveType.KILL,
                 targetCode: target.code,
             });

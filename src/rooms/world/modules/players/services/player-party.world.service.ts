@@ -39,9 +39,9 @@ export class PlayerPartyWorldService {
         room: WorldRoom,
         playerId: string
     ): { client: PlayerClient; player: PlayerWorldState } | undefined {
-        for (const [sessionId, player] of room.state.players) {
+        for (const [playerId, player] of room.state.players) {
             if (player.id !== playerId) continue;
-            const client = room.clients.getById(sessionId) as PlayerClient | undefined;
+            const client = room.clientOf(playerId);
             return client ? { client, player } : undefined;
         }
         return undefined;

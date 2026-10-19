@@ -178,7 +178,7 @@ export interface MapSpawnPoint {
     kind: MapSpawnKind;
 }
 
-/** Hình chữ nhật chặn đường (tile, gốc trên-trái, y hướng xuống). */
+/** Hình chữ nhật chặn đường (tile, gốc ở giữa map, y hướng lên). `x`, `y` là góc nhỏ nhất (dưới-trái), trải tới `x + w`, `y + h`. */
 export interface MapCollider {
     x: number;
     y: number;
@@ -192,7 +192,7 @@ export interface MonsterSpawn {
     monsterCode: string;
     count: number;
     /**
-     * Vị trí sinh (đơn vị tile, gốc trên-trái như `spawnX/spawnY` của map). `count` > 1 → xếp hàng ngang
+     * Vị trí sinh (đơn vị tile, gốc ở giữa map, y hướng lên, như `spawnX/spawnY` của map). `count` > 1 → xếp hàng ngang
      * cách nhau `MONSTER_SPAWN_SPACING` ô. Bỏ trống → xếp chéo theo thứ tự (chỉ để thử).
      */
     spawnX?: number;

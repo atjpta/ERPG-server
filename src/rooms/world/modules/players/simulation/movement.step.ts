@@ -13,7 +13,10 @@ export interface MovableState {
     moving: boolean;
 }
 
-/** Vùng chặn tĩnh (tile, gốc trên-trái, y xuống) — tường, nước, cây... lấy từ file map. */
+/**
+ * Vùng chặn tĩnh (tile) — tường, nước, cây... lấy từ file map. Toạ độ theo hệ Unity (gốc ở giữa map, y hướng lên);
+ * `x`, `y` là góc **nhỏ nhất** (dưới-trái), vùng trải tới `x + w`, `y + h`.
+ */
 export interface BlockRect {
     x: number;
     y: number;
@@ -22,8 +25,8 @@ export interface BlockRect {
 }
 
 /**
- * Hình chân của entity khi va chạm địa hình — cùng quy ước `CollisionBounds`: tâm = (x + offsetX, y - offsetY),
- * offsetY dương hướng lên (như prefab client), rộng `width` cao `height`.
+ * Hình chân của entity khi va chạm địa hình — cùng quy ước `CollisionBounds`: tâm = (x + offsetX, y + offsetY),
+ * offsetY dương hướng lên (y hướng lên như Unity), rộng `width` cao `height`.
  */
 export interface MoveFootprint {
     width: number;
@@ -44,6 +47,7 @@ export interface MoveCommand {
     dash?: boolean;
 }
 
+/** Giới hạn map: gốc ở giữa, x ∈ [-width/2, width/2], y ∈ [-height/2, height/2]. */
 export interface MoveBounds {
     width: number;
     height: number;
@@ -68,6 +72,11 @@ export const SLIDE_REACH = 1;
 /** Hệ số chuẩn hoá khi đi chéo (1/√2). Client C# (`Math.Sqrt(0.5)`) ra đúng cùng giá trị double. */
 export const DIAGONAL_FACTOR = Math.SQRT1_2;
 
+/** Khoảng toạ độ hợp lệ của map (gốc ở giữa, y hướng lên). Client C# dùng cùng công thức. */
+export function mapExtent(width: number, height: number) {
+    return { minX: -width / 2, maxX: width / 2, minY: -height / 2, maxY: height / 2 };
+}
+
 export function applyMove(
     state: MovableState,
     cmd: MoveCommand,
@@ -78,8 +87,8 @@ export function applyMove(
 ): void {
     const moveX = Number.isFinite(cmd.moveX) ? cmd.moveX : 0;
     const moveY = Number.isFinite(cmd.moveY) ? cmd.moveY : 0;
-    if (!Number.isFinite(state.x)) state.x = bounds.width / 2;
-    if (!Number.isFinite(state.y)) state.y = bounds.height / 2;
+    if (!Number.isFinite(state.x)) state.x = 0;
+    if (!Number.isFinite(state.y)) state.y = 0;
     if (!Number.isFinite(speed) || !Number.isFinite(dt)) {
         state.moving = false;
         return;
@@ -93,14 +102,15 @@ export function applyMove(
     const factor = moveX !== 0 && moveY !== 0 ? DIAGONAL_FACTOR : 1;
     const step = speed * dt * factor;
     // Tách trục (X rồi Y) để trượt dọc tường thay vì đứng khựng.
-    state.x = clamp(state.x + moveX * step, 0, bounds.width);
-    state.y = clamp(state.y + moveY * step, 0, bounds.height);
-    if (footprint && bounds.colliders?.length) {
-        const wantX = state.x;
-        const wantY = state.y;
-        resolveTerrain(state, prevX, prevY, bounds.colliders, footprint);
-        slideAroundCorner(state, { wantX, wantY, moveX, moveY, step }, bounds, footprint);
-    }
+    const extent = mapExtent(bounds.width, bounds.height);
+    state.x = clamp(state.x + moveX * step, extent.minX, extent.maxX);
+    state.y = clamp(state.y + moveY * step, extent.minY, extent.maxY);
+    // if (footprint && bounds.colliders?.length) {
+    //     const wantX = state.x;
+    //     const wantY = state.y;
+    //     resolveTerrain(state, prevX, prevY, bounds.colliders, footprint);
+    //     slideAroundCorner(state, { wantX, wantY, moveX, moveY, step }, bounds, footprint);
+    // }
     if (moveX < 0) state.direction = Direction.LEFT;
     else if (moveX > 0) state.direction = Direction.RIGHT;
 }
@@ -119,8 +129,9 @@ export function applyDirectedMove(
     if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
     const prevX = state.x;
     const prevY = state.y;
-    state.x = clamp(state.x + dx, 0, bounds.width);
-    state.y = clamp(state.y + dy, 0, bounds.height);
+    const extent = mapExtent(bounds.width, bounds.height);
+    state.x = clamp(state.x + dx, extent.minX, extent.maxX);
+    state.y = clamp(state.y + dy, extent.minY, extent.maxY);
     if (footprint && bounds.colliders?.length) {
         const wantX = state.x;
         const wantY = state.y;
@@ -172,7 +183,7 @@ function resolveTerrain(
     const offY = footprint.offsetY ?? 0;
 
     // Trục X: giữ y cũ.
-    const cy = prevY - offY;
+    const cy = prevY + offY;
     let x = state.x;
     for (const r of colliders) {
         if (cy + halfH <= r.y || cy - halfH >= r.y + r.h) continue;
@@ -189,15 +200,15 @@ function resolveTerrain(
     // Trục Y: dùng x đã xử lý.
     const cx = state.x + offX;
     let y = state.y;
-    const prevCy = prevY - offY;
+    const prevCy = prevY + offY;
     for (const r of colliders) {
         if (cx + halfW <= r.x || cx - halfW >= r.x + r.w) continue;
-        const top = y - offY - halfH;
-        const bottom = y - offY + halfH;
+        const top = y + offY - halfH;
+        const bottom = y + offY + halfH;
         if (bottom <= r.y || top >= r.y + r.h) continue;
-        if (y > prevY && prevCy + halfH <= r.y + TERRAIN_EPSILON) y = r.y - halfH + offY;
+        if (y > prevY && prevCy + halfH <= r.y + TERRAIN_EPSILON) y = r.y - halfH - offY;
         else if (y < prevY && prevCy - halfH >= r.y + r.h - TERRAIN_EPSILON)
-            y = r.y + r.h + halfH + offY;
+            y = r.y + r.h + halfH - offY;
     }
     state.y = y;
 }
@@ -232,8 +243,8 @@ function slideAroundCorner(
     const offY = footprint.offsetY ?? 0;
 
     if (moveY === 0 && moveX !== 0 && state.x !== wantX) {
-        // Đẩy ngang bị chặn: các khối mà vị trí muốn tới đâm vào, tính phải dời lên / xuống bao nhiêu để qua hết.
-        const cy = state.y - offY;
+        // Đẩy ngang bị chặn: các khối mà vị trí muốn tới đâm vào, tính phải dời về phía y nhỏ (`up`: tụt xuống) / y lớn (`down`: lách lên) bao nhiêu để qua hết.
+        const cy = state.y + offY;
         const left = wantX + offX - halfW;
         const right = wantX + offX + halfW;
         let up = 0;
@@ -246,14 +257,16 @@ function slideAroundCorner(
         }
         const need = Math.min(up, down);
         if (need <= 0 || need > SLIDE_REACH) return;
+        const extent = mapExtent(bounds.width, bounds.height);
         const nextY = clamp(
-            state.y + (up <= down ? -1 : 1) * Math.min(need, step),
-            0,
-            bounds.height
+            // y hướng lên nên `up` là quãng phải tụt xuống (y giảm) để qua khối; bằng nhau thì lách lên như trước đây.
+            state.y + (up < down ? -1 : 1) * Math.min(need, step),
+            extent.minY,
+            extent.maxY
         );
         if (!overlapsTerrain(state.x, nextY, colliders, footprint)) state.y = nextY;
     } else if (moveX === 0 && moveY !== 0 && state.y !== wantY) {
-        const cy = wantY - offY;
+        const cy = wantY + offY;
         const top = cy - halfH;
         const bottom = cy + halfH;
         const cx = state.x + offX;
@@ -267,10 +280,11 @@ function slideAroundCorner(
         }
         const need = Math.min(toLeft, toRight);
         if (need <= 0 || need > SLIDE_REACH) return;
+        const extent = mapExtent(bounds.width, bounds.height);
         const nextX = clamp(
             state.x + (toLeft <= toRight ? -1 : 1) * Math.min(need, step),
-            0,
-            bounds.width
+            extent.minX,
+            extent.maxX
         );
         if (!overlapsTerrain(nextX, state.y, colliders, footprint)) state.x = nextX;
     }
@@ -286,7 +300,7 @@ function overlapsTerrain(
     const halfW = footprint.width / 2;
     const halfH = footprint.height / 2;
     const cx = x + (footprint.offsetX ?? 0);
-    const cy = y - (footprint.offsetY ?? 0);
+    const cy = y + (footprint.offsetY ?? 0);
     for (const r of colliders) {
         if (cx + halfW <= r.x + TERRAIN_EPSILON || cx - halfW >= r.x + r.w - TERRAIN_EPSILON)
             continue;

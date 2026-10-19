@@ -10,7 +10,7 @@ import type { SkillOwner } from "@/rooms/world/modules/combat/utils/skill-owner.
 /**
  * Đạn đang bay (hit event `PROJECTILE`). Client vẽ từ vị trí/hướng/tốc độ này và tự nội suy; đạn
  * bị xoá khỏi `WorldState.projectiles` khi trúng (DESTROY / hết `maxHits`), bay hết `maxDistance`
- * hoặc ra khỏi map. Toạ độ server: ô, y hướng xuống.
+ * hoặc ra khỏi map. Toạ độ server: ô, gốc ở giữa map, y hướng lên.
  */
 export class ProjectileWorldState extends Schema {
     @type("string") id: string;

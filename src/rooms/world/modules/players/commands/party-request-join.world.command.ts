@@ -40,7 +40,7 @@ export class PartyRequestJoinWorldCommand extends Command<WorldRoom, PartyPayloa
 
     async execute({ client, payload }: PartyPayload) {
         const parsed = PlayerTargetSchema.safeParse(payload);
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         if (!parsed.success || !player) return;
         const targetPlayerId = parsed.data.playerId;
 

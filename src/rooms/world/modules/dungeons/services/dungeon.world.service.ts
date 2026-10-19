@@ -274,7 +274,7 @@ export class DungeonWorldService {
             roomName: WorldRoomName.DUNGEON,
             instanceId: session.instanceId,
         };
-        await worldService.savePlayer(room, client.sessionId);
+        await worldService.savePlayer(room, client.auth.playerId);
         sendOk(client, WorldMessage.MAP_CHANGE, message);
         return undefined;
     }
@@ -322,7 +322,7 @@ export class DungeonWorldService {
             spawnId: "default",
             roomName: WorldRoomName.WORLD,
         };
-        await worldService.savePlayer(room, client.sessionId);
+        await worldService.savePlayer(room, client.auth.playerId);
         sendOk(client, WorldMessage.MAP_CHANGE, message);
         return undefined;
     }
@@ -332,8 +332,8 @@ export class DungeonWorldService {
         if (!runtime) return;
         // Đánh dấu để tick không gọi lại.
         runtime.cleared = true;
-        for (const [sessionId, player] of room.state.players) {
-            const client = room.clients.getById(sessionId);
+        for (const [playerId, player] of room.state.players) {
+            const client = room.clientOf(playerId);
             if (client && player.dungeonSession && !player.pendingMapCode) {
                 await this.leave(room, client as PlayerClient, player, "return");
             }
@@ -439,8 +439,8 @@ export class DungeonWorldService {
         state.cleared = true;
         this.grantToAll(room, runtime.config.clearReward);
         this.grantClearLoot(room, runtime.config.clearReward);
-        for (const [sessionId, player] of room.state.players) {
-            questWorldService.onEvent(room, sessionId, player, {
+        for (const [playerId, player] of room.state.players) {
+            questWorldService.onEvent(room, playerId, player, {
                 type: QuestObjectiveType.CLEAR_DUNGEON,
                 targetCode: room.map.code,
             });
@@ -458,10 +458,10 @@ export class DungeonWorldService {
 
     private grantToAll(room: WorldRoom, spec: RewardSpec | undefined): void {
         if (!spec) return;
-        for (const [sessionId, player] of room.state.players) {
+        for (const [playerId, player] of room.state.players) {
             rewardWorldService.grant(
                 room,
-                sessionId,
+                playerId,
                 player,
                 resolveRewardSpec(spec, ItemSource.SYSTEM),
                 true
@@ -476,7 +476,7 @@ export class DungeonWorldService {
     private grantClearLoot(room: WorldRoom, reward: DungeonClearReward | undefined): void {
         if (!reward?.slots) return;
         const freeSlots = Math.max(0, reward.slots - reward.items.length);
-        for (const [sessionId, player] of room.state.players) {
+        for (const [playerId, player] of room.state.players) {
             const items: ItemReward[] = [];
             for (const drop of reward.dropItems) {
                 if (items.length >= freeSlots) break;
@@ -494,7 +494,7 @@ export class DungeonWorldService {
             if (items.length === 0) continue;
             rewardWorldService.grant(
                 room,
-                sessionId,
+                playerId,
                 player,
                 {
                     exp: 0,
@@ -515,9 +515,9 @@ export class DungeonWorldService {
     }
 
     private clientOf(room: WorldRoom, player: PlayerWorldState): PlayerClient | undefined {
-        for (const [sessionId, state] of room.state.players) {
+        for (const [playerId, state] of room.state.players) {
             if (state === player) {
-                return room.clients.getById(sessionId) as PlayerClient | undefined;
+                return room.clientOf(playerId);
             }
         }
         return undefined;

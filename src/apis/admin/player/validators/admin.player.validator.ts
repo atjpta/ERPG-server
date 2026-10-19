@@ -18,8 +18,9 @@ export const AdminUpdatePlayerSchema = z.object({
     hp: z.number().int().min(0).optional(),
     mp: z.number().int().min(0).optional(),
     mapCode: z.string().min(1).optional(),
-    x: z.number().min(0).optional(),
-    y: z.number().min(0).optional(),
+    // Toạ độ gốc ở giữa map nên có thể âm.
+    x: z.number().optional(),
+    y: z.number().optional(),
     direction: z.enum(Direction).optional(),
 });
 export type AdminUpdatePlayerBody = z.infer<typeof AdminUpdatePlayerSchema>;

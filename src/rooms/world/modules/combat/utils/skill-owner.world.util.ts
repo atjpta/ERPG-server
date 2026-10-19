@@ -9,12 +9,11 @@ import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 /**
- * Bên gây ra một hit (đòn đánh, đạn, vùng). Player tra lại theo `sessionId` mỗi lần trúng (có thể đã
+ * Bên gây ra một hit (đòn đánh, đạn, vùng). Player (`id` = playerId) tra lại mỗi lần trúng (có thể đã
  * rời room trong lúc đạn bay); monster giữ chính object của nó.
  */
 export type SkillOwner =
-    | { kind: "player"; id: string; sessionId: string }
-    | { kind: "monster"; id: string; monster: MonsterWorldState };
+    { kind: "player"; id: string } | { kind: "monster"; id: string; monster: MonsterWorldState };
 
 /** Một mục tiêu còn sống của `owner`, ở vị trí mà hit được tính. */
 export interface SkillTarget {
@@ -24,10 +23,9 @@ export interface SkillTarget {
     hitbox: HitboxColliderState;
 }
 
-export const playerSkillOwner = (sessionId: string, player: PlayerWorldState): SkillOwner => ({
+export const playerSkillOwner = (player: PlayerWorldState): SkillOwner => ({
     kind: "player",
     id: player.id,
-    sessionId,
 });
 
 export const monsterSkillOwner = (monster: MonsterWorldState): SkillOwner => ({
@@ -43,13 +41,14 @@ export const monsterSkillOwner = (monster: MonsterWorldState): SkillOwner => ({
 export function findSkillTargets(room: WorldRoom, owner: SkillOwner): SkillTarget[] {
     const targets: SkillTarget[] = [];
     if (owner.kind === "player") {
-        const seen = room.rewind.lastSeenBy(owner.sessionId);
+        const sessionId = room.sessionOf.get(owner.id);
+        const seen = sessionId ? room.rewind.lastSeenBy(sessionId) : undefined;
         for (const monster of room.state.monsters.values()) {
             if (monster.hp <= 0) continue;
             targets.push({
                 id: monster.id,
-                x: seen.value(monster, "x"),
-                y: seen.value(monster, "y"),
+                x: seen ? seen.value(monster, "x") : monster.x,
+                y: seen ? seen.value(monster, "y") : monster.y,
                 hitbox: monster.hitbox,
             });
         }
@@ -65,11 +64,10 @@ export function findSkillTargets(room: WorldRoom, owner: SkillOwner): SkillTarge
 /** Mục tiêu đang chọn của player (khoá hoặc tự chọn) — để ngắm đạn / đặt vùng. */
 export function findPlayerAimTarget(
     room: WorldRoom,
-    sessionId: string,
     player: PlayerWorldState
 ): SkillTarget | undefined {
     if (!player.targetId) return undefined;
-    return findSkillTargets(room, playerSkillOwner(sessionId, player)).find(
+    return findSkillTargets(room, playerSkillOwner(player)).find(
         (target) => target.id === player.targetId
     );
 }
@@ -104,8 +102,8 @@ export function applySkillHit(
         return true;
     }
 
-    if (room.isLeavingSession?.(owner.sessionId)) return false;
-    const attacker = room.state.players.get(owner.sessionId);
+    if (room.isLeavingPlayer?.(owner.id)) return false;
+    const attacker = room.state.players.get(owner.id);
     const target = room.state.monsters.find((monster) => monster.id === targetId);
     if (
         !attacker ||
@@ -154,7 +152,7 @@ export function applySkillHit(
     }
     // Đòn kết liễu → người đánh nhận thưởng (mỗi monster chỉ chết một lần).
     if (target.hp <= 0) {
-        room.onMonsterKilled(owner.sessionId, attacker, target);
+        room.onMonsterKilled(owner.id, attacker, target);
     }
     return true;
 }

@@ -19,7 +19,7 @@ export class PartyDeclineWorldCommand extends Command<WorldRoom, PartyPayload> {
     static readonly message = WorldClientMessage.PARTY_DECLINE;
 
     async execute({ client, payload }: PartyPayload) {
-        const player = this.room.state.players.get(client.sessionId);
+        const player = this.room.state.players.get(client.auth.playerId);
         const parsed = PartyDeclineSchema.safeParse(payload);
         if (!player || !parsed.success) return;
         await callRoom(parsed.data.partyRoomId, DeclineInvitePartyCommand, { playerId: player.id });

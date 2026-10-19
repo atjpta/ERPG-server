@@ -11,22 +11,22 @@ import type { WorldRoom } from "@/rooms/world/world.room.js";
 export class MonsterKillWorldService {
     grant(
         room: WorldRoom,
-        sessionId: string,
+        playerId: string,
         player: PlayerWorldState,
         monster: MonsterWorldState
     ): void {
-        questWorldService.onEvent(room, sessionId, player, {
+        questWorldService.onEvent(room, playerId, player, {
             type: QuestObjectiveType.KILL,
             targetCode: monster.code,
         });
         const recipients = partyRewardWorldService
-            .killParticipants(room, sessionId, player)
-            .map((member) => member.sessionId);
+            .killParticipants(room, playerId, player)
+            .map((member) => member.playerId);
         rewardTasksWorldService.track(
             room,
             partyRewardWorldService.grantKill(
                 room,
-                sessionId,
+                playerId,
                 player,
                 monsterRewardService.roll(
                     {

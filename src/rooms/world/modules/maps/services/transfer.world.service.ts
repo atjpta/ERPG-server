@@ -57,7 +57,7 @@ export class TransferWorldService {
         // Từ đây mọi lần lưu (checkpoint, rời room) ghi map đích thay vì map cũ.
         player.beginMapChange(mapCode);
         const message: MapChangeMessage = { mapCode, spawnId, roomName: WorldRoomName.WORLD };
-        await worldService.savePlayer(room, client.sessionId);
+        await worldService.savePlayer(room, client.auth.playerId);
         sendOk(client, WorldMessage.MAP_CHANGE, message);
         return undefined;
     }
@@ -93,7 +93,7 @@ export class TransferWorldService {
             spawnId: "default",
             roomName: WorldRoomName.WORLD,
         };
-        await worldService.savePlayer(room, client.sessionId);
+        await worldService.savePlayer(room, client.auth.playerId);
         sendOk(client, WorldMessage.MAP_CHANGE, message);
     }
 }

@@ -29,7 +29,7 @@ export class RewardWorldService {
      */
     grant(
         room: WorldRoom,
-        sessionId: string,
+        playerId: string,
         player: PlayerWorldState,
         reward: Reward,
         recordInDungeon = false
@@ -64,7 +64,7 @@ export class RewardWorldService {
         };
         const tally = recordInDungeon ? room.dungeon?.rewards.get(player.id) : undefined;
         if (tally) recordReward(tally, message, progress.level);
-        const client = room.clients.getById(sessionId);
+        const client = room.clientOf(playerId);
         if (client) sendOk(client, WorldMessage.REWARD, message);
         if (reward.currency.some((currency) => currency.amount > 0)) {
             const wallet: WalletMessage = player.wallet;
