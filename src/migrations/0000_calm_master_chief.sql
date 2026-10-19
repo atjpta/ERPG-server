@@ -3,7 +3,7 @@ CREATE TYPE "public"."account_deletion_status" AS ENUM('pending', 'completed', '
 CREATE TYPE "public"."admin_role" AS ENUM('super_admin', 'admin', 'game_master');--> statement-breakpoint
 CREATE TYPE "public"."admin_status" AS ENUM('active', 'inactive');--> statement-breakpoint
 CREATE TYPE "public"."game_server_status" AS ENUM('online', 'maintenance', 'full', 'offline', 'hidden');--> statement-breakpoint
-CREATE TYPE "public"."player_status" AS ENUM('active', 'banned');--> statement-breakpoint
+CREATE TYPE "public"."player_status" AS ENUM('active', 'banned', 'deleted');--> statement-breakpoint
 CREATE TYPE "public"."oauth_provider" AS ENUM('google', 'play_games', 'guest');--> statement-breakpoint
 CREATE TYPE "public"."client_platform" AS ENUM('android', 'pc');--> statement-breakpoint
 CREATE TYPE "public"."user_status" AS ENUM('active', 'inactive', 'banned', 'deleted');--> statement-breakpoint
@@ -11,7 +11,7 @@ CREATE TYPE "public"."item_rarity" AS ENUM('common', 'good', 'rare', 'epic', 'le
 CREATE TYPE "public"."item_type" AS ENUM('equipment', 'consumable', 'material');--> statement-breakpoint
 CREATE TYPE "public"."map_status" AS ENUM('active', 'inactive');--> statement-breakpoint
 CREATE TYPE "public"."map_type" AS ENUM('town', 'field', 'dungeon');--> statement-breakpoint
-CREATE TYPE "public"."master_data_key" AS ENUM('auth_session_config', 'player_config', 'level_config', 'equipment_stat_config', 'equipment_set_config', 'equipment_enhance_config', 'equipment_refine_config', 'equipment_disassemble_config', 'equipment_drop_config', 'monster_scale_config', 'monster_level_config', 'monster_spawn_config', 'daily_quest_config', 'dungeon_drop_config');--> statement-breakpoint
+CREATE TYPE "public"."master_data_key" AS ENUM('auth_session_config', 'player_config', 'level_config', 'equipment_stat_config', 'equipment_set_config', 'equipment_enhance_config', 'equipment_refine_config', 'equipment_disassemble_config', 'equipment_drop_config', 'monster_scale_config', 'monster_level_config', 'monster_spawn_config', 'daily_quest_config', 'party_config', 'player_target_config', 'monster_ai_config', 'npc_config');--> statement-breakpoint
 CREATE TYPE "public"."biome" AS ENUM('starter', 'slime', 'werewolf', 'werebear');--> statement-breakpoint
 CREATE TYPE "public"."direction" AS ENUM('up', 'down', 'left', 'right');--> statement-breakpoint
 CREATE TYPE "public"."quest_category" AS ENUM('hero', 'side', 'daily');--> statement-breakpoint
@@ -52,7 +52,6 @@ CREATE TABLE "game_servers" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"code" text NOT NULL,
 	"enabled" boolean DEFAULT true NOT NULL,
-	"name" text NOT NULL,
 	"status" "game_server_status" DEFAULT 'online' NOT NULL,
 	"max_players" integer DEFAULT 5000 NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
@@ -113,7 +112,6 @@ CREATE TABLE "classes" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"code" text NOT NULL,
 	"enabled" boolean DEFAULT true NOT NULL,
-	"name" text NOT NULL,
 	"tier" integer DEFAULT 1 NOT NULL,
 	"next_class_codes" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"next_class_required_level" integer,
@@ -140,7 +138,6 @@ CREATE TABLE "items" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"code" text NOT NULL,
 	"enabled" boolean DEFAULT true NOT NULL,
-	"name" text NOT NULL,
 	"type" "item_type" NOT NULL,
 	"rarity" "item_rarity" DEFAULT 'common' NOT NULL,
 	"required_level" integer DEFAULT 1 NOT NULL,
@@ -285,6 +282,7 @@ CREATE TABLE "skills" (
 	"target_type" "target_type" DEFAULT 'NONE' NOT NULL,
 	"cast_range" real DEFAULT 0 NOT NULL,
 	"cast_time_ms" integer DEFAULT 0 NOT NULL,
+	"animation_ms" integer DEFAULT 0 NOT NULL,
 	"cooldown_ms" integer DEFAULT 0 NOT NULL,
 	"mana_cost" integer DEFAULT 0 NOT NULL,
 	"stamina_cost" integer DEFAULT 0 NOT NULL,
@@ -292,6 +290,7 @@ CREATE TABLE "skills" (
 	"basic_attack" boolean DEFAULT false NOT NULL,
 	"level_config" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"skill_hit_events" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"charge_config" jsonb,
 	CONSTRAINT "skills_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
@@ -305,6 +304,6 @@ ALTER TABLE "player_states" ADD CONSTRAINT "player_states_player_id_players_id_f
 ALTER TABLE "player_states" ADD CONSTRAINT "player_states_class_id_classes_id_fk" FOREIGN KEY ("class_id") REFERENCES "public"."classes"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "player_states" ADD CONSTRAINT "player_states_map_code_game_maps_code_fk" FOREIGN KEY ("map_code") REFERENCES "public"."game_maps"("code") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "account_deletion_requests_status_idx" ON "account_deletion_requests" USING btree ("status");--> statement-breakpoint
-CREATE UNIQUE INDEX "players_server_id_name_lower_unique" ON "players" USING btree ("server_id",lower("name"));--> statement-breakpoint
+CREATE UNIQUE INDEX "players_server_id_name_lower_unique" ON "players" USING btree ("server_id",lower("name")) WHERE "players"."status" in ('active', 'banned');--> statement-breakpoint
 CREATE INDEX "players_user_id_idx" ON "players" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "user_sessions_user_id_idx" ON "user_sessions" USING btree ("user_id");

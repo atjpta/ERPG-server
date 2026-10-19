@@ -10,11 +10,16 @@ Server cho MMORPG pixel top-down **ERPG** (client Unity — Android/Google Play 
 ```bash
 yarn install
 cp .env.example .env.development   # sửa POSTGRES_URI, JWT_SECRET, ADMIN_JWT_SECRET, GOOGLE_WEB_CLIENT_ID
+yarn db:drop                       # (tuỳ chọn) XOÁ database cũ để làm lại từ đầu; chỉ chạy với DB local
+yarn db:create                     # tạo database trong POSTGRES_URI nếu chưa có (cần PostgreSQL đang chạy)
 yarn db:migrate
 yarn seed
 yarn dev                           # http://localhost:2567 — playground ở "/", monitor ở "/monitor"
 yarn smoke                         # test end-to-end (server phải đang chạy)
 ```
+
+Từ Unity: Hub → Config → Server → **First-time setup** kiểm tra Node ≥ 24, Yarn, `node_modules`, `.env.keys` và có nút
+**Run all** (install → drop DB → create DB → migrate → seed, xoá sạch DB cũ).
 
 ## Token cho user test local (mỗi class một user)
 

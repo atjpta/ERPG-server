@@ -1,1 +1,0 @@
-ALTER TYPE "public"."master_data_key" ADD VALUE 'monster_ai_config';
