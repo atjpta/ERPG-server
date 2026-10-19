@@ -45,6 +45,9 @@ export class PlayerAuthService {
             message: "Player not found",
             code: PlayerErrorCode.PLAYER_NOT_FOUND,
         });
+        if (player.status === PlayerStatus.DELETED) {
+            serviceError("Player not found", 404, PlayerErrorCode.PLAYER_NOT_FOUND);
+        }
         if (player.status === PlayerStatus.BANNED) {
             serviceError("Player is banned", 403, PlayerErrorCode.PLAYER_BANNED);
         }

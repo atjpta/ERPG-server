@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db, type Queryable } from "@/configs/postgres.config.js";
 import { BaseRepository } from "@/core/repositories/base.repository.js";
 import { Players } from "@/modules/auth/entities/player.entity.js";
+import { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
 
 export class PlayerIdentityRepository extends BaseRepository<typeof Players> {
     constructor() {
@@ -13,7 +14,7 @@ export class PlayerIdentityRepository extends BaseRepository<typeof Players> {
         return dbOrTx
             .select()
             .from(Players)
-            .where(eq(Players.userId, userId))
+            .where(and(eq(Players.userId, userId), ne(Players.status, PlayerStatus.DELETED)))
             .orderBy(asc(Players.createdAt));
     }
 
@@ -38,6 +39,7 @@ export class PlayerIdentityRepository extends BaseRepository<typeof Players> {
             where: and(
                 eq(Players.serverId, serverId),
                 eq(sql`lower(${Players.name})`, name.toLowerCase()),
+                ne(Players.status, PlayerStatus.DELETED),
                 excludeId ? ne(Players.id, excludeId) : undefined
             )!,
             dbOrTx,

@@ -116,6 +116,30 @@ export const userPlayerController = {
             })
     ),
 
+    /** Xoá mềm nhân vật (user token): ẩn khỏi danh sách, nhả slot và tên; đá nhân vật nếu đang online. */
+    userPlayerDelete: userEndpoint(
+        `${prefix}/:id`,
+        {
+            method: "DELETE",
+            sdk: {
+                summary:
+                    "Xoá mềm nhân vật: ẩn khỏi danh sách, trả lại slot và tên. Nhân vật đang online bị đá ra.",
+                auth: "user",
+                response: null,
+                errors: [PlayerErrorCode.PLAYER_NOT_FOUND, PlayerErrorCode.PLAYER_BANNED],
+            },
+            params: IdParamSchema,
+        },
+        (ctx) =>
+            RouterContainer(ctx, async () => {
+                await userPlayerService.deleteCharacter({
+                    userId: ctx.context.userId,
+                    playerId: ctx.params.id,
+                });
+                return Response.ok({ message: "Player deleted" });
+            })
+    ),
+
     userPlayerMe: playerEndpoint(
         `${prefix}/me`,
         {

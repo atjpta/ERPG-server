@@ -225,9 +225,26 @@ export class PlayerService extends BaseService<typeof Players> {
             message: "Player not found",
             code: PlayerErrorCode.PLAYER_NOT_FOUND,
         });
+        if (player.status === PlayerStatus.DELETED) {
+            serviceError("Player not found", 404, PlayerErrorCode.PLAYER_NOT_FOUND);
+        }
         if (player.status === PlayerStatus.BANNED) {
             serviceError("Player is banned", 403, PlayerErrorCode.PLAYER_BANNED);
         }
+        return player;
+    }
+
+    /**
+     * Soft delete: the character stays in the database (support can restore it) but leaves the character list,
+     * stops counting toward the limit and releases its name. Banned characters cannot be deleted (no evading a ban).
+     */
+    async deleteCharacter(params: { userId: string; playerId: string }): Promise<PlayerIdentity> {
+        const { userId, playerId } = params;
+        const player = await this.getOwnedOrFail(userId, playerId);
+        await PlayerIdentityRepo.updateById({
+            id: player.id,
+            data: { status: PlayerStatus.DELETED },
+        });
         return player;
     }
 

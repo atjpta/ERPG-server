@@ -1,4 +1,6 @@
 import { playerAuthService } from "@/modules/auth/services/player-auth.service.js";
+import { KickReason } from "@/core/enums/kick-reason.enum.js";
+import { playerKickService } from "@/core/services/player-kick.service.js";
 import { playerService } from "@/modules/player/services/player.service.js";
 import type { UserCreatePlayerBody } from "@/apis/user/player/validators/user.player.validator.js";
 
@@ -21,6 +23,12 @@ export class UserPlayerService {
             playerId: player.id,
         });
         return { player: { id: player.id }, playerToken };
+    }
+
+    async deleteCharacter(params: { userId: string; playerId: string }) {
+        const player = await playerService.deleteCharacter(params);
+        // Throw out the character if it is online right now.
+        playerKickService.kickPlayer(player.userId, player.id, KickReason.PLAYER_DELETED);
     }
 
     async createCharacter(params: {

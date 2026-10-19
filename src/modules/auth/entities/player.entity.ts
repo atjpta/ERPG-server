@@ -24,10 +24,11 @@ export const Players = pgTable(
         lastPlayedAt: timestamp("last_played_at", { withTimezone: true }),
     },
     (table) => [
-        uniqueIndex("players_server_id_name_lower_unique").on(
-            table.serverId,
-            sql`lower(${table.name})`
-        ),
+        // Only live characters own a name: a deleted one releases it. Lists the live statuses instead of
+        // `<> 'deleted'` because Postgres cannot use an enum value added in the same migration.
+        uniqueIndex("players_server_id_name_lower_unique")
+            .on(table.serverId, sql`lower(${table.name})`)
+            .where(sql`${table.status} in ('active', 'banned')`),
         index("players_user_id_idx").on(table.userId),
     ]
 );

@@ -14,6 +14,7 @@ export const KICK_CLOSE_CODES: Record<KickReason, number> = {
     [KickReason.ACCOUNT_DELETED]: 4003,
     [KickReason.SESSION_REVOKED]: 4004,
     [KickReason.PLAYER_UPDATED]: 4005,
+    [KickReason.PLAYER_DELETED]: 4006,
 };
 
 /**

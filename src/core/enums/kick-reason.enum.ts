@@ -10,4 +10,6 @@ export enum KickReason {
     SESSION_REVOKED = "session_revoked",
     /** Player data was edited by an administrator; reconnect to load the updated snapshot. */
     PLAYER_UPDATED = "player_updated",
+    /** The owner deleted this character. */
+    PLAYER_DELETED = "player_deleted",
 }

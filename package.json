@@ -34,6 +34,7 @@
         "env:dev:encrypt": "dotenvx encrypt -f .env.development",
         "env:prod:decrypt": "dotenvx decrypt -f .env.production",
         "env:prod:encrypt": "dotenvx encrypt -f .env.production",
+        "android:signing": "node scripts/android-signing.mjs",
         "prepare": "husky"
     },
     "license": "UNLICENSED",
