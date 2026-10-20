@@ -33,6 +33,12 @@ Dùng `playerToken` để join room `world` với `mapCode` trong thông tin pla
 dùng `token` cho các API `/user/auth`. Chạy lại script để lấy token mới; nếu bật chế độ một session/user,
 phiên cũ của hai tài khoản test sẽ bị thu hồi.
 
+Sau khi lấy token, `yarn test:tokens` gọi tiếp `yarn test:loadout` (chạy riêng được) để cấp sẵn đồ test cho ba nhân vật:
+level, điểm attribute/kỹ năng chưa cộng, gold/gem, mỗi loại consumable/material và trang bị của từng biome.
+Script chỉ **bổ sung phần còn thiếu** (không hạ level, không nhân đôi đồ) nên chạy lại bao nhiêu lần cũng an toàn;
+nên chạy khi nhân vật đang offline. Muốn đổi mức cấp (level, gold, số lượng, độ hiếm trang bị) thì sửa các hằng số
+ở đầu `scripts/local-test-loadout.ts`.
+
 ## Luồng client (Unity)
 
 1. `GET /master-data/client-version?platform=android&version=x.y.z` → `forceUpdate` thì mở `downloadUrl`.
