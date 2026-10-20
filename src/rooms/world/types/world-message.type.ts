@@ -395,6 +395,11 @@ export interface UpgradePreviewMessage {
     downgradeOnFail?: boolean;
     /** Tinh hoá: rarity sau khi thành công. */
     rarity?: ItemRarity;
+    /**
+     * Main stats của món sau khi nâng cấp thành công (đã nhân hệ số cường hoá/tinh hoá mới) — so với
+     * `finalMainStats` hiện tại của món để hiện mức tăng. Tinh hoá còn thêm 1 dòng rarity ngẫu nhiên, dòng đó không có ở đây.
+     */
+    finalMainStats: StatLineMessage[];
 }
 
 export interface InventoryNearlyFullMessage {

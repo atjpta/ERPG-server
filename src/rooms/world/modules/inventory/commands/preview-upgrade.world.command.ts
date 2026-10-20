@@ -5,6 +5,8 @@ import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { isFail } from "@/core/utils/result.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
+import { big, bigToNumber } from "@/core/utils/big-number.util.js";
+import { mainStatMultiplier } from "@/modules/equipment/services/equipment-stat.service.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
 import {
     enhanceCost,
@@ -23,6 +25,7 @@ import {
     WorldClientMessage,
     WorldMessage,
     type MaterialRequirementMessage,
+    type StatLineMessage,
     type UpgradePreviewMessage,
 } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
@@ -106,6 +109,21 @@ export class PreviewUpgradeWorldCommand extends Command<WorldRoom, InventoryComm
             };
         };
 
+        /** Main stats sau khi nâng cấp thành công: mainStats gốc × hệ số của cấp cường hoá / tinh hoá mới. */
+        const finalMainStatsAt = (levels: {
+            enhanceLevel: number;
+            refineLevel: number;
+        }): StatLineMessage[] => {
+            const multiplier = mainStatMultiplier(levels, {
+                enhance: equipmentConfigService.enhance.mainStatGrowth,
+                refine: equipmentConfigService.refine.mainStatGrowth,
+            });
+            return owned.metadata.mainStats.map((line) => ({
+                ...line,
+                value: bigToNumber(big(line.value).times(multiplier)),
+            }));
+        };
+
         if (action === EquipmentUpgradeAction.ENHANCE) {
             const cost = enhanceCost(owned.metadata, owned.group, equipmentConfigService.enhance);
             if (isFail(cost)) return refuse(cost.code);
@@ -113,10 +131,21 @@ export class PreviewUpgradeWorldCommand extends Command<WorldRoom, InventoryComm
                 ...priced(cost.data),
                 enhanceLevel: owned.metadata.enhanceLevel + 1,
                 downgradeOnFail: cost.data.step.downgradeOnFail,
+                finalMainStats: finalMainStatsAt({
+                    enhanceLevel: owned.metadata.enhanceLevel + 1,
+                    refineLevel: owned.metadata.refineLevel,
+                }),
             });
         }
         const cost = refineCost(owned.metadata, equipmentConfigService.refine);
         if (isFail(cost)) return refuse(cost.code);
-        return reply({ ...priced(cost.data), rarity: cost.data.target });
+        return reply({
+            ...priced(cost.data),
+            rarity: cost.data.target,
+            finalMainStats: finalMainStatsAt({
+                enhanceLevel: owned.metadata.enhanceLevel,
+                refineLevel: owned.metadata.refineLevel + 1,
+            }),
+        });
     }
 }
