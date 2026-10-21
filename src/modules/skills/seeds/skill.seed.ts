@@ -1,6 +1,6 @@
 import { Skills } from "@/modules/skills/entities/skill.entity.js";
 import { loadSkillFiles, skillFileToRow } from "@/modules/skills/seeds/skill-file.util.js";
-import { skillClipWarnings } from "@/modules/bodies/services/anim-clip.service.js";
+import { animClipService } from "@/modules/bodies/services/anim-clip.service.js";
 import { SkillRepo } from "@/modules/skills/repositories/skill.repository.js";
 
 /**
@@ -40,7 +40,8 @@ export const SkillSeed = async () => {
         castTimeMs: skill.castTimeMs ?? 0,
         skillHitEvents: skill.skillHitEvents ?? [],
     }));
-    for (const warning of skillClipWarnings(timed)) console.warn(`⚠️ [SkillSeed] ${warning}`);
+    for (const warning of animClipService.skillClipWarnings(timed))
+        console.warn(`⚠️ [SkillSeed] ${warning}`);
 
     console.info("✅ [SkillSeed] Done");
 };

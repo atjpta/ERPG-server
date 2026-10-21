@@ -3,9 +3,10 @@ import { z } from "zod";
 import type { WorldRoomOptions } from "@/rooms/world/types/world-room.type.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { createRpcRunner } from "@/core/rooms/room.integration.js";
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import { loadRoomMessages } from "@/core/utils/load-room-messages.util.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
-import { visitedFlagKey } from "@/modules/maps/services/teleport.service.js";
+import { teleportService } from "@/modules/maps/services/teleport.service.js";
 import { AuthenticatedPlayerRoom } from "@/rooms/authenticated-player.room.js";
 import { OnCreateWorldCommand } from "@/rooms/world/commands/on-create.world.command.js";
 import { JoinPlayerWorldCommand } from "@/rooms/world/commands/on-join.world.command.js";
@@ -25,7 +26,6 @@ import { PartyDetachWorldCommand } from "@/rooms/world/modules/players/commands/
 import { PartySetPlayerPartyWorldCommand } from "@/rooms/world/modules/players/commands/party-set-player-party.world.command.js";
 import { MoveWorldInput } from "@/rooms/world/modules/players/schemas/move.world.input.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import { attributeWorldService } from "@/rooms/world/modules/players/services/attribute.world.service.js";
 import type { MoveBounds } from "@/rooms/world/modules/players/simulation/movement.step.js";
 import { monsterKillWorldService } from "@/rooms/world/modules/rewards/services/monster-kill.world.service.js";
 import { rewardTasksWorldService } from "@/rooms/world/modules/rewards/services/reward-tasks.world.service.js";
@@ -119,11 +119,11 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
         const player = this.state.players.get(playerId);
         if (player) {
             // Đã đến map này → về sau teleport tới được.
-            player.flags[visitedFlagKey(this.map.code)] = true;
+            player.flags[teleportService.visitedFlagKey(this.map.code)] = true;
             if (this.isDungeon) dungeonWorldService.onPlayerJoined(this, player);
             await this.dispatcher.dispatch(new PartyAttachWorldCommand(), { player });
             inventoryWorldService.send(client, player);
-            attributeWorldService.send(client, player);
+            client.sendSuccess(WorldMessage.ATTRIBUTES, player.getAttributeSummary());
             questWorldService.sendInitial(this, client, player);
         }
     }

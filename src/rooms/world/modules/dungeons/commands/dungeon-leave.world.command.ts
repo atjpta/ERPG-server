@@ -3,23 +3,21 @@ import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { dungeonWorldService } from "@/rooms/world/modules/dungeons/services/dungeon.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
-import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 @SdkMessage({
     replies: [WorldMessage.MAP_CHANGE],
     note: "Không ở trong dungeon thì không có reply.",
 })
-export class DungeonLeaveWorldCommand extends Command<WorldRoom, { client: PlayerClient }> {
+export class DungeonLeaveWorldCommand extends PlayerWorldCommand<{ client: PlayerClient }> {
     static readonly message = WorldClientMessage.DUNGEON_LEAVE;
 
-    async execute({ client }: { client: PlayerClient }) {
-        if (this.room.isDungeon) await this.leaveByClient(this.room, client);
+    validate() {
+        return this.room.isDungeon;
     }
 
     /** Client chủ động rời dungeon. */
-    private async leaveByClient(room: WorldRoom, client: PlayerClient): Promise<void> {
-        const player = room.state.players.get(client.auth.playerId);
-        if (player) await dungeonWorldService.leave(room, client, player, "return");
+    async execute({ client }: { client: PlayerClient }) {
+        await dungeonWorldService.leave(this.room, client, this.player, "return");
     }
 }

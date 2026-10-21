@@ -19,7 +19,9 @@ interface Payload {
 export class RequestJoinPartyCommand extends Command<PartyRoom, Payload> {
     result: Result = fail(CommonCode.ROOM_UNAVAILABLE);
 
-    async execute({ fromPlayerId, fromName }: Payload) {
+    private leaderWorldRoomId!: string;
+
+    validate({ fromPlayerId }: Payload) {
         const { room } = this;
         const { state } = room;
         const leaderId = state.leaderPlayerId;
@@ -27,8 +29,17 @@ export class RequestJoinPartyCommand extends Command<PartyRoom, Payload> {
         const leaderWorldRoomId = room.worldRoomOf.get(leaderId);
         if (error || !leaderWorldRoomId) {
             this.result = fail(error ?? PartyErrorCode.PARTY_TARGET_OFFLINE);
-            return;
+            return false;
         }
+        this.leaderWorldRoomId = leaderWorldRoomId;
+        return true;
+    }
+
+    async execute({ fromName }: Payload) {
+        const { room } = this;
+        const { state } = room;
+        const leaderId = state.leaderPlayerId;
+        const leaderWorldRoomId = this.leaderWorldRoomId;
         const delivered = await callRoom(leaderWorldRoomId, PartyDeliverJoinRequestWorldCommand, {
             leaderId,
             message: {

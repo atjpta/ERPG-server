@@ -12,7 +12,7 @@ import {
     validateDefinitionRefs,
     validateLayoutAgainstDefinition,
 } from "@/modules/maps/seeds/map-build.seed-util.js";
-import { hashMapLayout, parseMapLayout } from "@/modules/maps/services/map-file.service.js";
+import { mapFileService } from "@/modules/maps/services/map-file.service.js";
 
 const DATA_DIR = new URL("../data/", import.meta.url);
 
@@ -22,7 +22,7 @@ export const loadMapLayouts = (): MapLayout[] =>
         .filter((file) => file.endsWith(".map.json"))
         .sort()
         .map((file) => {
-            const layout = parseMapLayout(
+            const layout = mapFileService.parseMapLayout(
                 JSON.parse(readFileSync(new URL(file, DATA_DIR), "utf-8"))
             );
             if (`${layout.code}.map.json` !== file) {
@@ -82,7 +82,7 @@ export const buildAllMapRows = (): NewGameMap[] => {
             errors.push(...layoutErrors);
             return buildPlaceholderRow(def);
         }
-        return buildMapRow(def, layout, hashMapLayout(layout)).row;
+        return buildMapRow(def, layout, mapFileService.hashMapLayout(layout)).row;
     });
     if (errors.length > 0) throw new Error(`[GameMapSeed] ${errors.join("; ")}`);
     return rows;

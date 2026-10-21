@@ -3,7 +3,7 @@ import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { WorldErrorCode } from "@/rooms/world/types/world-error-code.type.js";
 import { DialogueErrorCode } from "@/modules/dialogues/enums/dialogue-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { evaluateConditions } from "@/modules/dialogues/services/condition.service.js";
+import { conditionService } from "@/modules/dialogues/services/condition.service.js";
 import { dialogueService } from "@/modules/dialogues/services/dialogue.service.js";
 import { contentWorldService } from "@/rooms/world/modules/content/services/content.world.service.js";
 import {
@@ -14,7 +14,7 @@ import { DialogueChooseSchema } from "@/rooms/world/modules/content/validators/c
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 interface ContentPayload {
     client: PlayerClient;
@@ -26,15 +26,16 @@ interface ContentPayload {
     errors: [DialogueErrorCode.DIALOGUE_NOT_FOUND, WorldErrorCode.INTERACT_NOT_AVAILABLE],
     note: '`optionId` rỗng = "Tiếp tục".',
 })
-export class DialogueChooseWorldCommand extends Command<WorldRoom, ContentPayload> {
+export class DialogueChooseWorldCommand extends PlayerWorldCommand<
+    ContentPayload,
+    typeof DialogueChooseSchema
+> {
     static readonly message = WorldClientMessage.DIALOGUE_CHOOSE;
 
-    execute({ client, payload }: ContentPayload) {
-        const player = this.room.state.players.get(client.auth.playerId);
-        if (!player) return;
-        const parsed = DialogueChooseSchema.safeParse(payload);
-        if (!parsed.success) return;
-        this.choose(this.room, client, player, parsed.data.optionId);
+    protected override readonly validateSchema = DialogueChooseSchema;
+
+    execute({ client }: ContentPayload) {
+        this.choose(this.room, client, this.player, this.body.optionId);
     }
 
     /** Chọn option (hoặc "Tiếp tục" khi `optionId` rỗng). */
@@ -72,7 +73,7 @@ export class DialogueChooseWorldCommand extends Command<WorldRoom, ContentPayloa
         const option = node.options?.find((o) => o.id === optionId);
         const ctx = contentWorldService.conditionContext(room, player);
         // Không tin client: option phải có thật và còn thoả điều kiện ở thời điểm chọn.
-        if (!option || !evaluateConditions(ctx, option.conditions)) {
+        if (!option || !conditionService.evaluateConditions(ctx, option.conditions)) {
             dialogueWorldService.end(
                 room,
                 client,

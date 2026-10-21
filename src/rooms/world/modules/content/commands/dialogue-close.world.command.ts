@@ -4,7 +4,7 @@ import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { dialogueWorldService } from "@/rooms/world/modules/content/services/dialogue.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 interface ContentPayload {
     client: PlayerClient;
@@ -14,7 +14,7 @@ interface ContentPayload {
 @SdkMessage({
     replies: [WorldMessage.DIALOGUE_END],
 })
-export class DialogueCloseWorldCommand extends Command<WorldRoom, ContentPayload> {
+export class DialogueCloseWorldCommand extends PlayerWorldCommand<ContentPayload> {
     static readonly message = WorldClientMessage.DIALOGUE_CLOSE;
 
     execute({ client }: ContentPayload) {

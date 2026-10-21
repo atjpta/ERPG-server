@@ -1,7 +1,6 @@
 import { callRoom } from "@/core/rooms/room.integration.js";
 import { AttachWorldPartyCommand } from "@/rooms/party/commands/attach-world.party.command.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
-import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import type {
     PartyMemberInfo,
@@ -33,7 +32,7 @@ export class PlayerPartyWorldService {
     private tellParty(room: WorldRoom, playerId: string, partyRoomId: string | null): void {
         const message: PartyRoomMessage = { roomId: partyRoomId ?? "" };
         const found = this.findPlayer(room, playerId);
-        if (found) sendOk(found.client, WorldMessage.PARTY, message);
+        if (found) found.client.sendSuccess(WorldMessage.PARTY, message);
     }
     findPlayer(
         room: WorldRoom,

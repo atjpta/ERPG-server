@@ -1,9 +1,11 @@
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
-import { equipmentItemCode } from "@/modules/equipment/services/equipment-code.service.js";
+import { equipmentCodeService } from "@/modules/equipment/services/equipment-code.service.js";
 import {
-    rollEquipmentInstance,
     type Rng,
+    equipmentRollService,
 } from "@/modules/equipment/services/equipment-roll.service.js";
 import type { Item } from "@/modules/items/entities/item.entity.js";
 import {
@@ -47,10 +49,11 @@ export class EquipmentFactoryService {
                 `Missing equipment_stat_config entry ${template.classCode ?? "*"}:${template.equipmentType}:${level}`
             );
         }
-        return rollEquipmentInstance({
+        return equipmentRollService.rollEquipmentInstance({
             entry,
             rarity,
-            rarityLineCount: equipmentConfigService.stat.rarityLineCount,
+            rarityLineCount: masterDataCacheService.get(MasterDataKey.EQUIPMENT_STAT_CONFIG)
+                .rarityLineCount,
             rng,
         });
     }
@@ -63,7 +66,11 @@ export class EquipmentFactoryService {
         const equipments = createEquipments();
         for (const type of Object.values(ItemEquipmentType)) {
             const isWeapon = EQUIPMENT_GROUP_BY_TYPE[type] === EquipmentGroup.WEAPON;
-            const code = equipmentItemCode(Biome.STARTER, isWeapon ? classCode : null, type);
+            const code = equipmentCodeService.equipmentItemCode(
+                Biome.STARTER,
+                isWeapon ? classCode : null,
+                type
+            );
             const item = itemService.getByCode(code);
             if (!item) throw new Error(`Starter equipment "${code}" not found — run yarn seed`);
             for (const slot of EQUIPMENT_SLOTS_BY_TYPE[type]) {

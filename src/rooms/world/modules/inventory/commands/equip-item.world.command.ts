@@ -6,7 +6,7 @@ import { fail, ok } from "@/core/utils/result.util.js";
 import { classService } from "@/modules/classes/services/class.service.js";
 import { EQUIPMENT_SLOTS_BY_TYPE } from "@/modules/items/enums/item-equipment.enum.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
-import { takeInstance } from "@/modules/player/services/inventory.service.js";
+import { inventoryService } from "@/modules/player/services/inventory.service.js";
 import { InventoryWorldCommand } from "@/rooms/world/modules/inventory/commands/inventory.world.command.js";
 import {} from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import {
@@ -32,7 +32,7 @@ export class EquipItemWorldCommand extends InventoryWorldCommand<
 > {
     static readonly message = WorldClientMessage.EQUIP_ITEM;
 
-    protected readonly schema = EquipItemSchema;
+    protected readonly validateSchema = EquipItemSchema;
     protected override readonly changesStats = true;
     protected run(
         player: PlayerWorldState,
@@ -54,7 +54,7 @@ export class EquipItemWorldCommand extends InventoryWorldCommand<
         const slot =
             requestedSlot ?? slots.find((candidate) => !player.equipments[candidate]) ?? slots[0];
 
-        takeInstance(bag, instanceId);
+        inventoryService.takeInstance(bag, instanceId);
         const previous = player.equipments[slot];
         player.equipments[slot] = {
             id: entry.id,

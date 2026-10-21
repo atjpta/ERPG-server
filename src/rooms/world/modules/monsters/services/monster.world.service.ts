@@ -3,10 +3,7 @@ import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
-import {
-    rollMonsterLevel,
-    rollMonsterVariant,
-} from "@/modules/monsters/services/monster-spawn.service.js";
+import { monsterSpawnService } from "@/modules/monsters/services/monster-spawn.service.js";
 import { monsterService } from "@/modules/monsters/services/monster.service.js";
 import { WorldChain } from "@/rooms/world/chains/world.chain.js";
 import { MonsterIdleHealChain } from "@/rooms/world/modules/monsters/chains/monster-idle-heal.world.chain.js";
@@ -70,12 +67,12 @@ export class MonsterWorldService {
             }
             const config = masterDataCacheService.get(MasterDataKey.MONSTER_SPAWN_CONFIG);
             for (let i = 0; i < spawn.count; i++) {
-                const variant = rollMonsterVariant(
+                const variant = monsterSpawnService.rollMonsterVariant(
                     spawn,
                     config,
                     countAliveElites([...existing, ...monsters])
                 );
-                const monsterLevel = rollMonsterLevel(monster.level, spawn);
+                const monsterLevel = monsterSpawnService.rollMonsterLevel(monster.level, spawn);
                 const index = monsters.length;
                 const { spawnX, spawnY } = spawn;
                 const position =
@@ -124,12 +121,15 @@ export class MonsterWorldService {
             // Roll lại biến thể + level; map đã đủ elite thì spawn `random` ra normal.
             const { definition, spawn } = monster;
             const config = masterDataCacheService.get(MasterDataKey.MONSTER_SPAWN_CONFIG);
-            const variant = rollMonsterVariant(
+            const variant = monsterSpawnService.rollMonsterVariant(
                 spawn,
                 config,
                 countAliveElites(room.state.monsters, monster)
             );
-            monster.applyVariant(variant, rollMonsterLevel(definition.level, spawn));
+            monster.applyVariant(
+                variant,
+                monsterSpawnService.rollMonsterLevel(definition.level, spawn)
+            );
             monster.setSpawns();
             this.respawningMonsters.delete(monster);
         }, MONSTER_RESPAWN_MS);

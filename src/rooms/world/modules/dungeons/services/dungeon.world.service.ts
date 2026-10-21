@@ -1,7 +1,6 @@
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
-import { broadcastOk, sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
@@ -13,11 +12,8 @@ import type {
     GameMap,
 } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
-import {
-    dungeonMonsterLevel,
-    phasesMonsterCount,
-} from "@/modules/maps/services/dungeon.service.js";
-import { respawnPointOf } from "@/modules/maps/services/map-file.service.js";
+import { dungeonService } from "@/modules/maps/services/dungeon.service.js";
+import { mapFileService } from "@/modules/maps/services/map-file.service.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
@@ -25,8 +21,8 @@ import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { RewardSpec } from "@/modules/rewards/schemas/reward-spec.schema.js";
 import { monsterRewardService } from "@/modules/rewards/services/monster-reward.service.js";
-import { randomInt, rollChance } from "@/modules/rewards/services/reward-roll.service.js";
-import { resolveRewardSpec } from "@/modules/rewards/services/reward-spec.service.js";
+import { rewardRollService } from "@/modules/rewards/services/reward-roll.service.js";
+import { rewardSpecService } from "@/modules/rewards/services/reward-spec.service.js";
 import type { ItemReward } from "@/modules/rewards/types/reward.type.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
 import {
@@ -186,8 +182,10 @@ export class DungeonWorldService {
         }
 
         const alive = runtime.monsters.filter((monster) => !isDead(monster)).length;
-        const pending = phasesMonsterCount(chamber.phases.slice(runtime.spawnedPhases));
-        const total = phasesMonsterCount(chamber.phases);
+        const pending = dungeonService.phasesMonsterCount(
+            chamber.phases.slice(runtime.spawnedPhases)
+        );
+        const total = dungeonService.phasesMonsterCount(chamber.phases);
         state.remaining = alive + pending;
         state.total = total;
         state.phaseIndex = runtime.spawnedPhases;
@@ -275,7 +273,7 @@ export class DungeonWorldService {
             instanceId: session.instanceId,
         };
         await worldService.savePlayer(room, client.auth.playerId);
-        sendOk(client, WorldMessage.MAP_CHANGE, message);
+        client.sendSuccess(WorldMessage.MAP_CHANGE, message);
         return undefined;
     }
 
@@ -305,14 +303,16 @@ export class DungeonWorldService {
         try {
             if (destination === "town") {
                 mapCode = player.lastTownMapCode ?? config.startMapCode;
-                spawn = respawnPointOf(await mapService.getActiveByCodeOrFail(mapCode));
+                spawn = mapFileService.respawnPointOf(
+                    await mapService.getActiveByCodeOrFail(mapCode)
+                );
             } else {
                 await mapService.getActiveByCodeOrFail(mapCode);
             }
         } catch {
             // Map đích không còn mở: về map khởi đầu.
             mapCode = config.startMapCode;
-            spawn = respawnPointOf(await mapService.getActiveByCodeOrFail(mapCode));
+            spawn = mapFileService.respawnPointOf(await mapService.getActiveByCodeOrFail(mapCode));
         }
         player.placeAt(spawn.x, spawn.y);
         player.dungeonSession = undefined;
@@ -323,7 +323,7 @@ export class DungeonWorldService {
             roomName: WorldRoomName.WORLD,
         };
         await worldService.savePlayer(room, client.auth.playerId);
-        sendOk(client, WorldMessage.MAP_CHANGE, message);
+        client.sendSuccess(WorldMessage.MAP_CHANGE, message);
         return undefined;
     }
 
@@ -361,7 +361,7 @@ export class DungeonWorldService {
         runtime.monsters = [];
         runtime.chamberCleared = false;
         runtime.crossedAt = null;
-        runtime.monsterLevel = dungeonMonsterLevel(
+        runtime.monsterLevel = dungeonService.dungeonMonsterLevel(
             [...room.state.players.values()].map((player) => player.level),
             runtime.config.maxLevel
         );
@@ -432,7 +432,7 @@ export class DungeonWorldService {
             chamberIndex: runtime.chamberIndex,
             chamberCount: runtime.config.chambers.length,
         };
-        broadcastOk(room, WorldMessage.DUNGEON_CHAMBER_CLEAR, message);
+        room.broadcastSuccess(WorldMessage.DUNGEON_CHAMBER_CLEAR, message);
 
         if (!chamber.isBoss) return;
         runtime.cleared = true;
@@ -450,7 +450,7 @@ export class DungeonWorldService {
             members: [...runtime.rewards.values()].map(toMemberMessage),
             leaderPlayerId: runtime.leaderPlayerId,
         };
-        broadcastOk(room, WorldMessage.DUNGEON_CLEAR, clear);
+        room.broadcastSuccess(WorldMessage.DUNGEON_CLEAR, clear);
         room.clock.setTimeout(() => {
             void this.leaveAll(room);
         }, DUNGEON_LEAVE_DELAY_SEC * 1000);
@@ -463,7 +463,7 @@ export class DungeonWorldService {
                 room,
                 playerId,
                 player,
-                resolveRewardSpec(spec, ItemSource.SYSTEM),
+                rewardSpecService.resolveRewardSpec(spec, ItemSource.SYSTEM),
                 true
             );
         }
@@ -481,8 +481,11 @@ export class DungeonWorldService {
             for (const drop of reward.dropItems) {
                 if (items.length >= freeSlots) break;
                 const item = itemService.getByCode(drop.itemCode);
-                if (!item || !rollChance(drop.rate)) continue;
-                items.push({ itemId: item.id, quantity: randomInt(drop.min, drop.max) });
+                if (!item || !rewardRollService.rollChance(drop.rate)) continue;
+                items.push({
+                    itemId: item.id,
+                    quantity: rewardRollService.randomInt(drop.min, drop.max),
+                });
             }
             for (let slot = items.length; reward.equipment && slot < freeSlots; slot++) {
                 const piece = monsterRewardService.rollEquipment(reward.equipment.biome, {

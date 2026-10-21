@@ -10,7 +10,7 @@ import type { z } from "zod";
 export class LockItemWorldCommand extends InventoryWorldCommand<typeof LockItemSchema, undefined> {
     static readonly message = WorldClientMessage.LOCK_ITEM;
 
-    protected readonly schema = LockItemSchema;
+    protected readonly validateSchema = LockItemSchema;
     protected run(
         player: PlayerWorldState,
         { instanceId, locked }: z.infer<typeof LockItemSchema>

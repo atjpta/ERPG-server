@@ -1,16 +1,16 @@
 import type { ErrorCode } from "@/core/types/result.type.js";
-import { playerSnapshotWorldService } from "@/rooms/world/modules/players/services/player-snapshot.world.service.js";
-import { playerStatsWorldService } from "@/rooms/world/modules/players/services/player-stats.world.service.js";
 import { ArraySchema, Schema, type } from "@colyseus/schema";
 
 import { big, floorBig, roundBig } from "@/core/utils/big-number.util.js";
-import { classBody } from "@/modules/bodies/services/entity-body.service.js";
+import { entityBodyService } from "@/modules/bodies/services/entity-body.service.js";
 import { classService } from "@/modules/classes/services/class.service.js";
+import { levelService } from "@/modules/levels/services/level.service.js";
 import type { FlagValue } from "@/modules/dialogues/schemas/condition.schema.js";
 import type { DungeonSession } from "@/modules/maps/entities/game-map.entity.js";
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import {
+    fromInventories,
     toInventories,
     type Equipments,
     type Inventories,
@@ -31,6 +31,11 @@ import {
 } from "@/rooms/world/modules/players/schemas/owned-skill.world.state.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
 import type { AttributesMessage } from "@/rooms/world/types/world-message.type.js";
+import { playerService } from "@/modules/player/services/player.service.js";
+import {
+    PlayerStatService,
+    playerStatService,
+} from "@/modules/player/services/player-stat.service.js";
 
 /** Trần của `dashTicks` / `dashCooldownTicks` (uint8). */
 const MAX_DASH_TICKS = 0xff;
@@ -52,8 +57,6 @@ export class PlayerWorldState extends Schema {
     @type("uint32") mp: number;
     @type("uint32") maxMp: number;
     @type("float32") moveSpeed: number;
-    @type("uint32") attack: number;
-    @type("uint32") defense: number;
     @type("uint32") stateRevision: number;
     @type("uint8") attackCooldownTicks: number = 0;
     /**
@@ -169,7 +172,7 @@ export class PlayerWorldState extends Schema {
         this.mp = player.mp;
         this.stateRevision = player.stateRevision;
         // The body follows the class prefab in Unity (not the row, which holds what it was when the character was made).
-        const body = classBody(this.classCode, this.baseClassCode);
+        const body = entityBodyService.classBody(this.classCode, this.baseClassCode);
         this.hitbox = new HitboxColliderState(body?.hitbox ?? player.hitbox);
         this.collider = new HitboxColliderState(body?.collider ?? player.collider);
         this.skills.push(...toOwnedSkillStates(player.skills));
@@ -178,31 +181,85 @@ export class PlayerWorldState extends Schema {
 
     /** Level, exp, ví tiền, điểm chưa dùng — từ DB (lúc vào room / sau khi đồng bộ lại). */
     private applyProgress(player: PlayerSnapshot) {
-        return playerSnapshotWorldService.applyProgress(this, player);
+        this.setLevelProgress(player.level, player.exp);
+        this.wallet = structuredClone(player.wallet);
+        this.attributePoints = player.attributePoints;
+        this.skillPoints = player.skillPoints;
+        this.allocatedAttributes = { ...player.allocatedAttributes };
+        this.flags = { ...player.flags };
+        this.quests = structuredClone(player.quests);
+        this.lastTownMapCode = player.lastTownMapCode;
+        this.dailyQuests = player.dailyQuests ? structuredClone(player.dailyQuests) : null;
     }
 
     setLevelProgress(level: number, exp: number) {
-        return playerStatsWorldService.setLevelProgress(this, level, exp);
+        this.level = level;
+        this.exp = exp;
+        this.expToNextLevel = levelService.getExpToNext(level) ?? 0;
     }
 
     refreshStats() {
-        return playerStatsWorldService.refreshStats(this);
+        const { attributes, stats } = playerStatService.compute(this);
+        const previousMaxHp = this.maxHp ?? 0;
+        const previousMaxMp = this.maxMp ?? 0;
+        this.attributes = attributes;
+        this.stats = stats;
+        this.maxHp = PlayerStatService.whole(stats, StatKey.MAX_HP);
+        this.maxMp = PlayerStatService.whole(stats, StatKey.MAX_MP);
+        this.moveSpeed = stats[StatKey.MOVE_SPEED] ?? 0;
+        if (this.hp !== undefined && this.hp > 0) {
+            this.hp = Math.min(this.maxHp, Math.max(1, this.hp + this.maxHp - previousMaxHp));
+        }
+        if (this.mp !== undefined) {
+            this.mp = Math.min(this.maxMp, Math.max(0, this.mp + this.maxMp - previousMaxMp));
+        }
     }
 
     /** Cộng điểm tiềm năng; trả `ErrorCode` lỗi nếu không hợp lệ, `undefined` khi thành công. */
-    allocateAttributes(request: Partial<Record<AttributeKey, number>>): ErrorCode | undefined {
-        return playerStatsWorldService.allocateAttributes(this, request);
+    updateAttributes(request: Partial<Record<AttributeKey, number>>): ErrorCode | undefined {
+        const result = playerService.updateAttributePoints(
+            this.allocatedAttributes,
+            this.attributePoints,
+            request
+        );
+        if (typeof result === "string") return result;
+        this.allocatedAttributes = result.allocatedAttributes;
+        this.attributePoints = result.attributePoints;
+        this.refreshStats();
+        return undefined;
     }
 
     /** Kết quả nếu cộng điểm như `request` — không đổi state; trả `ErrorCode` lỗi nếu không hợp lệ. */
     previewAttributes(
         request: Partial<Record<AttributeKey, number>>
     ): AttributesMessage | ErrorCode {
-        return playerStatsWorldService.previewAttributes(this, request);
+        const result = playerService.updateAttributePoints(
+            this.allocatedAttributes,
+            this.attributePoints,
+            request
+        );
+        if (typeof result === "string") return result;
+        const { attributes, stats } = playerStatService.compute({
+            classId: this.classId,
+            allocatedAttributes: result.allocatedAttributes,
+            equipments: this.equipments,
+        });
+        return {
+            attributePoints: result.attributePoints,
+            allocatedAttributes: { ...result.allocatedAttributes },
+            attributes: { ...attributes },
+            stats: { ...stats },
+        };
     }
 
+    /** lấy danh sách tất cả điểm thuộc tính, chỉ số của player. */
     getAttributeSummary(): AttributesMessage {
-        return playerStatsWorldService.getAttributeSummary(this);
+        return {
+            attributePoints: this.attributePoints,
+            allocatedAttributes: { ...this.allocatedAttributes },
+            attributes: { ...this.attributes },
+            stats: { ...this.stats },
+        };
     }
 
     /** Hồi HP/MP theo `hp_regen`/`mp_regen` (mỗi giây) sau `dt` giây; chết thì không hồi. */
@@ -267,10 +324,30 @@ export class PlayerWorldState extends Schema {
         | "dungeonSession"
         | "dailyQuests"
     > {
-        return playerSnapshotWorldService.toSavedState(this, mapCode, {
-            x: this.pendingX,
-            y: this.pendingY,
-        });
+        // Trong dungeon (hoặc đang bước vào): lưu chỗ quay về — mất kết nối thì đăng nhập lại ở ngoài dungeon.
+        const session = this.dungeonSession;
+        return {
+            // Đang chuyển map (portal/teleport): lưu map đích để rời room không ghi đè về map cũ.
+            mapCode: session?.returnMapCode ?? this.pendingMapCode ?? mapCode,
+            x: session?.returnX ?? (this.pendingMapCode ? this.pendingX : this.x),
+            y: session?.returnY ?? (this.pendingMapCode ? this.pendingY : this.y),
+            lastTownMapCode: this.lastTownMapCode,
+            dailyQuests: this.dailyQuests ? structuredClone(this.dailyQuests) : null,
+            dungeonSession: session ? { ...session } : null,
+            direction: this.direction as PlayerState["direction"],
+            hp: this.hp,
+            mp: this.mp,
+            level: this.level,
+            exp: this.exp,
+            wallet: structuredClone(this.wallet),
+            attributePoints: this.attributePoints,
+            skillPoints: this.skillPoints,
+            allocatedAttributes: { ...this.allocatedAttributes },
+            equipments: structuredClone(this.equipments),
+            ...structuredClone(fromInventories(this.inventories)),
+            flags: { ...this.flags },
+            quests: structuredClone(this.quests),
+        };
     }
 
     /** Hồi sinh tại điểm spawn của map (`game_maps.spawnX/spawnY`). */
@@ -332,8 +409,10 @@ export class PlayerWorldState extends Schema {
     /** Vị trí hỏng hoặc ngoài map (gốc ở giữa map: x ∈ ±width/2, y ∈ ±height/2) thì về điểm spawn. */
     recoverPosition(spawnX: number, spawnY: number, width: number, height: number) {
         const extent = mapExtent(width, height);
-        if (!Number.isFinite(this.x) || this.x < extent.minX || this.x > extent.maxX) this.x = spawnX;
-        if (!Number.isFinite(this.y) || this.y < extent.minY || this.y > extent.maxY) this.y = spawnY;
+        if (!Number.isFinite(this.x) || this.x < extent.minX || this.x > extent.maxX)
+            this.x = spawnX;
+        if (!Number.isFinite(this.y) || this.y < extent.minY || this.y > extent.maxY)
+            this.y = spawnY;
     }
 
     /** Bắt đầu đòn: khoá di chuyển `durationTicks`; đòn kế tiếp đợi lâu hơn trong `durationTicks` và `cooldownTicks` (cùng đếm từ lúc bắt đầu). */
@@ -464,7 +543,17 @@ export class PlayerWorldState extends Schema {
     }
 
     syncSnapshot(player: PlayerSnapshot) {
-        return playerSnapshotWorldService.syncSnapshot(this, player);
+        this.x = player.x;
+        this.y = player.y;
+        this.direction = player.direction === "left" ? "left" : "right";
+        this.hp = player.hp;
+        this.mp = player.mp;
+        this.applyProgress(player);
+        this.equipments = structuredClone(player.equipments);
+        this.inventories = structuredClone(toInventories(player));
+        this.refreshStats();
+        this.stateRevision = player.stateRevision;
+        this.moving = false;
     }
 
     setStateRevision(revision: number) {

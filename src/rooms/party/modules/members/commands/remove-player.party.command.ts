@@ -13,10 +13,13 @@ interface Payload {
 
 /** Bỏ `playerId` khỏi party (tự rời / bị kick / offline), dọn con trỏ và báo cho phần còn lại. */
 export class RemovePlayerPartyCommand extends Command<PartyRoom, Payload> {
+    validate({ playerId }: Payload) {
+        return this.room.state.has(playerId);
+    }
+
     async execute({ playerId, code, kickSocket = true }: Payload) {
         const { room } = this;
         const { state } = room;
-        if (!state.has(playerId)) return;
         const name = state.nameOf(playerId);
         const newLeaderId = state.leave(playerId);
 

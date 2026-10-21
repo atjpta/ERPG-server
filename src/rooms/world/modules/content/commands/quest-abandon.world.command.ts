@@ -12,7 +12,7 @@ import { QuestAbandonSchema } from "@/rooms/world/modules/content/validators/con
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 interface ContentPayload {
     client: PlayerClient;
@@ -23,14 +23,16 @@ interface ContentPayload {
     replies: [WorldMessage.QUEST_UPDATE, WorldMessage.NPC_MARKERS, WorldMessage.QUEST_TARGETS],
     note: "Quest không bỏ được (không có / không cho bỏ) thì server im lặng, không có reply.",
 })
-export class QuestAbandonWorldCommand extends Command<WorldRoom, ContentPayload> {
+export class QuestAbandonWorldCommand extends PlayerWorldCommand<
+    ContentPayload,
+    typeof QuestAbandonSchema
+> {
     static readonly message = WorldClientMessage.QUEST_ABANDON;
 
-    execute({ client, payload }: ContentPayload) {
-        const player = this.room.state.players.get(client.auth.playerId);
-        const parsed = QuestAbandonSchema.safeParse(payload);
-        if (!player || !parsed.success) return;
-        this.abandon(this.room, client, player, parsed.data.questCode);
+    protected override readonly validateSchema = QuestAbandonSchema;
+
+    execute({ client }: ContentPayload) {
+        this.abandon(this.room, client, this.player, this.body.questCode);
     }
 
     private abandon(

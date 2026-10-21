@@ -8,20 +8,6 @@ export const CLIP_TOLERANCE_MS = 10;
 
 let cached: AnimClips | undefined;
 
-/** Clip lengths exported from Unity; a missing or malformed file is an error (run Sync Server in the Authoring Hub). */
-export const loadAnimClips = (): AnimClips => {
-    cached ??= AnimClipsSchema.parse(JSON.parse(readFileSync(FILE, "utf-8")));
-    return cached;
-};
-
-/** Length of a monster's attack animation, so its attack lasts exactly as long as it plays. */
-export const monsterAttackMs = (code: string): number => {
-    const clip = loadAnimClips().monsters[code];
-    if (!clip)
-        throw new Error(`[AnimClips] No Attack1 clip for monster "${code}": sync it from Unity`);
-    return clip.attackMs;
-};
-
 interface TimedSkill {
     code: string;
     animationMs: number;
@@ -32,32 +18,52 @@ interface TimedSkill {
 /** 20 ticks a second while the seed is authored (50 ms a tick). */
 const AUTHORED_TICK_MS = 50;
 
-/**
- * Warnings for class skills that do not fit their animation: it lasts longer than the clip (the animation would end while the
- * character is still locked), or a hit lands after the clip is over. A skill shorter than its clip is fine: that is tuning.
- */
-export const skillClipWarnings = (
-    skills: readonly TimedSkill[],
-    clips: AnimClips = loadAnimClips()
-): string[] => {
-    const warnings: string[] = [];
-    for (const skill of skills) {
-        const clip = clips.skills[skill.code];
-        if (!clip) continue;
-        if (skill.animationMs > clip.lengthMs + CLIP_TOLERANCE_MS) {
-            warnings.push(
-                `${skill.code}: animationMs ${skill.animationMs} is longer than its clip (${clip.lengthMs} ms)`
-            );
-        }
-        const lastHitMs = Math.max(
-            0,
-            ...skill.skillHitEvents.map((e) => e.triggerTicks * AUTHORED_TICK_MS)
-        );
-        if (lastHitMs > clip.lengthMs + CLIP_TOLERANCE_MS) {
-            warnings.push(
-                `${skill.code}: its last hit (${lastHitMs} ms) lands after its clip ends (${clip.lengthMs} ms)`
-            );
-        }
+export class AnimClipService {
+    /** Clip lengths exported from Unity; a missing or malformed file is an error (run Sync Server in the Authoring Hub). */
+    loadAnimClips(): AnimClips {
+        cached ??= AnimClipsSchema.parse(JSON.parse(readFileSync(FILE, "utf-8")));
+        return cached;
     }
-    return warnings;
-};
+
+    /** Length of a monster's attack animation, so its attack lasts exactly as long as it plays. */
+    monsterAttackMs(code: string): number {
+        const clip = this.loadAnimClips().monsters[code];
+        if (!clip)
+            throw new Error(
+                `[AnimClips] No Attack1 clip for monster "${code}": sync it from Unity`
+            );
+        return clip.attackMs;
+    }
+
+    /**
+     * Warnings for class skills that do not fit their animation: it lasts longer than the clip (the animation would end while the
+     * character is still locked), or a hit lands after the clip is over. A skill shorter than its clip is fine: that is tuning.
+     */
+    skillClipWarnings(
+        skills: readonly TimedSkill[],
+        clips: AnimClips = this.loadAnimClips()
+    ): string[] {
+        const warnings: string[] = [];
+        for (const skill of skills) {
+            const clip = clips.skills[skill.code];
+            if (!clip) continue;
+            if (skill.animationMs > clip.lengthMs + CLIP_TOLERANCE_MS) {
+                warnings.push(
+                    `${skill.code}: animationMs ${skill.animationMs} is longer than its clip (${clip.lengthMs} ms)`
+                );
+            }
+            const lastHitMs = Math.max(
+                0,
+                ...skill.skillHitEvents.map((e) => e.triggerTicks * AUTHORED_TICK_MS)
+            );
+            if (lastHitMs > clip.lengthMs + CLIP_TOLERANCE_MS) {
+                warnings.push(
+                    `${skill.code}: its last hit (${lastHitMs} ms) lands after its clip ends (${clip.lengthMs} ms)`
+                );
+            }
+        }
+        return warnings;
+    }
+}
+
+export const animClipService = new AnimClipService();

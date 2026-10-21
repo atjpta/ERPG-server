@@ -1,6 +1,6 @@
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { STARTER_CLASS_CODES } from "@/modules/classes/constants/class.constant.js";
-import { equipmentItemCode } from "@/modules/equipment/services/equipment-code.service.js";
+import { equipmentCodeService } from "@/modules/equipment/services/equipment-code.service.js";
 import type { NewItem } from "@/modules/items/entities/item.entity.js";
 import {
     EQUIPMENT_GROUP_BY_TYPE,
@@ -17,7 +17,7 @@ const equipment = (
 ): NewItem => {
     const metadata: EquipmentMetadata = { equipmentType, biome, classCode };
     return {
-        code: equipmentItemCode(biome, classCode, equipmentType),
+        code: equipmentCodeService.equipmentItemCode(biome, classCode, equipmentType),
         type: ItemType.EQUIPMENT,
         rarity: ItemRarity.COMMON,
         requiredLevel: 1,

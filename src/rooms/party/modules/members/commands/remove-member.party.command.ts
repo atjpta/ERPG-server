@@ -12,8 +12,11 @@ export class RemoveMemberPartyCommand extends Command<
 > {
     result: Result = ok();
 
-    execute({ playerId, worldRoomId }: { playerId: string; worldRoomId: string }) {
-        if (this.room.worldRoomOf.get(playerId) !== worldRoomId) return;
+    validate({ playerId, worldRoomId }: { playerId: string; worldRoomId: string }) {
+        return this.room.worldRoomOf.get(playerId) === worldRoomId;
+    }
+
+    execute({ playerId }: { playerId: string; worldRoomId: string }) {
         return new RemovePlayerPartyCommand().setPayload({
             playerId,
             code: PartyNotice.MEMBER_LEFT,

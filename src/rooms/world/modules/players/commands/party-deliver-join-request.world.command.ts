@@ -2,7 +2,6 @@ import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.j
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { Result } from "@/core/types/result.type.js";
 import { fail, ok } from "@/core/utils/result.util.js";
-import { sendOk } from "@/core/utils/room-send.util.js";
 import { playerPartyWorldService } from "@/rooms/world/modules/players/services/player-party.world.service.js";
 import {
     WorldMessage,
@@ -20,13 +19,21 @@ interface Payload {
 export class PartyDeliverJoinRequestWorldCommand extends Command<WorldRoom, Payload> {
     result: Result = fail(CommonCode.ROOM_UNAVAILABLE);
 
-    execute({ leaderId, message }: Payload) {
+    private found!: NonNullable<ReturnType<typeof playerPartyWorldService.findPlayer>>;
+
+    validate({ leaderId }: Payload) {
         const found = playerPartyWorldService.findPlayer(this.room, leaderId);
         if (!found) {
             this.result = fail(PlayerErrorCode.PLAYER_OFFLINE);
-            return;
+            return false;
         }
-        sendOk(found.client, WorldMessage.PARTY_JOIN_REQUEST, message);
+        this.found = found;
+        return true;
+    }
+
+    execute({ message }: Payload) {
+        const { found } = this;
+        found.client.sendSuccess(WorldMessage.PARTY_JOIN_REQUEST, message);
         this.result = ok();
     }
 }

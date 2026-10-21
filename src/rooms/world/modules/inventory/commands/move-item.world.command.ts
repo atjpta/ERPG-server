@@ -1,5 +1,5 @@
 import { fail, ok } from "@/core/utils/result.util.js";
-import { moveInventorySlot } from "@/modules/player/services/inventory.service.js";
+import { inventoryService } from "@/modules/player/services/inventory.service.js";
 import { InventoryWorldCommand } from "@/rooms/world/modules/inventory/commands/inventory.world.command.js";
 import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import { MoveItemSchema } from "@/rooms/world/modules/inventory/validators/inventory.world.validator.js";
@@ -10,12 +10,12 @@ import type { z } from "zod";
 export class MoveItemWorldCommand extends InventoryWorldCommand<typeof MoveItemSchema, undefined> {
     static readonly message = WorldClientMessage.MOVE_ITEM;
 
-    protected readonly schema = MoveItemSchema;
+    protected readonly validateSchema = MoveItemSchema;
     protected run(
         player: PlayerWorldState,
         { type, fromSlot, toSlot }: z.infer<typeof MoveItemSchema>
     ) {
-        const error = moveInventorySlot(
+        const error = inventoryService.moveInventorySlot(
             player.inventories[type],
             inventoryWorldService.inventorySize(type),
             fromSlot,

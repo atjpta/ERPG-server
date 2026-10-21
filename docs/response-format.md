@@ -63,11 +63,11 @@ isFail(result)                      // type guard (tsconfig tắt strictNullChec
 
 ## Room
 
-- **Mọi** message server gửi xuống client đều là `Result`: dùng `sendOk / sendFail / sendResult / broadcastOk /
-broadcastResult` trong `src/core/utils/room-send.util.ts`, không gọi `client.send()` / `room.broadcast()` trực tiếp.
-- Reply cho yêu cầu của client: thành công `sendOk(client, type, data)`; thất bại `sendFail(client, type, code, error?)`.
+- **Mọi** message server gửi xuống client đều là `Result`: dùng method của client `client.sendSuccess / sendError / sendResult`
+  (`PlayerClient`, cài vào class client của transport bởi `extendClientSend` ở `src/index.ts`) và `room.broadcastSuccess / room.broadcastResult` (`BasePlayerRoom`), không gọi `client.send()` / `room.broadcast()` trực tiếp.
+- Reply cho yêu cầu của client: thành công `client.sendSuccess(type, data)`; thất bại `client.sendError(type, code, error?)`.
   Thất bại không kèm snapshot trạng thái — client giữ state cũ cho tới khi nhận message cập nhật bình thường.
-- Sự kiện server đẩy xuống (`mapChange`, `partyNotice`, `reward`...) cũng `sendOk`; loại sự kiện nằm trong `data`
+- Sự kiện server đẩy xuống (`mapChange`, `partyNotice`, `reward`...) cũng `client.sendSuccess`; loại sự kiện nằm trong `data`
   (vd `data.notice` của `PartyMessage.NOTICE`), không dùng `code`.
 - Lỗi nội bộ giữa service / command là `ErrorCode | undefined` hoặc `Result<T>`.
 

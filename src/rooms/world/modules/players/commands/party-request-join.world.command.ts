@@ -6,7 +6,6 @@ import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.j
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { isFail } from "@/core/utils/result.util.js";
-import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import {
     PartyErrorCode,
     PartyNotice,
@@ -15,8 +14,8 @@ import {
 import { playerPartyWorldService } from "@/rooms/world/modules/players/services/player-party.world.service.js";
 import { PlayerTargetSchema } from "@/rooms/world/modules/players/validators/player-target.world.validator.js";
 import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
-import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 interface PartyPayload {
     client: PlayerClient;
@@ -35,27 +34,42 @@ interface PartyPayload {
     ],
     note: "Payload sai thì server im lặng.",
 })
-export class PartyRequestJoinWorldCommand extends Command<WorldRoom, PartyPayload> {
+export class PartyRequestJoinWorldCommand extends PlayerWorldCommand<
+    PartyPayload,
+    typeof PlayerTargetSchema
+> {
     static readonly message = WorldClientMessage.PARTY_REQUEST_JOIN;
 
-    async execute({ client, payload }: PartyPayload) {
-        const parsed = PlayerTargetSchema.safeParse(payload);
-        const player = this.room.state.players.get(client.auth.playerId);
-        if (!parsed.success || !player) return;
-        const targetPlayerId = parsed.data.playerId;
+    protected override readonly validateSchema = PlayerTargetSchema;
 
-        const refuse = (code: ErrorCode) => sendFail(client, WorldMessage.PARTY_NOTICE, code);
+    private target!: PlayerWorldState;
+
+    validate({ client }: PartyPayload) {
+        const refuse = (code: ErrorCode) => {
+            client.sendError(WorldMessage.PARTY_NOTICE, code);
+            return false;
+        };
+        const target = [...this.room.state.players.values()].find(
+            (other) => other.id === this.body.playerId
+        );
+        if (!target) return refuse(PlayerErrorCode.PLAYER_NOT_HERE);
+        if (target.id === this.player.id) return refuse(PartyErrorCode.PARTY_SELF_TARGET);
+        if (!target.partyRoomId) return refuse(PartyErrorCode.PARTY_TARGET_NOT_IN_PARTY);
+
+        this.target = target;
+        return true;
+    }
+
+    async execute({ client }: PartyPayload) {
+        const { player, target } = this;
+        const refuse = (code: ErrorCode) => client.sendError(WorldMessage.PARTY_NOTICE, code);
+        // Cần await (đọc directory) nên không nằm trong validate().
         if (
             player.partyRoomId &&
             (await playerPartyWorldService.isPartyRoomListed(player.partyRoomId))
         ) {
             return refuse(PartyErrorCode.PARTY_ALREADY_MEMBER);
         }
-        const target = [...this.room.state.players.values()].find(
-            (other) => other.id === targetPlayerId
-        );
-        if (!target) return refuse(PlayerErrorCode.PLAYER_NOT_HERE);
-        if (target.id === player.id) return refuse(PartyErrorCode.PARTY_SELF_TARGET);
         if (!target.partyRoomId) return refuse(PartyErrorCode.PARTY_TARGET_NOT_IN_PARTY);
 
         const result = await callRoom(target.partyRoomId, RequestJoinPartyCommand, {
@@ -71,6 +85,6 @@ export class PartyRequestJoinWorldCommand extends Command<WorldRoom, PartyPayloa
             return;
         }
         const message: PartyNoticeMessage = { notice: PartyNotice.JOIN_REQUEST_SENT };
-        sendOk(client, WorldMessage.PARTY_NOTICE, message);
+        client.sendSuccess(WorldMessage.PARTY_NOTICE, message);
     }
 }

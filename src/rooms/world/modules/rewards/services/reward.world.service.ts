@@ -1,16 +1,10 @@
-import { sendOk } from "@/core/utils/room-send.util.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
-import {
-    creditWallet,
-    gainExp,
-    levelUpPoints,
-} from "@/modules/player/services/player-progress.service.js";
+import { playerService } from "@/modules/player/services/player.service.js";
 import type { Reward } from "@/modules/rewards/types/reward.type.js";
 import { recordReward } from "@/rooms/world/modules/dungeons/utils/dungeon-reward.world.util.js";
 import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import { attributeWorldService } from "@/rooms/world/modules/players/services/attribute.world.service.js";
 import {
     WorldMessage,
     type RewardMessage,
@@ -34,14 +28,16 @@ export class RewardWorldService {
         reward: Reward,
         recordInDungeon = false
     ): void {
-        player.wallet = creditWallet(player.wallet, reward.currency);
+        player.wallet = playerService.creditWallet(player.wallet, reward.currency);
 
-        const progress = gainExp({ level: player.level, exp: player.exp }, reward.exp, (level) =>
-            levelService.getExpToNext(level)
+        const progress = playerService.gainExp(
+            { level: player.level, exp: player.exp },
+            reward.exp,
+            (level) => levelService.getExpToNext(level)
         );
         player.setLevelProgress(progress.level, progress.exp);
         if (progress.levelsGained > 0) {
-            const points = levelUpPoints(progress.levelsGained);
+            const points = playerService.levelUpPoints(progress.levelsGained);
             player.attributePoints += points.attributePoints;
             player.skillPoints += points.skillPoints;
             // Lên level hồi đầy trạng thái.
@@ -65,15 +61,16 @@ export class RewardWorldService {
         const tally = recordInDungeon ? room.dungeon?.rewards.get(player.id) : undefined;
         if (tally) recordReward(tally, message, progress.level);
         const client = room.clientOf(playerId);
-        if (client) sendOk(client, WorldMessage.REWARD, message);
+        if (client) client.sendSuccess(WorldMessage.REWARD, message);
         if (reward.currency.some((currency) => currency.amount > 0)) {
             const wallet: WalletMessage = player.wallet;
-            if (client) sendOk(client, WorldMessage.WALLET, wallet);
+            if (client) client.sendSuccess(WorldMessage.WALLET, wallet);
         }
         if (reward.items.length > 0)
             inventoryWorldService.grantItems(client, player, reward.items, reward.source);
         // Lên level: có thêm điểm tiềm năng và stat đổi theo level.
-        if (progress.levelsGained > 0) attributeWorldService.send(client, player);
+        if (client && progress.levelsGained > 0)
+            client.sendSuccess(WorldMessage.ATTRIBUTES, player.getAttributeSummary());
     }
 }
 

@@ -6,13 +6,10 @@ import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import type { InventoryResult } from "@/rooms/world/modules/inventory/types/inventory.world.type.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import { attributeWorldService } from "@/rooms/world/modules/players/services/attribute.world.service.js";
-import { fail, isFail } from "@/core/utils/result.util.js";
-import { sendResult } from "@/core/utils/room-send.util.js";
+import { isFail } from "@/core/utils/result.util.js";
 import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
-import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 import type { z } from "zod";
 
 interface InventoryCommandPayload {
@@ -28,18 +25,17 @@ interface InventoryCommandPayload {
     replies: [WorldMessage.INVENTORY],
     errors: [
         CommonCode.INVALID_INPUT,
-        PlayerErrorCode.PLAYER_DEAD,
         ItemErrorCode.ITEM_NOT_FOUND,
         ItemErrorCode.INVENTORY_FULL,
         ItemErrorCode.INVENTORY_SLOT_INVALID,
         ItemErrorCode.INVENTORY_SLOT_EMPTY,
     ],
 })
-export abstract class InventoryWorldCommand<TSchema extends z.ZodType, TValue> extends Command<
-    WorldRoom,
-    InventoryCommandPayload
-> {
-    protected abstract readonly schema: TSchema;
+export abstract class InventoryWorldCommand<
+    TSchema extends z.ZodType,
+    TValue,
+> extends PlayerWorldCommand<InventoryCommandPayload, TSchema> {
+    protected abstract readonly validateSchema: TSchema;
     /** Thao tác có random kết quả → lưu DB ngay sau khi thành công. */
     protected readonly saveImmediately: boolean = false;
     /** Có thể đổi stat (đồ đang mặc) → gửi thêm `attributes`. */
@@ -53,24 +49,20 @@ export abstract class InventoryWorldCommand<TSchema extends z.ZodType, TValue> e
     /** Gửi thêm message riêng khi thành công (vd kết quả cường hoá). */
     protected onSuccess(_client: PlayerClient, _value: TValue): void {}
 
-    async execute({ client, payload }: InventoryCommandPayload) {
-        const player = this.room.state.players.get(client.auth.playerId);
-        if (!player) return;
+    protected override readonly replyType = WorldMessage.INVENTORY;
 
-        const parsed = this.schema.safeParse(payload);
-        const result: InventoryResult<TValue> = !parsed.success
-            ? fail(CommonCode.INVALID_INPUT)
-            : player.hp <= 0
-              ? fail(PlayerErrorCode.PLAYER_DEAD)
-              : this.run(player, parsed.data);
+    async execute({ client }: InventoryCommandPayload) {
+        const player = this.player;
+        const result = this.run(player, this.body);
 
         if (isFail(result)) {
-            sendResult(client, WorldMessage.INVENTORY, result);
+            client.sendResult(WorldMessage.INVENTORY, result);
             return;
         }
         this.onSuccess(client, result.data);
         inventoryWorldService.send(client, player);
-        if (this.changesStats) attributeWorldService.send(client, player);
+        if (this.changesStats)
+            client.sendSuccess(WorldMessage.ATTRIBUTES, player.getAttributeSummary());
         if (this.saveImmediately) await worldService.savePlayer(this.room, client.auth.playerId);
     }
 }

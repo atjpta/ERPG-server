@@ -20,3 +20,9 @@ export enum ItemSource {
     QUEST = "quest",
     CRAFT = "craft",
 }
+
+/** Loại hiệu ứng khi dùng consumable — xử lý ở `ConsumableWorldService`. */
+export enum ConsumableEffectType {
+    /** Bình hồi: cộng thẳng HP / MP. */
+    RESTORE = "restore",
+}

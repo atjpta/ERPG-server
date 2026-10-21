@@ -3,9 +3,12 @@ import { KickReason } from "@/core/enums/kick-reason.enum.js";
 import type { AuthPlayer } from "@/core/types/auth-player.type.js";
 import { playerKickService } from "@/core/services/player-kick.service.js";
 import { userKickTopic } from "@/core/utils/player-kick.util.js";
+import type { ClientSend } from "@/core/utils/client-send.util.js";
+import type { Result } from "@/core/types/result.type.js";
+import { ok } from "@/core/utils/result.util.js";
 import type { KickMessage } from "@/core/types/player-kick.type.js";
 
-export type PlayerClient = Client<{ auth: AuthPlayer }>;
+export type PlayerClient = Client<{ auth: AuthPlayer }> & ClientSend;
 
 /** Close code (4000–4999) gửi về client khi bị đá — client dựa vào đây để hiện thông báo. */
 export const KICK_CLOSE_CODES: Record<KickReason, number> = {
@@ -27,6 +30,24 @@ export const KICK_CLOSE_CODES: Record<KickReason, number> = {
  * - `unregisterOnlinePlayer` (`onLeave`), `verifyReconnect` (`onReconnect`).
  */
 export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extends Room<T> {
+    /** Gửi `Success` cho mọi client trong room (envelope `Result`, như `client.sendSuccess`). */
+    broadcastSuccess(
+        type: string | number,
+        data: unknown = null,
+        options?: Parameters<Room["broadcast"]>[2]
+    ) {
+        this.broadcast(type, ok(data), options);
+    }
+
+    /** Gửi một `Result` dựng sẵn cho mọi client trong room. */
+    broadcastResult(
+        type: string | number,
+        result: Result<unknown>,
+        options?: Parameters<Room["broadcast"]>[2]
+    ) {
+        this.broadcast(type, result, options);
+    }
+
     /** `client.sessionId` → auth — gồm cả client đang rớt mạng chờ reconnect. */
     private readonly onlinePlayers = new Map<string, AuthPlayer>();
     /** Client bị đá lúc đang rớt mạng → chặn khi reconnect. */

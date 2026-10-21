@@ -3,8 +3,7 @@ import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { playerPartyWorldService } from "@/rooms/world/modules/players/services/player-party.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
-import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 interface PartyPayload {
     client: PlayerClient;
@@ -16,12 +15,14 @@ interface PartyPayload {
     replies: [WorldMessage.PARTY],
     note: "Đang chết (hp ≤ 0) thì server im lặng.",
 })
-export class PartyCreateWorldCommand extends Command<WorldRoom, PartyPayload> {
+export class PartyCreateWorldCommand extends PlayerWorldCommand<PartyPayload> {
     static readonly message = WorldClientMessage.PARTY_CREATE;
 
-    async execute({ client }: PartyPayload) {
-        const player = this.room.state.players.get(client.auth.playerId);
-        if (!player || player.hp <= 0) return;
-        await playerPartyWorldService.ensureParty(this.room, player);
+    validate() {
+        return this.player.hp > 0;
+    }
+
+    async execute() {
+        await playerPartyWorldService.ensureParty(this.room, this.player);
     }
 }

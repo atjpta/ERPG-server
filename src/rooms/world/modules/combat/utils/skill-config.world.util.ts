@@ -4,11 +4,7 @@ import {
     HitDelivery,
     SkillEffectType,
 } from "@/modules/skills/enums/skill.enum.js";
-import {
-    getChargeConfig,
-    isChargeSkill,
-    sortSkillHitEvents,
-} from "@/modules/skills/services/skill.service.js";
+import { skillService } from "@/modules/skills/services/skill.service.js";
 import {
     resolvePlayerTargetRule,
     type PlayerTargetConfig,
@@ -54,17 +50,17 @@ function toClientSkill(skill: Skill) {
         /** Thuộc combo đánh thường (theo thứ tự trong `skills` của player/monster). */
         basicAttack: skill.basicAttack,
         /** Chỉ skill lướt tới mục tiêu (`isChargeSkill`): tốc độ, thời gian dư, quãng lướt không mục tiêu — đã điền mặc định. */
-        charge: isChargeSkill(skill)
+        charge: skillService.isChargeSkill(skill)
             ? {
-                  ...getChargeConfig(skill),
-                  freeDistance: getChargeConfig(skill).freeDistance ?? skill.castRange,
+                  ...skillService.getChargeConfig(skill),
+                  freeDistance: skillService.getChargeConfig(skill).freeDistance ?? skill.castRange,
               }
             : null,
         /** Số tick chờ từ lúc bấm đến lúc anim + hit event bắt đầu (`castTimeMs`; 0 = ngay). */
         castTicks: getSkillCastTicks(skill, WORLD_TICK_RATE),
         /** Số tick mô phỏng của cả đòn (chờ + anim, khoá di chuyển) — giống PlayerAttackChain. */
         durationTicks: getSkillDurationTicks(skill, WORLD_TICK_RATE),
-        hitEvents: sortSkillHitEvents(skill.skillHitEvents).map((event) => {
+        hitEvents: skillService.sortSkillHitEvents(skill.skillHitEvents).map((event) => {
             const damageEffects = event.effects.filter(
                 (effect) => effect.effectType === SkillEffectType.DAMAGE
             );

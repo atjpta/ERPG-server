@@ -45,6 +45,10 @@ export const LevelConfigSchema = z
     .object({
         maxLevel: z.number().int().min(1),
         expToNextLevel: z.array(z.number().int().positive()),
+        /** Điểm attribute nhận mỗi lần lên level (vào `attributePoints` để player tự cộng). */
+        attributePointsPerLevel: z.number().int().nonnegative().default(5),
+        /** Điểm kỹ năng nhận mỗi lần lên level. */
+        skillPointsPerLevel: z.number().int().nonnegative().default(1),
     })
     .refine((config) => config.expToNextLevel.length === config.maxLevel - 1, {
         message: "expToNextLevel must have maxLevel - 1 entries",

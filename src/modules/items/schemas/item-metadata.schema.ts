@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { ItemEquipmentType } from "@/modules/items/enums/item-equipment.enum.js";
-import { ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
+import { ConsumableEffectType, ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
 import { StatBonusSchema } from "@/modules/player/schemas/stat.schema.js";
 
 /**
@@ -32,15 +32,42 @@ export const ItemEquipmentInstanceMetadataSchema = z.object({
     rarityStats: z.array(StatBonusSchema).default([]),
 });
 
+/**
+ * Hiệu ứng khi dùng một consumable (`use_item`). Thêm loại mới = thêm biến thể ở đây + xử lý ở
+ * `ConsumableWorldService` (rooms/world/modules/inventory/services/consumable.world.service.ts).
+ */
+export const ConsumableEffectSchema = z.discriminatedUnion("type", [
+    /** Bình hồi: cộng thẳng HP / MP (chung cooldown bình theo loại). */
+    z.object({
+        type: z.literal(ConsumableEffectType.RESTORE),
+        hp: z.number().int().nonnegative().default(0),
+        mp: z.number().int().nonnegative().default(0),
+    }),
+]);
+
+/** `items.metadata` khi `type = CONSUMABLE`: danh sách hiệu ứng, chạy lần lượt khi dùng. */
+export const ConsumableMetadataSchema = z.object({
+    effects: z.array(ConsumableEffectSchema).default([]),
+});
+
 /** Item không phải trang bị: chưa có field cố định. */
 export const GenericItemMetadataSchema = z.record(z.string(), z.unknown());
 
 export type EquipmentMetadata = z.infer<typeof EquipmentMetadataSchema>;
+export type ConsumableEffect = z.infer<typeof ConsumableEffectSchema>;
+export type ConsumableMetadata = z.infer<typeof ConsumableMetadataSchema>;
 export type ItemEquipmentInstanceMetadata = z.infer<typeof ItemEquipmentInstanceMetadataSchema>;
-export type ItemMetadata = EquipmentMetadata | z.infer<typeof GenericItemMetadataSchema>;
+export type ItemMetadata =
+    EquipmentMetadata | ConsumableMetadata | z.infer<typeof GenericItemMetadataSchema>;
 
 /** Validate `items.metadata` theo `items.type`. */
-export const parseItemMetadata = (type: ItemType, metadata: unknown): ItemMetadata =>
-    type === ItemType.EQUIPMENT
-        ? EquipmentMetadataSchema.parse(metadata)
-        : GenericItemMetadataSchema.parse(metadata ?? {});
+export function parseItemMetadata(type: ItemType, metadata: unknown): ItemMetadata {
+    switch (type) {
+        case ItemType.EQUIPMENT:
+            return EquipmentMetadataSchema.parse(metadata);
+        case ItemType.CONSUMABLE:
+            return ConsumableMetadataSchema.parse(metadata ?? {});
+        default:
+            return GenericItemMetadataSchema.parse(metadata ?? {});
+    }
+}

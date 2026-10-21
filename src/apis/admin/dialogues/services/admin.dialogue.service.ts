@@ -11,10 +11,10 @@ import { Dialogues } from "@/modules/dialogues/entities/dialogue.entity.js";
 import { DialogueRepo } from "@/modules/dialogues/repositories/dialogue.repository.js";
 import type { DialogueNode } from "@/modules/dialogues/schemas/dialogue.schema.js";
 import { dialogueService } from "@/modules/dialogues/services/dialogue.service.js";
-import { validateDialogueGraph } from "@/modules/dialogues/services/dialogue-graph.service.js";
+import { dialogueGraphService } from "@/modules/dialogues/services/dialogue-graph.service.js";
 
 const assertGraph = (nodes: readonly DialogueNode[]) => {
-    const errors = validateDialogueGraph(nodes);
+    const errors = dialogueGraphService.validateDialogueGraph(nodes);
     if (errors.length > 0) serviceError(errors.join("; "), 422, DialogueErrorCode.DIALOGUE_INVALID);
 };
 

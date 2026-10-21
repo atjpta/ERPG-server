@@ -3,7 +3,7 @@ import { createRateLimitMiddleware } from "@/core/middlewares/rate-limit.middlew
 import { Response, RouterContainer } from "@/core/utils/response.util.js";
 import { ACCOUNT_DELETION_WEB_RATE_LIMIT } from "@/modules/auth/constants/rate-limit.constant.js";
 import { userAuthMiddleware } from "@/modules/auth/middlewares/user.auth.middleware.js";
-import { userRenderAccountDeletionPage } from "@/apis/user/auth/services/user.account-deletion-page.service.js";
+import { userAccountDeletionPageService } from "@/apis/user/auth/services/user.account-deletion-page.service.js";
 import { accountDeletionService } from "@/modules/auth/services/account-deletion.service.js";
 import {
     UserDeleteMyAccountSchema,
@@ -69,9 +69,12 @@ export const userAccountDeletionController = {
             },
         },
         async () => {
-            return new globalThis.Response(userRenderAccountDeletionPage(), {
-                headers: { "content-type": "text/html; charset=utf-8" },
-            });
+            return new globalThis.Response(
+                userAccountDeletionPageService.userRenderAccountDeletionPage(),
+                {
+                    headers: { "content-type": "text/html; charset=utf-8" },
+                }
+            );
         }
     ),
 };

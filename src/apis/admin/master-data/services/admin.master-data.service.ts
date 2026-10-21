@@ -1,6 +1,6 @@
 import { MasterDataErrorCode } from "@/modules/master-data/enums/master-data-error-code.enum.js";
 import { serviceError } from "@/core/utils/service-error.js";
-import { isUnityMasterDataKey } from "@/modules/master-data/services/unity-master-data.service.js";
+import { unityMasterDataService } from "@/modules/master-data/services/unity-master-data.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
 import { MasterDataValueSchemas } from "@/modules/master-data/schemas/master-data-value.schema.js";
@@ -18,7 +18,7 @@ export class AdminMasterDataService {
     }
 
     async update(key: MasterDataKey, body: AdminUpdateMasterDataBody) {
-        if (isUnityMasterDataKey(key)) {
+        if (unityMasterDataService.isUnityMasterDataKey(key)) {
             serviceError(
                 `Master data "${key}" is authored in Unity (Ranges tab of the Authoring Hub) and synced from there`,
                 409,

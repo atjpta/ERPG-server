@@ -1,4 +1,3 @@
-import { broadcastOk } from "@/core/utils/room-send.util.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import { PlayerStatService } from "@/modules/player/services/player-stat.service.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
@@ -180,7 +179,7 @@ export class SkillDeliveryWorldService {
      */
     private pulseAura(room: WorldRoom, aura: AuraWorldState, player: PlayerWorldState): void {
         const config = aura.aura;
-        const zone = auraZoneEvent(aura, config.damageScaling);
+        const zone = this.auraZoneEvent(aura, config.damageScaling);
         const origin = { x: player.x, y: player.y, direction: "right" };
 
         if (config.healScaling > 0) {
@@ -226,12 +225,12 @@ export class SkillDeliveryWorldService {
         const healed = this.healAlliesInZone(
             room,
             player,
-            alliesZoneEvent(allies, hit.eventIndex),
+            this.alliesZoneEvent(allies, hit.eventIndex),
             amount
         );
         if (healed.length === 0) return;
         const message: SkillEffectMessage = { skillId: skill.id, playerIds: healed };
-        broadcastOk(room, WorldMessage.SKILL_EFFECT, message);
+        room.broadcastSuccess(WorldMessage.SKILL_EFFECT, message);
     }
 
     /**
@@ -256,7 +255,7 @@ export class SkillDeliveryWorldService {
             }
             ally.heal(amount);
             const message: PotionUsedMessage = { playerId, hp: amount, mp: 0 };
-            broadcastOk(room, WorldMessage.POTION_USED, message);
+            room.broadcastSuccess(WorldMessage.POTION_USED, message);
             healed.push(playerId);
         }
         return healed;
@@ -336,7 +335,7 @@ export class SkillDeliveryWorldService {
         );
         const steps = Math.max(1, Math.ceil(distance / PROJECTILE_MAX_SWEEP_STEP));
         const stepDistance = distance / steps;
-        const body = projectileBody(projectile);
+        const body = this.projectileBody(projectile);
         const targets = findSkillTargets(room, projectile.owner);
         const maxHits =
             projectile.projectile.hitBehavior === ProjectileHitBehavior.PIERCE
@@ -435,65 +434,67 @@ export class SkillDeliveryWorldService {
         this.nextId = (this.nextId + 1) % Number.MAX_SAFE_INTEGER;
         return `${prefix}${this.nextId.toString(36)}`;
     }
-}
 
-/** Thân đạn: hình tròn bán kính `radius` quanh vị trí đạn. */
-const projectileBody = (projectile: ProjectileWorldState): SkillHitEvent => ({
-    ...projectile.event,
-    offsetX: 0,
-    offsetY: 0,
-    shape: HitShape.CIRCLE,
-    range: 0,
-    radius: projectile.radius,
-});
+    /** Thân đạn: hình tròn bán kính `radius` quanh vị trí đạn. */
+    private projectileBody(projectile: ProjectileWorldState): SkillHitEvent {
+        return {
+            ...projectile.event,
+            offsetX: 0,
+            offsetY: 0,
+            shape: HitShape.CIRCLE,
+            range: 0,
+            radius: projectile.radius,
+        };
+    }
+
+    /**
+     * Vùng elip của vùng buff làm hit event để dùng chung `intersectsSkillHitEvent` (đường kính = 2 × nửa trục) và để tính damage
+     * phép (`damageScaling` × MAGIC_ATTACK) — chỉ có hiệu ứng DAMAGE khi `damageScaling` > 0.
+     */
+    private auraZoneEvent(aura: AuraWorldState, damageScaling: number): SkillHitEvent {
+        return {
+            eventIndex: aura.eventIndex,
+            triggerTicks: 0,
+            shape: HitShape.ELLIPSE,
+            range: 0,
+            width: aura.radiusX * 2,
+            height: aura.radiusY * 2,
+            radius: 0,
+            angle: 90,
+            effects:
+                damageScaling > 0
+                    ? [
+                          {
+                              effectType: SkillEffectType.DAMAGE,
+                              baseValue: 0,
+                              scalingType: DamageScalingType.MAGIC_ATTACK,
+                              scalingValue: damageScaling,
+                              durationMs: 0,
+                              damageType: DamageType.MAGICAL,
+                              resourceType: ResourceType.NONE,
+                              crowdControlType: CrowdControlType.NONE,
+                          },
+                      ]
+                    : [],
+            delivery: HitDelivery.AURA,
+        };
+    }
+
+    /** Vùng elip của hit ALLIES làm hit event để dùng chung `intersectsSkillHitEvent` (đường kính = 2 × nửa trục). */
+    private alliesZoneEvent(allies: SkillAllies, eventIndex: number): SkillHitEvent {
+        return {
+            eventIndex,
+            triggerTicks: 0,
+            shape: HitShape.ELLIPSE,
+            range: 0,
+            width: allies.radiusX * 2,
+            height: allies.radiusY * 2,
+            radius: 0,
+            angle: 90,
+            effects: [],
+            delivery: HitDelivery.ALLIES,
+        };
+    }
+}
 
 export const skillDeliveryWorldService = new SkillDeliveryWorldService();
-
-/**
- * Vùng elip của vùng buff làm hit event để dùng chung `intersectsSkillHitEvent` (đường kính = 2 × nửa trục) và để tính damage
- * phép (`damageScaling` × MAGIC_ATTACK) — chỉ có hiệu ứng DAMAGE khi `damageScaling` > 0.
- */
-function auraZoneEvent(aura: AuraWorldState, damageScaling: number): SkillHitEvent {
-    return {
-        eventIndex: aura.eventIndex,
-        triggerTicks: 0,
-        shape: HitShape.ELLIPSE,
-        range: 0,
-        width: aura.radiusX * 2,
-        height: aura.radiusY * 2,
-        radius: 0,
-        angle: 90,
-        effects:
-            damageScaling > 0
-                ? [
-                      {
-                          effectType: SkillEffectType.DAMAGE,
-                          baseValue: 0,
-                          scalingType: DamageScalingType.MAGIC_ATTACK,
-                          scalingValue: damageScaling,
-                          durationMs: 0,
-                          damageType: DamageType.MAGICAL,
-                          resourceType: ResourceType.NONE,
-                          crowdControlType: CrowdControlType.NONE,
-                      },
-                  ]
-                : [],
-        delivery: HitDelivery.AURA,
-    };
-}
-
-/** Vùng elip của hit ALLIES làm hit event để dùng chung `intersectsSkillHitEvent` (đường kính = 2 × nửa trục). */
-function alliesZoneEvent(allies: SkillAllies, eventIndex: number): SkillHitEvent {
-    return {
-        eventIndex,
-        triggerTicks: 0,
-        shape: HitShape.ELLIPSE,
-        range: 0,
-        width: allies.radiusX * 2,
-        height: allies.radiusY * 2,
-        radius: 0,
-        angle: 90,
-        effects: [],
-        delivery: HitDelivery.ALLIES,
-    };
-}

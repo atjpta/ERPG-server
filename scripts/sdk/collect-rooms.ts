@@ -11,13 +11,13 @@ import type { ClientMessageContract, RoomContract, ServerMessageContract } from 
 /*
  * Contract room suy từ code, không cần file khai báo riêng:
  *  - message client: command có `static readonly message = Enum.X`
- *  - payload: Zod schema mà command (hoặc lớp cha) `safeParse`/`parse`/gán vào `schema`
- *  - kiểu `data` của message server: kiểu đối số tại các chỗ gọi `sendOk/sendResult/broadcast*`
+ *  - payload: Zod schema mà command (hoặc lớp cha) `safeParse`/`parse`/`client.parsePayload(schema, …)`/gán vào `validateSchema`
+ *  - kiểu `data` của message server: kiểu đối số tại các chỗ gọi `sendSuccess/sendResult/broadcast*`
  *  - state: generic của class room; cách join: `@SdkRoom` trên class room
  *  - tài liệu (replies, errors, note): `@SdkMessage` trên command (gộp theo lớp cha)
  */
 
-const SEND_FUNCTIONS = /^(send|broadcast)(Ok|Fail|Result)$/;
+const SEND_FUNCTIONS = /^(send|broadcast)(Success|Error|Result)$/;
 
 function walk(dir: string, filter: (file: string) => boolean, out: string[] = []): string[] {
     if (!existsSync(dir)) return out;
@@ -96,7 +96,7 @@ export async function collectRooms(root: string) {
                 if (found) return;
                 if (
                     ts.isPropertyDeclaration(node) &&
-                    node.name.getText() === "schema" &&
+                    node.name.getText() === "validateSchema" &&
                     node.initializer &&
                     ts.isIdentifier(node.initializer)
                 ) {
@@ -108,6 +108,13 @@ export async function collectRooms(root: string) {
                     ts.isIdentifier(node.expression.expression)
                 ) {
                     found = node.expression.expression;
+                } else if (
+                    ts.isCallExpression(node) &&
+                    ts.isPropertyAccessExpression(node.expression) &&
+                    node.expression.name.text === "parsePayload" &&
+                    ts.isIdentifier(node.arguments[0])
+                ) {
+                    found = node.arguments[0];
                 }
                 ts.forEachChild(node, visit);
             };
@@ -178,8 +185,16 @@ export async function collectRooms(root: string) {
     const dataNames = new Map<string, Set<string>>();
     for (const file of roomFiles) {
         const visit = (node: ts.Node) => {
-            if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-                const match = SEND_FUNCTIONS.exec(node.expression.text);
+            // `sendSuccess/sendError/sendResult` là method của client (`client.sendSuccess(...)`), `broadcast*` là hàm rời.
+            const callee = ts.isCallExpression(node)
+                ? ts.isIdentifier(node.expression)
+                    ? node.expression.text
+                    : ts.isPropertyAccessExpression(node.expression)
+                      ? node.expression.name.text
+                      : undefined
+                : undefined;
+            if (ts.isCallExpression(node) && callee) {
+                const match = SEND_FUNCTIONS.exec(callee);
                 const index = match
                     ? node.arguments.findIndex(
                           (arg) => enumInfo(arg) && /Message$/.test(enumInfo(arg)!.enumName)
@@ -191,9 +206,9 @@ export async function collectRooms(root: string) {
                     const names = dataNames.get(info.value) ?? new Set<string>();
                     dataNames.set(info.value, names);
                     const dataArg = node.arguments[index + 1];
-                    if (match[2] !== "Fail" && dataArg) {
+                    if (match[2] !== "Error" && dataArg) {
                         const type = dataArgType(dataArg);
-                        if (match[2] === "Ok") {
+                        if (match[2] === "Success") {
                             const name = typeName(type);
                             if (name) names.add(name);
                         } else {

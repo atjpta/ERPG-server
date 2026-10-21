@@ -3,8 +3,8 @@ import { StatKey } from "@/modules/player/enums/stat.enum.js";
 
 const points = z.number().int().nonnegative().optional();
 
-/** Payload của message `allocateAttributes`: số điểm muốn cộng vào từng attribute (thiếu = 0). */
-export const AllocateAttributesSchema = z
+/** Payload của message `updateAttributes`: số điểm muốn cộng vào từng attribute (thiếu = 0). */
+export const UpdateAttributesSchema = z
     .object({
         [StatKey.STRENGTH]: points,
         [StatKey.DEXTERITY]: points,
@@ -14,4 +14,4 @@ export const AllocateAttributesSchema = z
     })
     .strict();
 
-export type AllocateAttributesPayload = z.infer<typeof AllocateAttributesSchema>;
+export type UpdateAttributesPayload = z.infer<typeof UpdateAttributesSchema>;

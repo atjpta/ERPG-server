@@ -1,6 +1,7 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { listen } from "@colyseus/tools";
-import { uWebSocketsTransport } from "@colyseus/uwebsockets-transport";
+import { uWebSocketClient, uWebSocketsTransport } from "@colyseus/uwebsockets-transport";
+import { extendClientSend } from "@/core/utils/client-send.util.js";
 import { createEndpoint, createRouter, defineServer, monitor, playground } from "colyseus";
 import { networkInterfaces } from "os";
 import { env } from "@/configs/env.config.js";
@@ -22,6 +23,8 @@ applyCorsPolicy();
 const { admin, user } = await loadControllers();
 await setCacheDataApp();
 warnMapLayouts(await GameMapRepo.findIncompleteLayouts());
+extendClientSend(uWebSocketClient.prototype);
+
 await listen(
     defineServer({
         rooms: createRooms(),

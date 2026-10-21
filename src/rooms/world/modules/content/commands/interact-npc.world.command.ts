@@ -4,9 +4,8 @@ import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.j
 import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
 import { DialogueErrorCode } from "@/modules/dialogues/enums/dialogue-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
-import { sendFail } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { selectDialogueCode } from "@/modules/dialogues/services/dialogue-rule.service.js";
+import { dialogueRuleService } from "@/modules/dialogues/services/dialogue-rule.service.js";
 import { dialogueService } from "@/modules/dialogues/services/dialogue.service.js";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
 import { contentWorldService } from "@/rooms/world/modules/content/services/content.world.service.js";
@@ -16,7 +15,7 @@ import { InteractNpcSchema } from "@/rooms/world/modules/content/validators/cont
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 interface ContentPayload {
     client: PlayerClient;
@@ -36,22 +35,20 @@ interface ContentPayload {
     ],
     note: "Thành công trả `dialogue`; thất bại trả `dialogueEnd` (lỗi có `error: { sourceCode }`).",
 })
-export class InteractNpcWorldCommand extends Command<WorldRoom, ContentPayload> {
+export class InteractNpcWorldCommand extends PlayerWorldCommand<
+    ContentPayload,
+    typeof InteractNpcSchema
+> {
     static readonly message = WorldClientMessage.INTERACT_NPC;
 
-    execute({ client, payload }: ContentPayload) {
-        const player = this.room.state.players.get(client.auth.playerId);
-        if (!player) return;
-        const parsed = InteractNpcSchema.safeParse(payload);
-        const error = !parsed.success
-            ? CommonCode.INVALID_INPUT
-            : player.hp <= 0
-              ? PlayerErrorCode.PLAYER_DEAD
-              : this.startNpc(this.room, client, player, parsed.data.npcCode);
+    protected override readonly validateSchema = InteractNpcSchema;
+    protected override readonly replyType = WorldMessage.DIALOGUE_END;
+    protected override readonly invalidError = { sourceCode: "" };
+
+    execute({ client }: ContentPayload) {
+        const error = this.startNpc(this.room, client, this.player, this.body.npcCode);
         if (error) {
-            sendFail(client, WorldMessage.DIALOGUE_END, error, {
-                sourceCode: parsed.success ? parsed.data.npcCode : "",
-            });
+            client.sendError(WorldMessage.DIALOGUE_END, error, { sourceCode: this.body.npcCode });
         }
     }
 
@@ -77,7 +74,7 @@ export class InteractNpcWorldCommand extends Command<WorldRoom, ContentPayload> 
             return PlayerErrorCode.TOO_FAR;
         }
         const ctx = contentWorldService.conditionContext(room, player);
-        const dialogueCode = selectDialogueCode(npc, ctx);
+        const dialogueCode = dialogueRuleService.selectDialogueCode(npc, ctx);
         if (!dialogueCode || !dialogueService.getByCode(dialogueCode))
             return DialogueErrorCode.DIALOGUE_NOT_FOUND;
         dialogueWorldService.begin(room, client, player, {

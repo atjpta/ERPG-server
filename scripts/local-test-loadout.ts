@@ -30,9 +30,7 @@ import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import { PlayerStateRepo } from "@/modules/player/repositories/player-state.repository.js";
 import type { InventoryItem } from "@/modules/player/schemas/inventory.schema.js";
 import { ATTRIBUTE_KEYS } from "@/modules/player/schemas/stat.schema.js";
-import { addToInventory, countItem } from "@/modules/player/services/inventory.service.js";
-import { SKILL_POINTS_PER_LEVEL } from "@/modules/player/services/player-progress.service.js";
-import { ATTRIBUTE_POINTS_PER_LEVEL } from "@/modules/player/services/player-stat-calculation.service.js";
+import { inventoryService } from "@/modules/player/services/inventory.service.js";
 
 /** Mức cấp cho mỗi nhân vật test — sửa số ở đây. */
 const TARGET_LEVEL = 30;
@@ -72,12 +70,12 @@ async function giveLoadout(playerId: string, label: string) {
     );
     const attributePoints = Math.max(
         state.attributePoints,
-        ATTRIBUTE_POINTS_PER_LEVEL * (level - 1) - spentAttributes
+        levelService.attributePointsPerLevel * (level - 1) - spentAttributes
     );
     if (attributePoints > state.attributePoints) {
         changes.push(`attributePoints ${state.attributePoints} → ${attributePoints}`);
     }
-    const skillPoints = Math.max(state.skillPoints, SKILL_POINTS_PER_LEVEL * (level - 1));
+    const skillPoints = Math.max(state.skillPoints, levelService.skillPointsPerLevel * (level - 1));
     if (skillPoints > state.skillPoints) {
         changes.push(`skillPoints ${state.skillPoints} → ${skillPoints}`);
     }
@@ -118,7 +116,11 @@ async function giveLoadout(playerId: string, label: string) {
         if (item.type === ItemType.EQUIPMENT) {
             const template = item.metadata as EquipmentMetadata;
             if (template.classCode && template.classCode !== characterClass.code) continue;
-            if (equippedItemIds.has(item.id) || countItem(bags[item.type], item.id) > 0) continue;
+            if (
+                equippedItemIds.has(item.id) ||
+                inventoryService.countItem(bags[item.type], item.id) > 0
+            )
+                continue;
             const itemLevel =
                 template.biome === Biome.STARTER
                     ? STARTER_EQUIPMENT_LEVEL
@@ -129,10 +131,16 @@ async function giveLoadout(playerId: string, label: string) {
                     level: itemLevel,
                     rarity: template.biome === Biome.STARTER ? ItemRarity.COMMON : EQUIPMENT_RARITY,
                 });
-                const { overflow } = addToInventory(bags[item.type], size, item, 1, {
-                    source: ItemSource.SYSTEM,
-                    metadata,
-                });
+                const { overflow } = inventoryService.addToInventory(
+                    bags[item.type],
+                    size,
+                    item,
+                    1,
+                    {
+                        source: ItemSource.SYSTEM,
+                        metadata,
+                    }
+                );
                 if (overflow > 0) skipped.push(`${item.code} (túi trang bị đầy)`);
                 else addedEquipment++;
             } catch (err) {
@@ -141,11 +149,17 @@ async function giveLoadout(playerId: string, label: string) {
             continue;
         }
         const target = item.type === ItemType.CONSUMABLE ? CONSUMABLE_QTY : MATERIAL_QTY;
-        const missing = target - countItem(bags[item.type], item.id);
+        const missing = target - inventoryService.countItem(bags[item.type], item.id);
         if (missing <= 0) continue;
-        const { added, overflow } = addToInventory(bags[item.type], size, item, missing, {
-            source: ItemSource.SYSTEM,
-        });
+        const { added, overflow } = inventoryService.addToInventory(
+            bags[item.type],
+            size,
+            item,
+            missing,
+            {
+                source: ItemSource.SYSTEM,
+            }
+        );
         if (added > 0) addedStacks++;
         if (overflow > 0) skipped.push(`${item.code} (thiếu ${overflow}, túi đầy)`);
     }

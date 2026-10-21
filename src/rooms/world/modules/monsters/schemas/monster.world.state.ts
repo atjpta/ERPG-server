@@ -6,10 +6,8 @@ import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import type { Stats } from "@/modules/player/schemas/stat.schema.js";
 import {
-    computeMonsterStats,
-    combineSize,
-    monsterScales,
     type MonsterVariant,
+    monsterStatService,
 } from "@/modules/monsters/services/monster-stat.service.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
@@ -112,13 +110,13 @@ export class MonsterWorldState extends Schema {
         this.level = level;
         this.monsterType = variant.type;
         this.rarity = variant.rarity;
-        const scales = monsterScales(
+        const scales = monsterStatService.monsterScales(
             variant,
             masterDataCacheService.get(MasterDataKey.MONSTER_SCALE_CONFIG)
         );
-        this.scale = combineSize(scales);
+        this.scale = monsterStatService.combineSize(scales);
         // Stat cuối = base × tăng theo level (`monster_level_config`) × hệ số loại × độ hiếm (cùng bộ StatKey với player).
-        this.stats = computeMonsterStats(
+        this.stats = monsterStatService.computeMonsterStats(
             monster,
             level,
             masterDataCacheService.get(MasterDataKey.MONSTER_LEVEL_CONFIG),

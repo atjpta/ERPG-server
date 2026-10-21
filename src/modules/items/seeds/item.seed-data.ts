@@ -1,5 +1,5 @@
 import { ItemCode } from "@/modules/items/enums/item-code.enum.js";
-import { ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
+import { ConsumableEffectType, ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
 import type { NewItem } from "@/modules/items/entities/item.entity.js";
 import {
     BIOME_EQUIPMENT_ITEMS,
@@ -48,9 +48,9 @@ export const ITEMS: NewItem[] = [
         rarity: ItemRarity.COMMON,
         requiredLevel: 1,
         stackable: true,
-        maxStack: 99,
+        maxStack: 9999,
         sellPrice: 2,
-        metadata: { heal: 50 },
+        metadata: { effects: [{ type: ConsumableEffectType.RESTORE, hp: 50 }] },
     },
     {
         code: ItemCode.MP_POTION_SMALL,
@@ -58,8 +58,8 @@ export const ITEMS: NewItem[] = [
         rarity: ItemRarity.COMMON,
         requiredLevel: 1,
         stackable: true,
-        maxStack: 99,
+        maxStack: 9999,
         sellPrice: 2,
-        metadata: { mana: 30 },
+        metadata: { effects: [{ type: ConsumableEffectType.RESTORE, mp: 30 }] },
     },
 ];

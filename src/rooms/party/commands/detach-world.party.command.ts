@@ -10,9 +10,13 @@ export class DetachWorldPartyCommand extends Command<
 > {
     result: Result = ok();
 
-    execute({ playerId, worldRoomId }: { playerId: string; worldRoomId: string }) {
+    validate({ playerId, worldRoomId }: { playerId: string; worldRoomId: string }) {
         const { room } = this;
-        if (!room.state.has(playerId) || room.worldRoomOf.get(playerId) !== worldRoomId) return;
+        return room.state.has(playerId) && room.worldRoomOf.get(playerId) === worldRoomId;
+    }
+
+    execute({ playerId }: { playerId: string; worldRoomId: string }) {
+        const { room } = this;
         room.worldRoomOf.delete(playerId);
         room.state.patch(playerId, { inWorld: false });
     }

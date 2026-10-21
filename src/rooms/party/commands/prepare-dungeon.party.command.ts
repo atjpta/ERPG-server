@@ -12,26 +12,32 @@ import { Command } from "@colyseus/command";
 export class PrepareDungeonPartyCommand extends Command<PartyRoom, DungeonPartyRequest> {
     result: Result<DungeonPartyPlan> = fail(CommonCode.ROOM_UNAVAILABLE);
 
-    execute(request: DungeonPartyRequest) {
+    validate(request: DungeonPartyRequest) {
         const { room } = this;
         const { state } = room;
         if (!state.isLeader(request.leaderPlayerId)) {
             this.result = fail(PartyErrorCode.PARTY_NOT_LEADER);
-            return;
+            return false;
         }
         if (request.retry) {
             if (!state.joinOrder.every((id) => request.presentPlayerIds?.includes(id))) {
                 this.result = fail(MapErrorCode.DUNGEON_NOT_TOGETHER);
-                return;
+                return false;
             }
         } else {
             const failures = state.checkDungeon(request.minLevel ?? 0);
             if (failures.length) {
                 broadcastDungeonDenied(room, request.code, failures);
                 this.result = fail(MapErrorCode.DUNGEON_DENIED, undefined, { failures });
-                return;
+                return false;
             }
         }
+        return true;
+    }
+
+    execute() {
+        const { room } = this;
+        const { state } = room;
         this.result = ok({
             members: state.joinOrder.map((playerId) => ({
                 playerId,

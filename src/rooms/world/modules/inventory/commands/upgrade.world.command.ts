@@ -1,5 +1,4 @@
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { InventoryWorldCommand } from "@/rooms/world/modules/inventory/commands/inventory.world.command.js";
 import {
@@ -18,6 +17,6 @@ export abstract class UpgradeWorldCommand<TSchema extends z.ZodType> extends Inv
     protected override readonly saveImmediately = true;
 
     protected override onSuccess(client: PlayerClient, value: EquipmentUpgradeMessage) {
-        sendOk(client, WorldMessage.EQUIPMENT_UPGRADE, value);
+        client.sendSuccess(WorldMessage.EQUIPMENT_UPGRADE, value);
     }
 }

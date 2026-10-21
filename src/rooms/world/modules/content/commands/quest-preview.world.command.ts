@@ -1,5 +1,4 @@
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
 import { questOf } from "@/rooms/world/modules/content/utils/quest-resolve.world.util.js";
@@ -10,8 +9,7 @@ import {
     WorldMessage,
     type QuestPreviewMessage,
 } from "@/rooms/world/types/world-message.type.js";
-import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 interface ContentPayload {
     client: PlayerClient;
@@ -22,14 +20,16 @@ interface ContentPayload {
     replies: [WorldMessage.QUEST_PREVIEW],
     note: "Quest không tồn tại thì server im lặng, không có reply.",
 })
-export class QuestPreviewWorldCommand extends Command<WorldRoom, ContentPayload> {
+export class QuestPreviewWorldCommand extends PlayerWorldCommand<
+    ContentPayload,
+    typeof QuestPreviewSchema
+> {
     static readonly message = WorldClientMessage.QUEST_PREVIEW;
 
-    execute({ client, payload }: ContentPayload) {
-        const player = this.room.state.players.get(client.auth.playerId);
-        const parsed = QuestPreviewSchema.safeParse(payload);
-        if (!player || !parsed.success) return;
-        this.sendPreview(client, player, parsed.data.questCode);
+    protected override readonly validateSchema = QuestPreviewSchema;
+
+    execute({ client }: ContentPayload) {
+        this.sendPreview(client, this.player, this.body.questCode);
     }
 
     /** Xem trước 1 quest (mục tiêu + thưởng) — dùng ở thoại nhận quest và bảng nhiệm vụ. */
@@ -37,6 +37,6 @@ export class QuestPreviewWorldCommand extends Command<WorldRoom, ContentPayload>
         const quest = questOf(player, questCode);
         if (!quest) return;
         const message: QuestPreviewMessage = { quest: questWorldService.toMessage(player, quest) };
-        sendOk(client, WorldMessage.QUEST_PREVIEW, message);
+        client.sendSuccess(WorldMessage.QUEST_PREVIEW, message);
     }
 }

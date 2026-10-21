@@ -14,8 +14,8 @@ export enum WorldClientMessage {
     /** Requests the skill and targeting configuration used by this server. No payload. */
     REQUEST_SKILL_CONFIGS = "requestSkillConfigs",
     /** `{ strength?, dexterity?, intelligence?, vitality?, luck? }` — số điểm tiềm năng muốn cộng. */
-    ALLOCATE_ATTRIBUTES = "allocateAttributes",
-    /** Giống `allocateAttributes` nhưng chỉ tính thử — trả `attributesPreview`, không đổi gì trên player. */
+    UPDATE_ATTRIBUTES = "updateAttributes",
+    /** Giống `updateAttributes` nhưng chỉ tính thử — trả `attributesPreview`, không đổi gì trên player. */
     PREVIEW_ATTRIBUTES = "previewAttributes",
     /** `{ instanceId, slot? }` — mặc trang bị trong túi (slot đang có đồ thì đổi chỗ). */
     EQUIP_ITEM = "equipItem",
@@ -73,7 +73,7 @@ export enum WorldMessage {
     SKILL_CONFIGS = "skillConfigs",
     /** Gửi riêng cho người nhận thưởng — client hiện chữ nổi "+exp / +gold / level up". */
     REWARD = "reward",
-    /** Trả lời `allocateAttributes` (kể cả khi lỗi) — điểm còn lại, attribute và stat sau khi tính lại. */
+    /** Trả lời `updateAttributes` (kể cả khi lỗi) — điểm còn lại, attribute và stat sau khi tính lại. */
     ATTRIBUTES = "attributes",
     /** Trả lời `previewAttributes`: điểm, attribute và stat nếu cộng như yêu cầu (chưa lưu). */
     ATTRIBUTES_PREVIEW = "attributesPreview",

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PLAYER_NAME_PATTERN } from "@/modules/player/services/player-name.service.js";
+import { playerService } from "@/modules/player/services/player.service.js";
 
 /**
  * Chữ (kể cả tiếng Việt có dấu), số và `_`. Độ dài theo master data `player_config` (nameMinLength /
@@ -10,7 +10,7 @@ const PlayerNameSchema = z
     .trim()
     .min(1)
     .max(32)
-    .regex(PLAYER_NAME_PATTERN, "Tên chỉ gồm chữ, số và _");
+    .regex(playerService.namePattern, "Tên chỉ gồm chữ, số và _");
 
 export const UserRenamePlayerSchema = z.object({ name: PlayerNameSchema });
 export type UserRenamePlayerBody = z.infer<typeof UserRenamePlayerSchema>;

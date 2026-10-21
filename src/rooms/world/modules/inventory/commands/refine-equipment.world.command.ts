@@ -1,3 +1,5 @@
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
@@ -5,7 +7,7 @@ import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { fail, isFail, ok } from "@/core/utils/result.util.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
-import { applyRefine, refineCost } from "@/modules/equipment/services/equipment-upgrade.service.js";
+import { equipmentUpgradeService } from "@/modules/equipment/services/equipment-upgrade.service.js";
 import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 import { UpgradeWorldCommand } from "@/rooms/world/modules/inventory/commands/upgrade.world.command.js";
 import { equipmentUpgradeWorldService } from "@/rooms/world/modules/inventory/services/equipment-upgrade.world.service.js";
@@ -21,7 +23,6 @@ import type { z } from "zod";
     replies: [WorldMessage.INVENTORY, WorldMessage.ATTRIBUTES],
     errors: [
         CommonCode.INVALID_INPUT,
-        PlayerErrorCode.PLAYER_DEAD,
         ItemErrorCode.ITEM_NOT_FOUND,
         ItemErrorCode.INVENTORY_FULL,
         ItemErrorCode.INVENTORY_SLOT_INVALID,
@@ -41,7 +42,7 @@ export class RefineEquipmentWorldCommand extends UpgradeWorldCommand<
 > {
     static readonly message = WorldClientMessage.REFINE_EQUIPMENT;
 
-    protected readonly schema = UpgradeEquipmentSchema;
+    protected readonly validateSchema = UpgradeEquipmentSchema;
     protected override readonly changesStats = true;
     protected run(
         player: PlayerWorldState,
@@ -50,7 +51,10 @@ export class RefineEquipmentWorldCommand extends UpgradeWorldCommand<
         const rng = Math.random;
         const owned = equipmentUpgradeWorldService.findOwned(player, instanceId);
         if (!owned) return fail(ItemErrorCode.EQUIPMENT_NOT_FOUND);
-        const cost = refineCost(owned.metadata, equipmentConfigService.refine);
+        const cost = equipmentUpgradeService.refineCost(
+            owned.metadata,
+            masterDataCacheService.get(MasterDataKey.EQUIPMENT_REFINE_CONFIG)
+        );
         if (isFail(cost)) return cost;
         const statEntry = equipmentConfigService.findStatEntry(
             owned.template.classCode,
@@ -66,10 +70,11 @@ export class RefineEquipmentWorldCommand extends UpgradeWorldCommand<
             equipmentUpgradeWorldService.update(
                 player,
                 owned,
-                applyRefine({
+                equipmentUpgradeService.applyRefine({
                     instance: owned.metadata,
                     target: cost.data.target,
-                    rarityLineCount: equipmentConfigService.stat.rarityLineCount,
+                    rarityLineCount: masterDataCacheService.get(MasterDataKey.EQUIPMENT_STAT_CONFIG)
+                        .rarityLineCount,
                     rarityPool: statEntry.rarityPool,
                     rng,
                 })

@@ -4,8 +4,7 @@ import { DeclineInvitePartyCommand } from "@/rooms/party/commands/decline-invite
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { PartyDeclineSchema } from "@/rooms/world/modules/players/validators/party.world.validator.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
-import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 interface PartyPayload {
     client: PlayerClient;
@@ -15,13 +14,17 @@ interface PartyPayload {
 @SdkMessage({
     note: "Không có reply.",
 })
-export class PartyDeclineWorldCommand extends Command<WorldRoom, PartyPayload> {
+export class PartyDeclineWorldCommand extends PlayerWorldCommand<
+    PartyPayload,
+    typeof PartyDeclineSchema
+> {
     static readonly message = WorldClientMessage.PARTY_DECLINE;
 
-    async execute({ client, payload }: PartyPayload) {
-        const player = this.room.state.players.get(client.auth.playerId);
-        const parsed = PartyDeclineSchema.safeParse(payload);
-        if (!player || !parsed.success) return;
-        await callRoom(parsed.data.partyRoomId, DeclineInvitePartyCommand, { playerId: player.id });
+    protected override readonly validateSchema = PartyDeclineSchema;
+
+    async execute() {
+        await callRoom(this.body.partyRoomId, DeclineInvitePartyCommand, {
+            playerId: this.player.id,
+        });
     }
 }

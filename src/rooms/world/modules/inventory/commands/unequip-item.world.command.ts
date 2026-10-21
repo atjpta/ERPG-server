@@ -3,7 +3,7 @@ import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { fail, ok } from "@/core/utils/result.util.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
-import { freeSlotIndexes } from "@/modules/player/services/inventory.service.js";
+import { inventoryService } from "@/modules/player/services/inventory.service.js";
 import { InventoryWorldCommand } from "@/rooms/world/modules/inventory/commands/inventory.world.command.js";
 import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import { toInventoryEquipment } from "@/rooms/world/modules/inventory/utils/equipment-instance.world.util.js";
@@ -21,13 +21,13 @@ export class UnequipItemWorldCommand extends InventoryWorldCommand<
 > {
     static readonly message = WorldClientMessage.UNEQUIP_ITEM;
 
-    protected readonly schema = UnequipItemSchema;
+    protected readonly validateSchema = UnequipItemSchema;
     protected override readonly changesStats = true;
     protected run(player: PlayerWorldState, { slot }: z.infer<typeof UnequipItemSchema>) {
         const equipped = player.equipments[slot];
         if (!equipped) return fail(ItemErrorCode.INVENTORY_SLOT_EMPTY);
         const bag = player.inventories[ItemType.EQUIPMENT];
-        const [slotIndex] = freeSlotIndexes(
+        const [slotIndex] = inventoryService.freeSlotIndexes(
             bag,
             inventoryWorldService.inventorySize(ItemType.EQUIPMENT)
         );

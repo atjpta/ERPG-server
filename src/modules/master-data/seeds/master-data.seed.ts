@@ -13,10 +13,7 @@ import { PartyLootMode } from "@/modules/master-data/enums/party-loot-mode.enum.
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
 import type { MasterDataValueMap } from "@/modules/master-data/schemas/master-data-value.schema.js";
 import { DEFAULT_PLAYER_TARGET_CONFIG } from "@/modules/master-data/schemas/player-target-config.schema.js";
-import {
-    isUnityMasterDataKey,
-    loadUnityMasterData,
-} from "@/modules/master-data/services/unity-master-data.service.js";
+import { unityMasterDataService } from "@/modules/master-data/services/unity-master-data.service.js";
 import { DEFAULT_MONSTER_AI_CONFIG } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
 import {
     DEFAULT_MONSTER_LEVEL_CONFIG,
@@ -54,6 +51,8 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
         value: {
             maxLevel: MAX_LEVEL,
             expToNextLevel: Array.from({ length: MAX_LEVEL - 1 }, (_, i) => expToNextLevel(i + 1)),
+            attributePointsPerLevel: 5,
+            skillPointsPerLevel: 1,
         },
         note: "Bảng exp lên level (expToNextLevel[i] = exp từ level i+1 lên i+2)",
     },
@@ -125,9 +124,9 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
 export const MasterDataSeed = async () => {
     for (const key of Object.values(MasterDataKey)) {
         // Ranges are authored in Unity: the file wins over the default and the table is overwritten by it on every seed.
-        const { value, note } = isUnityMasterDataKey(key)
+        const { value, note } = unityMasterDataService.isUnityMasterDataKey(key)
             ? {
-                  value: loadUnityMasterData(key),
+                  value: unityMasterDataService.loadUnityMasterData(key),
                   note: `${DEFAULTS[key].note}. Làm trong Unity, không sửa ở admin.`,
               }
             : DEFAULTS[key];

@@ -5,13 +5,12 @@ import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { isFail } from "@/core/utils/result.util.js";
-import { sendFail } from "@/core/utils/room-send.util.js";
 import { dungeonPartyCoordinator } from "@/rooms/coordinators/dungeon-party.coordinator.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { playerPartyWorldService } from "@/rooms/world/modules/players/services/player-party.world.service.js";
 import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 @SdkMessage({
     replies: [WorldMessage.DUNGEON_RETRY_RESULT, WorldMessage.MAP_CHANGE],
@@ -23,12 +22,15 @@ import { Command } from "@colyseus/command";
     ],
     note: "Chỉ lỗi mới trả `dungeonRetryResult`; thành công thì `mapChange` đến thay.",
 })
-export class DungeonRetryWorldCommand extends Command<WorldRoom, { client: PlayerClient }> {
+export class DungeonRetryWorldCommand extends PlayerWorldCommand<{ client: PlayerClient }> {
     static readonly message = WorldClientMessage.DUNGEON_RETRY;
 
+    validate() {
+        return this.room.isDungeon && !!this.room.dungeon?.cleared && !this.player.pendingMapCode;
+    }
+
     async execute({ client }: { client: PlayerClient }) {
-        const player = this.room.state.players.get(client.auth.playerId);
-        if (this.room.isDungeon && player) await this.retryDungeon(this.room, client, player);
+        await this.retryDungeon(this.room, client, this.player);
     }
 
     /**
@@ -42,8 +44,7 @@ export class DungeonRetryWorldCommand extends Command<WorldRoom, { client: Playe
         player: PlayerWorldState
     ): Promise<void> {
         const refuse = (code: ErrorCode) =>
-            sendFail(client, WorldMessage.DUNGEON_RETRY_RESULT, code);
-        if (!room.dungeon?.cleared || player.pendingMapCode) return;
+            client.sendError(WorldMessage.DUNGEON_RETRY_RESULT, code);
         const partyRoomId = await playerPartyWorldService.ensureParty(room, player);
         if (!partyRoomId) return refuse(MapErrorCode.DUNGEON_UNAVAILABLE);
         // Người đã bấm thoát đang chờ chuyển map nên không còn tính là ở đây.

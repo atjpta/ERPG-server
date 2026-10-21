@@ -1,5 +1,5 @@
 import type { Dialogue } from "@/modules/dialogues/entities/dialogue.entity.js";
-import { nodeTextKey, optionTextKey } from "@/modules/dialogues/services/dialogue-graph.service.js";
+import { dialogueGraphService } from "@/modules/dialogues/services/dialogue-graph.service.js";
 import type { MapDefinition } from "@/modules/maps/schemas/map-definition.schema.js";
 import type { Npc } from "@/modules/npcs/entities/npc.entity.js";
 import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
@@ -40,10 +40,10 @@ export const collectLocaleKeys = (data: {
     }
     for (const dialogue of data.dialogues) {
         for (const node of dialogue.nodes) {
-            keys.add(nodeTextKey(dialogue.code, node));
+            keys.add(dialogueGraphService.nodeTextKey(dialogue.code, node));
             if (node.speakerKey) keys.add(node.speakerKey);
             for (const option of node.options ?? []) {
-                keys.add(optionTextKey(dialogue.code, node.id, option));
+                keys.add(dialogueGraphService.optionTextKey(dialogue.code, node.id, option));
             }
         }
     }

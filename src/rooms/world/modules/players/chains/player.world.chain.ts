@@ -8,11 +8,7 @@ import {
     applyWorldMove,
 } from "@/rooms/world/modules/players/simulation/movement.step.js";
 import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
-import {
-    getChargeConfig,
-    isChargeSkill,
-    skillService,
-} from "@/modules/skills/services/skill.service.js";
+import { skillService } from "@/modules/skills/services/skill.service.js";
 import type { HitboxColliderState } from "@/rooms/world/modules/combat/schemas/hitbox-collider.world.state.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
@@ -316,7 +312,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         // Hồi chiêu đếm từ lúc bấm; skill AURA thì chỉ tính sau khi buff hết (cộng sẵn thời gian buff ở level này).
         const level = getOwnedSkillLevel(state, skill);
         const cooldownTicks = getSkillCooldownTicks(skill, level, room.tickRate);
-        if (isChargeSkill(skill)) {
+        if (skillService.isChargeSkill(skill)) {
             // Skill lướt luôn lướt đủ quãng (`freeDistance`, mặc định cả `castRange`) rồi mới ra đòn ở cuối, không dừng khi chạm
             // quái (xuyên qua). Có mục tiêu đang chọn trong `castRange` thì lướt thẳng về phía nó (hướng chốt vào aimX/aimY);
             // không có thì lướt theo hướng đang đi. Chưa ra đòn lúc bấm, chỉ bắt đầu lướt.
@@ -547,17 +543,21 @@ function getAttackApproachMove(room: WorldRoom, state: PlayerWorldState): MoveCo
 const AIM_EPSILON = 1e-6;
 
 /** Tốc độ, thời gian dư, quãng lướt không mục tiêu của skill lướt: cột `chargeConfig` (skill seed), thiếu thì mặc định. */
-const getChargeSpeed = (skill: Skill) => getChargeConfig(skill).speed;
+const getChargeSpeed = (skill: Skill) => skillService.getChargeConfig(skill).speed;
 
 /**
  * Thời gian (tick) của lướt: đủ đi `distance` ô ở tốc độ lướt, cộng 2 để
  * `attackCooldownTicks` còn đúng 1 ở tick ra đòn. Client C# (WorldMovementStep.FreeChargeTicks) tính y hệt.
  */
 const getFreeChargeTicks = (skill: Skill, tickRate: number, distance: number) =>
-    Math.min(0xff, Math.ceil((distance / getChargeConfig(skill).speed) * tickRate) + 2);
+    Math.min(
+        0xff,
+        Math.ceil((distance / skillService.getChargeConfig(skill).speed) * tickRate) + 2
+    );
 
 /** Quãng lướt tối đa: `freeDistance`, mặc định cả `castRange`. */
-const getChargeDistance = (skill: Skill) => getChargeConfig(skill).freeDistance ?? skill.castRange;
+const getChargeDistance = (skill: Skill) =>
+    skillService.getChargeConfig(skill).freeDistance ?? skill.castRange;
 
 /** Nửa kích thước collider (hình chữ nhật song song trục) chiếu lên hướng (dirX, dirY). */
 const getHalfExtent = (collider: HitboxColliderState | undefined, dirX: number, dirY: number) =>

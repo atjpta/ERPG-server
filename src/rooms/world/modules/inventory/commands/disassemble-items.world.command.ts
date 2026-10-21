@@ -5,7 +5,7 @@ import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { isFail, ok } from "@/core/utils/result.util.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
-import { takeInstance } from "@/modules/player/services/inventory.service.js";
+import { inventoryService } from "@/modules/player/services/inventory.service.js";
 import { UpgradeWorldCommand } from "@/rooms/world/modules/inventory/commands/upgrade.world.command.js";
 import { equipmentUpgradeWorldService } from "@/rooms/world/modules/inventory/services/equipment-upgrade.world.service.js";
 import { DisassembleItemsSchema } from "@/rooms/world/modules/inventory/validators/inventory.world.validator.js";
@@ -20,7 +20,6 @@ import type { z } from "zod";
     replies: [WorldMessage.INVENTORY],
     errors: [
         CommonCode.INVALID_INPUT,
-        PlayerErrorCode.PLAYER_DEAD,
         ItemErrorCode.ITEM_NOT_FOUND,
         ItemErrorCode.INVENTORY_FULL,
         ItemErrorCode.INVENTORY_SLOT_INVALID,
@@ -35,7 +34,7 @@ export class DisassembleItemsWorldCommand extends UpgradeWorldCommand<
 > {
     static readonly message = WorldClientMessage.DISASSEMBLE_ITEMS;
 
-    protected readonly schema = DisassembleItemsSchema;
+    protected readonly validateSchema = DisassembleItemsSchema;
     protected run(
         player: PlayerWorldState,
         { instanceIds }: z.infer<typeof DisassembleItemsSchema>
@@ -45,7 +44,7 @@ export class DisassembleItemsWorldCommand extends UpgradeWorldCommand<
         const { ids, materials, received } = result.data;
 
         const bag = player.inventories[ItemType.EQUIPMENT];
-        for (const id of ids) takeInstance(bag, id);
+        for (const id of ids) inventoryService.takeInstance(bag, id);
         player.inventories[ItemType.MATERIAL] = materials;
         return ok({
             action: EquipmentUpgradeAction.DISASSEMBLE,

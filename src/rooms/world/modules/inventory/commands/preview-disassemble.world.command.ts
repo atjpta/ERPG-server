@@ -3,7 +3,6 @@ import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { isFail } from "@/core/utils/result.util.js";
-import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import { equipmentUpgradeWorldService } from "@/rooms/world/modules/inventory/services/equipment-upgrade.world.service.js";
 import { DisassembleItemsSchema } from "@/rooms/world/modules/inventory/validators/inventory.world.validator.js";
 import {
@@ -11,8 +10,7 @@ import {
     WorldMessage,
     type DisassemblePreviewMessage,
 } from "@/rooms/world/types/world-message.type.js";
-import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { Command } from "@colyseus/command";
+import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
 
 interface InventoryCommandPayload {
     client: PlayerClient;
@@ -30,28 +28,27 @@ interface InventoryCommandPayload {
     ],
     note: "Lỗi có `error: { instanceIds }`.",
 })
-export class PreviewDisassembleWorldCommand extends Command<WorldRoom, InventoryCommandPayload> {
+export class PreviewDisassembleWorldCommand extends PlayerWorldCommand<
+    InventoryCommandPayload,
+    typeof DisassembleItemsSchema
+> {
     static readonly message = WorldClientMessage.PREVIEW_DISASSEMBLE;
 
-    execute({ client, payload }: InventoryCommandPayload) {
-        const player = this.room.state.players.get(client.auth.playerId);
-        if (!player) return;
+    protected override readonly validateSchema = DisassembleItemsSchema;
+    protected override readonly replyType = WorldMessage.DISASSEMBLE_PREVIEW;
 
-        const parsed = DisassembleItemsSchema.safeParse(payload);
-        if (!parsed.success) {
-            sendFail(client, WorldMessage.DISASSEMBLE_PREVIEW, CommonCode.INVALID_INPUT);
-            return;
-        }
-        const { instanceIds } = parsed.data;
+    execute({ client }: InventoryCommandPayload) {
+        const { player } = this;
+        const { instanceIds } = this.body;
         const result = equipmentUpgradeWorldService.simulateDisassemble(player, instanceIds);
         if (isFail(result)) {
-            sendFail(client, WorldMessage.DISASSEMBLE_PREVIEW, result.code, { instanceIds });
+            client.sendError(WorldMessage.DISASSEMBLE_PREVIEW, result.code, { instanceIds });
             return;
         }
         const message: DisassemblePreviewMessage = {
             instanceIds: result.data.ids,
             materials: result.data.received,
         };
-        sendOk(client, WorldMessage.DISASSEMBLE_PREVIEW, message);
+        client.sendSuccess(WorldMessage.DISASSEMBLE_PREVIEW, message);
     }
 }

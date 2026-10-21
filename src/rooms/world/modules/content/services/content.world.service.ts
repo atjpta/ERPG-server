@@ -1,7 +1,7 @@
 import type { ConditionContext } from "@/modules/dialogues/services/condition.service.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { QuestState } from "@/modules/quests/enums/quest.enum.js";
-import { questStateOf } from "@/modules/quests/services/quest-progress.service.js";
+import { questProgressService } from "@/modules/quests/services/quest-progress.service.js";
 import { questOf } from "@/rooms/world/modules/content/utils/quest-resolve.world.util.js";
 import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
@@ -16,7 +16,7 @@ export class ContentWorldService {
     questState(player: PlayerWorldState, questCode: string): QuestState {
         const quest = questOf(player, questCode);
         if (!quest) return QuestState.NOT_STARTED;
-        return questStateOf(quest, player.quests[questCode], (code) =>
+        return questProgressService.questStateOf(quest, player.quests[questCode], (code) =>
             this.itemCount(player, code)
         );
     }

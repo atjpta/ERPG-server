@@ -1,3 +1,4 @@
+import { PayloadRejected } from "@/core/utils/client-send.util.js";
 import { Command, type Dispatcher } from "@colyseus/command";
 import type { Client, Room } from "colyseus";
 import { readdir } from "node:fs/promises";
@@ -69,7 +70,11 @@ export async function loadRoomMessages(directory: URL): Promise<Record<string, M
                 client: Client,
                 payload: unknown
             ) {
-                await this.dispatcher.dispatch(new Message(), { client, payload });
+                try {
+                    await this.dispatcher.dispatch(new Message(), { client, payload });
+                } catch (error) {
+                    if (!(error instanceof PayloadRejected)) throw error;
+                }
             },
         ])
     );

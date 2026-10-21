@@ -6,10 +6,9 @@ import { PartyErrorCode } from "@/rooms/party/types/party-error-code.type.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { PartyInviteSchema } from "@/rooms/party/modules/members/validators/member.party.validator.js";
-import type { PartyRoom } from "@/rooms/party/party.room.js";
 import { partyDirectoryService } from "@/rooms/party/services/party-directory.service.js";
 import { PartyClientMessage, PartyNotice } from "@/rooms/party/types/party-message.type.js";
-import { Command } from "@colyseus/command";
+import { PlayerPartyCommand } from "@/rooms/party/commands/player.party.command.js";
 import { matchMaker } from "colyseus";
 import { notice, noticeError } from "@/rooms/party/services/party-notify.js";
 
@@ -32,15 +31,20 @@ interface Payload {
     ],
     note: "Thành công: notice `invite_sent`. Payload sai thì server im lặng.",
 })
-export class InvitePartyCommand extends Command<PartyRoom, Payload> {
+export class InvitePartyCommand extends PlayerPartyCommand<Payload, typeof PartyInviteSchema> {
     static readonly message = PartyClientMessage.INVITE;
 
-    async execute({ client, payload }: Payload) {
-        const parsed = PartyInviteSchema.safeParse(payload);
-        if (!parsed.success) return;
+    protected override readonly validateSchema = PartyInviteSchema;
+
+    validate({ client }: Payload) {
+        if (this.room.state.isLeader(client.auth.playerId)) return true;
+        noticeError(client, PartyErrorCode.PARTY_NOT_LEADER);
+        return false;
+    }
+
+    async execute({ client }: Payload) {
+        const parsed = { data: this.body };
         const leaderId = client.auth.playerId;
-        if (!this.room.state.isLeader(leaderId))
-            return noticeError(client, PartyErrorCode.PARTY_NOT_LEADER);
         if (!(await partyDirectoryService.allowInvite(leaderId))) {
             return noticeError(client, PartyErrorCode.PARTY_INVITE_LIMIT);
         }

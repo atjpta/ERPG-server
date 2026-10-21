@@ -28,40 +28,6 @@ interface TeleportMapLike {
     }[];
 }
 
-/**
- * Danh sách teleport: **mọi** map trừ dungeon và `currentMapCode`, mỗi map một điểm đến (bệ teleport đầu tiên).
- * Map chưa có bệ đã đặt vị trí (hoặc chưa mở) vẫn có trong danh sách với `open = false` để client hiện mờ,
- * không cho chọn. Sắp theo level vào map rồi theo code.
- */
-export const listTeleportDestinations = (
-    maps: readonly TeleportMapLike[],
-    currentMapCode?: string
-): TeleportDestination[] =>
-    maps
-        .filter((map) => map.type !== MapType.DUNGEON && map.code !== currentMapCode)
-        .map((map): TeleportDestination => {
-            const pad = map.interactables.find((it) => it.type === "teleport");
-            const active = map.status === undefined || map.status === "active";
-            return pad && active
-                ? {
-                      mapCode: map.code,
-                      teleportId: pad.id,
-                      minLevel: map.minLevel,
-                      x: pad.x,
-                      y: pad.y,
-                      open: true,
-                      ...(pad.openToAll ? { openToAll: true } : {}),
-                  }
-                : { mapCode: map.code, minLevel: map.minLevel, open: false };
-        })
-        .sort((a, b) => a.minLevel - b.minLevel || a.mapCode.localeCompare(b.mapCode));
-
-/** Flag ghi vào `player_states.flags` khi player đã đến một map — điều kiện để teleport tới map đó. */
-export const visitedFlagKey = (mapCode: string) => `visited.${mapCode}`;
-
-export const hasVisited = (flags: Record<string, unknown>, mapCode: string) =>
-    Boolean(flags[visitedFlagKey(mapCode)]);
-
 export interface TeleportStatus {
     /** Đã từng đến map đó. */
     discovered: boolean;
@@ -71,19 +37,66 @@ export interface TeleportStatus {
     available: boolean;
 }
 
-/**
- * Trạng thái của một điểm đến đối với player: phải đã đến map đó (trừ map `openToAll`) và đủ level mới
- * teleport được.
- */
-export const teleportStatus = (
-    destination: Pick<TeleportDestination, "mapCode" | "minLevel"> & {
-        open?: boolean;
-        openToAll?: boolean;
-    },
-    level: number,
-    flags: Record<string, unknown>
-): TeleportStatus => {
-    const discovered = destination.openToAll === true || hasVisited(flags, destination.mapCode);
-    const levelOk = level >= destination.minLevel;
-    return { discovered, levelOk, available: discovered && levelOk && destination.open !== false };
-};
+export class TeleportService {
+    /**
+     * Danh sách teleport: **mọi** map trừ dungeon và `currentMapCode`, mỗi map một điểm đến (bệ teleport đầu tiên).
+     * Map chưa có bệ đã đặt vị trí (hoặc chưa mở) vẫn có trong danh sách với `open = false` để client hiện mờ,
+     * không cho chọn. Sắp theo level vào map rồi theo code.
+     */
+    listTeleportDestinations(
+        maps: readonly TeleportMapLike[],
+        currentMapCode?: string
+    ): TeleportDestination[] {
+        return maps
+            .filter((map) => map.type !== MapType.DUNGEON && map.code !== currentMapCode)
+            .map((map): TeleportDestination => {
+                const pad = map.interactables.find((it) => it.type === "teleport");
+                const active = map.status === undefined || map.status === "active";
+                return pad && active
+                    ? {
+                          mapCode: map.code,
+                          teleportId: pad.id,
+                          minLevel: map.minLevel,
+                          x: pad.x,
+                          y: pad.y,
+                          open: true,
+                          ...(pad.openToAll ? { openToAll: true } : {}),
+                      }
+                    : { mapCode: map.code, minLevel: map.minLevel, open: false };
+            })
+            .sort((a, b) => a.minLevel - b.minLevel || a.mapCode.localeCompare(b.mapCode));
+    }
+
+    /** Flag ghi vào `player_states.flags` khi player đã đến một map — điều kiện để teleport tới map đó. */
+    visitedFlagKey(mapCode: string) {
+        return `visited.${mapCode}`;
+    }
+
+    hasVisited(flags: Record<string, unknown>, mapCode: string) {
+        return Boolean(flags[this.visitedFlagKey(mapCode)]);
+    }
+
+    /**
+     * Trạng thái của một điểm đến đối với player: phải đã đến map đó (trừ map `openToAll`) và đủ level mới
+     * teleport được.
+     */
+    teleportStatus(
+        destination: Pick<TeleportDestination, "mapCode" | "minLevel"> & {
+            open?: boolean;
+            openToAll?: boolean;
+        },
+        level: number,
+        flags: Record<string, unknown>
+    ): TeleportStatus {
+        const discovered =
+            destination.openToAll === true || this.hasVisited(flags, destination.mapCode);
+        const levelOk = level >= destination.minLevel;
+        return {
+            discovered,
+            levelOk,
+            available: discovered && levelOk && destination.open !== false,
+        };
+    }
+}
+
+export const teleportService = new TeleportService();

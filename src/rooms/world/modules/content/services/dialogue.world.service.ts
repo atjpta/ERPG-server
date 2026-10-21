@@ -2,17 +2,16 @@ import type { ErrorCode } from "@/core/types/result.type.js";
 import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { DialogueErrorCode } from "@/modules/dialogues/enums/dialogue-error-code.enum.js";
-import { sendFail, sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import type { Action } from "@/modules/dialogues/schemas/condition.schema.js";
 import type { DialogueNode } from "@/modules/dialogues/schemas/dialogue.schema.js";
-import { evaluateConditions } from "@/modules/dialogues/services/condition.service.js";
-import { nodeTextKey, optionTextKey } from "@/modules/dialogues/services/dialogue-graph.service.js";
+import { conditionService } from "@/modules/dialogues/services/condition.service.js";
+import { dialogueGraphService } from "@/modules/dialogues/services/dialogue-graph.service.js";
 import { dialogueService } from "@/modules/dialogues/services/dialogue.service.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
-import { debitWallet } from "@/modules/player/services/player-progress.service.js";
+import { playerService } from "@/modules/player/services/player.service.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import { contentWorldService } from "@/rooms/world/modules/content/services/content.world.service.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
@@ -144,12 +143,16 @@ export class DialogueWorldService {
     ) {
         const ctx = contentWorldService.conditionContext(room, player);
         const options = (node.options ?? []).flatMap((option) => {
-            const enabled = evaluateConditions(ctx, option.conditions);
+            const enabled = conditionService.evaluateConditions(ctx, option.conditions);
             if (!enabled && option.hideIfFail) return [];
             return [
                 {
                     id: option.id,
-                    textKey: optionTextKey(session.dialogueCode, node.id, option),
+                    textKey: dialogueGraphService.optionTextKey(
+                        session.dialogueCode,
+                        node.id,
+                        option
+                    ),
                     enabled,
                 },
             ];
@@ -158,7 +161,7 @@ export class DialogueWorldService {
             sourceCode: session.sourceCode,
             dialogueCode: session.dialogueCode,
             nodeId: node.id,
-            textKey: nodeTextKey(session.dialogueCode, node),
+            textKey: dialogueGraphService.nodeTextKey(session.dialogueCode, node),
             ...(node.speakerKey ? { speakerKey: node.speakerKey } : {}),
             options,
             hasNext: options.length === 0 && !!node.next,
@@ -168,13 +171,16 @@ export class DialogueWorldService {
                 )
             ),
         };
-        sendOk(client, WorldMessage.DIALOGUE, message);
+        client.sendSuccess(WorldMessage.DIALOGUE, message);
     }
 
     end(room: WorldRoom, client: PlayerClient, sourceCode: string, error?: ErrorCode) {
         this.sessionsOf(room).delete(client.auth.playerId);
-        if (error) sendFail(client, WorldMessage.DIALOGUE_END, error, { sourceCode });
-        else sendOk(client, WorldMessage.DIALOGUE_END, { sourceCode } satisfies DialogueEndMessage);
+        if (error) client.sendError(WorldMessage.DIALOGUE_END, error, { sourceCode });
+        else
+            client.sendSuccess(WorldMessage.DIALOGUE_END, {
+                sourceCode,
+            } satisfies DialogueEndMessage);
     }
 
     /** Chạy lần lượt; action lỗi thì dừng và trả lỗi (các action trước đó giữ nguyên hiệu lực). */
@@ -236,13 +242,13 @@ export class DialogueWorldService {
                 });
                 return undefined;
             case "take_currency": {
-                const wallet = debitWallet(player.wallet, [
+                const wallet = playerService.debitWallet(player.wallet, [
                     { code: action.currency, amount: action.amount },
                 ]);
                 if (!wallet) return ItemErrorCode.CURRENCY_NOT_ENOUGH;
                 player.wallet = wallet;
                 const message: WalletMessage = player.wallet;
-                sendOk(client, WorldMessage.WALLET, message);
+                client.sendSuccess(WorldMessage.WALLET, message);
                 return undefined;
             }
             case "set_flag":
@@ -268,7 +274,7 @@ export class DialogueWorldService {
                     type: fn.type,
                     config: JSON.stringify(fn.config),
                 };
-                sendOk(client, WorldMessage.NPC_FUNCTION_OPEN, message);
+                client.sendSuccess(WorldMessage.NPC_FUNCTION_OPEN, message);
                 return undefined;
             }
             case "talk":

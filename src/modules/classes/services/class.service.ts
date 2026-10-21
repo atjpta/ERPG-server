@@ -2,10 +2,7 @@ import { cacheService } from "@/core/cache/cache.service.js";
 import type { CharacterClass } from "@/modules/classes/entities/class.entity.js";
 import { STARTER_CLASS_CODES } from "@/modules/classes/constants/class.constant.js";
 import { ClassRepo } from "@/modules/classes/repositories/class.repository.js";
-import {
-    buildUsableItemClassCodes,
-    validateClassTree,
-} from "@/modules/classes/services/class-tree.service.js";
+import { classTreeService } from "@/modules/classes/services/class-tree.service.js";
 
 /** Cache class lúc khởi động (giống SkillService/ItemService). */
 export class ClassService {
@@ -17,7 +14,7 @@ export class ClassService {
     public async setCacheData() {
         const classes = await ClassRepo.findEnabled();
         // Cây chuyển cấp sai thì dừng lúc khởi động, không để lệch quyền mặc đồ khi đang chơi.
-        const errors = validateClassTree(classes);
+        const errors = classTreeService.validateClassTree(classes);
         if (errors.length > 0) throw new Error(`Invalid class tree: ${errors.join("; ")}`);
         this.classesById.clear();
         this.classesByCode.clear();
@@ -25,7 +22,7 @@ export class ClassService {
             this.classesById.set(characterClass.id, characterClass);
             this.classesByCode.set(characterClass.code, characterClass);
         }
-        this.usableItemClassCodes = buildUsableItemClassCodes(classes);
+        this.usableItemClassCodes = classTreeService.buildUsableItemClassCodes(classes);
         await cacheService.set("classes", this.classesByCode);
         console.log(`Cached ${classes.length} classes`);
     }

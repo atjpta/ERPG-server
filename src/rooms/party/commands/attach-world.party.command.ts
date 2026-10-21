@@ -17,12 +17,14 @@ interface Payload {
 export class AttachWorldPartyCommand extends Command<PartyRoom, Payload> {
     result: Result<PartySnapshot> = fail(CommonCode.ROOM_UNAVAILABLE);
 
+    validate({ playerId }: Payload) {
+        if (this.room.state.has(playerId)) return true;
+        this.result = fail(PartyErrorCode.PARTY_NOT_MEMBER);
+        return false;
+    }
+
     execute({ playerId, worldRoomId, info }: Payload) {
         const { room } = this;
-        if (!room.state.has(playerId)) {
-            this.result = fail(PartyErrorCode.PARTY_NOT_MEMBER);
-            return;
-        }
         room.worldRoomOf.set(playerId, worldRoomId);
         room.state.patch(playerId, { ...info, inWorld: true });
         this.result = ok({

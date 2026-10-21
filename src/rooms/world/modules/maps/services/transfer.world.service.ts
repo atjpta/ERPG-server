@@ -1,11 +1,10 @@
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
-import { sendOk } from "@/core/utils/room-send.util.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
-import { respawnPointOf } from "@/modules/maps/services/map-file.service.js";
+import { mapFileService } from "@/modules/maps/services/map-file.service.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
@@ -58,7 +57,7 @@ export class TransferWorldService {
         player.beginMapChange(mapCode);
         const message: MapChangeMessage = { mapCode, spawnId, roomName: WorldRoomName.WORLD };
         await worldService.savePlayer(room, client.auth.playerId);
-        sendOk(client, WorldMessage.MAP_CHANGE, message);
+        client.sendSuccess(WorldMessage.MAP_CHANGE, message);
         return undefined;
     }
 
@@ -83,7 +82,7 @@ export class TransferWorldService {
             mapCode = config.startMapCode;
             target = await mapService.getActiveByCodeOrFail(mapCode);
         }
-        const spawn = respawnPointOf(target);
+        const spawn = mapFileService.respawnPointOf(target);
         player.setSpawns(spawn.x, spawn.y);
         if (mapCode === room.map.code) return;
 
@@ -94,7 +93,7 @@ export class TransferWorldService {
             roomName: WorldRoomName.WORLD,
         };
         await worldService.savePlayer(room, client.auth.playerId);
-        sendOk(client, WorldMessage.MAP_CHANGE, message);
+        client.sendSuccess(WorldMessage.MAP_CHANGE, message);
     }
 }
 
