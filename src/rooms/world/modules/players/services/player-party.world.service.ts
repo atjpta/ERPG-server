@@ -38,12 +38,9 @@ export class PlayerPartyWorldService {
         room: WorldRoom,
         playerId: string
     ): { client: PlayerClient; player: PlayerWorldState } | undefined {
-        for (const [playerId, player] of room.state.players) {
-            if (player.id !== playerId) continue;
-            const client = room.clientOf(playerId);
-            return client ? { client, player } : undefined;
-        }
-        return undefined;
+        const player = room.state.players.get(playerId);
+        const client = player ? room.clientOf(playerId) : undefined;
+        return player && client ? { client, player } : undefined;
     }
     async ensureParty(room: WorldRoom, player: PlayerWorldState): Promise<string | undefined> {
         const partyRoomId = await this.ensurePartyRoom({
