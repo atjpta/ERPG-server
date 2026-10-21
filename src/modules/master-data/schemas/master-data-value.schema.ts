@@ -8,6 +8,7 @@ import {
 } from "@/modules/equipment/schemas/equipment-config.schema.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { ChatConfigSchema } from "@/modules/master-data/schemas/chat-config.schema.js";
 import { PartyConfigSchema } from "@/modules/master-data/schemas/party-config.schema.js";
 import { PlayerTargetConfigSchema } from "@/modules/master-data/schemas/player-target-config.schema.js";
 import { MonsterAiConfigSchema } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
@@ -74,6 +75,7 @@ export const MasterDataValueSchemas = {
     [MasterDataKey.PLAYER_TARGET_CONFIG]: PlayerTargetConfigSchema,
     [MasterDataKey.MONSTER_AI_CONFIG]: MonsterAiConfigSchema,
     [MasterDataKey.NPC_CONFIG]: NpcConfigSchema,
+    [MasterDataKey.CHAT_CONFIG]: ChatConfigSchema,
 } satisfies Record<MasterDataKey, z.ZodType>;
 
 export type AuthSessionConfigValue = z.infer<typeof AuthSessionConfigSchema>;

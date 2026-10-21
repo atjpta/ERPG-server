@@ -20,6 +20,7 @@ import { PartyEnterDungeonWorldCommand } from "@/rooms/world/modules/dungeons/co
 import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
 import type { MonsterWorldState } from "@/rooms/world/modules/monsters/schemas/monster.world.state.js";
 import { PartyAttachWorldCommand } from "@/rooms/world/modules/players/commands/party-attach.world.command.js";
+import { ChatListPlayersWorldCommand } from "@/rooms/world/modules/players/commands/chat-list-players.world.command.js";
 import { PartyDeliverInviteWorldCommand } from "@/rooms/world/modules/players/commands/party-deliver-invite.world.command.js";
 import { PartyDeliverJoinRequestWorldCommand } from "@/rooms/world/modules/players/commands/party-deliver-join-request.world.command.js";
 import { PartyDetachWorldCommand } from "@/rooms/world/modules/players/commands/party-detach.world.command.js";
@@ -182,6 +183,7 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
         PartyEnterDungeonWorldCommand,
         PartyDeliverJoinRequestWorldCommand,
         PartyDeliverInviteWorldCommand,
+        ChatListPlayersWorldCommand,
     ]);
 
     isLeavingPlayer(playerId: string): boolean {

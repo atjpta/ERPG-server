@@ -6,6 +6,7 @@ import {
     DEFAULT_EQUIPMENT_SET_CONFIG,
     DEFAULT_EQUIPMENT_STAT_CONFIG,
 } from "@/modules/equipment/seeds/equipment-config.seed-data.js";
+import { ChatChannelKey } from "@/modules/chat/enums/chat-channel-key.enum.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { MasterDatas } from "@/modules/master-data/entities/master-data.entity.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
@@ -118,6 +119,46 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
     [MasterDataKey.DAILY_QUEST_CONFIG]: {
         value: DEFAULT_DAILY_QUEST_CONFIG,
         note: "Quest hằng ngày: giờ reset, bậc level, thưởng theo level",
+    },
+    [MasterDataKey.CHAT_CONFIG]: {
+        value: {
+            retentionDays: 30,
+            channels: {
+                [ChatChannelKey.WORLD]: {
+                    enabled: true,
+                    maxLength: 200,
+                    rateLimit: { limit: 5, windowSeconds: 10 },
+                    saveHistory: true,
+                    historyOnJoin: 30,
+                    historyPageSize: 30,
+                },
+                [ChatChannelKey.GENERAL]: {
+                    enabled: true,
+                    maxLength: 200,
+                    rateLimit: { limit: 8, windowSeconds: 10 },
+                    saveHistory: false,
+                    historyOnJoin: 0,
+                    historyPageSize: 30,
+                },
+                [ChatChannelKey.PARTY]: {
+                    enabled: true,
+                    maxLength: 200,
+                    rateLimit: { limit: 8, windowSeconds: 10 },
+                    saveHistory: false,
+                    historyOnJoin: 0,
+                    historyPageSize: 30,
+                },
+                [ChatChannelKey.WHISPER]: {
+                    enabled: true,
+                    maxLength: 200,
+                    rateLimit: { limit: 10, windowSeconds: 30 },
+                    saveHistory: true,
+                    historyOnJoin: 30,
+                    historyPageSize: 30,
+                },
+            },
+        },
+        note: "Chat: số ngày giữ lịch sử + mỗi kênh (bật/tắt, độ dài, rate limit, có lưu DB không, số tin lịch sử khi vào)",
     },
 };
 

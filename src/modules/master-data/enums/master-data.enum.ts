@@ -16,4 +16,5 @@ export enum MasterDataKey {
     PLAYER_TARGET_CONFIG = "player_target_config",
     MONSTER_AI_CONFIG = "monster_ai_config",
     NPC_CONFIG = "npc_config",
+    CHAT_CONFIG = "chat_config",
 }

@@ -16,6 +16,7 @@ import { ReportPartyCommand } from "@/rooms/party/commands/report.party.command.
 import { RequestJoinPartyCommand } from "@/rooms/party/commands/request-join.party.command.js";
 import { AllocateKillRewardPartyCommand } from "@/rooms/party/modules/loot/commands/allocate-kill-reward.party.command.js";
 import { PartyLootRoomService } from "@/rooms/party/modules/loot/services/loot.party.service.js";
+import { ListMembersPartyCommand } from "@/rooms/party/modules/members/commands/list-members.party.command.js";
 import { RemoveMemberPartyCommand } from "@/rooms/party/modules/members/commands/remove-member.party.command.js";
 import { PartyState } from "@/rooms/party/schemas/party.state.js";
 import type { PartyRoomOptions } from "@/rooms/party/types/party-room.type.js";
@@ -85,5 +86,6 @@ export class PartyRoom extends AuthenticatedPlayerRoom<{
         PrepareDungeonPartyCommand,
         NotifyDungeonDeniedPartyCommand,
         AllocateKillRewardPartyCommand,
+        ListMembersPartyCommand,
     ]);
 }

@@ -255,7 +255,8 @@ export async function collectRooms(root: string) {
             roomClasses.set(roomOf(file), {
                 room: roomOf(file),
                 meta,
-                state: stateMember?.type?.getText() ?? `${roomOf(file)}State`,
+                // Room không khai báo `state` (chat) không có schema: client dùng NoState của Colyseus SDK (NoneSerializer).
+                state: stateMember?.type?.getText() ?? "Colyseus.NoState",
             });
         }
     }

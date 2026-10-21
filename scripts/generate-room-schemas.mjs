@@ -12,6 +12,7 @@ const sharedContractFiles = [
     join(projectRoot, "src", "rooms", "world", "types", "world-message.type.ts"),
     join(projectRoot, "src", "modules", "auth", "enums", "admin.enum.ts"),
     join(projectRoot, "src", "rooms", "party", "types", "party-message.type.ts"),
+    join(projectRoot, "src", "rooms", "chat", "types", "chat-message.type.ts"),
 ];
 const codegen = join(projectRoot, "node_modules", "@colyseus", "schema", "bin", "schema-codegen");
 // Thư mục Network của Unity: schema được xếp theo room (Room/<Room>/Schema, Common) sau khi codegen.

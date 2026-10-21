@@ -280,10 +280,11 @@ Khi cần vòng đời và state riêng, tạo room mới cùng DTO và remote r
    đăng ký room thay cho `roomId` khi gọi RPC.
 6. Đặt quy trình cần nhiều room vào coordinator và bổ sung test ranh giới import.
 
-Các bước trên là hướng mở rộng, chat chưa được cài đặt. Có thể dùng kênh logic trong
-chat room cho local/party/private; room đích kiểm tra người nhận và quyền gửi từ
-trạng thái server. System/alert có thể là loại thông điệp, không bắt buộc mỗi loại
-là một room riêng.
+Chat đã được cài đặt theo các bước trên: xem [src/rooms/chat/README.md](../src/rooms/chat/README.md).
+Một chat room cho mỗi `serverId` (`filterBy(["serverId"])`), các kiểu chat là "kênh logic" trong room
+(world/general/party/whisper); general hỏi world room, party hỏi party room bằng RPC (`ChatListPlayersWorldCommand`,
+`ListMembersPartyCommand`) để biết người nhận. System/alert có thể là một kênh mới, không bắt buộc
+mỗi loại là một room riêng.
 
 ## 9. Chạy nhiều process
 
