@@ -1,6 +1,6 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { createMiddleware } from "colyseus";
-import { Response } from "@/core/utils/response.util.js";
+import { HttpResponse } from "@/core/utils/response.util.js";
 import { assertRateLimit, getClientIp, type RateLimitRule } from "@/core/utils/rate-limit.util.js";
 
 /** Giới hạn số request theo IP cho 1 nhóm endpoint — gắn vào `use: [...]` của endpoint. Đưa IP vào `ctx.context.clientIp`. */
@@ -10,7 +10,7 @@ export const createRateLimitMiddleware = (rule: RateLimitRule) =>
         try {
             await assertRateLimit(rule, clientIp);
         } catch {
-            Response.tooManyRequests(ctx, {
+            HttpResponse.tooManyRequests(ctx, {
                 code: CommonCode.TOO_MANY_REQUESTS,
                 retryAfterSeconds: rule.windowSeconds,
             });

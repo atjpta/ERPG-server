@@ -1,8 +1,10 @@
 /**
- * Smoke test end-to-end: đăng ký → tạo nhân vật → join room `world` → di chuyển → lưu vị trí.
+ * Smoke test end-to-end: đăng ký → tạo nhân vật → join room `world` + `global` → di chuyển → request/response
+ * (world, chat, party) → lưu vị trí. Mọi thao tác hỏi-đáp dùng `room.request` (Colyseus Request/Response),
+ * response luôn là envelope `Result`; push (`dialogue`, `chatReceived`, `partyState`...) thu bằng `inbox`.
  * Chạy khi server đang bật: `yarn smoke` (mặc định http://localhost:2567, đổi bằng env SERVER_URL).
  */
-import { Client } from "@colyseus/sdk";
+import { Client, type Room } from "@colyseus/sdk";
 
 const SERVER_URL = process.env.SERVER_URL ?? "http://localhost:2567";
 
@@ -26,7 +28,7 @@ async function api<T = any>(method: string, path: string, body?: unknown, token?
     return json.data;
 }
 
-/** Envelope chung của mọi message room (xem `src/core/types/result.type.ts`). */
+/** Envelope chung của mọi response / push của room (xem `src/core/types/result.type.ts`). */
 interface RoomResult<T> {
     success: boolean;
     data: T;
@@ -36,6 +38,45 @@ interface RoomResult<T> {
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Gửi request và nhận envelope `Result` (response của handler). Lỗi giao thức (không có handler...) thì reject. */
+const request = <T = unknown>(target: Room, type: string, payload?: unknown, timeout = 5000) =>
+    (target as Room<any>).request<unknown, RoomResult<T>>(type as never, payload, { timeout });
+
+const until = async (check: () => boolean, label: string, ms = 4000) => {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+        if (check()) return;
+        await sleep(50);
+    }
+    throw new Error(`timeout waiting for ${label}`);
+};
+
+/** SDK cảnh báo mỗi push không có handler; smoke test chỉ quan tâm một vài loại nên nhận hết bằng `*`. */
+const silenced = new WeakSet<Room>();
+const silence = (target: Room) => {
+    if (silenced.has(target)) return;
+    silenced.add(target);
+    target.onMessage("*", () => {});
+};
+
+/** Thu mọi push `type` (server tự đẩy xuống, không phải response) vào một mảng sống. */
+const inbox = <T>(target: Room, type: string) => {
+    const list: RoomResult<T>[] = [];
+    silence(target);
+    target.onMessage(type, (message: RoomResult<T>) => list.push(message));
+    return list;
+};
+
+const expectOk = <T>(result: RoomResult<T>, label: string) => {
+    if (!result.success) throw new Error(`${label}: expected success, got ${result.code}`);
+    return result.data;
+};
+
+const expectCode = (result: RoomResult<unknown>, code: string, label: string) => {
+    if (result.success || result.code !== code)
+        throw new Error(`${label}: expected ${code}, got ${JSON.stringify(result)}`);
+};
 
 const client = { platform: "android", clientVersion: "0.0.1", device: "smoke-test" };
 const email = `smoke_${Date.now()}@erpg.local`;
@@ -75,14 +116,44 @@ await api(
     auth.playerToken
 );
 
+const serverId = auth.player.serverId as string;
 const sdk = new Client(SERVER_URL);
 sdk.auth.token = auth.playerToken;
-const room = await sdk.joinOrCreate("world", { mapCode: auth.player.mapCode });
+
+// ---- serverId bắt buộc và phải khớp token: join sai bị từ chối (world lẫn global) ------------------
+{
+    const wrong = "00000000-0000-0000-0000-000000000000";
+    const attempts: [string, string, Record<string, unknown>][] = [
+        ["world sai serverId", "world", { serverId: wrong, mapCode: auth.player.mapCode }],
+        ["world thiếu serverId", "world", { mapCode: auth.player.mapCode }],
+        ["global sai serverId", "global", { serverId: wrong }],
+        ["global thiếu serverId", "global", {}],
+    ];
+    for (const [label, name, options] of attempts) {
+        const joined = await sdk.joinOrCreate(name, options).then(
+            (r) => (r.leave(), true),
+            () => false
+        );
+        if (joined) throw new Error(`${label}: join must be rejected`);
+        console.info(`✅ ${label} bị từ chối`);
+    }
+    const servers = await api<{ id: string }[]>("GET", "/user/game-servers");
+    if (servers.length < 2)
+        console.info(
+            "ℹ️  chỉ có 1 game server: bỏ qua kiểm tra hai serverId không chung kênh world"
+        );
+}
+
+const room = await sdk.joinOrCreate("world", { serverId, mapCode: auth.player.mapCode });
+silence(room);
 console.info(`✅ joined world room ${room.roomId} (map ${auth.player.mapCode})`);
+const global1 = await sdk.joinOrCreate("global", { serverId });
+silence(global1);
+console.info(`✅ joined global room ${global1.roomId}`);
 
 await sleep(300);
 const startX = (room.state as any).players.get(auth.player.id).x;
-// Colyseus Netcode: gửi 1 input mỗi fixed step (20Hz) trong ~1s.
+// Colyseus Netcode: gửi 1 input mỗi fixed step (20Hz) trong ~1s. Input không đi qua request/response.
 const input = room.input<{ moveX: number; moveY: number }>({ mode: "reliable" });
 for (let i = 0; i < 20; i++) {
     input.data.moveX = 1;
@@ -95,29 +166,61 @@ const moved = (room.state as any).players.get(auth.player.id);
 console.info(`✅ moved x: ${startX} → ${moved.x.toFixed(2)} (direction ${moved.direction})`);
 if (!(moved.x > startX)) throw new Error("Player did not move");
 
+// ---- Request/Response cơ bản trên world (+ PlayerData ở global) -------------------------------------------------------------
+{
+    // Payload đúng → response là envelope Result.
+    const attributes = await request(global1, "previewAttributes", { strength: 0 });
+    if (typeof attributes.success !== "boolean" || !("code" in attributes))
+        throw new Error(`response must be a Result envelope: ${JSON.stringify(attributes)}`);
+    console.info(`✅ request previewAttributes → ${attributes.success ? "ok" : attributes.code}`);
+
+    // PlayerData do global làm chủ: tháo / mặc lại đồ → global đẩy `inventory` + `attributes`, world cập nhật stats.
+    const inventories = inbox<{ inventories: { equipment: { id: string; itemId: string }[] } }>(
+        global1,
+        "inventory"
+    );
+    const attributePushes = inbox(global1, "attributes");
+    const slot = Object.keys(auth.player.equipments)[0];
+    const worn = auth.player.equipments[slot] as { itemId: string };
+    expectOk(await request(global1, "unequipItem", { slot }), "unequipItem");
+    await until(() => inventories.length > 0 && attributePushes.length > 0, "inventory push");
+    const unequipped = inventories.at(-1)!.data.inventories.equipment.find(
+        (entry) => entry.itemId === worn.itemId
+    );
+    if (!unequipped) throw new Error("unequipped item must be in the bag");
+    expectOk(await request(global1, "equipItem", { instanceId: unequipped.id }), "equipItem");
+    console.info("✅ global unequip/equip → inventory + attributes pushed");
+
+    // Payload sai → INVALID_INPUT (không im lặng, không bị kick).
+    expectCode(await request(room, "interact", { nope: 1 }), "INVALID_INPUT", "invalid payload");
+    expectCode(await request(room, "interact"), "INVALID_INPUT", "missing payload");
+    console.info("✅ invalid payload → INVALID_INPUT");
+
+    // Message không có handler → server trả lỗi giao thức, promise reject (không phải Result).
+    const rejected = await request(room, "noSuchMessage", {}).then(
+        () => false,
+        (error: Error) => {
+            console.info(`✅ unknown message rejected (${error.name}: ${error.message})`);
+            return true;
+        }
+    );
+    if (!rejected) throw new Error("unknown message must be rejected");
+    if (!room.connection.isOpen) throw new Error("unknown message must not close the connection");
+}
+
 // ---- NPC, thoại, quest, vật thể ---------------------------------------------------------------
 // Chỉ chạy khi map hiện tại có NPC `village_chief` (greenfield_village).
 const content = await api("GET", `/user/maps/${auth.player.mapCode}/content`);
 if (!content.contentHash) throw new Error("map content must carry contentHash");
 if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chief")) {
     const chief = content.npcs.find((npc: { npcCode: string }) => npc.npcCode === "village_chief");
-    const waitFor = <T>(type: string) =>
-        new Promise<T>((resolve, reject) => {
-            const timer = setTimeout(
-                () => reject(new Error(`timeout waiting for "${type}"`)),
-                3000
-            );
-            room.onMessage(type, (message: T) => {
-                clearTimeout(timer);
-                resolve(message);
-            });
-        });
+    const dialogues = inbox<{ nodeId: string; options: { id: string }[] }>(room, "dialogue");
+    const questUpdates = inbox<{ quest: { code: string; state: string } }>(room, "questUpdate");
 
-    // Đứng xa NPC / portal thì bị từ chối.
-    const far = waitFor<RoomResult<{ id: string }>>("interactResult");
-    room.send("interact", { id: "south_gate" });
-    if ((await far).success) throw new Error("portal must reject a player standing far away");
-    console.info("✅ interact far portal rejected");
+    // Đứng xa NPC / portal thì bị từ chối (response là Result thất bại).
+    const far = await request(room, "interact", { id: "south_gate" });
+    if (far.success) throw new Error("portal must reject a player standing far away");
+    console.info(`✅ interact far portal rejected (${far.code})`);
 
     // Đi tới sát Trưởng làng — từ vị trí hiện tại, lái từng step theo vị trí server.
     const me = (room.state as any).players.get(auth.player.id);
@@ -134,205 +237,218 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
     await sleep(300);
     console.info(`✅ walked next to the village chief at (${me.x.toFixed(2)}, ${me.y.toFixed(2)})`);
 
-    const offer = waitFor<RoomResult<{ nodeId: string; options: { id: string }[] }>>("dialogue");
-    room.send("interactNpc", { npcCode: "village_chief" });
-    const first = (await offer).data;
+    // Response chỉ báo mở được thoại; node đầu đến qua push `dialogue`.
+    expectOk(await request(room, "interactNpc", { npcCode: "village_chief" }), "interactNpc");
+    await until(() => dialogues.length > 0, "dialogue push");
+    const first = dialogues[0].data;
     if (first.nodeId !== "start" || !first.options.some((o) => o.id === "accept")) {
         throw new Error(`unexpected first dialogue node ${JSON.stringify(first)}`);
     }
     console.info("✅ village chief offers the quest");
 
-    const updated = waitFor<RoomResult<{ quest: { code: string; state: string } }>>("questUpdate");
-    room.send("dialogueChoose", { optionId: "accept" });
-    const { quest } = (await updated).data;
+    expectOk(await request(room, "dialogueChoose", { optionId: "accept" }), "dialogueChoose");
+    await until(() => questUpdates.length > 0, "questUpdate push");
+    const { quest } = questUpdates[0].data;
     if (quest.code !== "adventurer_registration" || quest.state !== "active") {
         throw new Error(`quest not accepted: ${JSON.stringify(quest)}`);
     }
     console.info("✅ quest accepted via dialogue");
 
-    // Option bịa → server đóng thoại và báo lỗi, không chạy gì.
-    const ended = waitFor<RoomResult<{ sourceCode: string }>>("dialogueEnd");
-    room.send("dialogueChoose", { optionId: "does_not_exist" });
-    if ((await ended).success) throw new Error("unknown dialogue option must be rejected");
-    console.info("✅ unknown dialogue option rejected");
+    // Option bịa → response thất bại, phiên thoại đóng, không chạy gì.
+    const unknown = await request(room, "dialogueChoose", { optionId: "does_not_exist" });
+    if (unknown.success) throw new Error("unknown dialogue option must be rejected");
+    console.info(`✅ unknown dialogue option rejected (${unknown.code})`);
 }
 
-// ---- Party: tạo, mời, vào, rời, offline là rời ---------------------------------------------------
+// ---- Người chơi thứ hai: tài khoản + nhân vật + world + global cùng server ---------------------------
+const reg2 = await api("POST", "/user/auth/register", {
+    email: `smoke2_${Date.now()}@erpg.local`,
+    password: "123456",
+    ...client,
+});
+const name2 = `Smk${Date.now() % 100000}`;
+const created2 = await api(
+    "POST",
+    "/user/players",
+    { name: name2, classCode: starterClasses[0].code },
+    reg2.token
+);
+const sdk2 = new Client(SERVER_URL);
+sdk2.auth.token = created2.playerToken;
+const world2 = await sdk2.joinOrCreate("world", { serverId, mapCode: created2.player.mapCode });
+const global2 = await sdk2.joinOrCreate("global", { serverId });
+silence(world2);
+silence(global2);
+if (global1.roomId !== global2.roomId) throw new Error("same server must share one global room");
+await sleep(500); // chờ world báo presence lên global
+
+// ---- Chat (global): world / general / party / whisper, giới hạn, lịch sử ------------------------------
 {
-    const until = async (check: () => boolean, label: string, ms = 4000) => {
-        const end = Date.now() + ms;
-        while (Date.now() < end) {
-            if (check()) return;
-            await sleep(50);
-        }
-        throw new Error(`timeout waiting for ${label}`);
-    };
-    const once = <T>(target: any, type: string) =>
-        new Promise<T>((resolve, reject) => {
-            const timer = setTimeout(
-                () => reject(new Error(`timeout waiting for "${type}"`)),
-                4000
-            );
-            target.onMessage(type, (message: T) => {
-                clearTimeout(timer);
-                resolve(message);
-            });
-        });
+    interface Received {
+        id: string;
+        channel: string;
+        senderName: string;
+        content: string;
+    }
+    interface History {
+        channel: string;
+        messages: Received[];
+        hasMore: boolean;
+    }
+    const got1 = inbox<Received>(global1, "chatReceived");
+    const got2 = inbox<Received>(global2, "chatReceived");
 
-    // Người chơi thứ hai: tài khoản + nhân vật + world room cùng map.
-    const email2 = `smoke2_${Date.now()}@erpg.local`;
-    const reg2 = await api("POST", "/user/auth/register", {
-        email: email2,
-        password: "123456",
-        ...client,
-    });
-    const name2 = `Smk${Date.now() % 100000}`;
-    const created2 = await api(
-        "POST",
-        "/user/players",
-        { name: name2, classCode: starterClasses[0].code },
-        reg2.token
+    expectOk(await request(global1, "sendWorld", { content: "  hello world  " }), "sendWorld");
+    await until(() => got1.length === 1 && got2.length === 1, "world message to both");
+    if (got2[0].data.channel !== "world" || got2[0].data.content !== "hello world")
+        throw new Error(`unexpected world message ${JSON.stringify(got2[0])}`);
+    console.info("✅ chat world delivered (trimmed) to both players via global");
+
+    expectOk(await request(global1, "sendGeneral", { content: "local" }), "sendGeneral");
+    await until(() => got2.some((m) => m.data.channel === "general"), "general message");
+    console.info("✅ chat general delivered (same map)");
+
+    expectOk(
+        await request(global1, "sendWhisper", { targetName: name2, content: "psst" }),
+        "sendWhisper"
     );
-    const sdk2 = new Client(SERVER_URL);
-    sdk2.auth.token = created2.playerToken;
-    const world2 = await sdk2.joinOrCreate("world", { mapCode: created2.player.mapCode });
-    await sleep(500);
+    await until(
+        () =>
+            got1.some((m) => m.data.channel === "whisper") &&
+            got2.some((m) => m.data.channel === "whisper"),
+        "whisper to target + echo"
+    );
+    expectCode(
+        await request(global1, "sendWhisper", { targetName: "NoSuchPlayerXyz", content: "x" }),
+        "CHAT_TARGET_NOT_FOUND",
+        "whisper to unknown"
+    );
+    expectCode(
+        await request(global1, "sendParty", { content: "no party yet" }),
+        "CHAT_NOT_IN_PARTY",
+        "party chat without party"
+    );
+    expectCode(await request(global1, "sendWorld", { content: "   " }), "CHAT_EMPTY", "empty");
+    expectCode(
+        await request(global1, "sendWorld", { content: "x".repeat(300) }),
+        "CHAT_TOO_LONG",
+        "too long"
+    );
+    expectCode(
+        await request(global1, "sendWorld", { nope: 1 }),
+        "INVALID_INPUT",
+        "invalid payload"
+    );
+    const spam = await Promise.all(
+        Array.from({ length: 8 }, (_, i) => request(global1, "sendWorld", { content: `spam ${i}` }))
+    );
+    if (!spam.some((r) => r.code === "TOO_MANY_REQUESTS")) throw new Error("rate limit expected");
+    console.info("✅ chat whisper / empty / too long / invalid / rate limit via response codes");
 
-    // Người 1 tạo party rồi join party room.
-    const created = once<RoomResult<{ roomId: string }>>(room, "party");
-    room.send("partyCreate");
-    const { roomId: partyId } = (await created).data;
-    const party1 = await sdk.joinById(partyId);
-    await until(() => (party1.state as any).members?.size === 1, "party with 1 member");
-    console.info("✅ party created, leader joined the party room");
+    // Lịch sử: world có lưu DB, general/party không; loadmore bằng con trỏ uuid v7.
+    const history = expectOk(
+        await request<History>(global2, "getHistory", { channel: "world" }),
+        "getHistory"
+    );
+    if (!history.messages.some((m) => m.content === "hello world"))
+        throw new Error("world history must contain persisted message");
+    const ids = history.messages.map((m) => m.id);
+    if (ids.length < 3) throw new Error("need >= 3 world messages for loadmore");
+    if (ids.some((id, i) => i > 0 && id <= ids[i - 1]))
+        throw new Error("history must be ordered old → new by uuid v7 id");
+    const older = expectOk(
+        await request<History>(global2, "getHistory", { channel: "world", before: ids[2] }),
+        "loadmore"
+    );
+    if (older.messages.map((m) => m.id).join() !== ids.slice(0, 2).join() || older.hasMore)
+        throw new Error("loadmore before ids[2] must return exactly the 2 older messages");
+    const none = expectOk(
+        await request<History>(global2, "getHistory", { channel: "world", before: ids[0] }),
+        "loadmore oldest"
+    );
+    if (none.messages.length !== 0 || none.hasMore)
+        throw new Error("loadmore before the oldest message must be empty");
+    const general = await request<History>(global2, "getHistory", { channel: "general" });
+    if (general.success && general.data.messages.length > 0)
+        throw new Error("general must not have history");
+    console.info("✅ chat history + loadmore by uuid v7 cursor");
+}
 
-    // Mời người 2: nhận lời mời ở world room, chấp nhận bằng joinById.
-    const invited = once<RoomResult<{ partyRoomId: string }>>(world2, "partyInviteReceived");
-    party1.send("invite", { playerName: name2 });
-    const invite = (await invited).data;
-    const party2 = await sdk2.joinById(invite.partyRoomId);
-    await until(() => (party1.state as any).members.size === 2, "2 members");
+// ---- Party (global): tạo, mời, vào, rời, offline là rời ---------------------------------------------
+{
+    interface PartyState {
+        partyId: string;
+        leaderPlayerId: string;
+        members: { playerId: string; name: string }[];
+    }
+    const states1 = inbox<PartyState>(global1, "partyState");
+    const invites2 = inbox<{ partyId: string }>(global2, "partyInviteReceived");
+    const latestSize = () => states1.at(-1)?.data.members.length ?? 0;
+
+    const party = expectOk(await request<PartyState>(global1, "partyCreate"), "partyCreate");
+    if (party.members.length !== 1 || party.leaderPlayerId !== auth.player.id)
+        throw new Error(`unexpected new party ${JSON.stringify(party)}`);
+    console.info("✅ party created");
+
+    // Mời người 2: lời mời đến qua push, chấp nhận bằng request.
+    const invited = expectOk(
+        await request<{ notice: string }>(global1, "partyInvite", { playerName: name2 }),
+        "partyInvite"
+    );
+    if (invited.notice !== "invite_sent") throw new Error(`unexpected notice ${invited.notice}`);
+    await until(() => invites2.length === 1, "invite push");
+    const joined = expectOk(
+        await request<PartyState>(global2, "partyAcceptInvite", {
+            partyId: invites2[0].data.partyId,
+        }),
+        "partyAcceptInvite"
+    );
+    if (joined.members.length !== 2) throw new Error("accepted party must have 2 members");
+    await until(() => latestSize() === 2, "leader receives 2-member partyState");
     console.info("✅ invite accepted, party has 2 members");
 
-    // ---- Chat: world / general / party / whisper, giới hạn, lỗi ---------------------------------------
-    {
-        const serverId = auth.player.serverId as string;
-        const chat1 = await sdk.joinOrCreate("chat", { serverId });
-        const chat2 = await sdk2.joinOrCreate("chat", { serverId });
-        if (chat1.roomId !== chat2.roomId) throw new Error("same server must share one chat room");
-        type Received = {
-            id: string;
-            channel: string;
-            senderName: string;
-            content: string;
-            targetId?: string;
-        };
-        const got1: Received[] = [];
-        const got2: Received[] = [];
-        const errors1: (string | null)[] = [];
-        chat1.onMessage("received", (m: RoomResult<Received>) => got1.push(m.data));
-        chat2.onMessage("received", (m: RoomResult<Received>) => got2.push(m.data));
-        chat1.onMessage("sendResult", (m: RoomResult<null>) => errors1.push(m.code));
-        const expectError = async (code: string, label: string) => {
-            await until(() => errors1.includes(code), label);
-            errors1.length = 0;
-        };
+    // Hai người cùng map: partyId nằm trong state world nên đồng đội nhận ra nhau và đọc level / HP từ đó.
+    await until(
+        () =>
+            (room.state as any).players.get(created2.player.id)?.partyId === joined.partyId &&
+            (room.state as any).players.get(auth.player.id)?.partyId === joined.partyId,
+        "partyId synced in world state"
+    );
+    console.info("✅ partyId synced to both members through world state");
 
-        chat1.send("sendWorld", { content: "  hello world  " });
-        await until(() => got1.length === 1 && got2.length === 1, "world message to both");
-        if (got2[0].channel !== "world" || got2[0].content !== "hello world") {
-            throw new Error(`unexpected world message ${JSON.stringify(got2[0])}`);
-        }
-        console.info("✅ chat world delivered (trimmed) to both");
+    // Chat party giờ có người nhận.
+    const partyChat = inbox<{ channel: string }>(global2, "chatReceived");
+    expectOk(await request(global1, "sendParty", { content: "party hi" }), "sendParty");
+    await until(() => partyChat.some((m) => m.data.channel === "party"), "party chat");
+    console.info("✅ party chat delivered");
 
-        chat1.send("sendGeneral", { content: "local" });
-        await until(() => got2.some((m) => m.channel === "general"), "general message");
-        chat1.send("sendParty", { content: "party" });
-        await until(() => got2.some((m) => m.channel === "party"), "party message");
-        console.info("✅ chat general + party delivered");
-
-        chat1.send("sendWhisper", { targetName: name2, content: "psst" });
-        await until(
-            () =>
-                got1.some((m) => m.channel === "whisper") &&
-                got2.some((m) => m.channel === "whisper"),
-            "whisper to target + echo"
-        );
-        chat1.send("sendWhisper", { targetName: "NoSuchPlayerXyz", content: "x" });
-        await expectError("CHAT_TARGET_NOT_FOUND", "whisper to unknown");
-        console.info("✅ chat whisper delivered + unknown target rejected");
-
-        chat1.send("sendWorld", { content: "   " });
-        await expectError("CHAT_EMPTY", "empty message");
-        chat1.send("sendWorld", { content: "x".repeat(300) });
-        await expectError("CHAT_TOO_LONG", "too long message");
-        chat1.send("sendWorld", { nope: 1 });
-        await expectError("INVALID_INPUT", "invalid payload");
-        for (let i = 0; i < 8; i++) chat1.send("sendWorld", { content: `spam ${i}` });
-        await expectError("TOO_MANY_REQUESTS", "rate limit");
-        console.info("✅ chat empty / too long / invalid / rate limit rejected");
-
-        // Vào lại rồi xin lịch sử: world có lưu DB, general/party không.
-        await chat2.leave();
-        const history: { channel: string; messages: Received[]; hasMore: boolean }[] = [];
-        const chat2b = await sdk2.joinOrCreate("chat", { serverId });
-        chat2b.onMessage("history", (m: RoomResult<(typeof history)[number]>) =>
-            history.push(m.data)
-        );
-        chat2b.send("getHistory", { channel: "world" });
-        await until(() => history.some((h) => h.channel === "world"), "world history");
-        const world = history.find((h) => h.channel === "world");
-        if (!world.messages.some((m) => m.content === "hello world")) {
-            throw new Error("world history must contain persisted message");
-        }
-
-        // Loadmore theo `id` (uuid v7): `before` = tin cũ nhất đang có → chỉ trả tin cũ hơn, không sót / lặp.
-        if (world.messages.length < 3) throw new Error("need >= 3 world messages for loadmore");
-        const ids = world.messages.map((m) => m.id);
-        if (ids.some((id, i) => i > 0 && id <= ids[i - 1])) {
-            throw new Error("history must be ordered old → new by uuid v7 id");
-        }
-        const loadMore = async (before: string) => {
-            const count = history.length;
-            chat2b.send("getHistory", { channel: "world", before });
-            await until(() => history.length > count, "loadmore history");
-            return history[history.length - 1];
-        };
-        const older = await loadMore(ids[2]);
-        if (older.messages.map((m) => m.id).join() !== ids.slice(0, 2).join() || older.hasMore) {
-            throw new Error(`loadmore before ids[2] must return exactly the 2 older messages`);
-        }
-        const none = await loadMore(ids[0]);
-        if (none.messages.length !== 0 || none.hasMore) {
-            throw new Error("loadmore before the oldest message must be empty");
-        }
-        console.info("✅ chat loadmore by uuid v7 cursor (no gap / no duplicate)");
-        chat2b.send("getHistory", { channel: "general" });
-        chat2b.send("getHistory", { channel: "party" });
-        await sleep(500);
-        if (history.some((h) => h.channel === "general" || h.channel === "party")) {
-            throw new Error("general/party must not have history");
-        }
-        console.info("✅ chat history replayed for world (general/party not persisted)");
-        await chat2b.leave();
-        await chat1.leave();
-    }
+    // Người không phải chủ không đá được.
+    expectCode(
+        await request(global2, "partyKick", { playerId: auth.player.id }),
+        "PARTY_NOT_LEADER",
+        "non-leader kick"
+    );
 
     // Người 2 tự rời → còn 1 người.
-    party2.send("leave");
-    await until(() => (party1.state as any).members.size === 1, "member left");
+    expectOk(await request(global2, "partyLeave"), "partyLeave");
+    await until(() => latestSize() === 1, "member left");
     console.info("✅ member left the party");
 
-    // Mời lại, vào lại; rồi người 2 thoát game (rời world room) → bị loại khỏi party ngay.
-    const invitedAgain = once<RoomResult<{ partyRoomId: string }>>(world2, "partyInviteReceived");
-    party1.send("invite", { playerName: name2 });
-    const second = (await invitedAgain).data;
-    await sdk2.joinById(second.partyRoomId);
-    await until(() => (party1.state as any).members.size === 2, "2 members again");
+    // Mời lại, vào lại. Người 2 rời hẳn world room (thoát / mất kết nối) → ra khỏi party luôn;
+    // đổi map thì giữ party (không test ở đây).
+    expectOk(await request(global1, "partyInvite", { playerName: name2 }), "partyInvite again");
+    await until(() => invites2.length === 2, "second invite push");
+    expectOk(
+        await request(global2, "partyAcceptInvite", { partyId: invites2[1].data.partyId }),
+        "partyAcceptInvite again"
+    );
+    await until(() => latestSize() === 2, "2 members again");
     await world2.leave();
-    await until(() => (party1.state as any).members.size === 1, "offline member removed");
-    console.info("✅ going offline leaves the party immediately");
-    await party1.leave();
+    await until(() => latestSize() === 1, "member leaving the world is removed from the party");
+    console.info("✅ leaving the world room for good removes the member from the party");
+    await global2.leave();
+    await request(global1, "partyLeave"); // chủ cuối cùng rời = party tan
+    await global1.leave();
 }
 
 await room.leave();

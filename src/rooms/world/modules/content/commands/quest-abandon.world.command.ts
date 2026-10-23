@@ -1,4 +1,5 @@
 import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { Response } from "@/core/utils/response.util.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { QuestErrorCode } from "@/modules/quests/enums/quest-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
@@ -12,7 +13,7 @@ import { QuestAbandonSchema } from "@/rooms/world/modules/content/validators/con
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
+import { PlayerWorldCommand } from "@/rooms/world/player.world.command.js";
 
 interface ContentPayload {
     client: PlayerClient;
@@ -21,7 +22,8 @@ interface ContentPayload {
 
 @SdkMessage({
     replies: [WorldMessage.QUEST_UPDATE, WorldMessage.NPC_MARKERS, WorldMessage.QUEST_TARGETS],
-    note: "Quest không bỏ được (không có / không cho bỏ) thì server im lặng, không có reply.",
+    errors: [QuestErrorCode.QUEST_NOT_ACTIVE, QuestErrorCode.QUEST_CANNOT_ABANDON],
+    note: "Quest không bỏ được (không đang làm / quest hằng ngày) thì trả lỗi tương ứng.",
 })
 export class QuestAbandonWorldCommand extends PlayerWorldCommand<
     ContentPayload,
@@ -32,7 +34,8 @@ export class QuestAbandonWorldCommand extends PlayerWorldCommand<
     protected override readonly validateSchema = QuestAbandonSchema;
 
     execute({ client }: ContentPayload) {
-        this.abandon(this.room, client, this.player, this.body.questCode);
+        const error = this.abandon(this.room, client, this.player, this.body.questCode);
+        if (error) this.result = Response.error(error);
     }
 
     private abandon(

@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
 import { adminMapService } from "@/apis/admin/maps/services/admin.map.service.js";
@@ -19,22 +19,22 @@ export const adminMapController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminMapService.list(ctx.query);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
     adminMapShow: adminEndpoint(`${prefix}/:id`, { method: "GET", params: IdParamSchema }, (ctx) =>
         RouterContainer(ctx, async () => {
             const map = await adminMapService.findById({ id: ctx.params.id });
-            if (!map) return Response.notFound(ctx);
-            return Response.ok({ data: map });
+            if (!map) return HttpResponse.notFound(ctx);
+            return HttpResponse.ok({ data: map });
         })
     ),
 
     adminMapCreate: adminEndpoint(prefix, { method: "POST", body: AdminCreateMapSchema }, (ctx) =>
         RouterContainer(ctx, async () => {
             const map = await adminMapService.createMap(ctx.body);
-            return Response.created(ctx, { data: map });
+            return HttpResponse.created(ctx, { data: map });
         })
     ),
 
@@ -44,8 +44,8 @@ export const adminMapController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const map = await adminMapService.updateMap(ctx.params.id, ctx.body);
-                if (!map) return Response.notFound(ctx);
-                return Response.ok({ data: map });
+                if (!map) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: map });
             })
     ),
 };

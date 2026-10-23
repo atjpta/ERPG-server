@@ -1,30 +1,28 @@
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
+import { Response } from "@/core/utils/response.util.js";
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
 import { teleportService } from "@/modules/maps/services/teleport.service.js";
-import { contentWorldService } from "@/rooms/world/modules/content/services/content.world.service.js";
 import { transferWorldService } from "@/rooms/world/modules/maps/services/transfer.world.service.js";
 import { TeleportToSchema } from "@/rooms/world/modules/maps/validators/teleport.world.validator.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import {
-    WorldClientMessage,
-    WorldMessage,
-    type InteractResultMessage,
-} from "@/rooms/world/types/world-message.type.js";
+import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import type { InteractResultMessage } from "@/rooms/world/modules/content/interfaces/content.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
+import { PlayerWorldCommand } from "@/rooms/world/player.world.command.js";
 
 interface MapPayload {
     client: PlayerClient;
     payload: unknown;
 }
 
-/** Chọn điểm đến teleport; kết quả trả qua `interactResult` (id = mapCode). */
+/** Chọn điểm đến teleport; response mang `id` = mapCode. */
 @SdkMessage({
-    replies: [WorldMessage.INTERACT_RESULT, WorldMessage.MAP_CHANGE],
+    response: "InteractResultMessage",
+    replies: [WorldMessage.MAP_CHANGE],
     errors: [
         MapErrorCode.TELEPORT_NOT_AT_PAD,
         MapErrorCode.TELEPORT_NO_DESTINATION,
@@ -45,29 +43,26 @@ export class TeleportToWorldCommand extends PlayerWorldCommand<
 
     protected override readonly validateSchema = TeleportToSchema;
 
-    validate({ client }: MapPayload) {
+    validate() {
         const error = this.checkPad(this.room, this.player);
         if (!error) return true;
-        client.sendError(WorldMessage.INTERACT_RESULT, error, { id: this.body.mapCode });
+        this.result = Response.error(error, undefined, { id: this.body.mapCode });
         return false;
     }
 
     async execute({ client }: MapPayload) {
         const id = this.body.mapCode;
         const error = await this.travel(this.room, client, this.player, id);
-        if (error) client.sendError(WorldMessage.INTERACT_RESULT, error, { id });
-        else
-            client.sendSuccess(WorldMessage.INTERACT_RESULT, {
-                id,
-            } satisfies InteractResultMessage);
+        this.result = error
+            ? Response.error(error, undefined, { id })
+            : Response.success<InteractResultMessage>({ id });
     }
 
     /** Phải còn sống, không ở dungeon và đứng trên bệ teleport. */
     private checkPad(room: WorldRoom, player: PlayerWorldState): ErrorCode | undefined {
         if (player.hp <= 0 || room.dungeon) return MapErrorCode.TELEPORT_NOT_AT_PAD;
         const atPad = room.map.interactables.some(
-            (it) =>
-                it.type === "teleport" && contentWorldService.isNear(player, it.x, it.y, it.radius)
+            (it) => it.type === "teleport" && player.isNear(it.x, it.y, it.radius)
         );
         return atPad ? undefined : MapErrorCode.TELEPORT_NOT_AT_PAD;
     }

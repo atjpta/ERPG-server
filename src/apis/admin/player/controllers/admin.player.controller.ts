@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminPlayerService } from "@/apis/admin/player/services/admin.player.service.js";
 import {
@@ -19,7 +19,7 @@ export const adminPlayerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminPlayerService.list(ctx.query);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -29,7 +29,7 @@ export const adminPlayerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const player = await adminPlayerService.findPlayerById(ctx.params.id);
-                return Response.ok({ data: player });
+                return HttpResponse.ok({ data: player });
             })
     ),
 
@@ -39,8 +39,8 @@ export const adminPlayerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const player = await adminPlayerService.updatePlayer(ctx.params.id, ctx.body);
-                if (!player) return Response.notFound(ctx);
-                return Response.ok({ data: player });
+                if (!player) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: player });
             })
     ),
 
@@ -50,8 +50,8 @@ export const adminPlayerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const player = await adminPlayerService.ban(ctx.params.id, ctx.body);
-                if (!player) return Response.notFound(ctx);
-                return Response.ok({ data: player });
+                if (!player) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: player });
             })
     ),
 
@@ -61,8 +61,8 @@ export const adminPlayerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const player = await adminPlayerService.unban(ctx.params.id);
-                if (!player) return Response.notFound(ctx);
-                return Response.ok({ data: player });
+                if (!player) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: player });
             })
     ),
 };

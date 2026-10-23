@@ -8,11 +8,10 @@ import { env } from "@/configs/env.config.js";
 import { connectPostgres } from "@/configs/postgres.config.js";
 import { applyCorsPolicy } from "@/configs/cors.config.js";
 import { connectRedisCache, createRedisScaling } from "@/configs/redis.config.js";
-import { routerErrorHandler } from "@/core/utils/response.util.js";
-import { fail, ok } from "@/core/utils/result.util.js";
+import { routerErrorHandler, Response } from "@/core/utils/response.util.js";
 import { loadControllers } from "@/core/utils/load-controllers.util.js";
 import { prefixEndpoints } from "@/core/utils/prefix-endpoints.util.js";
-import { createRooms } from "@/rooms/index.room.js";
+import { InitRoom, createRooms } from "@/rooms/index.room.js";
 import { setCacheDataApp } from "@/cache-data/index.js";
 import { GameMapRepo } from "@/modules/maps/repositories/game-map.repository.js";
 import { warnMapLayouts } from "@/modules/maps/seeds/game-map.seed.js";
@@ -35,13 +34,13 @@ await listen(
                 app.use("/", playground());
             }
             app.use((_req, res) => {
-                res.status(404).json(fail(CommonCode.NOT_FOUND, "Not found"));
+                res.status(404).json(Response.error(CommonCode.NOT_FOUND, "Not found"));
             });
         },
         routes: createRouter(
             {
                 health: createEndpoint("/health", { method: "GET" }, async () => {
-                    return ok();
+                    return Response.success();
                 }),
                 ...prefixEndpoints("/admin", admin),
                 ...prefixEndpoints("/user", user),
@@ -51,7 +50,10 @@ await listen(
         transport: new uWebSocketsTransport({}, {}),
     }),
     env.PORT
-).then(() => {
+).then(async () => {
+    await InitRoom().catch((error: unknown) => {
+        console.error("[Rooms] bootstrap failed:", error);
+    });
     if (env.NODE_ENV === "production") return;
 
     const port = env.PORT;

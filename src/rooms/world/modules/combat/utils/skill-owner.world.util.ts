@@ -102,7 +102,7 @@ export function applySkillHit(
         return true;
     }
 
-    if (room.isLeavingPlayer?.(owner.id)) return false;
+    if (room.leavingPlayers.has(owner.id)) return false;
     const attacker = room.state.players.get(owner.id);
     const target = room.state.monsters.find((monster) => monster.id === targetId);
     if (

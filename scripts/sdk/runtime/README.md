@@ -9,14 +9,14 @@ server: `ERPG-server/scripts/sdk/runtime/`.
 
 ## Thư mục
 
-| Thư mục / file         | Nội dung                                                                                      |
-| ---------------------- | --------------------------------------------------------------------------------------------- |
-| `ERPG.Network.asmdef`  | Tham chiếu `ColyseusSDK` + `Newtonsoft.Json.dll`                                              |
-| `Runtime/`             | `Result`, `ApiClient`, `RoomClient<T>`, `NetworkSettings`, `NetworkSession`, `KickCode`...    |
-| `Api/<Role>/<Module>/` | `User*Api` (hàm gọi endpoint) + `Models/` (request / response)                                |
-| `Room/<Room>/`         | `WorldRoomClient` / `PartyRoomClient`, `Payloads/` (message gửi lên), `Schema/` (state + DTO) |
-| `Common/`              | Enum / mã dùng chung (`MapCode`, `ItemCode`, `ClassCode`...)                                  |
-| `Errors/`              | Một class hằng số cho mỗi enum mã lỗi (`CommonCode`, `PlayerErrorCode`...) kèm XML doc        |
+| Thư mục / file         | Nội dung                                                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
+| `ERPG.Network.asmdef`  | Tham chiếu `ColyseusSDK` + `Newtonsoft.Json.dll`                                               |
+| `Runtime/`             | `Result`, `ApiClient`, `RoomClient<T>`, `NetworkSettings`, `NetworkSession`, `KickCode`...     |
+| `Api/<Role>/<Module>/` | `User*Api` (hàm gọi endpoint) + `Models/` (request / response)                                 |
+| `Room/<Room>/`         | `WorldRoomClient` / `GlobalRoomClient`, `Payloads/` (message gửi lên), `Schema/` (state + DTO) |
+| `Common/`              | Enum / mã dùng chung (`MapCode`, `ItemCode`, `ClassCode`...)                                   |
+| `Errors/`              | Một class hằng số cho mỗi enum mã lỗi (`CommonCode`, `PlayerErrorCode`...) kèm XML doc         |
 
 ## Phụ thuộc
 
@@ -47,7 +47,7 @@ public class Result<T> : Result { T data; }   // data chỉ có khi success
 ```
 
 - **Không ném exception** với lỗi nghiệp vụ / mạng. Kiểm tra `success` trước, nhận biết lỗi bằng `code`.
-- Lỗi mạng (mất kết nối, timeout, phản hồi không đọc được) là `ClientErrorCode.NETWORK_ERROR`.
+- Lỗi mạng (mất kết nối, phản hồi không đọc được) là `ClientErrorCode.NETWORK_ERROR`; request room quá hạn là `REQUEST_TIMEOUT`, server từ chối ở tầng giao thức (không có handler...) là `REQUEST_FAILED`.
 - `message` là tiếng Anh cho dev; hiển thị cho người chơi thì tra locale theo `code`.
 - Hằng số mã lỗi: `CommonCode.X`, `AuthErrorCode.X`, `PlayerErrorCode.X`... — mỗi hàm sinh ra liệt kê mã nó có thể trả trong XML doc (hover trong IDE).
 - Chỉ ném `OperationCanceledException` khi `CancellationToken` bị huỷ.
@@ -80,33 +80,39 @@ if (picked.success) NetworkSession.SetPlayer(picked.data.playerToken, id);
 
 ## Room (realtime)
 
-Mỗi room có một client typed: `WorldRoomClient`, `PartyRoomClient`. Tạo **một lần** và giữ lại.
+Chỉ có hai room, mỗi room một client typed: `WorldRoomClient` (kênh của một map; `dungeon` là cùng class, vào bằng `JoinDungeon`) và `GlobalRoomClient` (chat, party, presence, mở dungeon). Tạo **một lần** và giữ lại. Yêu cầu Colyseus Unity SDK **>= 0.18.3** (Request/Response). Join option đều bắt buộc `serverId` (server của nhân vật đang đăng nhập).
 
 ```csharp
 var world = new WorldRoomClient();
+var global = new GlobalRoomClient();
 
-// Đăng ký handler trước hay sau khi join đều được; join lại sẽ tự gắn lại.
-world.OnInventory(inventory => Render(inventory));                                  // chỉ chạy khi thành công
-world.OnUpgradePreview(preview => Show(preview), failure => Toast(failure.code));   // + nhánh lỗi riêng
+// Push (server tự đẩy xuống): đăng ký trước hay sau khi join đều được; join lại sẽ tự gắn lại.
+global.OnChatReceived(chat => Render(chat), failure => Toast(failure.code));
+global.OnInventory(inventory => Render(inventory));
 world.Left += code =>
 {
     if (KickCode.IsKick(code)) { /* bị đá: KickCode.ReasonOf(code) */ }
 };
 
-if (!await world.JoinWorld(new WorldJoinOptions { mapCode = MapCode.GREENFIELD_VILLAGE }))
+if (!await world.JoinWorld(new WorldJoinOptions { serverId = serverId, mapCode = MapCode.GREENFIELD_VILLAGE }))
 {
     Debug.LogWarning(world.JoinError.code);  // vd INVALID_TOKEN
     return;
 }
+await global.JoinGlobal(new GlobalJoinOptions { serverId = serverId });
 await world.WaitForFirstState();             // world.State là Colyseus Schema, đọc / subscribe như thường
 
-await world.EquipItem(instanceId);           // gửi message (fire-and-forget); kết quả đến qua handler đã đăng ký
+// Request/Response: await trả Result<T>, không ném exception.
+var equipped = await world.EquipItem(instanceId);
+if (!equipped.success) return;               // RoomClient.Failed đã bắn; equipped.code là mã lỗi
+var sent = await global.SendWorld("xin chào");
 ```
 
-- **Nhận:** `OnX(onOk, onFail = null)` — `onOk` nhận `data` khi thành công; `onFail` nhận `Result` (`code`, `error`). Message không có dữ liệu: `OnX(Action<Result> handler)` chạy cho cả hai nhánh. Mọi `OnX` trả `Action` để huỷ đăng ký.
-- **Lỗi tập trung:** `RoomClient.Failed` bắn đúng một lần cho mỗi message thất bại, trước khi handler riêng chạy.
-- **Gửi:** tên hàm theo message (`EquipItem`, `Invite`...); tên trùng thành viên của `RoomClient` được thêm tiền tố `Send` (`SendLeave`). Chưa kết nối thì bỏ qua và ghi cảnh báo. Field `null` không được gửi.
-- **Join:** `JoinWorld(options)` (world), `JoinById(roomId)` (party: `roomId` lấy từ message của world room). Cần player token; trả `false` nếu lỗi, xem `JoinError`.
+- **Request:** mỗi message client là một hàm `async Task<Result<T>> X(...)` (không có `data` thì `Task<Result>`). Không ném exception: chưa kết nối → `NETWORK_ERROR`, quá `RequestTimeoutMs` (mặc định 15 giây) → `REQUEST_TIMEOUT`, server từ chối → `REQUEST_FAILED`.
+- **Push:** `OnX(onOk, onFail = null)` chỉ cho message server tự đẩy xuống (`WorldMessage` / `GlobalMessage`) — `onOk` nhận `data` khi thành công; `onFail` nhận `Result` (`code`, `error`). Message không có dữ liệu: `OnX(Action<Result> handler)` chạy cho cả hai nhánh. Mọi `OnX` trả `Action` để huỷ đăng ký.
+- **Lỗi tập trung:** `RoomClient.Failed` bắn đúng một lần cho mỗi request / push thất bại, trước khi trả về / trước khi handler riêng chạy.
+- **Tên hàm:** theo message (`EquipItem`, `PartyInvite`...); tên trùng thành viên của `RoomClient` được thêm tiền tố `Send` (`SendLeave`). Field `null` không được gửi.
+- **Join:** `JoinWorld(options)` / `JoinDungeon(options)` (world), `JoinGlobal(options)` (global). Cần player token; trả `false` nếu lỗi, xem `JoinError`.
 - **Sự kiện:** `Left(closeCode)`, `Dropped(closeCode)` (đang tự nối lại), `Reconnected`, `Error(code, message)`, `StateChanged(state, isFirst)`.
 - **Ping:** client room tự đo mỗi giây khi đang kết nối (không cần gọi gì). `PingMilliseconds` (`double?`, `null` = chưa kết nối / chưa có mẫu / mẫu quá 5 giây) và sự kiện `PingChanged(double?)`; cả hai nằm trong interface `IRoomPing` nên UI chỉ cần nhận `IRoomPing` rồi nghe sự kiện để cập nhật hiển thị. Có thể gọi `Reconnect()` thủ công; `Leave()` để rời.
 - **Bị đá khỏi room** — close code trong `KickCode`:

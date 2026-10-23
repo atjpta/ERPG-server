@@ -1,6 +1,6 @@
 import { createEndpoint } from "colyseus";
 import { createRateLimitMiddleware } from "@/core/middlewares/rate-limit.middleware.js";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { AUTH_IP_RATE_LIMIT } from "@/modules/auth/constants/rate-limit.constant.js";
 import { userAuthMiddleware } from "@/modules/auth/middlewares/user.auth.middleware.js";
@@ -49,7 +49,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await userAuthService.register(ctx.body);
-                return Response.created(ctx, { data: result });
+                return HttpResponse.created(ctx, { data: result });
             })
     ),
 
@@ -75,7 +75,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await userAuthService.login(ctx.body);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -101,7 +101,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await userAuthService.loginAsGuest(ctx.body, ctx.context.clientIp);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -119,7 +119,7 @@ export const userAuthController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                return Response.ok({ data: { nonce: userAuthService.issueOauthNonce() } });
+                return HttpResponse.ok({ data: { nonce: userAuthService.issueOauthNonce() } });
             })
     ),
 
@@ -149,7 +149,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await userAuthService.loginWithGoogle(ctx.body);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -179,7 +179,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await userAuthService.loginWithPlayGames(ctx.body);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -196,8 +196,8 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const profile = await userAuthService.getProfile(ctx.context.userId);
-                if (!profile) return Response.notFound(ctx);
-                return Response.ok({ data: profile });
+                if (!profile) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: profile });
             })
     ),
 
@@ -214,7 +214,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 await userAuthService.logout(ctx.context.userId, ctx.context.userSessionId);
-                return Response.ok({ message: "Logged out" });
+                return HttpResponse.ok({ message: "Logged out" });
             })
     ),
 
@@ -227,7 +227,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 await userAuthService.logoutAll(ctx.context.userId);
-                return Response.ok({ message: "Logged out from all devices" });
+                return HttpResponse.ok({ message: "Logged out from all devices" });
             })
     ),
 
@@ -244,7 +244,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const sessions = await userAuthService.listSessions(ctx.context.userId);
-                return Response.ok({ data: sessions });
+                return HttpResponse.ok({ data: sessions });
             })
     ),
 
@@ -266,7 +266,7 @@ export const userAuthController = {
                     userId: ctx.context.userId,
                     sessionId: ctx.params.id,
                 });
-                return Response.ok({ message: "Session revoked" });
+                return HttpResponse.ok({ message: "Session revoked" });
             })
     ),
 };

@@ -4,7 +4,7 @@ import {
     QuestState,
 } from "@/modules/quests/enums/quest.enum.js";
 import type { QuestObjective } from "@/modules/quests/schemas/quest.schema.js";
-import { NpcMarker } from "@/rooms/world/types/world-message.type.js";
+import { NpcMarker } from "@/rooms/world/modules/content/enums/npc-marker.enum.js";
 
 /** Hero > daily > side khi một NPC có nhiều quest cùng mức ưu tiên. */
 const CATEGORY_RANK: Record<QuestCategory, number> = {

@@ -1,4 +1,4 @@
-> Checklist cũ từ trước khi có SDK sinh tự động (`docs/client-sdk.md`): các tên như `PartyNoticeCode`, `ResponseCode`, `ok/error` không còn; message room giờ luôn là `Result<T>` và gọi thẳng `WorldRoomClient` / `PartyRoomClient`.
+> Checklist cũ từ trước khi có SDK sinh tự động (`docs/client-sdk.md`): các tên như `PartyNoticeCode`, `ResponseCode`, `ok/error` không còn; message room giờ luôn là `Result<T>` và gọi thẳng `WorldRoomClient` / `GlobalRoomClient` (party giờ nằm trong global room).
 
 ## 0. Việc chung đầu tiên
 
@@ -127,7 +127,7 @@ Server: room `party` riêng cho mỗi party (xem `docs/content-authoring.md`, m�
 - [ ] Tạo party: gửi `partyCreate` (world room) → nhận `party {roomId}` → `client.JoinById(roomId)`; giữ kết nối party mở xuyên suốt, **không rời khi đổi map / vào-ra dungeon**.
 - [ ] Mời người chơi (nhập tên) → `invite {playerName}` gửi vào **party room** (chỉ chủ). Hiện thông báo theo `notice.code` (`invite_sent`, `target_offline`, `target_in_party`, `party_full`, `invite_limit`...).
 - [ ] Nhận lời mời: message `partyInviteReceived` ở world room → popup Chấp nhận / Từ chối kèm đếm ngược `expiresInSec`. Chấp nhận = `JoinById(partyRoomId)` (thất bại nếu hết hạn/đầy); Từ chối = gửi `partyDecline {partyRoomId}` ở world room.
-- [ ] Khung thành viên từ `PartyState.members`: tên, level, thanh HP (`hp/maxHp`), map đang đứng (`mapCode`), dấu chủ (`leaderPlayerId`), mờ khi `inWorld = false` (đang chuyển map). Cập nhật theo OnChange của state.
+- [ ] Khung thành viên từ `PartyState.members`: tên (`name`), dấu chủ (`leaderPlayerId`) từ `partyState`; level / thanh HP lấy từ state world theo `playerId` khi thành viên cùng map (khớp `partyId` trong `PlayerWorldState`), khác map thì chỉ hiện tên.
 - [ ] Menu thành viên (chỉ chủ): Kick (`kick {playerId}`), Nhường chủ (`promote {playerId}`), Giải tán (`disband`); mọi người: Rời party (`leave`).
 - [ ] Xử lý `notice` từ party room (member_joined / member_left / kicked / leader_changed / disbanded...) và bị đá khỏi party room (socket đóng) → xoá UI party.
 - [ ] **Rời là rời ngay:** rớt mạng hay thoát game = ra khỏi party, đăng nhập lại không còn party → người chơi phải mời lại. Không cần logic reconnect party room.

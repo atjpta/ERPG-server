@@ -28,6 +28,8 @@ export enum MapErrorCode {
     DUNGEON_UNAVAILABLE = "DUNGEON_UNAVAILABLE",
     /** Có thành viên không đủ điều kiện vào dungeon nên cả nhóm không vào. `error: { dungeonCode, failures: [{ playerId, name, reason }] }` (reason = mã lỗi từng người). */
     DUNGEON_DENIED = "DUNGEON_DENIED",
+    /** Nhóm đang trong quá trình vào dungeon (yêu cầu trước chưa xong). Bỏ qua, đừng gửi lại. */
+    DUNGEON_LAUNCHING = "DUNGEON_LAUNCHING",
     /** Cả nhóm chưa cùng ở trong dungeon để đi lại. */
     DUNGEON_NOT_TOGETHER = "DUNGEON_NOT_TOGETHER",
 }

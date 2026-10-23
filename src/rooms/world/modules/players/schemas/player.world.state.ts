@@ -1,5 +1,17 @@
-import type { ErrorCode } from "@/core/types/result.type.js";
 import { ArraySchema, Schema, type } from "@colyseus/schema";
+import type { ErrorCode } from "@/core/types/result.type.js";
+import type { ConditionContext } from "@/modules/dialogues/services/condition.service.js";
+import { QuestState } from "@/modules/quests/enums/quest.enum.js";
+import { questProgressService } from "@/modules/quests/services/quest-progress.service.js";
+import { playerService } from "@/modules/player/services/player.service.js";
+import type { CurrencyReward } from "@/modules/rewards/types/reward.type.js";
+import { inventoryService } from "@/modules/player/services/inventory.service.js";
+import { questOf } from "@/rooms/world/modules/content/utils/quest-resolve.world.util.js";
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { ConsumableEffectType } from "@/modules/items/enums/item.enum.js";
+import type { ConsumableEffect } from "@/modules/items/schemas/item-metadata.schema.js";
+import type { PartyMembershipEvent, PartySnapshot } from "@/rooms/global/global.shared.js";
+import type { ConsumableGain } from "@/rooms/world/modules/players/types/consumable.world.type.js";
 
 import { big, floorBig, roundBig } from "@/core/utils/big-number.util.js";
 import { entityBodyService } from "@/modules/bodies/services/entity-body.service.js";
@@ -10,18 +22,17 @@ import type { DungeonSession } from "@/modules/maps/entities/game-map.entity.js"
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import {
-    fromInventories,
     toInventories,
     type Equipments,
     type Inventories,
 } from "@/modules/player/schemas/inventory.schema.js";
-import type { AttributeKey, Attributes, Stats } from "@/modules/player/schemas/stat.schema.js";
+import type { Attributes, Stats } from "@/modules/player/schemas/stat.schema.js";
 import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
 import type { PlayerSnapshot } from "@/modules/player/types/player.type.js";
 import type { PlayerDailyQuests } from "@/modules/quests/schemas/daily-quest.schema.js";
 import type { PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
 import { DASH_SKILL_CODE, skillService } from "@/modules/skills/services/skill.service.js";
-import { PartyLootMode } from "@/rooms/party/party.shared.js";
+import { PartyLootMode } from "@/rooms/global/global.shared.js";
 import { mapExtent } from "@/rooms/world/modules/players/simulation/movement.step.js";
 import type { DamageCombatant } from "@/rooms/world/modules/combat/chains/damage.world.chain.js";
 import { HitboxColliderState } from "@/rooms/world/modules/combat/schemas/hitbox-collider.world.state.js";
@@ -30,12 +41,15 @@ import {
     toOwnedSkillStates,
 } from "@/rooms/world/modules/players/schemas/owned-skill.world.state.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
-import type { AttributesMessage } from "@/rooms/world/types/world-message.type.js";
-import { playerService } from "@/modules/player/services/player.service.js";
+import type { PlayerWorldFields } from "@/modules/player/types/player-fields.type.js";
+import type { PlayerDataSnapshot } from "@/rooms/global/global.shared.js";
 import {
     PlayerStatService,
     playerStatService,
 } from "@/modules/player/services/player-stat.service.js";
+
+/** Hồi chiêu giữa hai lần dùng bình cùng loại (HP / MP). */
+const POTION_COOLDOWN_MS = 10_000;
 
 /** Trần của `dashTicks` / `dashCooldownTicks` (uint8). */
 const MAX_DASH_TICKS = 0xff;
@@ -53,10 +67,11 @@ export class PlayerWorldState extends Schema {
     @type("string") direction: string;
     @type("boolean") moving: boolean = false;
     @type("uint32") hp: number;
-    @type("uint32") maxHp: number;
+    /** Từ stats do global tính (`maxHp`, `maxMp`, `moveSpeed`) — chỉ ở server, không sync; client lấy từ push `attributes` của global. */
+    maxHp: number;
     @type("uint32") mp: number;
-    @type("uint32") maxMp: number;
-    @type("float32") moveSpeed: number;
+    maxMp: number;
+    moveSpeed: number;
     @type("uint32") stateRevision: number;
     @type("uint8") attackCooldownTicks: number = 0;
     /**
@@ -114,16 +129,7 @@ export class PlayerWorldState extends Schema {
     /** Vị trí đích chốt lúc bắt đầu đổi map — room cũ còn simulate player tới khi client rời, không được để nó ghi đè vị trí lưu. */
     private pendingX = 0;
     private pendingY = 0;
-    private _partyRoomId: string | null = null;
-    /** Room party đang tham gia (server-only) — dùng chia exp / quest cho thành viên cùng room. Gán là cập nhật luôn `inParty`. */
-    get partyRoomId(): string | null {
-        return this._partyRoomId;
-    }
-    set partyRoomId(value: string | null) {
-        this._partyRoomId = value;
-        this.inParty = !!value;
-    }
-    /** Cách chia item của party hiện tại (do chủ chọn; party room đẩy xuống). */
+    /** Cách chia item của party hiện tại (do chủ chọn; global room đẩy xuống). */
     partyLootMode: PartyLootMode = PartyLootMode.ROUND_ROBIN;
     /** Làng gần nhất đã đến (server-only) — chết trong dungeon thì hồi sinh ở đây. */
     lastTownMapCode: string | null = null;
@@ -136,12 +142,22 @@ export class PlayerWorldState extends Schema {
     /** Giây còn lại của hồi chiêu bình HP / MP (0 = dùng được) — để client hiện đếm ngược. */
     @type("uint8") hpPotionCooldownSec = 0;
     @type("uint8") mpPotionCooldownSec = 0;
-    /** Đang trong party hay không — client dùng để chọn "mời" hay "xin vào party" ở menu người chơi (id room party vẫn server-only). */
+    /** Đang trong party hay không — client dùng để chọn "mời" hay "xin vào party" ở menu người chơi (id party vẫn server-only). */
     @type("boolean") inParty = false;
+    /**
+     * Party đang tham gia (id do global room cấp), đồng bộ cho mọi client trong room: client ghép với danh sách thành viên
+     * của `partyState` để nhận ra đồng đội cùng map và đọc level / HP... của họ ngay từ state này. Đổi bằng `setParty`.
+     * Khai báo sau cùng trong các field đồng bộ để không làm lệch chỉ số field cũ trong schema C#.
+     */
+    @type("string") partyId: string | null = null;
+
     classId: string;
+    /**
+     * Bản sao chỉ-đọc của PlayerData do global làm chủ (cộng điểm, túi, trang bị): chỉ được đổi bằng `applyPlayerData`
+     * khi global đẩy snapshot mới. World đọc để tính stats / điều kiện quest, không ghi.
+     */
     allocatedAttributes: Attributes;
     equipments: Equipments;
-    /** 3 túi inventory theo ItemType (server-only, gửi client qua message `inventory`). */
     inventories: Inventories;
     attributes: Attributes;
     stats: Stats;
@@ -149,6 +165,8 @@ export class PlayerWorldState extends Schema {
     attackSerial = 0;
     skillPoints: number;
     /** Phần HP/MP hồi lẻ (< 1) cộng dồn giữa các tick. */
+    /** Revision mới nhất đã áp dụng theo từng party nguồn — bỏ qua thông báo cũ / trùng của global. */
+    private partyRevisions = new Map<string, number>();
     private hpRegenCarry = big(0);
     private mpRegenCarry = big(0);
 
@@ -215,51 +233,21 @@ export class PlayerWorldState extends Schema {
         }
     }
 
-    /** Cộng điểm tiềm năng; trả `ErrorCode` lỗi nếu không hợp lệ, `undefined` khi thành công. */
-    updateAttributes(request: Partial<Record<AttributeKey, number>>): ErrorCode | undefined {
-        const result = playerService.updateAttributePoints(
-            this.allocatedAttributes,
-            this.attributePoints,
-            request
-        );
-        if (typeof result === "string") return result;
-        this.allocatedAttributes = result.allocatedAttributes;
-        this.attributePoints = result.attributePoints;
+    /**
+     * Nhận snapshot PlayerData từ global (bản mới hơn thì mới áp dụng): đổi bản sao túi / trang bị / điểm và tính lại
+     * stats (kẹp HP/MP như `refreshStats`). Trả `true` nếu túi đổi — để quest "collect" cập nhật tiến độ.
+     */
+    applyPlayerData(data: PlayerDataSnapshot): boolean {
+        if (data.revision < this.stateRevision) return false;
+        const bagChanged = JSON.stringify(this.inventories) !== JSON.stringify(data.inventories);
+        this.attributePoints = data.attributePoints;
+        this.skillPoints = data.skillPoints;
+        this.allocatedAttributes = structuredClone(data.allocatedAttributes);
+        this.equipments = structuredClone(data.equipments);
+        this.inventories = structuredClone(data.inventories);
+        this.stateRevision = data.revision;
         this.refreshStats();
-        return undefined;
-    }
-
-    /** Kết quả nếu cộng điểm như `request` — không đổi state; trả `ErrorCode` lỗi nếu không hợp lệ. */
-    previewAttributes(
-        request: Partial<Record<AttributeKey, number>>
-    ): AttributesMessage | ErrorCode {
-        const result = playerService.updateAttributePoints(
-            this.allocatedAttributes,
-            this.attributePoints,
-            request
-        );
-        if (typeof result === "string") return result;
-        const { attributes, stats } = playerStatService.compute({
-            classId: this.classId,
-            allocatedAttributes: result.allocatedAttributes,
-            equipments: this.equipments,
-        });
-        return {
-            attributePoints: result.attributePoints,
-            allocatedAttributes: { ...result.allocatedAttributes },
-            attributes: { ...attributes },
-            stats: { ...stats },
-        };
-    }
-
-    /** lấy danh sách tất cả điểm thuộc tính, chỉ số của player. */
-    getAttributeSummary(): AttributesMessage {
-        return {
-            attributePoints: this.attributePoints,
-            allocatedAttributes: { ...this.allocatedAttributes },
-            attributes: { ...this.attributes },
-            stats: { ...this.stats },
-        };
+        return bagChanged;
     }
 
     /** Hồi HP/MP theo `hp_regen`/`mp_regen` (mỗi giây) sau `dt` giây; chết thì không hồi. */
@@ -291,39 +279,31 @@ export class PlayerWorldState extends Schema {
         if (mp !== this.mpPotionCooldownSec) this.mpPotionCooldownSec = mp;
     }
 
+    /**
+     * Cộng tiền và exp (thưởng): ví tăng ngay, lên level thì hồi đầy HP/MP. Điểm tiềm năng khi lên level do global làm chủ
+     * nên người gọi tự gửi sang global.
+     */
+    gainCurrencyAndExp(
+        currency: readonly CurrencyReward[],
+        exp: number
+    ): { level: number; levelsGained: number } {
+        this.wallet = playerService.creditWallet(this.wallet, currency);
+        const progress = playerService.gainExp({ level: this.level, exp: this.exp }, exp, (level) =>
+            levelService.getExpToNext(level)
+        );
+        this.setLevelProgress(progress.level, progress.exp);
+        if (progress.levelsGained > 0) this.restoreFull();
+        return { level: progress.level, levelsGained: progress.levelsGained };
+    }
+
     /** Hồi đầy HP/MP (lên level). */
     restoreFull() {
         this.hp = this.maxHp;
         this.mp = this.maxMp;
     }
 
-    /** Phần state được lưu xuống DB (checkpoint định kỳ và lúc rời room). */
-    toSavedState(
-        mapCode: string
-    ): Pick<
-        PlayerState,
-        | "mapCode"
-        | "x"
-        | "y"
-        | "direction"
-        | "hp"
-        | "mp"
-        | "level"
-        | "exp"
-        | "wallet"
-        | "attributePoints"
-        | "skillPoints"
-        | "allocatedAttributes"
-        | "equipments"
-        | "equipmentInventory"
-        | "consumableInventory"
-        | "materialInventory"
-        | "flags"
-        | "quests"
-        | "lastTownMapCode"
-        | "dungeonSession"
-        | "dailyQuests"
-    > {
+    /** Phần world làm chủ, gửi global lưu (checkpoint định kỳ, lúc rời room / đổi map). */
+    toWorldFields(mapCode: string): PlayerWorldFields {
         // Trong dungeon (hoặc đang bước vào): lưu chỗ quay về — mất kết nối thì đăng nhập lại ở ngoài dungeon.
         const session = this.dungeonSession;
         return {
@@ -340,14 +320,101 @@ export class PlayerWorldState extends Schema {
             level: this.level,
             exp: this.exp,
             wallet: structuredClone(this.wallet),
-            attributePoints: this.attributePoints,
-            skillPoints: this.skillPoints,
-            allocatedAttributes: { ...this.allocatedAttributes },
-            equipments: structuredClone(this.equipments),
-            ...structuredClone(fromInventories(this.inventories)),
             flags: { ...this.flags },
             quests: structuredClone(this.quests),
         };
+    }
+
+    /**
+     * Hiệu ứng của consumable có dùng được lúc `now` không (chưa đổi state). Command gọi cho mọi hiệu ứng trước khi trừ
+     * item, nên item chỉ mất khi cả danh sách hiệu ứng đều dùng được.
+     */
+    checkConsumable(effect: ConsumableEffect, now: number): ErrorCode | undefined {
+        switch (effect.type) {
+            case ConsumableEffectType.RESTORE: {
+                const usefulHp = effect.hp > 0 && this.hp < this.maxHp;
+                const usefulMp = effect.mp > 0 && this.mp < this.maxMp;
+                if (!usefulHp && !usefulMp) return ItemErrorCode.ITEM_ALREADY_FULL;
+                if (
+                    (usefulHp && now < this.hpPotionReadyAt) ||
+                    (usefulMp && now < this.mpPotionReadyAt)
+                ) {
+                    return ItemErrorCode.ITEM_ON_COOLDOWN;
+                }
+                return undefined;
+            }
+        }
+    }
+
+    /** Áp dụng hiệu ứng consumable (đã `checkConsumable`): hồi HP / MP và đặt hồi chiêu bình. */
+    applyConsumable(effect: ConsumableEffect, now: number): ConsumableGain {
+        switch (effect.type) {
+            case ConsumableEffectType.RESTORE: {
+                const hpBefore = this.hp;
+                const mpBefore = this.mp;
+                if (effect.hp > 0 && this.hp < this.maxHp) {
+                    this.hpPotionReadyAt = now + POTION_COOLDOWN_MS;
+                    this.hp = Math.min(this.maxHp, this.hp + effect.hp);
+                }
+                if (effect.mp > 0 && this.mp < this.maxMp) {
+                    this.mpPotionReadyAt = now + POTION_COOLDOWN_MS;
+                    this.mp = Math.min(this.maxMp, this.mp + effect.mp);
+                }
+                this.syncPotionCooldowns(now);
+                return { hp: this.hp - hpBefore, mp: this.mp - mpBefore };
+            }
+        }
+    }
+
+    /** Thành viên vào / rời party hoặc đổi cách chia loot (global đẩy xuống). Bản cũ / trùng bị bỏ qua. */
+    applyPartyEvent(event: PartyMembershipEvent) {
+        if (event.revision <= (this.partyRevisions.get(event.sourcePartyId) ?? -1)) return;
+        if (!event.partyId && this.partyId !== event.sourcePartyId) return;
+        this.partyRevisions.set(event.sourcePartyId, event.revision);
+        this.setParty(event.partyId);
+        this.partyLootMode = event.lootMode;
+    }
+
+    /** Snapshot party lúc vừa vào room (global trả khi attach). */
+    applyPartySnapshot(snapshot: PartySnapshot) {
+        this.setParty(snapshot.partyId);
+        this.partyLootMode = snapshot.lootMode;
+        this.partyRevisions = new Map([[snapshot.partyId, snapshot.revision]]);
+    }
+
+    /** Số item (theo code) trong bản sao túi. */
+    itemCount(itemCode: string): number {
+        return inventoryService.countByCode(this.inventories, itemCode);
+    }
+
+    /** Trạng thái quest (chưa nhận / đang làm / xong...) theo tiến độ hiện tại và số item đang có. */
+    questState(questCode: string): QuestState {
+        const quest = questOf(this, questCode);
+        if (!quest) return QuestState.NOT_STARTED;
+        return questProgressService.questStateOf(quest, this.quests[questCode], (code) =>
+            this.itemCount(code)
+        );
+    }
+
+    /** Ngữ cảnh để đánh giá điều kiện thoại / quest / vật thể tại map `mapCode`. */
+    conditionContext(mapCode: string): ConditionContext {
+        return {
+            level: this.level,
+            classCode: this.classCode,
+            baseClassCode: this.baseClassCode,
+            mapCode,
+            flags: this.flags,
+            questState: (code) => this.questState(code),
+            itemCount: (code) => this.itemCount(code),
+            currency: (code) =>
+                (this.wallet as unknown as Record<string, { balance: number } | undefined>)[code]
+                    ?.balance ?? 0,
+        };
+    }
+
+    /** Đang đứng trong `radius` quanh (x, y) không. */
+    isNear(x: number, y: number, radius: number): boolean {
+        return Math.hypot(this.x - x, this.y - y) <= radius;
     }
 
     /** Hồi sinh tại điểm spawn của map (`game_maps.spawnX/spawnY`). */
@@ -542,21 +609,12 @@ export class PlayerWorldState extends Schema {
         this.hp = Math.max(0, this.hp - Math.max(0, damage));
     }
 
-    syncSnapshot(player: PlayerSnapshot) {
-        this.x = player.x;
-        this.y = player.y;
-        this.direction = player.direction === "left" ? "left" : "right";
-        this.hp = player.hp;
-        this.mp = player.mp;
-        this.applyProgress(player);
-        this.equipments = structuredClone(player.equipments);
-        this.inventories = structuredClone(toInventories(player));
-        this.refreshStats();
-        this.stateRevision = player.stateRevision;
-        this.moving = false;
-    }
-
     setStateRevision(revision: number) {
         this.stateRevision = revision;
+    }
+
+    setParty(partyId: string | null) {
+        this.partyId = partyId;
+        this.inParty = !!partyId;
     }
 }

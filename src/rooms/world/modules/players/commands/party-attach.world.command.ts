@@ -1,25 +1,22 @@
 import { callRoom } from "@/core/rooms/room.integration.js";
-import { AttachWorldPartyCommand } from "@/rooms/party/commands/attach-world.party.command.js";
-import { partyDirectoryService } from "@/rooms/party/party.shared.js";
+import { AttachWorldGlobalCommand } from "@/rooms/global/global.shared.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import { playerPartyWorldService } from "@/rooms/world/modules/players/services/player-party.world.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { Command } from "@colyseus/command";
 
+/** Player vừa vào world room này: báo global vị trí, và nhận lại party (nếu có) của họ. */
 export class PartyAttachWorldCommand extends Command<WorldRoom, { player: PlayerWorldState }> {
     async execute({ player }: { player: PlayerWorldState }) {
         const room = this.room;
 
-        await partyDirectoryService.setWorldRoomId(player.id, room.roomId);
-        const partyRoomId = await partyDirectoryService.getPartyRoomId(player.id);
-        if (!partyRoomId) return;
-        const attached = await callRoom(partyRoomId, AttachWorldPartyCommand, {
-            playerId: player.id,
+        const attached = await callRoom(room.serverId, AttachWorldGlobalCommand, {
             worldRoomId: room.roomId,
-            info: playerPartyWorldService.toMemberInfo(room, player),
+            mapCode: room.map.code,
+            instanceId: room.dungeon?.instanceId,
+            playerId: player.id,
         });
-        // RPC lỗi hoặc không còn là thành viên: giữ directory để lần sau đối soát.
-        if (!attached.success) return;
-        playerPartyWorldService.applySnapshot(room, player, attached.data);
+        // RPC lỗi hoặc không ở party nào: world giữ nguyên, lần heartbeat / report sau đối soát.
+        if (!attached.success || !attached.data) return;
+        player.applyPartySnapshot(attached.data);
     }
 }

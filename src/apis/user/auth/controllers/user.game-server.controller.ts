@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { userGameServerService } from "@/apis/user/auth/services/user.game-server.service.js";
 import { z } from "zod";
 import { UserGameServerResponse } from "@/apis/user/auth/validators/user.auth.response.js";
@@ -21,7 +21,7 @@ export const userGameServerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const servers = await userGameServerService.listVisible();
-                return Response.ok({ data: servers });
+                return HttpResponse.ok({ data: servers });
             })
     ),
 };

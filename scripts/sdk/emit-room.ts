@@ -27,12 +27,14 @@ function errorList(codes: readonly string[], index: CodeIndex): string[] {
     return lines;
 }
 
-/** Tên member của `RoomClient` — hàm gửi trùng tên thì thêm tiền tố `Send` (vd message `leave` → `SendLeave`). */
+/** Tên member của `RoomClient` — hàm request trùng tên thì thêm tiền tố `Send` (vd message `leave` → `SendLeave`). */
 const RESERVED_METHODS = new Set([
     "Leave",
     "JoinById",
     "Reconnect",
     "Send",
+    "Call",
+    "RequestTimeoutMs",
     "Connection",
     "IsConnected",
 ]);
@@ -43,6 +45,9 @@ const sendMethod = (key: string) => {
 
 const dataType = (data: string | null) =>
     data ? (data === "string" ? "string" : `${SCHEMA}.${data}`) : "Result";
+
+/** Kiểu C# trả về của request: `Result<T>` hoặc `Result` khi response không có data. */
+const resultType = (data: string | null) => (data ? `Result<${dataType(data)}>` : "Result");
 
 export interface RoomEmitResult {
     files: OutputFile[];
@@ -85,7 +90,7 @@ export function emitRooms(
         const clientKeys = [...clientMembers.keys()].filter((key) => key in contract.client);
         const serverKeys = [...serverMembers.keys()].filter((key) => key in contract.server);
 
-        // reply index: server key → các hàm gửi (client key) trả lời nó
+        // push index: server key → các request (client key) đẩy thêm nó như hiệu ứng phụ
         const repliedBy = new Map<string, string[]>();
         for (const key of clientKeys) {
             for (const reply of contract.client[key].replies) {
@@ -102,7 +107,7 @@ export function emitRooms(
             "",
             `namespace ${NAMESPACE}`,
             "{",
-            `    /// <summary>Client typed cho room <c>${contract.joins.map((j) => j.room).join("</c> / <c>")}</c> (state <see cref="${contract.state}"/>). Gửi bằng các hàm <c>Send...</c>/tên hành động, nhận bằng <c>On...</c>; mọi message server là <see cref="Result{T}"/>.</summary>`,
+            `    /// <summary>Client typed cho room <c>${contract.joins.map((j) => j.room).join("</c> / <c>")}</c> (state <see cref="${contract.state}"/>). Thao tác hỏi-đáp là hàm <c>async</c> trả <see cref="Result{T}"/> (Request/Response, Colyseus SDK &gt;= 0.18.3); message server tự đẩy xuống nhận bằng <c>On...</c>.</summary>`,
             `    public partial class ${contract.name}RoomClient : RoomClient<${contract.state}>`,
             "    {",
         ];
@@ -130,15 +135,17 @@ export function emitRooms(
             }
         }
 
-        // ---- send
-        lines.push("        // ---- Client → server ----", "");
+        lines.push("        // ---- Client → server (Request/Response) ----", "");
         for (const key of clientKeys) {
             const message = contract.client[key];
             const method = sendMethod(key);
+            const result = resultType(message.response);
+            if (message.response && message.response !== "string")
+                referencedDtos.add(message.response);
             const param = message.payload
                 ? collector.typeOf(message.payload, `${method}Payload`, contract.name, "input")
                 : undefined;
-            const replies = message.replies.map((value) => `<see cref="On${pascal(value)}"/>`);
+            const pushes = message.replies.map((value) => `<see cref="On${pascal(value)}"/>`);
             const common = message.payload ? ["INVALID_INPUT"] : [];
             const allCodes = [
                 ...new Set([
@@ -146,37 +153,37 @@ export function emitRooms(
                     ...common.filter((c) => !message.errors.includes(c)),
                 ]),
             ];
+            const call = message.response ? `Call<${dataType(message.response)}>` : "Call";
             lines.push(
                 ...(clientMembers.get(key)!.doc
                     ? [`        /// <summary>${docText(clientMembers.get(key)!.doc)}</summary>`]
                     : []),
                 "        /// <remarks>",
-                `        /// <para>Tên message: <c>${contract.enums.client}.${clientMembers.get(key)!.code}</c> ("${key}"). Fire-and-forget: kết quả đến qua handler đã đăng ký.</para>`,
-                ...(replies.length
-                    ? [`        /// <para>Trả lời qua: ${replies.join(", ")}.</para>`]
-                    : message.documented
-                      ? ["        /// <para>Không có reply.</para>"]
-                      : []),
+                `        /// <para>Request <c>${contract.enums.client}.${clientMembers.get(key)!.code}</c> ("${key}"). Không ném exception: lỗi nghiệp vụ / mạng / quá hạn là <see cref="Result"/> thất bại (<see cref="RoomClient.Failed"/> bắn trước khi trả về).</para>`,
+                `        /// <para>Response: ${message.response ? (message.response === "string" ? "<c>string</c>" : `<see cref="${SCHEMA}.${message.response}"/>`) : "không có <c>data</c>"}.</para>`,
+                ...(pushes.length
+                    ? [`        /// <para>Còn đẩy thêm: ${pushes.join(", ")}.</para>`]
+                    : []),
                 ...(message.note ? [`        /// <para>${docText(message.note)}</para>`] : []),
                 ...errorList(allCodes, codes),
                 "        /// </remarks>",
-                `        public Task ${method}(${param ? `${param} payload` : ""}) =>`,
-                `            Send(${SCHEMA}.${contract.enums.client}.${clientMembers.get(key)!.code}${param ? ", payload" : ""});`,
+                `        public Task<${result}> ${method}(${param ? `${param} payload` : ""}) =>`,
+                `            ${call}(${SCHEMA}.${contract.enums.client}.${clientMembers.get(key)!.code}${param ? ", payload" : ""});`,
                 ""
             );
             const flat = param ? flatParams(collector.classes.get(param)) : null;
             if (flat && param) {
                 lines.push(
                     `        /// <inheritdoc cref="${method}(${param})"/>`,
-                    `        public Task ${method}(${flat.signature}) =>`,
+                    `        public Task<${result}> ${method}(${flat.signature}) =>`,
                     `            ${method}(new ${param} { ${flat.initializer} });`,
                     ""
                 );
             }
         }
 
-        // ---- receive
-        lines.push("        // ---- Server → client ----", "");
+        // ---- push
+        lines.push("        // ---- Server → client (push) ----", "");
         for (const key of serverKeys) {
             const message = contract.server[key];
             if (message.data && message.data !== "string") referencedDtos.add(message.data);
@@ -187,12 +194,16 @@ export function emitRooms(
                     ? [`        /// <summary>${docText(serverMembers.get(key)!.doc)}</summary>`]
                     : []),
                 "        /// <remarks>",
-                `        /// <para>Tên message: <c>${contract.enums.server}.${serverMembers.get(key)!.code}</c> ("${key}"). ${trigger ? ` Gửi bởi: ${trigger.map((k) => `<see cref="${sendMethod(k)}"/>`).join(", ")}.` : ""}</para>`,
+                ...(message.data
+                    ? [
+                          '        /// <para>Chỉ gọi <c>onOk</c> khi thành công; thất bại luôn bắn <see cref="RoomClient.Failed"/> và gọi <c>onFail</c> nếu có.</para>',
+                      ]
+                    : []),
+                `        /// <para>Push <c>${contract.enums.server}.${serverMembers.get(key)!.code}</c> ("${key}"). Server tự đẩy xuống${trigger ? `, kèm theo: ${trigger.map((k) => `<see cref="${sendMethod(k)}"/>`).join(", ")}` : ""}.</para>`,
                 "        /// </remarks>",
                 "        /// <returns>Hàm huỷ đăng ký.</returns>",
                 ...(message.data
                     ? [
-                          '        /// <para>Chỉ gọi <c>onOk</c> khi thành công; thất bại luôn bắn <see cref="RoomClient.Failed"/> và gọi <c>onFail</c> nếu có.</para>',
                           `        public Action ${method}(Action<${dataType(message.data)}> onOk, Action<Result> onFail = null) =>`,
                           `            OnOk(${SCHEMA}.${contract.enums.server}.${serverMembers.get(key)!.code}, onOk, onFail);`,
                       ]

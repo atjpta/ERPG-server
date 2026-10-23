@@ -40,15 +40,15 @@ import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/pla
 import type { MoveBounds } from "@/rooms/world/modules/players/simulation/movement.step.js";
 import { rewardWorldService } from "@/rooms/world/modules/rewards/services/reward.world.service.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
-import {
-    WorldMessage,
-    WorldRoomName,
-    type DungeonChamberClearMessage,
-    type DungeonClearMessage,
-    type MapChangeMessage,
-} from "@/rooms/world/types/world-message.type.js";
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { WorldRoomName } from "@/rooms/world/modules/maps/enums/world-room-name.enum.js";
+import type {
+    DungeonChamberClearMessage,
+    DungeonClearMessage,
+} from "@/rooms/world/modules/dungeons/interfaces/dungeon.world.message.js";
+import type { MapChangeMessage } from "@/rooms/world/modules/maps/interfaces/map.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { randomUUID } from "node:crypto";
+import { generateEntityId } from "@/core/entities/base.entity.js";
 
 /** Sau khi hạ boss, ở lại tối đa chừng này giây trước khi bị đưa ra ngoài. */
 export const DUNGEON_LEAVE_DELAY_SEC = 60;
@@ -83,7 +83,7 @@ export interface DungeonRuntime {
     cleared: boolean;
     /** Những gì từng người nhận được trong lần đi này (key = playerId) — hiện ở bảng thưởng sau khi clear. */
     rewards: Map<string, DungeonRewardTally>;
-    /** Chủ party lúc vào (nguồn: kỳ vọng của party room) — người duy nhất được bấm "đi lại". Rỗng nếu không rõ. */
+    /** Chủ party lúc vào (nguồn: kỳ vọng do global room ghi) — người duy nhất được bấm "đi lại". Rỗng nếu không rõ. */
     leaderPlayerId: string;
     /** Map + cổng chắn của chamber đang chơi (đổi khi vào / dọn xong chamber); chưa có thì dùng địa hình map. */
     bounds?: MoveBounds;
@@ -247,7 +247,7 @@ export class DungeonWorldService {
         player: PlayerWorldState,
         dungeon: GameMap,
         spawnId: string,
-        instanceId: string = randomUUID()
+        instanceId: string = generateEntityId()
     ): Promise<ErrorCode | undefined> {
         if (player.level < dungeon.minLevel) return PlayerErrorCode.LEVEL_TOO_LOW;
         if (!dungeon.dungeon || dungeon.dungeon.chambers.length === 0) {

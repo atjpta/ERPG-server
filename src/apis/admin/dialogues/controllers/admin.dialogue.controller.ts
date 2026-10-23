@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
 import { adminDialogueService } from "@/apis/admin/dialogues/services/admin.dialogue.service.js";
@@ -19,7 +19,7 @@ export const adminDialogueController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminDialogueService.list(ctx.query);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -29,8 +29,8 @@ export const adminDialogueController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const dialogue = await adminDialogueService.findById({ id: ctx.params.id });
-                if (!dialogue) return Response.notFound(ctx);
-                return Response.ok({ data: dialogue });
+                if (!dialogue) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: dialogue });
             })
     ),
 
@@ -40,7 +40,7 @@ export const adminDialogueController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const dialogue = await adminDialogueService.createDialogue(ctx.body);
-                return Response.created(ctx, { data: dialogue });
+                return HttpResponse.created(ctx, { data: dialogue });
             })
     ),
 
@@ -50,8 +50,8 @@ export const adminDialogueController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const dialogue = await adminDialogueService.updateDialogue(ctx.params.id, ctx.body);
-                if (!dialogue) return Response.notFound(ctx);
-                return Response.ok({ data: dialogue });
+                if (!dialogue) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: dialogue });
             })
     ),
 };

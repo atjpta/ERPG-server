@@ -9,10 +9,10 @@ namespace ERPG.Network
     /// <summary>Một message room thất bại — dữ liệu của <see cref="RoomClient.Failed"/>.</summary>
     public readonly struct RoomFailure
     {
-        /// <summary>Tên room (<c>world</c>, <c>party</c>).</summary>
+        /// <summary>Tên room (<c>world</c>, <c>dungeon</c>, <c>global</c>).</summary>
         public readonly string Room;
 
-        /// <summary>Loại message server gửi xuống (giá trị <c>WorldMessage.X</c>...).</summary>
+        /// <summary>Request thất bại: tên request (<c>WorldClientMessage.X</c>); push thất bại: loại push server gửi xuống (<c>WorldMessage.X</c>).</summary>
         public readonly string Type;
 
         public readonly Result Result;
@@ -62,11 +62,12 @@ namespace ERPG.Network
     }
 
     /// <summary>
-    /// Client typed cho một room Colyseus. Lớp con sinh ra (<c>WorldRoomClient</c>, <c>PartyRoomClient</c>) thêm
-    /// hàm gửi (<c>EquipItem(...)</c>) và hàm nhận (<c>OnInventory(...)</c>).
+    /// Client typed cho một room Colyseus. Lớp con sinh ra (<c>WorldRoomClient</c>, <c>GlobalRoomClient</c>) thêm
+    /// hàm request (<c>await EquipItem(...)</c> trả <c>Result&lt;T&gt;</c>) và hàm nhận push (<c>OnChatReceived(...)</c>).
     /// <list type="bullet">
     /// <item>Tạo một lần, đăng ký handler trước hay sau khi join đều được; join lại thì handler tự gắn lại.</item>
-    /// <item>Mọi message server là <see cref="Result{T}"/>: <c>OnX(onOk, onFail)</c> chỉ gọi <c>onOk</c> khi thành công.</item>
+    /// <item>Thao tác hỏi-đáp là Request/Response của Colyseus (SDK &gt;= 0.18.3): không ném exception, lỗi mạng / timeout / bị từ chối đổi thành <see cref="Result"/> thất bại.</item>
+    /// <item>Mọi message server đẩy xuống là <see cref="Result{T}"/>: <c>OnX(onOk, onFail)</c> chỉ gọi <c>onOk</c> khi thành công.</item>
     /// <item>Join cần player token (<see cref="NetworkSettings.PlayerToken"/>).</item>
     /// </list>
     /// </summary>
@@ -188,7 +189,7 @@ namespace ERPG.Network
         protected Task<bool> JoinOrCreate(string roomName, object options = null) =>
             JoinWith(c => c.JoinOrCreate<TState>(roomName, ToOptions(options)));
 
-        /// <summary>Vào room đã có theo id (party: id lấy từ message của world room). Trả <c>false</c> nếu lỗi.</summary>
+        /// <summary>Vào room đã có theo id Trả <c>false</c> nếu lỗi.</summary>
         public Task<bool> JoinById(string roomId, object options = null) =>
             JoinWith(c => c.JoinById<TState>(roomId, ToOptions(options)));
 
@@ -321,10 +322,66 @@ namespace ERPG.Network
             }
         }
 
+        // ------------------------------------------------------------------ request / response
+
+        /// <summary>Thời gian chờ response của mọi request (ms). Mặc định 15s (lớn hơn timeout RPC nội bộ 10s của server khi vào dungeon).</summary>
+        public int RequestTimeoutMs { get; set; } = 15000;
+
+        /// <summary>
+        /// Gửi request và chờ response <see cref="Result{T}"/>. Không ném exception: chưa kết nối → <c>NETWORK_ERROR</c>,
+        /// quá hạn → <c>REQUEST_TIMEOUT</c>, server từ chối / không có handler → <c>REQUEST_FAILED</c>.
+        /// Thất bại luôn bắn <see cref="RoomClient.Failed"/> đúng một lần trước khi trả về.
+        /// </summary>
+        protected async Task<Result<TData>> Call<TData>(string type, object payload = null)
+        {
+            var result = await CallCore<Result<TData>>(type, payload, (code, message, error) => Result<TData>.Fail(code, message, error));
+            return Finish(type, result);
+        }
+
+        /// <summary>Như <see cref="Call{TData}"/> cho request không có <c>data</c> trong response.</summary>
+        protected async Task<Result> Call(string type, object payload = null)
+        {
+            var result = await CallCore<Result>(type, payload, (code, message, error) => Result.Fail(code, message, error));
+            return Finish(type, result);
+        }
+
+        private TResult Finish<TResult>(string type, TResult result) where TResult : Result
+        {
+            if (!result.success) RaiseFailed(new RoomFailure(RoomName, type, result));
+            return result;
+        }
+
+        private async Task<TResult> CallCore<TResult>(string type, object payload, Func<string, string, object, TResult> fail)
+            where TResult : Result
+        {
+            var room = Room;
+            if (room == null || !IsConnected)
+                return fail(ClientErrorCode.NETWORK_ERROR, $"chưa kết nối room khi gửi '{type}'", null);
+            NetworkSettings.Verbose($"request {room.Name}/{type}");
+            try
+            {
+                var wire = payload == null ? null : PayloadConverter.ToWire(payload);
+                var result = await room.Request<TResult>(type, wire, RequestTimeoutMs);
+                return result ?? fail(ClientErrorCode.NETWORK_ERROR, "empty response", null);
+            }
+            catch (TimeoutException)
+            {
+                return fail(ClientErrorCode.REQUEST_TIMEOUT, $"request '{type}' quá {RequestTimeoutMs}ms", null);
+            }
+            catch (RequestError requestError)
+            {
+                return fail(ClientErrorCode.REQUEST_FAILED, $"{requestError.Name}: {requestError.Message}", requestError.Payload);
+            }
+            catch (Exception exception)
+            {
+                return fail(ClientErrorCode.NETWORK_ERROR, exception.Message, null);
+            }
+        }
+
         // ------------------------------------------------------------------ send
 
         /// <summary>
-        /// Gửi message lên server (fire-and-forget). Payload là model sinh ra; field <c>null</c> bị bỏ.
+        /// Gửi message lên server (fire-and-forget, không có response; thao tác hỏi-đáp dùng <c>Call</c>). Payload là model sinh ra; field <c>null</c> bị bỏ.
         /// Chưa join / mất kết nối thì bỏ qua và ghi cảnh báo.
         /// </summary>
         protected Task Send(string type, object payload = null)

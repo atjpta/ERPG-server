@@ -144,7 +144,7 @@ export const adminFooController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminFooService.list(ctx.query);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 };
@@ -155,15 +155,15 @@ export const adminFooController = {
   `adminAuthMiddleware` (admin token).
 - Param path không phải `:id` (vd `:key` enum) → `Schema.parse(ctx.params)` để có đúng kiểu.
 
-## Response helpers
+## HttpResponse helpers
 
 Mọi response là envelope `Result` `{ success, data, code, message, error }` — xem [định dạng trả về chung](response-format.md).
 
-| Helper                                        | HTTP | Dùng khi          |
-| --------------------------------------------- | ---- | ----------------- |
-| `Response.ok({ data })`                       | 200  | GET / UPDATE      |
-| `Response.created(ctx, { data })`             | 201  | POST tạo mới      |
-| `Response.notFound(ctx)`                      | 404  | Không tìm thấy    |
-| `Response.badRequest(ctx, { message, code })` | 400  | Input sai logic   |
-| `Response.unauthorized(ctx)`                  | 401  | Thiếu / sai token |
-| `Response.conflict(ctx)`                      | 409  | Trùng dữ liệu     |
+| Helper                                            | HTTP | Dùng khi          |
+| ------------------------------------------------- | ---- | ----------------- |
+| `HttpResponse.ok({ data })`                       | 200  | GET / UPDATE      |
+| `HttpResponse.created(ctx, { data })`             | 201  | POST tạo mới      |
+| `HttpResponse.notFound(ctx)`                      | 404  | Không tìm thấy    |
+| `HttpResponse.badRequest(ctx, { message, code })` | 400  | Input sai logic   |
+| `HttpResponse.unauthorized(ctx)`                  | 401  | Thiếu / sai token |
+| `HttpResponse.conflict(ctx)`                      | 409  | Trùng dữ liệu     |

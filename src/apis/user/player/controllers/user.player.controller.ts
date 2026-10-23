@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { playerAuthMiddleware } from "@/modules/auth/middlewares/player.auth.middleware.js";
 import { userAuthMiddleware } from "@/modules/auth/middlewares/user.auth.middleware.js";
@@ -36,7 +36,7 @@ export const userPlayerController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                return Response.ok({
+                return HttpResponse.ok({
                     data: await userPlayerService.listCharacters(ctx.context.userId),
                 });
             })
@@ -56,7 +56,7 @@ export const userPlayerController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                return Response.ok({ data: { name: await playerService.randomName() } });
+                return HttpResponse.ok({ data: { name: await playerService.randomName() } });
             })
     ),
 
@@ -81,7 +81,7 @@ export const userPlayerController = {
                     sessionId: userSessionId,
                     playerId: ctx.params.id,
                 });
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -112,7 +112,7 @@ export const userPlayerController = {
                     sessionId: userSessionId,
                     body: ctx.body,
                 });
-                return Response.created(ctx, { data: result });
+                return HttpResponse.created(ctx, { data: result });
             })
     ),
 
@@ -136,7 +136,7 @@ export const userPlayerController = {
                     userId: ctx.context.userId,
                     playerId: ctx.params.id,
                 });
-                return Response.ok({ message: "Player deleted" });
+                return HttpResponse.ok({ message: "Player deleted" });
             })
     ),
 
@@ -154,7 +154,7 @@ export const userPlayerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const player = await playerService.findWithStateById(ctx.context.playerId);
-                return Response.ok({ data: player });
+                return HttpResponse.ok({ data: player });
             })
     ),
 
@@ -177,7 +177,7 @@ export const userPlayerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const player = await playerService.rename(ctx.context.playerId, ctx.body.name);
-                return Response.ok({ data: player });
+                return HttpResponse.ok({ data: player });
             })
     ),
 };

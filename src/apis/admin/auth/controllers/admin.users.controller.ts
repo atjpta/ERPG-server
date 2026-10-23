@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminUsersService } from "@/apis/admin/auth/services/admin.users.service.js";
 import {
@@ -19,7 +19,7 @@ export const adminUsersController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminUsersService.list(ctx.query);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -29,8 +29,8 @@ export const adminUsersController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const user = await adminUsersService.getDetail(ctx.params.id);
-                if (!user) return Response.notFound(ctx);
-                return Response.ok({ data: user });
+                if (!user) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: user });
             })
     ),
 
@@ -40,8 +40,8 @@ export const adminUsersController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const user = await adminUsersService.ban(ctx.params.id, ctx.body);
-                if (!user) return Response.notFound(ctx);
-                return Response.ok({ data: user });
+                if (!user) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: user });
             })
     ),
 
@@ -51,8 +51,8 @@ export const adminUsersController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const user = await adminUsersService.unban(ctx.params.id);
-                if (!user) return Response.notFound(ctx);
-                return Response.ok({ data: user });
+                if (!user) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: user });
             })
     ),
 
@@ -63,8 +63,8 @@ export const adminUsersController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const user = await adminUsersService.forceLogout(ctx.params.id);
-                if (!user) return Response.notFound(ctx);
-                return Response.ok({ message: "User logged out from all devices" });
+                if (!user) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ message: "User logged out from all devices" });
             })
     ),
 
@@ -74,7 +74,7 @@ export const adminUsersController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const sessions = await adminUsersService.listSessions(ctx.params.id);
-                return Response.ok({ data: sessions });
+                return HttpResponse.ok({ data: sessions });
             })
     ),
 
@@ -85,8 +85,8 @@ export const adminUsersController = {
             RouterContainer(ctx, async () => {
                 const { id, sessionId } = ctx.params;
                 const session = await adminUsersService.revokeSession(id, sessionId);
-                if (!session) return Response.notFound(ctx);
-                return Response.ok({ message: "Session revoked" });
+                if (!session) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ message: "Session revoked" });
             })
     ),
 };

@@ -11,11 +11,9 @@ import { masterDataCacheService } from "@/modules/master-data/services/master-da
 import { partyDungeonWorldService } from "@/rooms/world/modules/dungeons/services/party-dungeon.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
-import {
-    WorldMessage,
-    WorldRoomName,
-    type MapChangeMessage,
-} from "@/rooms/world/types/world-message.type.js";
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import { WorldRoomName } from "@/rooms/world/modules/maps/enums/world-room-name.enum.js";
+import type { MapChangeMessage } from "@/rooms/world/modules/maps/interfaces/map.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 /** Đưa player tới điểm spawn `spawnId` của map `mapCode` (portal, teleport trong thoại). */
@@ -41,7 +39,7 @@ export class TransferWorldService {
         if (!sameMap && player.level < target.minLevel) return PlayerErrorCode.LEVEL_TOO_LOW;
         // Dungeon: instance riêng + lưu chỗ đứng cũ, không dùng chuyển map thường.
         if (target.type === MapType.DUNGEON) {
-            if (room.isDungeon) return MapErrorCode.MAP_NOT_OPEN;
+            if (room.dungeon !== undefined) return MapErrorCode.MAP_NOT_OPEN;
             if (!target.spawnPoints.some((point) => point.id === spawnId)) {
                 return MapErrorCode.MAP_SPAWN_NOT_FOUND;
             }

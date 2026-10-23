@@ -35,11 +35,9 @@ import {
 } from "@/rooms/world/modules/combat/utils/skill-owner.world.util.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
-import {
-    WorldMessage,
-    type PotionUsedMessage,
-    type SkillEffectMessage,
-} from "@/rooms/world/types/world-message.type.js";
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import type { PotionUsedMessage } from "@/rooms/world/modules/consumables/interfaces/consumable.world.message.js";
+import type { SkillEffectMessage } from "@/rooms/world/modules/combat/interfaces/combat.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { mapExtent } from "@/rooms/world/modules/players/simulation/movement.step.js";
 
@@ -248,8 +246,7 @@ export class SkillDeliveryWorldService {
         for (const [playerId, ally] of room.state.players) {
             if (ally.hp <= 0) continue;
             const isAlly =
-                ally === player ||
-                (player.partyRoomId !== null && ally.partyRoomId === player.partyRoomId);
+                ally === player || (player.partyId !== null && ally.partyId === player.partyId);
             if (!isAlly || !intersectsSkillHitEvent(origin, ally.x, ally.y, ally.hitbox, zone)) {
                 continue;
             }

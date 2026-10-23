@@ -1,15 +1,14 @@
-import { ok } from "@/core/utils/result.util.js";
+import { Response } from "@/core/utils/response.util.js";
 import type { Result } from "@/core/types/result.type.js";
-import type { PartyMembershipEvent } from "@/rooms/party/party.shared.js";
-import { playerPartyWorldService } from "@/rooms/world/modules/players/services/player-party.world.service.js";
+import type { PartyMembershipEvent } from "@/rooms/global/global.shared.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { Command } from "@colyseus/command";
 
-/** RPC từ party: thành viên vào / rời party hoặc đổi cách chia loot. Bản cũ / trùng bị bỏ qua. */
+/** RPC từ global: thành viên vào / rời party hoặc đổi cách chia loot. Bản cũ / trùng bị bỏ qua. */
 export class PartySetPlayerPartyWorldCommand extends Command<WorldRoom, PartyMembershipEvent> {
-    result: Result = ok();
+    result: Result = Response.success();
 
-    async execute(event: PartyMembershipEvent) {
-        await playerPartyWorldService.setPlayerParty(this.room, event);
+    execute(event: PartyMembershipEvent) {
+        this.room.state.players.get(event.playerId)?.applyPartyEvent(event);
     }
 }

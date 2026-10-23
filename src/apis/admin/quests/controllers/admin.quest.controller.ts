@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
 import { adminQuestService } from "@/apis/admin/quests/services/admin.quest.service.js";
@@ -19,7 +19,7 @@ export const adminQuestController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminQuestService.list(ctx.query);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -29,8 +29,8 @@ export const adminQuestController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const quest = await adminQuestService.findById({ id: ctx.params.id });
-                if (!quest) return Response.notFound(ctx);
-                return Response.ok({ data: quest });
+                if (!quest) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: quest });
             })
     ),
 
@@ -40,7 +40,7 @@ export const adminQuestController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const quest = await adminQuestService.createQuest(ctx.body);
-                return Response.created(ctx, { data: quest });
+                return HttpResponse.created(ctx, { data: quest });
             })
     ),
 
@@ -50,8 +50,8 @@ export const adminQuestController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const quest = await adminQuestService.updateQuest(ctx.params.id, ctx.body);
-                if (!quest) return Response.notFound(ctx);
-                return Response.ok({ data: quest });
+                if (!quest) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: quest });
             })
     ),
 };

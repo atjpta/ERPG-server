@@ -12,12 +12,15 @@ import type { ClientMessageContract, RoomContract, ServerMessageContract } from 
  * Contract room suy từ code, không cần file khai báo riêng:
  *  - message client: command có `static readonly message = Enum.X`
  *  - payload: Zod schema mà command (hoặc lớp cha) `safeParse`/`parse`/`client.parsePayload(schema, …)`/gán vào `validateSchema`
- *  - kiểu `data` của message server: kiểu đối số tại các chỗ gọi `sendSuccess/sendResult/broadcast*`
+ *  - kiểu `data` của response: `@SdkMessage.response` trên command (gộp theo lớp cha)
+ *  - kiểu `data` của push (`<Room>Message`): kiểu đối số tại các chỗ gọi `sendSuccess/sendResult/broadcast*`
  *  - state: generic của class room; cách join: `@SdkRoom` trên class room
  *  - tài liệu (replies, errors, note): `@SdkMessage` trên command (gộp theo lớp cha)
+ *  - mỗi thư mục room có đúng một enum client `<Room>ClientMessage` và một enum push `<Room>Message`
  */
 
-const SEND_FUNCTIONS = /^(send|broadcast)(Success|Error|Result)$/;
+/** `sendTo` là helper của party/global (gửi `ok(data)` cho một player theo id), tính như `sendSuccess`. */
+const SEND_FUNCTIONS = /^(?:(send|broadcast)(Success|Error|Result)|(sendTo))$/;
 
 function walk(dir: string, filter: (file: string) => boolean, out: string[] = []): string[] {
     if (!existsSync(dir)) return out;
@@ -181,7 +184,6 @@ export async function collectRooms(root: string) {
         }
         return checker.getTypeAtLocation(node);
     };
-    const serverEnums = new Map<string, { enumName: string; file: string }>();
     const dataNames = new Map<string, Set<string>>();
     for (const file of roomFiles) {
         const visit = (node: ts.Node) => {
@@ -195,20 +197,24 @@ export async function collectRooms(root: string) {
                 : undefined;
             if (ts.isCallExpression(node) && callee) {
                 const match = SEND_FUNCTIONS.exec(callee);
+                // Chỉ push: enum `<Room>Message` (bỏ `<Room>ClientMessage`).
                 const index = match
                     ? node.arguments.findIndex(
-                          (arg) => enumInfo(arg) && /Message$/.test(enumInfo(arg)!.enumName)
+                          (arg) =>
+                              enumInfo(arg) &&
+                              /Message$/.test(enumInfo(arg)!.enumName) &&
+                              !/ClientMessage$/.test(enumInfo(arg)!.enumName)
                       )
                     : -1;
                 const info = index >= 0 ? enumInfo(node.arguments[index]) : undefined;
                 if (match && info) {
-                    serverEnums.set(info.value, { enumName: info.enumName, file: info.file });
                     const names = dataNames.get(info.value) ?? new Set<string>();
                     dataNames.set(info.value, names);
                     const dataArg = node.arguments[index + 1];
-                    if (match[2] !== "Error" && dataArg) {
+                    const kind = match[2] ?? "Success";
+                    if (kind !== "Error" && dataArg) {
                         const type = dataArgType(dataArg);
-                        if (match[2] === "Success") {
+                        if (kind === "Success") {
                             const name = typeName(type);
                             if (name) names.add(name);
                         } else {
@@ -261,6 +267,18 @@ export async function collectRooms(root: string) {
         }
     }
 
+    /** Enum push của room: `<Room>Message` khai báo trong thư mục room. */
+    const pushEnumOf = (room: string) => {
+        for (const file of roomFiles) {
+            if (roomOf(file.fileName) !== room) continue;
+            for (const node of file.statements) {
+                if (ts.isEnumDeclaration(node) && node.name.text === `${room}Message`)
+                    return { enumName: node.name.text, file: file.fileName };
+            }
+        }
+        return undefined;
+    };
+
     // ---- ghép ----
     const contracts: RoomContract[] = [];
     for (const [name, roomClass] of roomClasses) {
@@ -276,6 +294,7 @@ export async function collectRooms(root: string) {
             const meta = readSdkMessage(module[command.name]);
             client[command.wire] = {
                 payload: identifier ? await loadSchema(identifier) : null,
+                response: meta?.response ? meta.response : null,
                 replies: meta?.replies ?? [],
                 errors: meta?.errors ?? [],
                 note: meta?.note ?? "",
@@ -283,9 +302,14 @@ export async function collectRooms(root: string) {
             };
         }
 
-        const serverEnum = [...serverEnums.values()].find((entry) => roomOf(entry.file) === name);
+        const clientEnums = new Set(group.map((command) => command.enumName));
+        if (clientEnums.size > 1 || !clientEnums.has(`${name}ClientMessage`))
+            warnings.push(
+                `${name}: enum client message phải là đúng ${name}ClientMessage (thấy ${[...clientEnums].join(", ")})`
+            );
+        const serverEnum = pushEnumOf(name);
         if (!serverEnum) {
-            warnings.push(`${name}: không thấy enum message server`);
+            warnings.push(`${name}: không thấy enum push ${name}Message`);
             continue;
         }
         const server: Record<string, ServerMessageContract> = {};

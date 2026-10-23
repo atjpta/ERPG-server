@@ -48,6 +48,16 @@ const CLIENT_ONLY_CODES = [
         doc: "Không kết nối được máy chủ hoặc phản hồi không đọc được (lỗi phía client, không phải mã từ server).",
         enumName: "ClientErrorCode",
     },
+    {
+        code: "REQUEST_TIMEOUT",
+        doc: "Request room không có response trong thời hạn (lỗi phía client).",
+        enumName: "ClientErrorCode",
+    },
+    {
+        code: "REQUEST_FAILED",
+        doc: "Server từ chối request ở tầng giao thức (không có handler, handler ném lỗi...) — không phải lỗi nghiệp vụ.",
+        enumName: "ClientErrorCode",
+    },
 ];
 
 /**

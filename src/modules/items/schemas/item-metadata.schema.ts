@@ -34,7 +34,7 @@ export const ItemEquipmentInstanceMetadataSchema = z.object({
 
 /**
  * Hiệu ứng khi dùng một consumable (`use_item`). Thêm loại mới = thêm biến thể ở đây + xử lý ở
- * `ConsumableWorldService` (rooms/world/modules/inventory/services/consumable.world.service.ts).
+ * `ConsumableWorldService` (rooms/world/modules/consumables/services/consumable.world.service.ts).
  */
 export const ConsumableEffectSchema = z.discriminatedUnion("type", [
     /** Bình hồi: cộng thẳng HP / MP (chung cooldown bình theo loại). */

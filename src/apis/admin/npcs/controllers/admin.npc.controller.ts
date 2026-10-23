@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
 import { adminNpcService } from "@/apis/admin/npcs/services/admin.npc.service.js";
@@ -19,22 +19,22 @@ export const adminNpcController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminNpcService.list(ctx.query);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
     adminNpcShow: adminEndpoint(`${prefix}/:id`, { method: "GET", params: IdParamSchema }, (ctx) =>
         RouterContainer(ctx, async () => {
             const npc = await adminNpcService.findById({ id: ctx.params.id });
-            if (!npc) return Response.notFound(ctx);
-            return Response.ok({ data: npc });
+            if (!npc) return HttpResponse.notFound(ctx);
+            return HttpResponse.ok({ data: npc });
         })
     ),
 
     adminNpcCreate: adminEndpoint(prefix, { method: "POST", body: AdminCreateNpcSchema }, (ctx) =>
         RouterContainer(ctx, async () => {
             const npc = await adminNpcService.createNpc(ctx.body);
-            return Response.created(ctx, { data: npc });
+            return HttpResponse.created(ctx, { data: npc });
         })
     ),
 
@@ -44,8 +44,8 @@ export const adminNpcController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const npc = await adminNpcService.updateNpc(ctx.params.id, ctx.body);
-                if (!npc) return Response.notFound(ctx);
-                return Response.ok({ data: npc });
+                if (!npc) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: npc });
             })
     ),
 };

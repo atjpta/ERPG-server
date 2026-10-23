@@ -113,7 +113,7 @@ export class MonsterWorldService {
 
     private scheduleRespawn(room: WorldRoom, monster: MonsterWorldState): void {
         // Dungeon: quái chết là hết (chamber hoàn thành khi dọn sạch), không hồi sinh.
-        if (room.isDungeon) return;
+        if (room.dungeon !== undefined) return;
         if (this.respawningMonsters.has(monster)) return;
 
         this.respawningMonsters.add(monster);

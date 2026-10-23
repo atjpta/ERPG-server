@@ -5,7 +5,7 @@ import { playerKickService } from "@/core/services/player-kick.service.js";
 import { userKickTopic } from "@/core/utils/player-kick.util.js";
 import type { ClientSend } from "@/core/utils/client-send.util.js";
 import type { Result } from "@/core/types/result.type.js";
-import { ok } from "@/core/utils/result.util.js";
+import { Response } from "@/core/utils/response.util.js";
 import type { KickMessage } from "@/core/types/player-kick.type.js";
 
 export type PlayerClient = Client<{ auth: AuthPlayer }> & ClientSend;
@@ -36,7 +36,7 @@ export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extend
         data: unknown = null,
         options?: Parameters<Room["broadcast"]>[2]
     ) {
-        this.broadcast(type, ok(data), options);
+        this.broadcast(type, Response.success(data), options);
     }
 
     /** Gửi một `Result` dựng sẵn cho mọi client trong room. */

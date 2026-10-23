@@ -1,3 +1,4 @@
+import { worldService } from "@/rooms/world/services/world.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import {
@@ -88,7 +89,7 @@ export class MonsterStunChain implements WorldChainAction<MonsterChainContext> {
                 monster,
                 monster.knockbackStepX,
                 monster.knockbackStepY,
-                room.moveBounds,
+                worldService.moveBounds(room),
                 monster.collider
             );
         }
@@ -217,7 +218,7 @@ export class MonsterMoveChain implements WorldChainAction<MonsterChainContext> {
         }
         const moveX = Math.abs(dx) > 0.1 ? Math.sign(dx) : 0;
         const moveY = Math.abs(dy) > 0.1 ? Math.sign(dy) : 0;
-        applyWorldMove(monster, { moveX, moveY }, room.moveBounds, dt);
+        applyWorldMove(monster, { moveX, moveY }, worldService.moveBounds(room), dt);
     }
 
     private getRoamTarget(room: WorldRoom, monster: MonsterWorldState): RoamTarget {

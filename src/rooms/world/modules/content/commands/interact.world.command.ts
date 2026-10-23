@@ -1,7 +1,8 @@
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
+import { Response } from "@/core/utils/response.util.js";
 import type { ErrorCode } from "@/core/types/result.type.js";
-import { WorldErrorCode } from "@/rooms/world/types/world-error-code.type.js";
+import { WorldErrorCode } from "@/rooms/world/enums/world-error-code.enum.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
@@ -14,22 +15,18 @@ import { type TeleportStatus, teleportService } from "@/modules/maps/services/te
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import { rewardSpecService } from "@/modules/rewards/services/reward-spec.service.js";
 import { InteractableWorldState } from "@/rooms/world/modules/content/schemas/interactable.world.state.js";
-import { contentWorldService } from "@/rooms/world/modules/content/services/content.world.service.js";
 import { dialogueWorldService } from "@/rooms/world/modules/content/services/dialogue.world.service.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
 import { InteractSchema } from "@/rooms/world/modules/content/validators/content.world.validator.js";
-import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
+import { playerDataWorldService } from "@/rooms/world/modules/players/services/player-data.world.service.js";
 import { transferWorldService } from "@/rooms/world/modules/maps/services/transfer.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { rewardWorldService } from "@/rooms/world/modules/rewards/services/reward.world.service.js";
-import {
-    WorldClientMessage,
-    WorldMessage,
-    type InteractResultMessage,
-    type TeleportListMessage,
-} from "@/rooms/world/types/world-message.type.js";
+import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import type { InteractResultMessage } from "@/rooms/world/modules/content/interfaces/content.world.message.js";
+import type { TeleportListMessage } from "@/rooms/world/modules/maps/interfaces/map.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
+import { PlayerWorldCommand } from "@/rooms/world/player.world.command.js";
 
 const pickStatus = ({ discovered, available }: TeleportStatus) => ({ discovered, available });
 
@@ -40,7 +37,7 @@ interface ContentPayload {
 
 /** Tương tác vật thể trong map (portal, thu thập, biển báo). */
 @SdkMessage({
-    replies: [WorldMessage.INTERACT_RESULT],
+    response: "InteractResultMessage",
     errors: [
         CommonCode.INVALID_INPUT,
         CommonCode.NOT_FOUND,
@@ -55,6 +52,12 @@ interface ContentPayload {
         MapErrorCode.MAP_SPAWN_NOT_FOUND,
         PlayerErrorCode.LEVEL_TOO_LOW,
     ],
+    replies: [
+        WorldMessage.MAP_CHANGE,
+        WorldMessage.TELEPORT_LIST,
+        WorldMessage.DIALOGUE,
+        WorldMessage.REWARD,
+    ],
     note: "Thành công kèm thêm message hiệu ứng (`mapChange`, `teleportList`, `dialogue`, `reward`...). Lỗi có `error: { id }`.",
 })
 export class InteractWorldCommand extends PlayerWorldCommand<
@@ -64,20 +67,18 @@ export class InteractWorldCommand extends PlayerWorldCommand<
     static readonly message = WorldClientMessage.INTERACT;
 
     protected override readonly validateSchema = InteractSchema;
-    protected override readonly replyType = WorldMessage.INTERACT_RESULT;
-    protected override readonly invalidError = { id: "" };
 
     private def!: MapInteractable;
     private interactable!: InteractableWorldState;
 
-    validate({ client }: ContentPayload) {
+    validate() {
         const room = this.room;
         const { id } = this.body;
         const def = room.map.interactables.find((it) => it.id === id);
         const state = room.state.interactables.find((it) => it.id === id);
         const error = this.checkInteractable(room, this.player, def, state);
         if (error) {
-            client.sendError(WorldMessage.INTERACT_RESULT, error, { id });
+            this.result = Response.error(error, undefined, { id });
             return false;
         }
 
@@ -89,11 +90,9 @@ export class InteractWorldCommand extends PlayerWorldCommand<
     async execute({ client }: ContentPayload) {
         const { id } = this.body;
         const error = await this.run(this.room, client, this.player, this.def, this.interactable);
-        if (error) client.sendError(WorldMessage.INTERACT_RESULT, error, { id });
-        else
-            client.sendSuccess(WorldMessage.INTERACT_RESULT, {
-                id,
-            } satisfies InteractResultMessage);
+        this.result = error
+            ? Response.error(error, undefined, { id })
+            : Response.success<InteractResultMessage>({ id });
     }
 
     /** Điều kiện để tương tác với vật thể: còn sống, có thật, đang bật, đứng đủ gần, thoả điều kiện. */
@@ -106,9 +105,8 @@ export class InteractWorldCommand extends PlayerWorldCommand<
         if (player.hp <= 0) return PlayerErrorCode.PLAYER_DEAD;
         if (!def || !state) return CommonCode.NOT_FOUND;
         if (!state.active) return WorldErrorCode.INTERACT_NOT_AVAILABLE;
-        if (!contentWorldService.isNear(player, def.x, def.y, def.radius))
-            return PlayerErrorCode.TOO_FAR;
-        const ctx = contentWorldService.conditionContext(room, player);
+        if (!player.isNear(def.x, def.y, def.radius)) return PlayerErrorCode.TOO_FAR;
+        const ctx = player.conditionContext(room.map.code);
         if (!conditionService.evaluateConditions(ctx, def.conditions))
             return PlayerErrorCode.REQUIREMENTS_NOT_MET;
         return undefined;
@@ -136,7 +134,7 @@ export class InteractWorldCommand extends PlayerWorldCommand<
             case "gather":
                 return this.gather(room, client, player, def, state);
             case "sign": {
-                const error = dialogueWorldService.startSource(room, client, player, {
+                const error = await dialogueWorldService.startSource(room, client, player, {
                     ...def,
                     id: def.id,
                 });
@@ -146,22 +144,30 @@ export class InteractWorldCommand extends PlayerWorldCommand<
         }
     }
 
-    private gather(
+    private async gather(
         room: WorldRoom,
         client: PlayerClient,
         player: PlayerWorldState,
         def: Extract<MapInteractable, { type: "gather" }>,
         state: InteractableWorldState
-    ): ErrorCode | undefined {
+    ): Promise<ErrorCode | undefined> {
         const reward = rewardSpecService.resolveRewardSpec(def.reward, ItemSource.SYSTEM);
-        // Túi đầy thì không cho nhặt (thay vì nhặt xong mất đồ).
-        if (!inventoryWorldService.canFit(player, reward.items))
-            return ItemErrorCode.INVENTORY_FULL;
+        // Giữ chỗ trước khi chờ global để người khác không nhặt trùng; thất bại thì trả lại.
         state.active = false;
+        // Túi đầy thì không cho nhặt (thay vì nhặt xong mất đồ): global kiểm tra và cộng item cùng lúc.
+        if (reward.items.length > 0) {
+            const given = await playerDataWorldService.apply(room, client.auth.playerId, [
+                { type: "giveItem", items: reward.items, source: reward.source, requireFit: true },
+            ]);
+            if (Response.isError(given)) {
+                state.active = true;
+                return given.code;
+            }
+        }
         room.clock.setTimeout(() => {
             state.active = true;
         }, def.respawnSec * 1000);
-        rewardWorldService.grant(room, client.auth.playerId, player, reward);
+        rewardWorldService.grant(room, client.auth.playerId, player, reward, false, false);
         this.notifyQuest(room, client, player, def.id);
         return undefined;
     }

@@ -1,6 +1,5 @@
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { QuestErrorCode } from "@/modules/quests/enums/quest-error-code.enum.js";
-import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { TIME_ZONE } from "@/configs/time.config.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
@@ -20,26 +19,27 @@ import {
 } from "@/modules/quests/services/quest-progress.service.js";
 import { unlockService } from "@/modules/quests/services/unlock.service.js";
 import { rewardSpecService } from "@/modules/rewards/services/reward-spec.service.js";
-import { contentWorldService } from "@/rooms/world/modules/content/services/content.world.service.js";
 import {
     collectQuestTargets,
     npcMarkerFor,
 } from "@/rooms/world/modules/content/utils/quest-marker.world.util.js";
 import { questOf, questsOf } from "@/rooms/world/modules/content/utils/quest-resolve.world.util.js";
-import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
+import { playerDataWorldService } from "@/rooms/world/modules/players/services/player-data.world.service.js";
+import type { PlayerChangeOp } from "@/rooms/global/global.shared.js";
+import { Response } from "@/core/utils/response.util.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { rewardWorldService } from "@/rooms/world/modules/rewards/services/reward.world.service.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 import { worldEvents } from "@/rooms/world/utils/world-events.js";
-import {
-    WorldMessage,
-    type FeaturesMessage,
-    type NpcMarkersMessage,
-    type QuestListMessage,
-    type QuestMessage,
-    type QuestTargetsMessage,
-    type QuestUpdateMessage,
-} from "@/rooms/world/types/world-message.type.js";
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import type {
+    FeaturesMessage,
+    NpcMarkersMessage,
+    QuestListMessage,
+    QuestMessage,
+    QuestTargetsMessage,
+    QuestUpdateMessage,
+} from "@/rooms/world/modules/content/interfaces/content.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { DateTime } from "luxon";
 
@@ -57,14 +57,14 @@ export class QuestWorldService {
     }
 
     private itemCount(player: PlayerWorldState) {
-        return (code: string) => contentWorldService.itemCount(player, code);
+        return (code: string) => player.itemCount(code);
     }
 
     toMessage(player: PlayerWorldState, quest: Quest): QuestMessage {
         const entry = player.quests[quest.code];
         return {
             code: quest.code,
-            state: contentWorldService.questState(player, quest.code),
+            state: player.questState(quest.code),
             category: quest.category,
             requiredLevel: quest.requiredLevel,
             giverNpcCode: quest.giverNpcCode,
@@ -104,7 +104,7 @@ export class QuestWorldService {
 
     /** Dấu trên đầu NPC của riêng player này (màu theo loại quest) — cũng dùng cho minimap. */
     sendMarkers(room: WorldRoom, client: PlayerClient, player: PlayerWorldState) {
-        const ctx = contentWorldService.conditionContext(room, player);
+        const ctx = player.conditionContext(room.map.code);
         const now = DateTime.now();
         const quests = questsOf(player).map((quest) => {
             const entry = player.quests[quest.code];
@@ -113,7 +113,7 @@ export class QuestWorldService {
                 giverNpcCode: quest.giverNpcCode,
                 turnInNpcCode: quest.turnInNpcCode,
                 objectives: quest.objectives,
-                state: contentWorldService.questState(player, quest.code),
+                state: player.questState(quest.code),
                 acceptable: questProgressService.canAcceptQuest(quest, entry, ctx, now),
                 doneObjectiveIds: new Set(
                     quest.objectives
@@ -146,7 +146,7 @@ export class QuestWorldService {
                 if (!entry) return [];
                 return [
                     {
-                        state: contentWorldService.questState(player, quest.code),
+                        state: player.questState(quest.code),
                         objectives: quest.objectives.map((objective) => ({
                             ...objective,
                             current: questProgressService.objectiveCurrent(
@@ -210,7 +210,7 @@ export class QuestWorldService {
         if (!quest) return QuestErrorCode.QUEST_NOT_FOUND;
         // Quest hằng ngày được giao tự động, không nhận qua thoại.
         if (quest.category === QuestCategory.DAILY) return QuestErrorCode.QUEST_NOT_AVAILABLE;
-        const ctx = contentWorldService.conditionContext(room, player);
+        const ctx = player.conditionContext(room.map.code);
         if (
             !questProgressService.canAcceptQuest(
                 quest,
@@ -232,35 +232,57 @@ export class QuestWorldService {
      * Trả quest tại NPC `turnInNpcCode`: đủ mục tiêu, còn chỗ túi cho thưởng → trừ item `collect`,
      * cộng thưởng, đánh dấu xong, lưu ngay.
      */
-    complete(
+    async complete(
         room: WorldRoom,
         client: PlayerClient,
         player: PlayerWorldState,
         questCode: string,
         turnInNpcCode: string
-    ): QuestError {
+    ): Promise<QuestError> {
         const quest = questOf(player, questCode);
         const entry = player.quests[questCode];
         if (!quest || !entry) return QuestErrorCode.QUEST_NOT_ACTIVE;
         if (quest.turnInNpcCode !== turnInNpcCode) return QuestErrorCode.QUEST_WRONG_NPC;
-        if (contentWorldService.questState(player, questCode) !== QuestState.READY) {
+        if (player.questState(questCode) !== QuestState.READY) {
             return QuestErrorCode.QUEST_NOT_COMPLETED;
         }
 
         const reward = rewardSpecService.resolveRewardSpec(quest.rewards, ItemSource.QUEST);
-        // Túi đầy thì giữ quest để trả lại sau, thay vì làm mất đồ thưởng.
-        if (!inventoryWorldService.canFit(player, reward.items))
-            return ItemErrorCode.INVENTORY_FULL;
-
-        for (const objective of quest.objectives) {
-            if (objective.type !== QuestObjectiveType.COLLECT) continue;
-            inventoryWorldService.takeByCode(player, objective.targetCode, objective.count);
+        // Trừ item `collect` và cộng thưởng trong một lần nguyên tử ở global; túi đầy thì giữ quest để trả lại sau,
+        // thay vì làm mất đồ thưởng.
+        const ops: PlayerChangeOp[] = quest.objectives.flatMap((objective) =>
+            objective.type === QuestObjectiveType.COLLECT
+                ? [
+                      {
+                          type: "takeItem" as const,
+                          itemCode: objective.targetCode,
+                          quantity: objective.count,
+                      },
+                  ]
+                : []
+        );
+        if (reward.items.length > 0) {
+            ops.push({
+                type: "giveItem",
+                items: reward.items,
+                source: reward.source,
+                requireFit: true,
+            });
         }
+        // Đánh dấu xong trước khi chờ global để bấm trùng không nhận thưởng hai lần; thất bại thì trả về như cũ.
         entry.status = "completed";
         entry.completedAt = DateTime.now().toISO()!;
+        if (ops.length > 0) {
+            const applied = await playerDataWorldService.apply(room, client.auth.playerId, ops);
+            if (Response.isError(applied)) {
+                entry.status = "active";
+                delete entry.completedAt;
+                return applied.code;
+            }
+        }
         for (const feature of quest.unlockFeatures)
             player.flags[unlockService.unlockFlagKey(feature)] = true;
-        rewardWorldService.grant(room, client.auth.playerId, player, reward);
+        rewardWorldService.grant(room, client.auth.playerId, player, reward, false, false);
 
         this.sendUpdate(client, player, quest);
         this.sendMarkers(room, client, player);
@@ -270,7 +292,6 @@ export class QuestWorldService {
             if (this.ensureDaily(room, client.auth.playerId, player)) this.sendList(client, player);
             this.sendFeatures(client, player);
         }
-        inventoryWorldService.send(client, player);
         void worldService.savePlayer(room, client.auth.playerId);
         return undefined;
     }

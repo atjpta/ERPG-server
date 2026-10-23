@@ -27,10 +27,21 @@ src/
 | `equipment/`                   | Roll/tính chỉ số trang bị, set, cường hoá, tinh hoá, phân rã — mọi bảng số nằm ở master data `equipment_*_config`                                                                                                                                                                   |
 | `npcs/` `dialogues/` `quests/` | NPC dùng chung nhiều map, đồ thị thoại + rule chọn thoại theo hoàn cảnh, quest hero/side/daily (daily sinh theo level mỗi ngày) — data-driven, text qua key locale — xem `docs/content-authoring.md`                                                                                |
 
-Realtime: room `world` (`src/rooms/world/`) — 1 room = 1 kênh của 1 map. Dùng **Colyseus Netcode**
-(`defineInput` + `setFixedTimestep`, client predict/reconcile) — xem mục 7 của `src/core/README.md`.
-Hàm trong `src/rooms/**/simulation/*.step.ts` là hợp đồng với client Unity: sửa ở đây thì phải sửa
-bản C# tương ứng (cùng thứ tự phép tính, cùng hằng số), không dùng thời gian thực/random trong step.
+Realtime: **chỉ có 2 room**, mỗi player giữ 2 kết nối (đều bắt buộc `options.serverId` khớp token):
+
+- `world` (`src/rooms/world/`) — 1 room = 1 kênh của 1 map trong 1 game server (`filterBy(["serverId","mapCode"])`).
+  Dùng **Colyseus Netcode** (`defineInput` + `setFixedTimestep`, client predict/reconcile) — xem mục 7 của
+  `src/core/README.md`. `dungeon` **không phải room thứ ba**: là lần đăng ký thứ hai của chính class `WorldRoom`
+  (`filterBy(["serverId","instanceId"])`) để mỗi lượt dungeon là một instance riêng.
+- `global` (`src/rooms/global/`) — 1 room / `serverId`, state `GlobalState` (Schema nhưng không field `@type` nên không sync, chỉ giữ hồ sơ / presence / party trong bộ nhớ server): chat, party, presence, điều phối vào dungeon.
+  Tính năng mới kiểu social (friend, guild, mail...) là module mới trong `global`, không thêm room.
+
+Mọi thao tác kiểu hỏi-đáp của client là **Request/Response** của Colyseus 0.18 (`await room.Request<T>(...)` trên Unity SDK
+
+> = 0.18.3): command gán `this.result = Response.success(data)` / `Response.error(Code)`, handler trả envelope `Result`. Enum `*Message` chỉ còn
+> cho thông báo server chủ động đẩy xuống (push). Xem `docs/room-messages.md`, `docs/room-command-pattern.md`.
+> Hàm trong `src/rooms/**/simulation/*.step.ts` là hợp đồng với client Unity: sửa ở đây thì phải sửa
+> bản C# tương ứng (cùng thứ tự phép tính, cùng hằng số), không dùng thời gian thực/random trong step.
 
 ## Conventions
 
@@ -43,8 +54,10 @@ bản C# tương ứng (cùng thứ tự phép tính, cùng hằng số), không
 - Mọi method repository nhận 1 object param; `.from(table)` chỉ viết trong repo sở hữu bảng đó.
 - ≥ 2 thao tác ghi DB → `withTransaction`, truyền `tx` vào mọi lệnh.
 - Lỗi nghiệp vụ trong service: `serviceError(message, status, <Domain>ErrorCode.X)`.
-- Mọi thứ trả cho client (API, message room, RPC giữa room) dùng envelope `Result` `{ success, data, code, message, error }`; lỗi chỉ trả mã lỗi (enum theo domain: `CommonCode` ở core, `AuthErrorCode`, `PartyErrorCode`...), không text tự do; room gửi qua `client.sendSuccess`/`client.sendError` — xem `docs/response-format.md`.
-- Client Unity gọi server qua SDK sinh tự động (`yarn unity:network`): endpoint khai báo option `sdk`, room tự suy từ command (thêm `@SdkMessage` / `@SdkRoom` để ghi reply, mã lỗi, cách join), mã lỗi có JSDoc từng member — xem `docs/client-sdk.md`.
+- Mọi thứ trả cho client (API, response/push của room, RPC giữa room) dùng envelope `Result` `{ success, data, code, message, error }`; lỗi chỉ trả mã lỗi (enum theo domain: `CommonCode` ở core, `AuthErrorCode`, `PartyErrorCode`...), không text tự do — xem `docs/response-format.md`.
+- Message room từ client là Request/Response: command khai `static readonly message = <Room>ClientMessage.X` và **luôn gán `this.result`** (`Response.success(data)` hoặc `Response.error(Code)`; không gán thì client nhận `Response.success()` rỗng). Không `client.sendSuccess` để trả lời, không dùng `ctx.reject`/`validate()` của Colyseus cho lỗi nghiệp vụ. Chỉ thông báo server chủ động (`WorldMessage`/`GlobalMessage`) mới đi qua `client.sendSuccess`/`sendError`/`broadcastSuccess`.
+- Gọi giữa các room dùng `callRoom(roomId, XCommand, payload, { timeoutMs? })` (mặc định 3s; RPC gộp nhiều bước như mở dungeon dùng timeout dài hơn). Thêm module vào room: xem mục "Thêm module mới vào room" trong `docs/room-command-pattern.md`.
+- Client Unity gọi server qua SDK sinh tự động (`yarn unity:network`): endpoint khai báo option `sdk`, room tự suy từ command (thêm `@SdkMessage({ response, errors, note })` / `@SdkRoom` để ghi kiểu response, mã lỗi, cách join; sinh `<Room>RoomClient` với hàm `async Task<Result<T>>` cho mỗi request), mã lỗi có JSDoc từng member — xem `docs/client-sdk.md`.
 - Phần admin: chữ `admin` đứng đầu tên file/export/endpoint key, path `/admin/...`.
 - Luxon cho thời gian (`DateTime.now()`), không `new Date()` rải rác.
 - Thêm bảng chứa dữ liệu người chơi → cập nhật `AccountDeletionService.purgeUserData` (xoá tài khoản).
@@ -73,13 +86,17 @@ yarn smoke        # test end-to-end khi server đang chạy
 
 - `loadControllers()` returns `{ admin, user }`. Only `src/index.ts` mounts `/admin` and `/user` via `prefixEndpoints`; controllers use local resource paths.
 
-- World lifecycle code lives directly in `src/rooms/world/{chains,commands,services,utils}`.
+- World room lifecycle (`onCreate` / `onJoin` / `onLeave` / `onDispose`) is written in `src/rooms/world/world.room.ts`; shared pieces live in `src/rooms/world/{chains,enums,schemas,services,types,utils}` and the base `player.world.command.ts` at the room root.
 - World features live in `src/rooms/world/modules/<feature>` with their Colyseus schemas in `schemas/`; only aggregate `WorldState` stays in `world/schemas`.
 
-- Party mirrors world: room-level lifecycle commands/services/aggregate schemas, with feature commands/services/validators/schemas under `party/modules/<feature>`.
-- Party runtime logic, DTOs, schemas and helpers live in `rooms/party`, not `modules/party`. Peer rooms import only public `<room>.shared.ts` entrypoints and the peer's RPC **command classes** (to call `callRoom(roomId, XCommand, payload)`), never the peer's services, schemas or other implementation. Party master-data config schema and its loot-mode enum belong to `modules/master-data` so modules never import rooms. Multi-room workflows belong in `rooms/coordinators`.
+- Thư mục trong module room theo mục đích: `interfaces/` (DTO `*.message.ts` gửi client), `enums/`, `schemas/` (Colyseus Schema / state), `types/` (kiểu chỉ dùng trong server), `services/`, `commands/`, `validators/` — xem `docs/room-command-pattern.md`.
+- State Schema (`*.state.ts`, kể cả server-only như `PartiesState`/`PartyState`) chỉ đổi dữ liệu và trả kết quả; gửi message client, push event và báo room khác (`callRoom`) do command / service làm (vd `partyGlobalService`), không đặt trong state.
+- PlayerData split: `global/modules/player-data` (state + persistence; client requests live in `inventory`, `equipment-upgrade`, `attributes`, world room registry in `world-registry`) owns bags, equipment, attribute/skill points and allocated attributes (all inventory/attribute client requests and `inventory`/`attributes` pushes are global; global is the only DB writer while playing and saves those columns immediately). World owns position, hp/mp, level/exp, wallet, quests, flags; it keeps a read-only replica of global's part (`PlayerWorldState.applyPlayerData`) and changes it only through `playerDataWorldService` (`apply`/`queue`/`sync`) → `ApplyPlayerChangesGlobalCommand` / `SyncPlayersGlobalCommand`. Global asks world for wallet/level via `PullPlayerFieldsWorldCommand`/`DebitWalletWorldCommand`. One `player_states.revision`. See `src/rooms/global/README.md`.
+- Global mirrors world: lifecycle in the room file, base `player.global.command.ts` at the room root, room-level `schemas/` (server-only state), `services/` and `types/` (the two message enums), with features under `global/modules/<feature>` (`chat`, `party`, `dungeon-launch`, `player-data`; each with commands/services/validators/types). There is no separate party or chat room.
+- Party and chat room workflow (state Schemas, commands, notify/delivery orchestration), DTOs and helpers live in `rooms/global/modules/*`, not `modules/party`; pure business logic reused outside the room (e.g. party loot split in `modules/rewards`) belongs in `src/modules`. Peer rooms import only public `<room>.shared.ts` entrypoints and the peer's RPC **command classes** (to call `callRoom(roomId, XCommand, payload)` / `callRoom(serverId, XCommand, payload)`), never the peer's services, schemas or other implementation. Party and chat master-data config schemas and the loot-mode enum belong to `modules/master-data` so modules never import rooms. Multi-room workflows are modules of `global` (e.g. `global/modules/dungeon-launch`), there is no `rooms/coordinators`.
 - World player commands call `callRoom(...)` directly; do not add a world-party integration wrapper. Shared player-party processing and public RPC capabilities belong in `world/modules/players/services`.
-- Party room owns membership, loot mode, round-robin cursor and allocation deduplication. World owns applying rewards; pending allocations must drain before saves/leaves.
+- Global room owns party membership and loot mode (pushed to world via `PartySetPlayerPartyWorldCommand`). World computes and applies kill rewards locally with `shareKillReward` (no RPC on the kill path); the round-robin cursor is per (world room, party).
 
+- Room services (`rooms/**/services`) only orchestrate: call other services, send messages / `callRoom`, or handle room-specific workflow. Pure business logic (inventory ops, equipment upgrade, loot split...) lives in `src/modules/*/services`; logic used by a single command is written in that command; logic that only reads/changes a state Schema is a method of that Schema (e.g. `PlayerDataState.takeByCode`, `PlayerWorldState.checkConsumable`).
 - Each room command class (including abstract commands) has its own `*.command.ts` file. Action-specific handling belongs in the command, not a service wrapper. Services hold reused processing or capabilities called elsewhere. See `docs/room-command-pattern.md`.
-- Client message commands declare their key as `static readonly message = ClientMessage.KEY`; `.room.ts` loads its directory with `await loadRoomMessages(...)` at module scope and assigns the result to `messages`. Colyseus registers/binds handlers per room instance. Do not add manual message maps or static message keys to lifecycle/timer/abstract commands. Keep message enums for client synchronization.
+- Client message commands declare their key as `static readonly message = <Room>ClientMessage.KEY` (one `<Room>ClientMessage` + one `<Room>Message` push enum per room folder) and set `this.result` (Request/Response); `.room.ts` loads its directory with `await loadRoomMessages(...)` at module scope and assigns the result to `messages`. Colyseus registers/binds handlers per room instance. Do not add manual message maps or static message keys to lifecycle/timer/abstract commands. Keep message enums for client synchronization.

@@ -1,6 +1,6 @@
 import { createEndpoint } from "colyseus";
 import { UserMapCodeParamSchema } from "@/apis/user/maps/validators/user.map.validator.js";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { userMapService } from "@/apis/user/maps/services/user.map.service.js";
 import { z } from "zod";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
@@ -26,7 +26,7 @@ export const userMapController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const maps = await userMapService.listActive();
-                return Response.ok({ data: maps });
+                return HttpResponse.ok({ data: maps });
             })
     ),
 
@@ -47,7 +47,7 @@ export const userMapController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const content = await userMapService.getContent(ctx.params.code);
-                return Response.ok({ data: content });
+                return HttpResponse.ok({ data: content });
             })
     ),
 };

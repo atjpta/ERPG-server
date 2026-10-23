@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminAccountDeletionService } from "@/apis/admin/auth/services/admin.account-deletion.service.js";
 import {
@@ -19,7 +19,7 @@ export const adminAccountDeletionController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminAccountDeletionService.list(ctx.query);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -33,7 +33,7 @@ export const adminAccountDeletionController = {
                     ctx.context.adminId,
                     ctx.body
                 );
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -47,7 +47,7 @@ export const adminAccountDeletionController = {
                     ctx.context.adminId,
                     ctx.body
                 );
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 };

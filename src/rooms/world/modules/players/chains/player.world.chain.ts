@@ -1,3 +1,4 @@
+import { worldService } from "@/rooms/world/services/world.service.js";
 import { distanceSquared } from "@/rooms/world/utils/world.util.js";
 import { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
@@ -193,7 +194,7 @@ export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
                     ? getAttackApproachMove(room, state)
                     : undefined);
             if (approach) {
-                applyWorldMove(state, approach, room.moveBounds, dt, 1, 4);
+                applyWorldMove(state, approach, worldService.moveBounds(room), dt, 1, 4);
                 if (skillApproach) context.approachingSkill = true;
                 else context.approachingAttack = true;
                 return WorldChainResult.CONTINUE;
@@ -202,7 +203,7 @@ export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
             state.moving = false;
             return WorldChainResult.CONTINUE;
         }
-        applyWorldMove(state, move, room.moveBounds, dt, state.dashing ? 2 : 1, 4);
+        applyWorldMove(state, move, worldService.moveBounds(room), dt, state.dashing ? 2 : 1, 4);
         return WorldChainResult.CONTINUE;
     }
 }
@@ -426,7 +427,13 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
                 const dirX = state.aimX;
                 const dirY = state.aimY;
                 const step = getChargeSpeed(skill) * dt;
-                applyDirectedMove(state, dirX * step, dirY * step, room.moveBounds, state.collider);
+                applyDirectedMove(
+                    state,
+                    dirX * step,
+                    dirY * step,
+                    worldService.moveBounds(room),
+                    state.collider
+                );
                 if (dirX < 0) state.direction = "left";
                 else if (dirX > 0) state.direction = "right";
             } else {
@@ -440,7 +447,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
                     state,
                     moveX * step,
                     moveY * step,
-                    room.moveBounds,
+                    worldService.moveBounds(room),
                     state.collider
                 );
                 if (moveX < 0) state.direction = "left";

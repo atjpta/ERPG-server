@@ -1,10 +1,15 @@
 import type { ZodType } from "zod";
 
-/** Một message client → server, đã ghép phần tự suy (payload) với `@SdkMessage` (tài liệu). */
+/** Một message client → server (Request/Response), đã ghép phần tự suy (payload) với `@SdkMessage`. */
 export interface ClientMessageContract {
     /** Payload client gửi (Zod schema, sinh class C#); `null` nếu không có. */
     payload: ZodType | null;
-    /** Message server dùng để trả lời (value của enum server message). */
+    /**
+     * Kiểu `data` của response: tên DTO `...Message`, `"string"`, hoặc `null` = response không có dữ liệu
+     * (C# `Task<Result>`). Lấy từ `@SdkMessage.response`.
+     */
+    response: string | null;
+    /** Message server (push) mà command đẩy thêm như hiệu ứng phụ (value của enum server message). */
     replies: readonly string[];
     /** Mã lỗi nghiệp vụ có thể trả trong `replies`. */
     errors: readonly string[];
@@ -13,7 +18,7 @@ export interface ClientMessageContract {
     documented: boolean;
 }
 
-/** Một message server → client. */
+/** Một message server → client chủ động đẩy xuống (push, không phải response của request). */
 export interface ServerMessageContract {
     /** Tên DTO `...Message` của `data`, `"string"`, hoặc `null` nếu không có dữ liệu. */
     data: string | null;

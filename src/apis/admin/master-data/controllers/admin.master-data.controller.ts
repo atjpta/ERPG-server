@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
 import { adminMasterDataService } from "@/apis/admin/master-data/services/admin.master-data.service.js";
 import {
@@ -14,7 +14,7 @@ export const adminMasterDataController = {
     adminMasterDataIndex: adminEndpoint(prefix, { method: "GET" }, (ctx) =>
         RouterContainer(ctx, async () => {
             const result = await adminMasterDataService.getAll();
-            return Response.ok({ data: result });
+            return HttpResponse.ok({ data: result });
         })
     ),
 
@@ -26,8 +26,8 @@ export const adminMasterDataController = {
                 const result = await adminMasterDataService.getByKey(
                     AdminMasterDataKeyParamSchema.parse(ctx.params).key
                 );
-                if (!result) return Response.notFound(ctx);
-                return Response.ok({ data: result });
+                if (!result) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -40,7 +40,7 @@ export const adminMasterDataController = {
                     AdminMasterDataKeyParamSchema.parse(ctx.params).key,
                     ctx.body
                 );
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 };

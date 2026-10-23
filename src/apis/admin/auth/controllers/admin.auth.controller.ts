@@ -1,6 +1,6 @@
 import { createEndpoint } from "colyseus";
 import { createRateLimitMiddleware } from "@/core/middlewares/rate-limit.middleware.js";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { ADMIN_LOGIN_IP_RATE_LIMIT } from "@/modules/auth/constants/rate-limit.constant.js";
 import { adminAuthService } from "@/apis/admin/auth/services/admin.auth.service.js";
 import { AdminLoginSchema } from "@/apis/admin/auth/validators/admin.auth.validator.js";
@@ -20,15 +20,15 @@ export const adminAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminAuthService.login(ctx.body);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
     adminAuthMe: adminEndpoint(`${prefix}/me`, { method: "GET" }, (ctx) =>
         RouterContainer(ctx, async () => {
             const profile = await adminAuthService.getProfile(ctx.context.adminId);
-            if (!profile) return Response.notFound(ctx);
-            return Response.ok({ data: profile });
+            if (!profile) return HttpResponse.notFound(ctx);
+            return HttpResponse.ok({ data: profile });
         })
     ),
 };

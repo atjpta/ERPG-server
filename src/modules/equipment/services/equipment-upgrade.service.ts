@@ -1,6 +1,6 @@
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import type { Result } from "@/core/types/result.type.js";
-import { fail, ok } from "@/core/utils/result.util.js";
+import { Response } from "@/core/utils/response.util.js";
 import { Big, big, floorBig } from "@/core/utils/big-number.util.js";
 import type {
     EnhanceStep,
@@ -15,8 +15,17 @@ import {
     type Rng,
     equipmentRollService,
 } from "@/modules/equipment/services/equipment-roll.service.js";
+import { equipmentInstanceService } from "@/modules/equipment/services/equipment-instance.service.js";
 import type { EquipmentGroup } from "@/modules/items/enums/item-equipment.enum.js";
-import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
+import { ItemSource, ItemType, type ItemRarity } from "@/modules/items/enums/item.enum.js";
+import { itemService } from "@/modules/items/services/item.service.js";
+import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
+import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
+import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
+import type { Inventories, InventoryItem } from "@/modules/player/schemas/inventory.schema.js";
+import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
+import { inventoryService } from "@/modules/player/services/inventory.service.js";
+import { playerService } from "@/modules/player/services/player.service.js";
 import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 
 /** Nguyên liệu theo code item. */
@@ -60,14 +69,14 @@ export class EquipmentUpgradeService {
         config: EquipmentEnhanceConfig
     ): UpgradeCheck<UpgradeCost & { step: EnhanceStep }> {
         if (instance.enhanceLevel >= MAX_ENHANCE_LEVEL) {
-            return fail(ItemErrorCode.EQUIPMENT_MAX_ENHANCE);
+            return Response.error(ItemErrorCode.EQUIPMENT_MAX_ENHANCE);
         }
         if (instance.enhanceLevel >= config.maxByRarity[instance.rarity]) {
-            return fail(ItemErrorCode.EQUIPMENT_NEEDS_REFINE);
+            return Response.error(ItemErrorCode.EQUIPMENT_NEEDS_REFINE);
         }
         const step = config.steps[instance.enhanceLevel];
         const scale = this.levelScale(config.levelCostScale, instance.level);
-        return ok({
+        return Response.success({
             step,
             rate: step.rate,
             gold: this.scaled(step.gold, scale),
@@ -99,9 +108,9 @@ export class EquipmentUpgradeService {
     ): UpgradeCheck<UpgradeCost & { step: RefineStep; target: ItemRarity }> {
         const target = equipmentRollService.nextRarity(instance.rarity);
         const step = target ? config.steps[target] : undefined;
-        if (!target || !step) return fail(ItemErrorCode.EQUIPMENT_MAX_RARITY);
+        if (!target || !step) return Response.error(ItemErrorCode.EQUIPMENT_MAX_RARITY);
         const scale = this.levelScale(config.levelCostScale, instance.level);
-        return ok({
+        return Response.success({
             step,
             target,
             rate: step.rate,
@@ -162,6 +171,81 @@ export class EquipmentUpgradeService {
             { code: config.spiritCode, quantity: spirit },
             { code: config.dustCodeByGroup[group], quantity: dust },
         ]);
+    }
+
+    /** Có thành công không (so `rng()` với tỉ lệ `rate`). */
+    rollSuccess(rate: number, rng: Rng) {
+        return big(rng()).lt(rate);
+    }
+
+    /**
+     * Trừ vàng + nguyên liệu `cost` (kiểm tra đủ hết rồi mới trừ): sửa trực tiếp túi nguyên liệu `materials`, trả ví
+     * mới (ví thật do world làm chủ nên không sửa ở đây).
+     */
+    pay(materials: InventoryItem[], wallet: Wallet, cost: UpgradeCost): Result<{ wallet: Wallet }> {
+        const paid = playerService.debitWallet(wallet, [
+            { code: CurrencyCode.GOLD, amount: cost.gold },
+        ]);
+        if (!paid) return Response.error(ItemErrorCode.CURRENCY_NOT_ENOUGH);
+        const resolved: { itemId: string; quantity: number }[] = [];
+        for (const { code, quantity } of cost.materials) {
+            const item = itemService.getByCode(code);
+            if (!item) return Response.error(ItemErrorCode.ITEM_NOT_ENOUGH, undefined, { code });
+            if (inventoryService.countItem(materials, item.id) < quantity)
+                return Response.error(ItemErrorCode.ITEM_NOT_ENOUGH);
+            resolved.push({ itemId: item.id, quantity });
+        }
+        for (const { itemId, quantity } of resolved) {
+            inventoryService.removeFromInventory(materials, itemId, quantity);
+        }
+        return Response.success({ wallet: paid });
+    }
+
+    /** Tính phân rã trên bản sao túi nguyên liệu — dùng chung cho phân rã thật và xem trước. */
+    simulateDisassemble(
+        inventories: Inventories,
+        instanceIds: string[]
+    ): Result<{
+        ids: string[];
+        materials: InventoryItem[];
+        received: { itemId: string; code: string; quantity: number }[];
+    }> {
+        const ids = [...new Set(instanceIds)];
+        const bag = inventories[ItemType.EQUIPMENT];
+        const costs: MaterialCost[] = [];
+        for (const id of ids) {
+            const entry = bag.find((candidate) => candidate.id === id);
+            if (!entry) return Response.error(ItemErrorCode.ITEM_NOT_FOUND);
+            if (entry.isLocked) return Response.error(ItemErrorCode.ITEM_LOCKED);
+            const owned = equipmentInstanceService.toOwnedEquipment(entry);
+            if (!owned) return Response.error(ItemErrorCode.ITEM_NOT_EQUIPMENT);
+            costs.push(
+                ...this.disassembleCosts(
+                    owned.metadata,
+                    owned.group,
+                    masterDataCacheService.get(MasterDataKey.EQUIPMENT_DISASSEMBLE_CONFIG)
+                )
+            );
+        }
+
+        const materials = structuredClone(inventories[ItemType.MATERIAL]);
+        const received = new Map<string, { itemId: string; code: string; quantity: number }>();
+        for (const { code, quantity } of costs) {
+            const item = itemService.getByCode(code);
+            if (!item) return Response.error(ItemErrorCode.ITEM_NOT_ENOUGH, undefined, { code });
+            const { overflow } = inventoryService.addToInventory(
+                materials,
+                inventoryService.inventorySize(ItemType.MATERIAL),
+                item,
+                quantity,
+                { source: ItemSource.CRAFT }
+            );
+            if (overflow > 0) return Response.error(ItemErrorCode.INVENTORY_FULL);
+            const current = received.get(code) ?? { itemId: item.id, code, quantity: 0 };
+            current.quantity += quantity;
+            received.set(code, current);
+        }
+        return Response.success({ ids, materials, received: [...received.values()] });
     }
 }
 

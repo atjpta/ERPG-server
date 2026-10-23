@@ -1,12 +1,79 @@
 import type { ErrorCode } from "@/core/types/result.type.js";
+import { PayloadRejected } from "@/core/utils/client-send.util.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { EndpointContext, EndpointOptions } from "colyseus";
 import { APIError } from "@colyseus/better-call";
 import { ZodError } from "zod";
-import type { ErrorData, Failure, Result } from "@/core/types/result.type.js";
-import { fail, ok } from "@/core/utils/result.util.js";
+import type {
+    ErrorData,
+    Failure,
+    Paginated,
+    Pagination,
+    Result,
+    Success,
+} from "@/core/types/result.type.js";
 
-/** Tham số của `Response.*`: `data` chỉ cho thành công, `code` / `error` chỉ cho thất bại. */
+/** "ITEM_NOT_FOUND" -> "Item not found" (message mặc định cho dev / log; client dùng `code`). */
+const defaultMessage = (code: string) => {
+    const text = code.toLowerCase().replaceAll("_", " ");
+    return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+/**
+ * Tạo envelope `Result` cho API, reply của room và RPC giữa các room: `Response.success(data)`,
+ * `Response.error(code)`, `Response.successPage(...)`, `Response.isError(result)`. Helper HTTP cần `ctx`
+ * (đặt status) là `HttpResponse` trong `response.util.ts`.
+ */
+export const Response = {
+    /** Type guard thay cho `!result.success` (tsconfig tắt strictNullChecks nên truthiness không thu hẹp kiểu). */
+    isError: <T>(result: Result<T>): result is Failure => result.success === false,
+
+    /** Thành công. Không có dữ liệu thì `data` là `null`. */
+    success: <T = null>(data: T | null = null, message = "OK"): Success<T | null> => ({
+        success: true,
+        data,
+        code: null,
+        message,
+        error: null,
+    }),
+
+    /** Thành công với danh sách: luôn là `{ items, pagination }`, rỗng thì `items: []`. */
+    successPage: (
+        items: unknown[],
+        pagination: Pagination,
+        message = "OK"
+    ): Success<Paginated<unknown>> =>
+        Response.success({ items, pagination }, message) as Success<Paginated<unknown>>,
+
+    /**
+     * Thất bại. `code` bắt buộc; `message` mặc định suy ra từ `code`; `error` là dữ liệu kèm theo riêng
+     * cho `code` đó (nếu có).
+     */
+    /**
+     * Cầu nối lỗi → `Result` cho room (Request/Response): `serviceError` giữ nguyên mã nghiệp vụ,
+     * `PayloadRejected` thành `INVALID_INPUT`, lỗi lạ được log và trả `INTERNAL_ERROR` (không lộ chi tiết).
+     */
+    fromError: (error: unknown): Result<never> => {
+        if (error instanceof PayloadRejected) return Response.error(CommonCode.INVALID_INPUT);
+        if (
+            error instanceof Error &&
+            typeof (error as unknown as { code?: unknown }).code === "string"
+        ) {
+            const { code } = error as unknown as { code: ErrorCode };
+            return Response.error(code, error.message);
+        }
+        console.error("[Rooms] Unhandled error in room request:", error);
+        return Response.error(CommonCode.INTERNAL_ERROR);
+    },
+
+    error: <C extends ErrorCode>(
+        code: C,
+        message: string = defaultMessage(code),
+        error: ErrorData | null = null
+    ): Failure<C> => ({ success: false, data: null, code, message, error }),
+};
+
+/** Tham số của `HttpResponse.*`: `data` chỉ cho thành công, `code` / `error` chỉ cho thất bại. */
 export interface ResRaw {
     data?: unknown;
     message?: string;
@@ -61,25 +128,25 @@ const DEFAULT_CODE: Record<number, ErrorCode> = {
 };
 
 const failure = (status: number, res: ResRaw, fallbackMessage: string): Failure =>
-    fail(
+    Response.error(
         res.code ?? DEFAULT_CODE[status] ?? CommonCode.INTERNAL_ERROR,
         res.message ?? fallbackMessage,
         res.error ?? null
     );
 
-export const Response = {
+export const HttpResponse = {
     ok(res: ResRaw = {}): Result<unknown> {
-        return ok(serialize(res.data), res.message);
+        return Response.success(serialize(res.data), res.message);
     },
 
     created(ctx: Ctx, res: ResRaw = {}): Result<unknown> {
         ctx.setStatus(HttpStatusCode.CREATED);
-        return ok(serialize(res.data), res.message ?? "Created");
+        return Response.success(serialize(res.data), res.message ?? "Created");
     },
 
     noContent(ctx: Ctx, res: ResRaw = {}): Result<unknown> {
         ctx.setStatus(HttpStatusCode.NO_CONTENT);
-        return ok(null, res.message ?? "No content");
+        return Response.success(null, res.message ?? "No content");
     },
 
     badRequest(ctx: Ctx, res: ResRaw = {}): never {
@@ -142,7 +209,7 @@ export const RouterContainer = async (
     } catch (e) {
         if (e instanceof APIError) throw e;
         if (e instanceof ZodError) {
-            return Response.unprocessable(ctx, {
+            return HttpResponse.unprocessable(ctx, {
                 message: "Validation failed",
                 code: CommonCode.INVALID_INPUT,
                 error: { issues: e.issues.map(({ path, message }) => ({ path, message })) },
@@ -156,7 +223,7 @@ export const RouterContainer = async (
             );
         }
         console.error("[API] Unhandled endpoint error:", (e as Error)?.stack ?? err?.message ?? e);
-        return Response.internalError(ctx);
+        return HttpResponse.internalError(ctx);
     }
 };
 
@@ -173,7 +240,7 @@ export const routerErrorHandler = (error: unknown): globalThis.Response | undefi
         body?.code === "VALIDATION_ERROR"
             ? CommonCode.INVALID_INPUT
             : (DEFAULT_CODE[status] ?? CommonCode.INTERNAL_ERROR);
-    return globalThis.Response.json(fail(code, body?.message ?? error.message), {
+    return globalThis.Response.json(Response.error(code, body?.message ?? error.message), {
         status,
         headers: error.headers as HeadersInit,
     });

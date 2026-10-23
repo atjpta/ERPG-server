@@ -3,7 +3,7 @@ import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
-import { PlayerWorldCommand } from "@/rooms/world/commands/player.world.command.js";
+import { PlayerWorldCommand } from "@/rooms/world/player.world.command.js";
 
 interface ContentPayload {
     client: PlayerClient;

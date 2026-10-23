@@ -1,18 +1,17 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { findRoomSchemaFiles } from "./lib/find-room-schemas.mjs";
+import { findRoomSchemaFiles, findServerOnlySchemaClasses } from "./lib/find-room-schemas.mjs";
 import { buildRoomIndex, distributeSchemas } from "./lib/distribute-schemas.mjs";
 import { normalizeCSharpSchemas } from "./lib/normalize-csharp-schemas.mjs";
 import { join, relative, resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const roomsDirectory = join(projectRoot, "src", "rooms");
-// Shared client contracts are explicit inputs rather than incidental imports through room implementations.
+// Shared client contracts are explicit inputs (enum message mỗi room); DTO theo module nằm trong `modules/*/interfaces/*.message.ts`, tự tìm bởi findRoomSchemaFiles.
 const sharedContractFiles = [
     join(projectRoot, "src", "rooms", "world", "types", "world-message.type.ts"),
     join(projectRoot, "src", "modules", "auth", "enums", "admin.enum.ts"),
-    join(projectRoot, "src", "rooms", "party", "types", "party-message.type.ts"),
-    join(projectRoot, "src", "rooms", "chat", "types", "chat-message.type.ts"),
+    join(projectRoot, "src", "rooms", "global", "types", "global-message.type.ts"),
 ];
 const codegen = join(projectRoot, "node_modules", "@colyseus", "schema", "bin", "schema-codegen");
 // Thư mục Network của Unity: schema được xếp theo room (Room/<Room>/Schema, Common) sau khi codegen.
@@ -66,6 +65,10 @@ for (const output of outputs) {
     );
 
     if (result.status !== 0) process.exit(result.status ?? 1);
+    // State chỉ ở server (không `@type`) không có gì để client giải mã: bỏ C# rỗng do codegen đi theo import.
+    for (const name of findServerOnlySchemaClasses(roomsDirectory)) {
+        rmSync(join(output.directory, `${name}.cs`), { force: true });
+    }
     const files = new Map(
         readdirSync(output.directory)
             .filter((name) => name.endsWith(".cs"))

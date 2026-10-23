@@ -1,47 +1,39 @@
 import { itemService } from "@/modules/items/services/item.service.js";
-import { levelService } from "@/modules/levels/services/level.service.js";
 import { playerService } from "@/modules/player/services/player.service.js";
 import type { Reward } from "@/modules/rewards/types/reward.type.js";
 import { recordReward } from "@/rooms/world/modules/dungeons/utils/dungeon-reward.world.util.js";
-import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
+import { playerDataWorldService } from "@/rooms/world/modules/players/services/player-data.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import {
-    WorldMessage,
-    type RewardMessage,
-    type WalletMessage,
-} from "@/rooms/world/types/world-message.type.js";
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import type {
+    RewardMessage,
+    WalletMessage,
+} from "@/rooms/world/modules/rewards/interfaces/reward.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 /**
- * Cộng phần thưởng (tiền, item, exp → lên level) vào player đang online. Chỉ đổi state trong room;
- * checkpoint / lúc rời room lưu xuống DB (PlayerWorldState.toSavedState).
+ * Cộng phần thưởng (tiền, item, exp → lên level) vào player đang online. Tiền / exp / level đổi ngay trong room
+ * (checkpoint / lúc rời room lưu xuống DB qua global); item và điểm khi lên level do global làm chủ nên gom lại gửi
+ * sang global (`PlayerDataWorldService.queue`).
  */
 export class RewardWorldService {
     /**
      * `recordInDungeon`: ghi vào bảng thưởng dungeon (`DUNGEON_CLEAR`) — chỉ phần thưởng clear dungeon bật cờ
-     * này, drop quái dọc đường không vào bảng.
+     * này, drop quái dọc đường không vào bảng. `queueItems = false`: item đã được cộng riêng qua global
+     * (`PlayerDataWorldService.apply`), chỉ báo client.
      */
     grant(
         room: WorldRoom,
         playerId: string,
         player: PlayerWorldState,
         reward: Reward,
-        recordInDungeon = false
+        recordInDungeon = false,
+        queueItems = true
     ): void {
-        player.wallet = playerService.creditWallet(player.wallet, reward.currency);
-
-        const progress = playerService.gainExp(
-            { level: player.level, exp: player.exp },
-            reward.exp,
-            (level) => levelService.getExpToNext(level)
-        );
-        player.setLevelProgress(progress.level, progress.exp);
+        const progress = player.gainCurrencyAndExp(reward.currency, reward.exp);
         if (progress.levelsGained > 0) {
             const points = playerService.levelUpPoints(progress.levelsGained);
-            player.attributePoints += points.attributePoints;
-            player.skillPoints += points.skillPoints;
-            // Lên level hồi đầy trạng thái.
-            player.restoreFull();
+            playerDataWorldService.queue(room, playerId, [{ type: "addPoints", ...points }]);
         }
 
         const message: RewardMessage = {
@@ -66,11 +58,11 @@ export class RewardWorldService {
             const wallet: WalletMessage = player.wallet;
             if (client) client.sendSuccess(WorldMessage.WALLET, wallet);
         }
-        if (reward.items.length > 0)
-            inventoryWorldService.grantItems(client, player, reward.items, reward.source);
-        // Lên level: có thêm điểm tiềm năng và stat đổi theo level.
-        if (client && progress.levelsGained > 0)
-            client.sendSuccess(WorldMessage.ATTRIBUTES, player.getAttributeSummary());
+        if (queueItems && reward.items.length > 0) {
+            playerDataWorldService.queue(room, playerId, [
+                { type: "giveItem", items: reward.items, source: reward.source },
+            ]);
+        }
     }
 }
 

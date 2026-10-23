@@ -2,18 +2,18 @@
 
 Both projects group World code by feature. Server folders use lowercase; Unity folders use PascalCase.
 
-| Server: `src/rooms/world`                     | Unity: `Assets/ERPG/Scripts/Rooms/World` | Responsibility                                                          |
-| --------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------- |
-| `chains/`, `commands/`, `services/`, `utils/` | `Core/`                                  | Room lifecycle, shared chain, tick and world helpers                    |
-| `modules/players/`                            | `Players/`                               | Player state processing, movement; client input and prediction          |
-| `modules/monsters/`                           | `Monsters/`                              | Monster chains and services; client monster prefabs                     |
-| `modules/combat/`                             | `Combat/`                                | Skills, attacks, hitboxes, configuration; client skill effects          |
-| `modules/maps/`                               | `Maps/`                                  | Map transfers; client map data, collision, validation and prefabs       |
-| `modules/content/`                            | `Content/`                               | NPCs, interactions, dialogue, quests and world props                    |
-| `modules/dungeons/`                           | `Dungeons/`                              | Dungeon sessions, rewards and client gates                              |
-| `modules/rewards/`                            | `Rewards/`                               | Reward delivery and client reward messages/popups                       |
-| `modules/inventory/`                          | —                                        | Server inventory commands and validation                                |
-| —                                             | `Presentation/`                          | Shared client character views, cameras, prefab infrastructure and debug |
+| Server: `src/rooms/world`                  | Unity: `Assets/ERPG/Scripts/Rooms/World` | Responsibility                                                                 |
+| ------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------ |
+| `chains/`, `enums/`, `services/`, `utils/` | `Core/`                                  | Shared chain, error codes, tick and world helpers (lifecycle: `world.room.ts`) |
+| `modules/players/`                         | `Players/`                               | Player state processing, movement; client input and prediction                 |
+| `modules/monsters/`                        | `Monsters/`                              | Monster chains and services; client monster prefabs                            |
+| `modules/combat/`                          | `Combat/`                                | Skills, attacks, hitboxes, configuration; client skill effects                 |
+| `modules/maps/`                            | `Maps/`                                  | Map transfers; client map data, collision, validation and prefabs              |
+| `modules/content/`                         | `Content/`                               | NPCs, interactions, dialogue, quests and world props                           |
+| `modules/dungeons/`                        | `Dungeons/`                              | Dungeon sessions, rewards and client gates                                     |
+| `modules/rewards/`                         | `Rewards/`                               | Reward delivery and client reward messages/popups                              |
+| `modules/consumables/`                     | —                                        | `useItem` (potions) only; the bag itself lives in global `player-data`         |
+| —                                          | `Presentation/`                          | Shared client character views, cameras, prefab infrastructure and debug        |
 
 Within a feature, use `chains/Chains`, `commands/Commands`, `services/Services`,
 `utils/Utils`, `validators/Validators` and `simulation/Simulation` according to role.
@@ -25,8 +25,8 @@ Create folders only when they contain code; the two runtimes do not need placeho
 | Server file                                                      | Unity file                                   |
 | ---------------------------------------------------------------- | -------------------------------------------- |
 | `chains/world.chain.ts`                                          | `Core/Chains/WorldChain.cs`                  |
-| `commands/on-join.world.command.ts`                              | `Core/Commands/OnJoinWorldCommand.cs`        |
-| `commands/on-leave.world.command.ts`                             | `Core/Commands/OnLeaveWorldCommand.cs`       |
+| `world.room.ts` (`onJoin`)                                       | `Core/Commands/OnJoinWorldCommand.cs`        |
+| `world.room.ts` (`releasePlayer`)                                | `Core/Commands/OnLeaveWorldCommand.cs`       |
 | `services/world.service.ts`                                      | `Core/Services/WorldService.cs`              |
 | `modules/players/chains/player.world.chain.ts`                   | `Players/Chains/PlayerWorldChain.cs`         |
 | `modules/players/services/player.world.service.ts`               | `Players/Services/PlayerWorldService.cs`     |
@@ -44,14 +44,18 @@ Room entry points stay at the World root. Public message enums/DTOs live in
 `world.shared.ts` exports those types/enums and the reusable `buildClientSkillConfig`
 builder used by client config exports. External consumers use this public entrypoint
 instead of importing feature implementation files. Its RPC commands are listed in `createRpcRunner` in `world.room.ts`.
-Room lifecycle, tick orchestration and world helpers live directly under this folder.
+Room lifecycle and tick orchestration are in `world.room.ts`; the base command is `player.world.command.ts`; world helpers live directly under this folder.
+DTOs sent to the client are `modules/<feature>/interfaces/*.world.message.ts`, enums are in `enums/`; `types/world-message.type.ts` keeps only the two message enums.
 Feature implementations live under `modules/<feature>/`. These are world-runtime modules;
 `src/modules` remains the shared business/data layer used by both HTTP APIs and rooms.
 Keep generic infrastructure in `src/core`; shared business logic belongs in `src/modules`.
 Feature message handlers belong in commands, with payload schemas in their own feature validators.
 The room wires monster-death handling to rewards so combat does not import party services.
-Player schemas delegate stat calculation and persistence mapping to player services;
-inventory upgrades and disassembly live in `equipment-upgrade.world.service.ts`.
+Player schemas delegate stat calculation and persistence mapping to player services.
+Bags, equipment, attribute/skill points and equipment upgrades are owned by the global room (`global/modules/player-data`, `inventory`, `equipment-upgrade`);
+the world keeps a read-only replica (`PlayerWorldState.applyPlayerData`) and changes it only through
+`PlayerDataWorldService` (`apply` for immediate item changes, `queue`/`flush` for drops and level-up points, `sync` for backups).
+Wallet, exp/level, position, quests and flags stay in the world and are backed up to global (`toWorldFields`).
 Colyseus schemas belong to their feature in `modules/<feature>/schemas/`:
 player/input/owned skills in players, monsters in monsters, NPCs/interactables in content,
 dungeon state in dungeons, and hitboxes/projectiles/areas/auras in combat.
@@ -62,18 +66,19 @@ Do not manually move or edit generated C# schemas to match feature folders.
 C# namespaces stay `ERPG.Rooms.World`; moving scripts must preserve their `.meta` GUIDs.
 Update server import paths and client source-reference comments when moving shared logic.
 
-World and party implementations must not import each other's internal files.
-World consumes public party DTOs/helpers through `src/rooms/party/party.shared.ts`
-and RPC through party's command classes with `callRoom`. Transport lives in `src/core/rooms/room.integration.ts`.
-Party discovery/creation belongs to the world
-player-party service; dungeon launch coordination lives in `src/rooms/coordinators`.
-World-side party actions are player commands. Dungeon admission belongs to the
-world dungeon module, and kill rewards/quest application belong to rewards.
-Player commands call the typed RPC remotes directly. Shared player lookup,
-snapshot mapping/application and RPC capabilities live in
+World and global implementations must not import each other's internal files.
+World consumes public global DTOs/helpers through `src/rooms/global/global.shared.ts`
+(including the RPC command classes; call them with `callRoom(serverId, XGlobalCommand, payload)` because
+the global room's `roomId` is the game server id). Transport lives in `src/core/rooms/room.integration.ts`.
+Parties are owned by the global room (client party requests go to `global`, not to world); world only
+reports presence (`PartyAttach/Detach/HeartbeatWorldCommand`) and remembers which
+party each player is in (`PlayerWorldState.partyId`, synced to clients so same-map teammates read each
+other's level/HP from world state; nothing about HP/level goes to global). Dungeon admission belongs to the world dungeon module and is launched
+through `LaunchDungeonGlobalCommand`; kill rewards/quest application belong to rewards.
+Shared player lookup, snapshot mapping/application live in
 `modules/players/services/player-party.world.service.ts`; there is no separate
 world-party integration layer.
-Only the party room owns membership, loot mode and the round-robin cursor.
+Only the global room owns membership and loot mode; the world computes kill-reward shares itself and keeps the round-robin cursor per (room, party).
 
 Each command class lives in its own file and owns its action's handling. Inventory
 commands share an abstract command for validation, responses and persistence;

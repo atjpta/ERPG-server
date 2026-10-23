@@ -10,7 +10,12 @@ const MESSAGE_META = Symbol.for("erpg.sdk.message");
 const ROOM_META = Symbol.for("erpg.sdk.room");
 
 export interface SdkMessageMeta {
-    /** Message server → client (giá trị enum, vd `WorldMessage.INVENTORY`) mà command này trả lời. */
+    /**
+     * Kiểu `data` của response (Request/Response): tên DTO `...Message` (vd `"AttributesMessage"`) hoặc kiểu
+     * nguyên thuỷ (`"string"`). Bỏ trống = response không có `data`.
+     */
+    response?: string;
+    /** Message server → client (giá trị enum, vd `WorldMessage.INVENTORY`) mà command này đẩy thêm như hiệu ứng phụ. */
     replies?: readonly string[];
     /** Mã lỗi nghiệp vụ có thể xuất hiện trong các `replies` (mã chung như INVALID_INPUT cũng liệt kê khi có). */
     errors?: readonly string[];
@@ -63,6 +68,7 @@ export function readSdkMessage(command: unknown): Required<SdkMessageMeta> | und
     }
     if (chain.length === 0) return undefined;
     return {
+        response: chain.map((meta) => meta.response).findLast(Boolean) ?? "",
         replies: [...new Set(chain.flatMap((meta) => meta.replies ?? []))],
         errors: [...new Set(chain.flatMap((meta) => meta.errors ?? []))],
         note: chain

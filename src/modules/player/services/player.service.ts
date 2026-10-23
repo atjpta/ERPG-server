@@ -35,6 +35,7 @@ import {
     playerStatService,
 } from "@/modules/player/services/player-stat.service.js";
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
+import type { PlayerSavedState } from "@/modules/player/types/player-fields.type.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { PlayerStateRepo } from "@/modules/player/repositories/player-state.repository.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
@@ -331,31 +332,11 @@ export class PlayerService extends BaseService<typeof Players> {
         return this.combine(player, state);
     }
 
-    async saveState(
-        id: string,
-        data: Pick<PlayerState, "mapCode" | "x" | "y" | "direction" | "hp" | "mp"> &
-            Partial<
-                Pick<
-                    PlayerState,
-                    | "level"
-                    | "exp"
-                    | "wallet"
-                    | "attributePoints"
-                    | "skillPoints"
-                    | "allocatedAttributes"
-                    | "equipments"
-                    | "equipmentInventory"
-                    | "consumableInventory"
-                    | "materialInventory"
-                    | "flags"
-                    | "quests"
-                    | "lastTownMapCode"
-                    | "dungeonSession"
-                    | "dailyQuests"
-                >
-            >,
-        expectedRevision?: number
-    ) {
+    /**
+     * Lưu một phần hoặc toàn bộ `PlayerSavedState`. Global room là nơi duy nhất gọi hàm này lúc đang chơi;
+     * `expectedRevision` là khoá lạc quan của cả bản ghi (lệch thì ném lỗi).
+     */
+    async saveState(id: string, data: Partial<PlayerSavedState>, expectedRevision?: number) {
         return withTransaction(async (tx) => {
             const state =
                 expectedRevision !== undefined

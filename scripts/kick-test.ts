@@ -44,12 +44,22 @@ async function register() {
 }
 
 /** `forceNewRoom` = `create` thay vì `joinOrCreate` → chắc chắn vào room (kênh) khác. */
-async function join(playerToken: string, mapCode: string, forceNewRoom = false) {
+async function join(auth: any, forceNewRoom = false) {
     const sdk = new Client(SERVER_URL);
-    sdk.auth.token = playerToken;
+    sdk.auth.token = auth.playerToken;
+    const options = { serverId: auth.player.serverId, mapCode: auth.player.mapCode };
     const room = forceNewRoom
-        ? await sdk.create("world", { mapCode })
-        : await sdk.joinOrCreate("world", { mapCode });
+        ? await sdk.create("world", options)
+        : await sdk.joinOrCreate("world", options);
+    const left = new Promise<number>((resolve) => room.onLeave((code) => resolve(code)));
+    return { room, left };
+}
+
+/** Vào global room (chat / party / presence) — cùng player token, mỗi player một kết nối. */
+async function joinGlobal(auth: any) {
+    const sdk = new Client(SERVER_URL);
+    sdk.auth.token = auth.playerToken;
+    const room = await sdk.joinOrCreate("global", { serverId: auth.player.serverId });
     const left = new Promise<number>((resolve) => room.onLeave((code) => resolve(code)));
     return { room, left };
 }
@@ -72,8 +82,8 @@ const adminToken = (await api("POST", "/admin/auth/login", ADMIN)).token;
 // 1. Đăng nhập trùng trong cùng room.
 {
     const auth = await register();
-    const a = await join(auth.playerToken, auth.player.mapCode);
-    const b = await join(auth.playerToken, auth.player.mapCode);
+    const a = await join(auth);
+    const b = await join(auth);
     await expectKicked("Trùng login cùng room: kết nối cũ", a.left, 4001);
     await expectStillConnected("Trùng login cùng room: kết nối mới", b.room);
 
@@ -85,26 +95,28 @@ const adminToken = (await api("POST", "/admin/auth/login", ADMIN)).token;
 // 3. Đăng nhập trùng ở 2 room khác nhau (2 kênh của cùng map) — đi qua presence.
 {
     const auth = await register();
-    const a = await join(auth.playerToken, auth.player.mapCode);
-    const b = await join(auth.playerToken, auth.player.mapCode, true);
+    const a = await join(auth);
+    const b = await join(auth, true);
     if (a.room.roomId === b.room.roomId) throw new Error("Expected 2 different rooms");
     await expectKicked("Trùng login khác room: kết nối cũ", a.left, 4001);
     await expectStillConnected("Trùng login khác room: kết nối mới", b.room);
     await b.room.leave();
 }
 
-// 4. Logout → đá kết nối của session đó.
+// 4. Logout → đá kết nối của session đó (cả world lẫn global).
 {
     const auth = await register();
-    const a = await join(auth.playerToken, auth.player.mapCode);
+    const a = await join(auth);
+    const g = await joinGlobal(auth);
     await api("POST", "/user/auth/logout", {}, auth.token);
-    await expectKicked("Logout", a.left, 4004);
+    await expectKicked("Logout (world)", a.left, 4004);
+    await expectKicked("Logout (global)", g.left, 4004);
 }
 
 // 5. Xoá tài khoản trong app.
 {
     const auth = await register();
-    const a = await join(auth.playerToken, auth.player.mapCode);
+    const a = await join(auth);
     await api("DELETE", "/user/auth/account", {}, auth.token);
     await expectKicked("Xoá tài khoản", a.left, 4003);
 }

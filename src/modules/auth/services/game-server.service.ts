@@ -20,6 +20,12 @@ export class GameServerService {
         return server!;
     }
 
+    /** Mọi server chưa `OFFLINE` (kể cả bảo trì / ẩn): server vẫn cần room dựng sẵn để người chơi nội bộ vào được. */
+    async listNotOffline(dbOrTx?: Queryable) {
+        const servers = await GameServerRepo.findMany({ dbOrTx });
+        return servers.filter((server) => server.status !== GameServerStatus.OFFLINE);
+    }
+
     private assertOnline(server: GameServer | null) {
         if (!server || server.status !== GameServerStatus.ONLINE) {
             serviceError("Game server is unavailable", 503, AuthErrorCode.GAME_SERVER_UNAVAILABLE);

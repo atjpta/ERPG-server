@@ -14,6 +14,11 @@ export class MapService {
         );
     }
 
+    /** Mọi map đang mở (`ACTIVE`), theo mã. */
+    async listActive(dbOrTx?: Queryable) {
+        return GameMapRepo.findActive({ dbOrTx });
+    }
+
     async getActiveByCodeOrFail(code: string, dbOrTx?: Queryable) {
         const map = await GameMapRepo.findByCode({ code, dbOrTx });
         if (!map || map.status !== MapStatus.ACTIVE) {

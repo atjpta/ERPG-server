@@ -13,7 +13,7 @@ export const ChatChannelConfigSchema = z.object({
     }),
     /** Lưu tin vào DB (`chat_messages`). */
     saveHistory: z.boolean().default(false),
-    /** Số tin gần nhất gửi cho người chơi khi vào chat room (cần `saveHistory`). 0 = không gửi. */
+    /** Số tin gần nhất gửi cho người chơi khi client xin lịch sử lúc vào game (`getHistory` không có `before`; cần `saveHistory`). 0 = không có. */
     historyOnJoin: z.number().int().min(0).max(100).default(0),
     /** Số tin mỗi lần client xin thêm lịch sử cũ (`getHistory` với `before`; cần `saveHistory`). */
     historyPageSize: z.number().int().min(1).max(100).default(30),

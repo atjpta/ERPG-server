@@ -1,4 +1,5 @@
-import { PayloadRejected } from "@/core/utils/client-send.util.js";
+import type { Result } from "@/core/types/result.type.js";
+import { Response } from "@/core/utils/response.util.js";
 import { Command, type Dispatcher } from "@colyseus/command";
 import type { Client, Room } from "colyseus";
 import { readdir } from "node:fs/promises";
@@ -48,9 +49,14 @@ type MessageHandler = (
     this: { dispatcher: Pick<Dispatcher<Room>, "dispatch"> },
     client: Client,
     payload: unknown
-) => Promise<void>;
+) => Promise<Result<unknown>>;
 
-/** Load a declarative messages map; Colyseus binds each handler to its room instance. */
+/**
+ * Load a declarative messages map; Colyseus binds each handler to its room instance.
+ *
+ * Handler trả `Result`: client gọi bằng Request/Response (`room.Request<T>`) nhận đúng envelope này; client
+ * gửi message thường (`room.Send`) thì Colyseus bỏ qua giá trị trả về. Command không gán `result` thì trả `ok()`.
+ */
 export async function loadRoomMessages(directory: URL): Promise<Record<string, MessageHandler>> {
     const key = directory.href;
     let loading = discovered.get(key);
@@ -69,12 +75,14 @@ export async function loadRoomMessages(directory: URL): Promise<Record<string, M
                 this: { dispatcher: Pick<Dispatcher<Room>, "dispatch"> },
                 client: Client,
                 payload: unknown
-            ) {
+            ): Promise<Result<unknown>> {
+                const command = new Message();
                 try {
-                    await this.dispatcher.dispatch(new Message(), { client, payload });
+                    await this.dispatcher.dispatch(command, { client, payload });
                 } catch (error) {
-                    if (!(error instanceof PayloadRejected)) throw error;
+                    return Response.fromError(error);
                 }
+                return (command as { result?: Result<unknown> }).result ?? Response.success();
             },
         ])
     );

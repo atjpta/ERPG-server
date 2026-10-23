@@ -1,5 +1,6 @@
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
+import { Response } from "@/core/utils/response.util.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { DialogueErrorCode } from "@/modules/dialogues/enums/dialogue-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
@@ -13,19 +14,18 @@ import { itemService } from "@/modules/items/services/item.service.js";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
 import { playerService } from "@/modules/player/services/player.service.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
-import { contentWorldService } from "@/rooms/world/modules/content/services/content.world.service.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
-import { inventoryWorldService } from "@/rooms/world/modules/inventory/services/inventory.world.service.js";
+import { playerDataWorldService } from "@/rooms/world/modules/players/services/player-data.world.service.js";
 import { transferWorldService } from "@/rooms/world/modules/maps/services/transfer.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { rewardWorldService } from "@/rooms/world/modules/rewards/services/reward.world.service.js";
-import {
-    WorldMessage,
-    type DialogueEndMessage,
-    type DialogueMessage,
-    type NpcFunctionOpenMessage,
-    type WalletMessage,
-} from "@/rooms/world/types/world-message.type.js";
+import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
+import type {
+    DialogueEndMessage,
+    DialogueMessage,
+    NpcFunctionOpenMessage,
+} from "@/rooms/world/modules/content/interfaces/content.world.message.js";
+import type { WalletMessage } from "@/rooms/world/modules/rewards/interfaces/reward.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 /** Cuộc thoại đang mở của 1 player (chỉ ở server — client chỉ gửi optionId). */
@@ -59,10 +59,10 @@ export class DialogueWorldService {
         client: PlayerClient,
         player: PlayerWorldState,
         source: { id: string; x: number; y: number; radius: number; dialogueCode: string }
-    ): ErrorCode | undefined {
+    ): Promise<ErrorCode | undefined> {
         if (!dialogueService.getByCode(source.dialogueCode))
-            return DialogueErrorCode.DIALOGUE_NOT_FOUND;
-        this.begin(room, client, player, {
+            return Promise.resolve(DialogueErrorCode.DIALOGUE_NOT_FOUND);
+        return this.begin(room, client, player, {
             sourceCode: source.id,
             dialogueCode: source.dialogueCode,
             nodeId: "start",
@@ -70,7 +70,6 @@ export class DialogueWorldService {
             y: source.y,
             radius: source.radius,
         });
-        return undefined;
     }
 
     /**
@@ -84,15 +83,7 @@ export class DialogueWorldService {
             const player = room.state.players.get(playerId);
             const client = room.clientOf(playerId);
             if (!player || !client) continue;
-            if (
-                contentWorldService.isNear(
-                    player,
-                    session.x,
-                    session.y,
-                    session.radius + RANGE_MARGIN
-                )
-            )
-                continue;
+            if (player.isNear(session.x, session.y, session.radius + RANGE_MARGIN)) continue;
             this.end(room, client, session.sourceCode);
         }
     }
@@ -107,31 +98,37 @@ export class DialogueWorldService {
         client: PlayerClient,
         player: PlayerWorldState,
         session: DialogueSession
-    ) {
+    ): Promise<ErrorCode | undefined> {
         this.sessionsOf(room).set(client.auth.playerId, session);
-        this.enter(room, client, player, session, session.nodeId);
+        return this.enter(room, client, player, session, session.nodeId);
     }
 
-    enter(
+    /**
+     * Vào node `nodeId` và đẩy `dialogue` cho client. Lỗi thì đóng phiên và trả mã lỗi để command báo lại
+     * qua response của request (không đẩy `dialogueEnd`).
+     */
+    async enter(
         room: WorldRoom,
         client: PlayerClient,
         player: PlayerWorldState,
         session: DialogueSession,
         nodeId: string
-    ) {
+    ): Promise<ErrorCode | undefined> {
+        const sessions = this.sessionsOf(room);
         const node = dialogueService.getNode(session.dialogueCode, nodeId);
         if (!node) {
-            this.end(room, client, session.sourceCode, DialogueErrorCode.DIALOGUE_NOT_FOUND);
-            return;
+            sessions.delete(client.auth.playerId);
+            return DialogueErrorCode.DIALOGUE_NOT_FOUND;
         }
         session.nodeId = nodeId;
-        const error = this.runActions(room, client, player, session, node.actions);
+        const error = await this.runActions(room, client, player, session, node.actions);
         if (error) {
-            this.end(room, client, session.sourceCode, error);
-            return;
+            sessions.delete(client.auth.playerId);
+            return error;
         }
-        if (!this.sessionsOf(room).has(client.auth.playerId)) return;
+        if (!sessions.has(client.auth.playerId)) return undefined;
         this.send(room, client, player, session, node);
+        return undefined;
     }
 
     private send(
@@ -141,7 +138,7 @@ export class DialogueWorldService {
         session: DialogueSession,
         node: DialogueNode
     ) {
-        const ctx = contentWorldService.conditionContext(room, player);
+        const ctx = player.conditionContext(room.map.code);
         const options = (node.options ?? []).flatMap((option) => {
             const enabled = conditionService.evaluateConditions(ctx, option.conditions);
             if (!enabled && option.hideIfFail) return [];
@@ -184,33 +181,33 @@ export class DialogueWorldService {
     }
 
     /** Chạy lần lượt; action lỗi thì dừng và trả lỗi (các action trước đó giữ nguyên hiệu lực). */
-    runActions(
+    async runActions(
         room: WorldRoom,
         client: PlayerClient,
         player: PlayerWorldState,
         session: DialogueSession,
         actions: readonly Action[] | undefined
-    ): ErrorCode | undefined {
+    ): Promise<ErrorCode | undefined> {
         for (const action of actions ?? []) {
-            const error = this.runAction(room, client, player, session, action);
+            const error = await this.runAction(room, client, player, session, action);
             if (error) return error;
         }
         return undefined;
     }
 
-    private runAction(
+    private async runAction(
         room: WorldRoom,
         client: PlayerClient,
         player: PlayerWorldState,
         session: DialogueSession,
         action: Action
-    ): ErrorCode | undefined {
+    ): Promise<ErrorCode | undefined> {
         switch (action.type) {
             case "start_quest":
                 return questWorldService.start(room, client, player, action.questCode);
             case "complete_quest":
                 // Chỉ trả được tại đúng NPC nhận trả quest.
-                return questWorldService.complete(
+                return await questWorldService.complete(
                     room,
                     client,
                     player,
@@ -221,17 +218,16 @@ export class DialogueWorldService {
                 const item = itemService.getByCode(action.itemCode);
                 if (!item) return ItemErrorCode.ITEM_NOT_FOUND;
                 const items = [{ itemId: item.id, quantity: action.quantity }];
-                if (!inventoryWorldService.canFit(player, items))
-                    return ItemErrorCode.INVENTORY_FULL;
-                inventoryWorldService.grantItems(client, player, items, ItemSource.QUEST);
-                return undefined;
+                const given = await playerDataWorldService.apply(room, client.auth.playerId, [
+                    { type: "giveItem", items, source: ItemSource.QUEST, requireFit: true },
+                ]);
+                return Response.isError(given) ? given.code : undefined;
             }
             case "take_item": {
-                if (!inventoryWorldService.takeByCode(player, action.itemCode, action.quantity)) {
-                    return ItemErrorCode.ITEM_NOT_ENOUGH;
-                }
-                inventoryWorldService.send(client, player);
-                return undefined;
+                const taken = await playerDataWorldService.apply(room, client.auth.playerId, [
+                    { type: "takeItem", itemCode: action.itemCode, quantity: action.quantity },
+                ]);
+                return Response.isError(taken) ? taken.code : undefined;
             }
             case "give_currency":
                 rewardWorldService.grant(room, client.auth.playerId, player, {

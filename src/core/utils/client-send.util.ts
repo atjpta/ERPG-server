@@ -1,6 +1,6 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { ErrorCode, ErrorData, Result } from "@/core/types/result.type.js";
-import { fail, ok } from "@/core/utils/result.util.js";
+import { Response } from "@/core/utils/response.util.js";
 import type { z } from "zod";
 
 type MessageType = string | number;
@@ -37,10 +37,10 @@ export function extendClientSend(prototype: object) {
             this.send(type, result);
         },
         sendSuccess(type, data = null) {
-            this.send(type, ok(data));
+            this.send(type, Response.success(data));
         },
         sendError(type, code, error = null) {
-            this.send(type, fail(code, undefined, error));
+            this.send(type, Response.error(code, undefined, error));
         },
         parsePayload(schema, payload, type, error = null) {
             const parsed = schema.safeParse(payload);

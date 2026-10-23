@@ -1,5 +1,5 @@
 import { createEndpoint } from "colyseus";
-import { Response, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
 import { adminGameServerService } from "@/apis/admin/auth/services/admin.game-server.service.js";
@@ -19,7 +19,7 @@ export const adminGameServerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminGameServerService.list(ctx.query);
-                return Response.ok({ data: result });
+                return HttpResponse.ok({ data: result });
             })
     ),
 
@@ -29,8 +29,8 @@ export const adminGameServerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const server = await adminGameServerService.findById({ id: ctx.params.id });
-                if (!server) return Response.notFound(ctx);
-                return Response.ok({ data: server });
+                if (!server) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: server });
             })
     ),
 
@@ -40,7 +40,7 @@ export const adminGameServerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const server = await adminGameServerService.createServer(ctx.body);
-                return Response.created(ctx, { data: server });
+                return HttpResponse.created(ctx, { data: server });
             })
     ),
 
@@ -50,8 +50,8 @@ export const adminGameServerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const server = await adminGameServerService.updateServer(ctx.params.id, ctx.body);
-                if (!server) return Response.notFound(ctx);
-                return Response.ok({ data: server });
+                if (!server) return HttpResponse.notFound(ctx);
+                return HttpResponse.ok({ data: server });
             })
     ),
 };
