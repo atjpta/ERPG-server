@@ -844,6 +844,25 @@ await sleep(500); // chờ world báo presence lên global
     await until(() => partyChat.some((m) => m.data.channel === "party"), "party chat");
     console.info("✅ party chat delivered");
 
+    // Đổi tên giữa phiên (PUT /user/players/me/name): world state, partyState và chat dùng tên mới ngay, không cần vào lại.
+    const renamed2 = `Rn${Date.now() % 100000}`;
+    const chatFrom2 = inbox<{ channel: string; senderName: string }>(global1, "chatReceived");
+    await api("PUT", "/user/players/me/name", { name: renamed2 }, created2.playerToken);
+    await until(
+        () => (room.state as any).players.get(created2.player.id)?.name === renamed2,
+        "world state shows the new name"
+    );
+    await until(
+        () => states1.at(-1)?.data.members.some((member) => member.name === renamed2) ?? false,
+        "partyState carries the new name"
+    );
+    expectOk(await request(global2, "sendParty", { content: "after rename" }), "sendParty renamed");
+    await until(
+        () => chatFrom2.some((m) => m.data.channel === "party" && m.data.senderName === renamed2),
+        "chat uses the new name"
+    );
+    console.info("✅ rename during the session: world state, partyState and chat use the new name");
+
     // Người không phải chủ không đá được.
     expectCode(
         await request(global2, "partyKick", { playerId: auth.player.id }),
@@ -858,7 +877,7 @@ await sleep(500); // chờ world báo presence lên global
 
     // Mời lại, vào lại. Người 2 rời hẳn world room (thoát / mất kết nối) → ra khỏi party luôn;
     // đổi map thì giữ party (không test ở đây).
-    expectOk(await request(global1, "partyInvite", { playerName: name2 }), "partyInvite again");
+    expectOk(await request(global1, "partyInvite", { playerName: renamed2 }), "partyInvite again");
     await until(() => invites2.length === 2, "second invite push");
     expectOk(
         await request(global2, "partyAcceptInvite", { partyId: invites2[1].data.partyId }),

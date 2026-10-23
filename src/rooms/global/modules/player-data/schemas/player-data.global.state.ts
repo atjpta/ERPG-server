@@ -41,7 +41,7 @@ const MAX_PROCESSED_EVENTS = 256;
  */
 export class PlayerDataState extends Schema {
     readonly playerId: string;
-    readonly name: string;
+    name: string;
     readonly classId: string;
     readonly classCode: string;
     /** Revision của cả bản ghi `player_states` (khoá lạc quan khi lưu). */
@@ -86,6 +86,11 @@ export class PlayerDataState extends Schema {
             revision: snapshot.stateRevision,
             global: snapshot,
         });
+    }
+
+    /** Đổi tên hiển thị trong phiên (sau khi tên mới đã ghi DB). */
+    rename(name: string) {
+        this.name = name;
     }
 
     get inWorld(): boolean {

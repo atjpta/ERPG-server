@@ -56,6 +56,13 @@ export class PartyState extends Schema {
         return this.members.get(playerId) ?? "";
     }
 
+    /** Đổi tên hiển thị của thành viên; `false` nếu người đó không ở party. */
+    renameMember(playerId: string, name: string): boolean {
+        if (!this.members.has(playerId)) return false;
+        this.members.set(playerId, name);
+        return true;
+    }
+
     hasMember(playerId: string) {
         return this.members.has(playerId);
     }

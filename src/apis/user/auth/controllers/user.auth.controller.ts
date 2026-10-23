@@ -6,6 +6,7 @@ import { AUTH_IP_RATE_LIMIT } from "@/modules/auth/constants/rate-limit.constant
 import { userAuthMiddleware } from "@/modules/auth/middlewares/user.auth.middleware.js";
 import { userAuthService } from "@/apis/user/auth/services/user.auth.service.js";
 import {
+    UserGoogleLinkSchema,
     UserGoogleLoginSchema,
     UserGuestLoginSchema,
     UserLoginSchema,
@@ -16,6 +17,7 @@ import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
 import { MasterDataErrorCode } from "@/modules/master-data/enums/master-data-error-code.enum.js";
 import {
     UserAuthResultResponse,
+    UserOauthAccountResponse,
     UserOauthNonceResponse,
     UserProfileResponse,
     UserSessionResponse,
@@ -198,6 +200,65 @@ export const userAuthController = {
                 const profile = await userAuthService.getProfile(ctx.context.userId);
                 if (!profile) return HttpResponse.notFound(ctx);
                 return HttpResponse.ok({ data: profile });
+            })
+    ),
+
+    userAuthGoogleLink: authEndpoint(
+        `${prefix}/oauth/google/link`,
+        {
+            method: "POST",
+            sdk: {
+                summary:
+                    "Liên kết Google vào tài khoản đang đăng nhập (vd khách muốn giữ tiến trình) bằng idToken đã xác minh.",
+                auth: "user",
+                response: UserOauthAccountResponse,
+                errors: [
+                    AuthErrorCode.OAUTH_PROVIDER_DISABLED,
+                    AuthErrorCode.OAUTH_INVALID_CREDENTIAL,
+                    AuthErrorCode.OAUTH_PROVIDER_ERROR,
+                    AuthErrorCode.OAUTH_ACCOUNT_LINKED_ELSEWHERE,
+                    AuthErrorCode.OAUTH_ALREADY_LINKED,
+                ],
+            },
+            body: UserGoogleLinkSchema,
+        },
+        (ctx) =>
+            RouterContainer(ctx, async () => {
+                const linked = await userAuthService.linkGoogle({
+                    userId: ctx.context.userId,
+                    body: ctx.body,
+                });
+                return HttpResponse.ok({
+                    data: {
+                        provider: linked.provider,
+                        email: linked.email,
+                        linkedAt: linked.createdAt.toISOString(),
+                    },
+                });
+            })
+    ),
+
+    userAuthOauthAccounts: authEndpoint(
+        `${prefix}/oauth/accounts`,
+        {
+            method: "GET",
+            sdk: {
+                summary:
+                    "Các cách đăng nhập đã liên kết với tài khoản (google, play_games, guest) — để biết đã liên kết Google chưa.",
+                auth: "user",
+                response: z.array(UserOauthAccountResponse),
+            },
+        },
+        (ctx) =>
+            RouterContainer(ctx, async () => {
+                const accounts = await userAuthService.listOauthAccounts(ctx.context.userId);
+                return HttpResponse.ok({
+                    data: accounts.map((account) => ({
+                        provider: account.provider,
+                        email: account.email,
+                        linkedAt: account.createdAt.toISOString(),
+                    })),
+                });
             })
     ),
 

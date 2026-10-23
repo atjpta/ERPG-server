@@ -7,6 +7,8 @@ import type { ClientSend } from "@/core/utils/client-send.util.js";
 import type { Result } from "@/core/types/result.type.js";
 import { Response } from "@/core/utils/response.util.js";
 import type { KickMessage } from "@/core/types/player-kick.type.js";
+import type { PlayerRenamedMessage } from "@/core/types/player-rename.type.js";
+import { playerRenameTopic } from "@/core/utils/player-rename.util.js";
 
 export type PlayerClient = Client<{ auth: AuthPlayer }> & ClientSend;
 
@@ -54,6 +56,8 @@ export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extend
     private readonly kickedWhileDropped = new Map<string, KickReason>();
     /** userId → handler đã subscribe (1 subscription / user / room). */
     private readonly kickHandlers = new Map<string, (message: KickMessage) => void>();
+    /** playerId → handler đổi tên đã subscribe (1 subscription / player / room). */
+    private readonly renameHandlers = new Map<string, (message: PlayerRenamedMessage) => void>();
 
     static async onAuth(
         _token: string,
@@ -79,6 +83,13 @@ export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extend
             await this.presence.subscribe(userKickTopic(userId), handler);
         }
 
+        if (!this.renameHandlers.has(playerId)) {
+            const handler = (message: PlayerRenamedMessage) =>
+                this.onPlayerRenamed(message.playerId, message.name);
+            this.renameHandlers.set(playerId, handler);
+            await this.presence.subscribe(playerRenameTopic(playerId), handler);
+        }
+
         // Room phụ (party) không được đá: kết nối world của cùng player là hợp lệ.
         if (options.kickDuplicateLogins === false) return;
         // Đá kết nối cũ của cùng player (kể cả trong chính room này), trừ kết nối vừa vào.
@@ -92,7 +103,16 @@ export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extend
         this.onlinePlayers.delete(client.sessionId);
         this.kickedWhileDropped.delete(client.sessionId);
 
-        const { userId } = client.auth;
+        const { userId, playerId } = client.auth;
+        const renameHandler = this.renameHandlers.get(playerId);
+        const playerStillOnline = [...this.onlinePlayers.values()].some(
+            (auth) => auth.playerId === playerId
+        );
+        if (!playerStillOnline && renameHandler) {
+            this.renameHandlers.delete(playerId);
+            await this.presence.unsubscribe(playerRenameTopic(playerId), renameHandler);
+        }
+
         const stillOnline = [...this.onlinePlayers.values()].some((auth) => auth.userId === userId);
         const handler = this.kickHandlers.get(userId);
         if (!stillOnline && handler) {
@@ -127,6 +147,9 @@ export abstract class BasePlayerRoom<T extends RoomOptions = RoomOptions> extend
     protected shouldKickFor(_reason: KickReason): boolean {
         return true;
     }
+
+    /** Người chơi đang ở room này vừa đổi tên (đã ghi DB): room con cập nhật tên trong state của mình. Mặc định không làm gì. */
+    protected onPlayerRenamed(_playerId: string, _name: string): void {}
 
     private handleKick(userId: string, message: KickMessage) {
         if (!this.shouldKickFor(message.reason)) return;

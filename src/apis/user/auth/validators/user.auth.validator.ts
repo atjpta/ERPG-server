@@ -20,6 +20,14 @@ export const UserGoogleLoginSchema = ClientInfoSchema.extend({
 });
 export type UserGoogleLoginBody = z.infer<typeof UserGoogleLoginSchema>;
 
+/** Liên kết Google vào tài khoản đang đăng nhập — cùng idToken / nonce như đăng nhập Google, không cần thông tin thiết bị. */
+export const UserGoogleLinkSchema = z.object({
+    idToken: z.string().min(1),
+    /** Nonce dùng một lần lấy từ `POST /user/auth/oauth/nonce`. */
+    nonce: z.string().min(1).max(256).optional(),
+});
+export type UserGoogleLinkBody = z.infer<typeof UserGoogleLinkSchema>;
+
 /** Login khách — không cần thông tin gì thêm, server nhận diện theo IP. */
 export const UserGuestLoginSchema = ClientInfoSchema;
 export type UserGuestLoginBody = z.infer<typeof UserGuestLoginSchema>;

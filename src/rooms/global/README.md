@@ -87,13 +87,20 @@ chỉ trong cùng game server. Lời mời lưu DB nên người nhận offline 
 
 - Request: `friendList`, `friendRequest { playerName }`, `friendAccept` / `friendDecline` / `friendCancel` / `friendRemove` `{ playerId }`,
   `friendBlock { playerName }`, `friendUnblock { playerId }`. Hai người mời chéo nhau thì thành bạn luôn.
-- Push: `friendChanged` (`added` / `removed` / `request_received`; `removed` dùng cho mọi trường hợp bỏ người đó khỏi danh sách),
+- Push: `friendChanged` (`added` / `removed` / `request_received` / `renamed`; `removed` dùng cho mọi trường hợp bỏ người đó khỏi danh sách),
   `friendPresence` (bạn online / offline / đổi map). Từ chối lời mời không báo người gửi.
 - `GlobalState.friends` (`FriendsState`) giữ id bạn của người đang kết nối global (nạp lúc `onJoin`, dọn lúc `onLeave`) để đẩy presence mà
   không query DB; `AttachWorld` cũng đẩy presence khi đổi map. Presence chỉ có online + `mapCode` (global không giữ level).
 - Chặn: xoá luôn quan hệ bạn bè / lời mời; người bị chặn (và người chặn) không mời party hay nhắn riêng được — server trả
   "không tìm thấy" để không lộ việc bị chặn (`partyInvite`, `sendWhisper`, `friendRequest`).
 - Xoá tài khoản: hai bảng có FK `onDelete: cascade` tới `players` nên `purgeUserData` (xoá player) dọn luôn.
+
+## Đổi tên giữa phiên
+
+`PUT /user/players/me/name` ghi DB rồi `playerRenameService.publish` (presence pub/sub, đi được qua nhiều process như kick). Mỗi room giữ người đó
+subscribe trong `BasePlayerRoom` và override `onPlayerRenamed`: global đổi tên trong `PlayerDataState`, tên thành viên party (gửi lại `partyState`) và
+báo bạn đang online bằng `friendChanged` `renamed`; world đổi `PlayerWorldState.name` (state đồng bộ nên mọi client cùng room thấy ngay). Thư đã gửi
+giữ `senderName` cũ (bản chụp lúc gửi).
 
 ## Mail
 

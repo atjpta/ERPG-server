@@ -6,4 +6,6 @@ export enum FriendChange {
     REMOVED = "removed",
     /** Có người gửi lời mời kết bạn cho bạn. */
     REQUEST_RECEIVED = "request_received",
+    /** Người này (bạn, hoặc người có lời mời) vừa đổi tên: cập nhật `name` ở mọi danh sách. */
+    RENAMED = "renamed",
 }

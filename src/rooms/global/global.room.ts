@@ -19,6 +19,7 @@ import { playerService } from "@/modules/player/services/player.service.js";
 import { PartyNotice } from "@/rooms/global/global.shared.js";
 import { SweepMailsGlobalCommand } from "@/rooms/global/modules/mail/commands/sweep-mails.global.command.js";
 import { friendGlobalService } from "@/rooms/global/modules/friend/services/friend.global.service.js";
+import { partyNotifyGlobalService } from "@/rooms/global/modules/party/services/party-notify.global.service.js";
 import { partyGlobalService } from "@/rooms/global/modules/party/services/party.global.service.js";
 
 const RECONNECT_SECONDS = 20;
@@ -54,6 +55,18 @@ export class GlobalRoom extends AuthenticatedPlayerRoom<{
      */
     protected override shouldKickFor(reason: KickReason) {
         return reason !== KickReason.DUPLICATE_LOGIN;
+    }
+
+    /**
+     * Người chơi đổi tên giữa phiên: cập nhật tên trong PlayerData (chat, mail gửi sau đó dùng tên mới), tên thành viên party
+     * (gửi lại `partyState`) và báo các bạn đang online (`friendChanged` `renamed`).
+     */
+    protected override onPlayerRenamed(playerId: string, name: string) {
+        this.state.players.get(playerId)?.rename(name);
+        const party = this.state.parties.getPartyByPlayerId(playerId);
+        if (party?.renameMember(playerId, name))
+            partyNotifyGlobalService.broadcastState(this, party);
+        friendGlobalService.announceRename(this, playerId, name);
     }
 
     async onCreate(options: GlobalRoomOptions) {

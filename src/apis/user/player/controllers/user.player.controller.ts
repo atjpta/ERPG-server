@@ -176,7 +176,10 @@ export const userPlayerController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const player = await playerService.rename(ctx.context.playerId, ctx.body.name);
+                const player = await userPlayerService.renameCharacter({
+                    playerId: ctx.context.playerId,
+                    name: ctx.body.name,
+                });
                 return HttpResponse.ok({ data: player });
             })
     ),

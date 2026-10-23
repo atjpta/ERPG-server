@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { GameServerStatus } from "@/modules/auth/enums/game-server.enum.js";
 import { ClientPlatform } from "@/core/enums/client-platform.enum.js";
+import { OauthProvider } from "@/modules/auth/enums/oauth-provider.enum.js";
 import { UserStatus } from "@/modules/auth/enums/user.enum.js";
 import { UserPlayerRefResponse } from "@/apis/user/player/validators/user.player.response.js";
 
@@ -29,6 +30,14 @@ export const UserProfileResponse = z.object({
     status: z.enum(UserStatus),
     lastLoginAt: z.string().nullable(),
     createdAt: z.string(),
+});
+
+/** Một cách đăng nhập đã liên kết với tài khoản (`google`, `play_games`, `guest`). */
+export const UserOauthAccountResponse = z.object({
+    provider: z.enum(OauthProvider),
+    /** Email của tài khoản bên thứ ba nếu có (khách không có). */
+    email: z.string().nullable(),
+    linkedAt: z.string(),
 });
 
 /** Một phiên đăng nhập (thiết bị). */

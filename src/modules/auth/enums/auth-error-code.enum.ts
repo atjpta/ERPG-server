@@ -24,6 +24,10 @@ export enum AuthErrorCode {
     OAUTH_INVALID_CREDENTIAL = "OAUTH_INVALID_CREDENTIAL",
     /** Google / Play Games lỗi hoặc không phản hồi (HTTP 502). Thử lại sau. */
     OAUTH_PROVIDER_ERROR = "OAUTH_PROVIDER_ERROR",
+    /** Tài khoản Google này đã được liên kết với một tài khoản game khác (HTTP 409) — không thể liên kết lại. */
+    OAUTH_ACCOUNT_LINKED_ELSEWHERE = "OAUTH_ACCOUNT_LINKED_ELSEWHERE",
+    /** Tài khoản game này đã liên kết một tài khoản Google khác (HTTP 409) — mỗi tài khoản chỉ liên kết một Google. */
+    OAUTH_ALREADY_LINKED = "OAUTH_ALREADY_LINKED",
     /** Sai thông tin đăng nhập admin. */
     ADMIN_INVALID_CREDENTIALS = "ADMIN_INVALID_CREDENTIALS",
     /** Cần quyền admin cho thao tác này. */

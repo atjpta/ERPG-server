@@ -34,6 +34,15 @@ export class FriendGlobalService {
         }
     }
 
+    /** `playerId` vừa đổi tên: báo các bạn đang online để họ đổi tên trong danh sách. */
+    announceRename(room: GlobalRoom, playerId: string, name: string) {
+        const friendIds = room.state.friends.friendIdsOf(playerId);
+        if (!friendIds) return;
+        for (const friendId of friendIds) {
+            this.pushChange(room, friendId, FriendChange.RENAMED, { playerId, name });
+        }
+    }
+
     presenceOf(
         room: GlobalRoom,
         playerId: string

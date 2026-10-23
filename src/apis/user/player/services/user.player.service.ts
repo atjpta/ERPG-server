@@ -1,6 +1,7 @@
 import { playerAuthService } from "@/modules/auth/services/player-auth.service.js";
 import { KickReason } from "@/core/enums/kick-reason.enum.js";
 import { playerKickService } from "@/core/services/player-kick.service.js";
+import { playerRenameService } from "@/core/services/player-rename.service.js";
 import { playerService } from "@/modules/player/services/player.service.js";
 import type { UserCreatePlayerBody } from "@/apis/user/player/validators/user.player.validator.js";
 
@@ -29,6 +30,13 @@ export class UserPlayerService {
         const player = await playerService.deleteCharacter(params);
         // Throw out the character if it is online right now.
         playerKickService.kickPlayer(player.userId, player.id, KickReason.PLAYER_DELETED);
+    }
+
+    /** Đổi tên nhân vật rồi báo các room đang giữ người đó (world, global) cập nhật tên trong phiên. */
+    async renameCharacter(params: { playerId: string; name: string }) {
+        const player = await playerService.rename(params.playerId, params.name);
+        playerRenameService.publish(params.playerId, player.name);
+        return player;
     }
 
     async createCharacter(params: {

@@ -21,6 +21,7 @@ import { userPlayGamesOauthService } from "@/apis/user/auth/services/user.play-g
 import { playerAuthService } from "@/modules/auth/services/player-auth.service.js";
 import { playerService } from "@/modules/player/services/player.service.js";
 import type {
+    UserGoogleLinkBody,
     UserGoogleLoginBody,
     UserGuestLoginBody,
     UserLoginBody,
@@ -103,6 +104,55 @@ export class UserAuthService {
             },
         ]);
         return this.issueSession(await this.resolveActiveUser(user), client);
+    }
+
+    /**
+     * Liên kết Google vào tài khoản đang đăng nhập (vd khách muốn giữ tiến trình): lần sau đăng nhập Google ra đúng tài khoản này.
+     * Gọi lại với cùng tài khoản Google thì trả kết quả hiện có. Google đã thuộc tài khoản KHÁC → 409
+     * `OAUTH_ACCOUNT_LINKED_ELSEWHERE` (không tự gộp); tài khoản này đã liên kết Google khác → 409 `OAUTH_ALREADY_LINKED`.
+     */
+    async linkGoogle(params: { userId: string; body: UserGoogleLinkBody }) {
+        const { userId, body } = params;
+        const profile = await userGoogleOauthService.verifyIdToken(body);
+        return withTransaction(async (tx) => {
+            const owner = await UserOauthAccountRepo.findByProviderAccount({
+                provider: OauthProvider.GOOGLE,
+                providerUserId: profile.providerUserId,
+                dbOrTx: tx,
+            });
+            if (owner) {
+                if (owner.userId !== userId) {
+                    serviceError(
+                        "This Google account is already linked to another account",
+                        409,
+                        AuthErrorCode.OAUTH_ACCOUNT_LINKED_ELSEWHERE
+                    );
+                }
+                return owner;
+            }
+            const mine = await UserOauthAccountRepo.findByUserId({ userId, dbOrTx: tx });
+            if (mine.some((account) => account.provider === OauthProvider.GOOGLE)) {
+                serviceError(
+                    "This account is already linked to a different Google account",
+                    409,
+                    AuthErrorCode.OAUTH_ALREADY_LINKED
+                );
+            }
+            return UserOauthAccountRepo.create({
+                data: {
+                    userId,
+                    provider: OauthProvider.GOOGLE,
+                    providerUserId: profile.providerUserId,
+                    email: profile.email,
+                },
+                dbOrTx: tx,
+            });
+        });
+    }
+
+    /** Các cách đăng nhập đã liên kết của tài khoản. */
+    listOauthAccounts(userId: string) {
+        return UserOauthAccountRepo.findByUserId({ userId });
     }
 
     /**

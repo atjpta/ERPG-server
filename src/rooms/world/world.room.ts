@@ -252,6 +252,12 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
         await this.verifyReconnect(client);
     }
 
+    /** Người chơi đổi tên giữa phiên: `name` nằm trong state đồng bộ nên mọi client cùng room thấy tên mới ngay. */
+    protected override onPlayerRenamed(playerId: string, name: string) {
+        const player = this.state.players.get(playerId);
+        if (player) player.name = name;
+    }
+
     async onLeave(client: PlayerClient) {
         await this.unregisterOnlinePlayer(client);
         // Kết nối đã bị thay bởi lần đăng nhập mới thì nhân vật không còn của nó (đã release lúc join).
