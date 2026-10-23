@@ -1,3 +1,4 @@
+import type { Queryable } from "@/configs/postgres.config.js";
 import { generateEntityId } from "@/core/entities/base.entity.js";
 import { callRoom } from "@/core/rooms/room.integration.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
@@ -102,10 +103,16 @@ export class PlayerDataGlobalService {
     async save(
         room: GlobalRoom,
         state: PlayerDataState,
-        fields: Partial<PlayerSavedState> = state.toGlobalFields()
+        fields: Partial<PlayerSavedState> = state.toGlobalFields(),
+        dbOrTx?: Queryable
     ): Promise<void> {
         try {
-            const saved = await playerService.saveState(state.playerId, fields, state.revision);
+            const saved = await playerService.saveState(
+                state.playerId,
+                fields,
+                state.revision,
+                dbOrTx
+            );
             state.revision = saved.revision;
         } catch (error) {
             console.error(`[PlayerData] Save player ${state.playerId} failed:`, error);

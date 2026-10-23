@@ -9,6 +9,7 @@ import {
 import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { FriendConfigSchema } from "@/modules/master-data/schemas/friend-config.schema.js";
+import { MailConfigSchema } from "@/modules/master-data/schemas/mail-config.schema.js";
 import { ChatConfigSchema } from "@/modules/master-data/schemas/chat-config.schema.js";
 import { PartyConfigSchema } from "@/modules/master-data/schemas/party-config.schema.js";
 import { PlayerTargetConfigSchema } from "@/modules/master-data/schemas/player-target-config.schema.js";
@@ -78,6 +79,7 @@ export const MasterDataValueSchemas = {
     [MasterDataKey.NPC_CONFIG]: NpcConfigSchema,
     [MasterDataKey.CHAT_CONFIG]: ChatConfigSchema,
     [MasterDataKey.FRIEND_CONFIG]: FriendConfigSchema,
+    [MasterDataKey.MAIL_CONFIG]: MailConfigSchema,
 } satisfies Record<MasterDataKey, z.ZodType>;
 
 export type AuthSessionConfigValue = z.infer<typeof AuthSessionConfigSchema>;

@@ -19,6 +19,7 @@ export enum ItemSource {
     SHOP = "shop",
     QUEST = "quest",
     CRAFT = "craft",
+    MAIL = "mail",
 }
 
 /** Loại hiệu ứng khi dùng consumable — xử lý ở `ConsumableWorldService`. */

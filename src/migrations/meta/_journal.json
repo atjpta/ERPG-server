@@ -22,6 +22,20 @@
             "when": 1792754200065,
             "tag": "0002_aspiring_golden_guardian",
             "breakpoints": true
+        },
+        {
+            "idx": 3,
+            "version": "7",
+            "when": 1792760677215,
+            "tag": "0003_careless_doctor_doom",
+            "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "7",
+            "when": 1792765601319,
+            "tag": "0004_complex_stellaris",
+            "breakpoints": true
         }
     ]
 }

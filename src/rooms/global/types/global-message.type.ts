@@ -67,6 +67,29 @@ export enum GlobalClientMessage {
     /** `{ playerId }` — bỏ chặn. */
     FRIEND_UNBLOCK = "friendUnblock",
 
+    // ---- Mail ----
+
+    /** `{ locale? }` — hộp thư còn hạn (mới → cũ); thư hệ thống đã dựng theo ngôn ngữ (fallback `mail_config.defaultLocale` → `en`). Cũng phát các broadcast chưa nhận. Response là `MailListMessage`. */
+    MAIL_LIST = "mailList",
+    /** `{ mailId }` — đánh dấu đã đọc. Response là `MailReadMessage`. */
+    MAIL_READ = "mailRead",
+    /** `{ mailId }` — nhận đính kèm (item vào túi, tiền vào ví; thư COD thì trả giá trước). Response là `MailClaimedMessage`. */
+    MAIL_CLAIM = "mailClaim",
+    /** Nhận đính kèm của mọi thư không COD (tối đa `claimAllLimit`). Response là `MailClaimAllMessage`. */
+    MAIL_CLAIM_ALL = "mailClaimAll",
+    /** `{ mailId }` — người nhận từ chối / trả lại thư người chơi chưa nhận: đính kèm về người gửi bằng thư hệ thống. */
+    MAIL_RETURN = "mailReturn",
+    /** Thư mình đã gửi mà người nhận chưa claim (thu hồi được). Response là `MailSentListMessage`. */
+    MAIL_SENT_LIST = "mailSentList",
+    /** `{ mailId }` — người gửi thu hồi thư người nhận chưa claim (đã đọc vẫn thu hồi được); đính kèm trả về bằng thư hệ thống. */
+    MAIL_RECALL = "mailRecall",
+    /** `{ mailId }` — xoá thư đã đọc và đã nhận (hoặc không có đính kèm). */
+    MAIL_DELETE = "mailDelete",
+    /** Xoá mọi thư xoá được. Response là `MailDeletedMessage`. */
+    MAIL_DELETE_READ = "mailDeleteRead",
+    /** `{ targetName, subject, body, items:[{instanceId, quantity}], currency:[{code, amount}], cod?:{code, amount} }` — gửi thư cho người chơi cùng server (kể cả offline). Response là `MailSendResultMessage`. */
+    MAIL_SEND = "mailSend",
+
     // ---- Player data (túi đồ, trang bị, điểm tiềm năng) ----
 
     /** `{ strength?, dexterity?, intelligence?, vitality?, luck? }` — số điểm tiềm năng muốn cộng. */
@@ -120,6 +143,13 @@ export enum GlobalMessage {
     FRIEND_CHANGED = "friendChanged",
     /** Một người bạn online / offline / đổi map. `data` là `FriendPresenceMessage`. */
     FRIEND_PRESENCE = "friendPresence",
+
+    // ---- Mail ----
+
+    /** Có thư mới (quà, thư người chơi, thư hoàn trả, thanh toán COD). `data` là `MailReceivedMessage`. */
+    MAIL_RECEIVED = "mailReceived",
+    /** Một thư biến khỏi hộp thư (người gửi thu hồi). `data` là `MailRemovedMessage`. */
+    MAIL_REMOVED = "mailRemoved",
 
     // ---- Player data ----
 

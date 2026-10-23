@@ -92,7 +92,7 @@ export class InventoryGlobalService {
         }
     }
 
-    private toItemRewardMessage(reward: ItemReward) {
+    toItemRewardMessage(reward: ItemReward) {
         const item = itemService.getById(reward.itemId);
         return {
             ...reward,
@@ -102,7 +102,7 @@ export class InventoryGlobalService {
     }
 
     /** Metadata trang bị → message, kèm main stats đã nhân hệ số cường hoá/tinh hoá. */
-    private toInstanceMessage(metadata: ItemEquipmentInstanceMetadata): EquipmentInstanceMessage {
+    toInstanceMessage(metadata: ItemEquipmentInstanceMetadata): EquipmentInstanceMessage {
         const multiplier = equipmentStatService.mainStatMultiplier(metadata, {
             enhance: masterDataCacheService.get(MasterDataKey.EQUIPMENT_ENHANCE_CONFIG)
                 .mainStatGrowth,

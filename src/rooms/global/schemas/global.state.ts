@@ -1,5 +1,6 @@
 import { Schema } from "@colyseus/schema";
 import { FriendsState } from "@/rooms/global/modules/friend/schemas/friends.global.state.js";
+import { MailsState } from "@/rooms/global/modules/mail/schemas/mails.global.state.js";
 import { PartiesState } from "@/rooms/global/modules/party/schemas/parties.global.state.js";
 import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
 
@@ -14,4 +15,6 @@ export class GlobalState extends Schema {
     readonly parties = new PartiesState();
     /** Id bạn bè của những người đang kết nối global (để đẩy presence). */
     readonly friends = new FriendsState();
+    /** Ngôn ngữ mail gần nhất của người đang kết nối global (để push đúng ngôn ngữ). */
+    readonly mails = new MailsState();
 }

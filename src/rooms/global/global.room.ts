@@ -17,11 +17,13 @@ import type { GlobalRoomOptions } from "@/rooms/global/types/global-room.type.js
 import { PruneRegistryGlobalCommand } from "@/rooms/global/modules/world-registry/commands/prune-registry.global.command.js";
 import { playerService } from "@/modules/player/services/player.service.js";
 import { PartyNotice } from "@/rooms/global/global.shared.js";
+import { SweepMailsGlobalCommand } from "@/rooms/global/modules/mail/commands/sweep-mails.global.command.js";
 import { friendGlobalService } from "@/rooms/global/modules/friend/services/friend.global.service.js";
 import { partyGlobalService } from "@/rooms/global/modules/party/services/party.global.service.js";
 
 const RECONNECT_SECONDS = 20;
 const PRESENCE_PRUNE_MS = 30_000;
+const MAIL_SWEEP_MS = 3_600_000;
 
 const messages = await loadRoomMessages(new URL(".", import.meta.url));
 
@@ -61,6 +63,10 @@ export class GlobalRoom extends AuthenticatedPlayerRoom<{
         this.clock.setInterval(() => {
             void dispatcher.dispatch(new PruneRegistryGlobalCommand());
         }, PRESENCE_PRUNE_MS);
+        // Thư hết hạn: xoá, thư người chơi còn đính kèm được trả về người gửi.
+        this.clock.setInterval(() => {
+            void dispatcher.dispatch(new SweepMailsGlobalCommand());
+        }, MAIL_SWEEP_MS);
     }
 
     async onJoin(client: PlayerClient) {
@@ -86,6 +92,7 @@ export class GlobalRoom extends AuthenticatedPlayerRoom<{
         if (this.sessionOf.get(playerId) !== client.sessionId) return;
         this.sessionOf.delete(playerId);
         friendGlobalService.disconnect(this, playerId);
+        this.state.mails.unload(playerId);
         // Kết nối global kết thúc (sau thời gian chờ reconnect) = rời party.
         const party = this.state.parties.getPartyByPlayerId(playerId);
         if (party) partyGlobalService.removeMember(this, party, playerId, PartyNotice.MEMBER_LEFT);

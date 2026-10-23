@@ -7,6 +7,7 @@ export * from "@/rooms/global/types/global-message.type.js";
 export * from "@/rooms/global/modules/chat/interfaces/chat.global.message.js";
 export * from "@/rooms/global/modules/party/interfaces/party.global.message.js";
 export * from "@/rooms/global/modules/friend/interfaces/friend.global.message.js";
+export * from "@/rooms/global/modules/mail/interfaces/mail.global.message.js";
 export * from "@/rooms/global/modules/dungeon-launch/interfaces/dungeon.global.message.js";
 export * from "@/rooms/global/modules/player-data/interfaces/player-data.global.message.js";
 export * from "@/rooms/global/modules/inventory/interfaces/inventory.global.message.js";

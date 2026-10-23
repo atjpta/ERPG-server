@@ -4,6 +4,7 @@
  * response luôn là envelope `Result`; push (`dialogue`, `chatReceived`, `partyState`...) thu bằng `inbox`.
  * Chạy khi server đang bật: `yarn smoke` (mặc định http://localhost:2567, đổi bằng env SERVER_URL).
  */
+import { execSync } from "node:child_process";
 import { Client, type Room } from "@colyseus/sdk";
 
 const SERVER_URL = process.env.SERVER_URL ?? "http://localhost:2567";
@@ -453,6 +454,346 @@ await sleep(500); // chờ world báo presence lên global
         "unblock twice"
     );
     console.info("✅ friend block removes the tie and denies request / whisper");
+}
+
+// ---- Mail (global): thư người chơi, đính kèm, COD, thu hồi, thư hệ thống đa ngôn ngữ, broadcast, hết hạn ------
+{
+    interface MailItem {
+        itemId: string;
+        quantity: number;
+    }
+    interface MailReward {
+        items: MailItem[];
+        currency: { code: string; amount: number }[];
+    }
+    interface MailMsg {
+        id: string;
+        kind: string;
+        subject: string;
+        body: string;
+        locale: string;
+        reward?: MailReward;
+        cod?: { code: string; amount: number };
+        read: boolean;
+        claimed: boolean;
+    }
+    interface MailList {
+        mails: MailMsg[];
+        unreadCount: number;
+        locale: string;
+    }
+    interface Bag {
+        inventories: { equipment: { id: string; itemId: string }[] };
+    }
+
+    /** Công cụ dev gửi mail hệ thống (chưa có API admin): chạy ở tiến trình riêng, cần DB đã seed. */
+    const mailTool = (args: string) =>
+        execSync(`yarn -s mail:tool ${args}`, { cwd: process.cwd(), stdio: "pipe" }).toString();
+
+    const name1 = (await api("GET", "/user/players/me", undefined, auth.playerToken))
+        .name as string;
+    const received1 = inbox<{ mail: MailMsg }>(global1, "mailReceived");
+    const received2 = inbox<{ mail: MailMsg; unreadCount: number }>(global2, "mailReceived");
+    const removed2 = inbox<{ mailId: string }>(global2, "mailRemoved");
+    const bag1 = inbox<Bag>(global1, "inventory");
+    const bag2 = inbox<Bag>(global2, "inventory");
+    const list = async (target: Room, locale?: string) =>
+        expectOk(await request<MailList>(target, "mailList", locale ? { locale } : {}), "mailList");
+    const find = (mails: MailMsg[], pick: (mail: MailMsg) => boolean, label: string) => {
+        const mail = mails.find(pick);
+        if (!mail) throw new Error(`mail not found: ${label}`);
+        return mail;
+    };
+
+    // Player 1 tháo vài món vào túi để có thứ đính kèm.
+    const slots = Object.keys(auth.player.equipments).slice(0, 3);
+    for (const slot of slots) {
+        const before = bag1.length;
+        expectOk(await request(global1, "unequipItem", { slot }), `unequip ${slot}`);
+        await until(() => bag1.length > before, "inventory push");
+    }
+    const firstBagItem = () => bag1.at(-1)!.data.inventories.equipment[0];
+    const bagSize1 = () => bag1.at(-1)!.data.inventories.equipment.length;
+    const startBag = bagSize1();
+
+    // --- Gửi thư text: lỗi và thành công ---
+    expectCode(
+        await request(global1, "mailSend", { targetName: "NoSuchPlayerXyz", subject: "x" }),
+        "MAIL_TARGET_NOT_FOUND",
+        "mail unknown target"
+    );
+    expectCode(
+        await request(global1, "mailSend", { targetName: name1, subject: "x" }),
+        "MAIL_SELF_TARGET",
+        "mail to self"
+    );
+    expectCode(
+        await request(global1, "mailSend", { targetName: name2 }),
+        "MAIL_EMPTY",
+        "empty mail"
+    );
+    expectOk(
+        await request(global1, "mailSend", { targetName: name2, subject: "hi", body: "hello" }),
+        "mailSend text"
+    );
+    await until(() => received2.length === 1, "mailReceived push");
+    const inbox2 = await list(global2, "vi");
+    const text = find(inbox2.mails, (m) => m.subject === "hi", "text mail");
+    if (text.kind !== "player" || text.read || inbox2.unreadCount < 1)
+        throw new Error(`unexpected text mail ${JSON.stringify(text)}`);
+    expectCode(
+        await request(global2, "mailDelete", { mailId: text.id }),
+        "MAIL_NOT_DELETABLE",
+        "delete unread mail"
+    );
+    expectOk(await request(global2, "mailRead", { mailId: text.id }), "mailRead");
+    expectOk(
+        await request(global2, "mailDelete", { mailId: text.id }),
+        "mailDelete read text mail"
+    );
+    console.info("✅ mail text: errors, push, list, read, delete");
+
+    // --- Đính kèm item + thu hồi (người nhận chưa claim) ---
+    const recallItem = firstBagItem();
+    expectOk(
+        await request(global1, "mailSend", {
+            targetName: name2,
+            subject: "gear",
+            items: [{ instanceId: recallItem.id, quantity: 1 }],
+        }),
+        "mailSend item"
+    );
+    if (bagSize1() !== startBag - 1) throw new Error("attached item must leave the sender's bag");
+    const sent = expectOk(
+        await request<{ mails: { id: string; subject: string }[] }>(global1, "mailSentList"),
+        "mailSentList"
+    );
+    const sentGear = sent.mails.find((m) => m.subject === "gear");
+    if (!sentGear) throw new Error("mailSentList must list the unclaimed mail");
+    await until(() => received2.length === 2, "gear mail push");
+    const gear2 = find((await list(global2)).mails, (m) => m.subject === "gear", "gear mail");
+    expectOk(await request(global2, "mailRead", { mailId: gear2.id }), "mailRead gear"); // đã đọc vẫn thu hồi được
+    expectOk(await request(global1, "mailRecall", { mailId: sentGear.id }), "mailRecall");
+    await until(() => removed2.some((m) => m.data.mailId === gear2.id), "mailRemoved push");
+    expectCode(
+        await request(global1, "mailRecall", { mailId: sentGear.id }),
+        "MAIL_NOT_FOUND",
+        "recall twice"
+    );
+    await until(() => received1.length >= 1, "returned mail push");
+    const returned = received1.at(-1)!.data.mail;
+    if (returned.kind !== "system" || returned.reward?.items.length !== 1)
+        throw new Error(`recall must return the attachment: ${JSON.stringify(returned)}`);
+    expectOk(await request(global1, "mailClaim", { mailId: returned.id }), "claim returned mail");
+    await until(() => bagSize1() === startBag, "returned item back in the bag");
+    console.info("✅ mail item attach → recall (already read) → returned by system mail");
+
+    // --- Người nhận claim; sau đó không thu hồi được ---
+    const claimItem = firstBagItem();
+    expectOk(
+        await request(global1, "mailSend", {
+            targetName: name2,
+            subject: "gift",
+            items: [{ instanceId: claimItem.id, quantity: 1 }],
+        }),
+        "mailSend gift"
+    );
+    const gift2 = find((await list(global2)).mails, (m) => m.subject === "gift", "gift mail");
+    const bag2Before = bag2.length;
+    expectOk(await request(global2, "mailClaim", { mailId: gift2.id }), "mailClaim");
+    await until(() => bag2.length > bag2Before, "recipient inventory push");
+    if (!bag2.at(-1)!.data.inventories.equipment.some((e) => e.itemId === claimItem.itemId))
+        throw new Error("claimed item must be in the recipient's bag");
+    expectCode(
+        await request(global2, "mailClaim", { mailId: gift2.id }),
+        "MAIL_ALREADY_CLAIMED",
+        "claim twice"
+    );
+    const gift1 = expectOk(
+        await request<{ mails: { id: string }[] }>(global1, "mailSentList"),
+        "mailSentList after claim"
+    );
+    if (gift1.mails.length !== 0) throw new Error("claimed mails must leave the sent list");
+    expectCode(
+        await request(global1, "mailRecall", { mailId: gift2.id }),
+        "MAIL_ALREADY_CLAIMED",
+        "recall after claim"
+    );
+    expectOk(await request(global2, "mailDelete", { mailId: gift2.id }), "delete claimed mail");
+    console.info("✅ mail item claimed by the recipient (no more recall)");
+
+    // --- Thư hệ thống đa ngôn ngữ + tiền (công cụ dev gửi) ---
+    mailTool(`gift ${name2} --gold 5000`);
+    const vi = await list(global2, "vi");
+    const viGift = find(
+        vi.mails,
+        (m) => m.kind === "system" && !!m.reward?.currency.length,
+        "gift"
+    );
+    const en = await list(global2, "en");
+    const enGift = find(en.mails, (m) => m.id === viGift.id, "gift (en)");
+    const fr = await list(global2, "fr"); // chưa có tiếng Pháp → fallback về ngôn ngữ mặc định (vi)
+    const frGift = find(fr.mails, (m) => m.id === viGift.id, "gift (fr)");
+    if (viGift.subject === enGift.subject || viGift.locale !== "vi" || enGift.locale !== "en")
+        throw new Error(
+            `system mail must follow the locale: ${viGift.subject} / ${enGift.subject}`
+        );
+    if (frGift.subject !== viGift.subject || frGift.locale !== "vi")
+        throw new Error(`missing locale must fall back to vi: ${JSON.stringify(frGift)}`);
+    const claimedGift = expectOk(
+        await request<{ currency: { code: string; amount: number }[] }>(global2, "mailClaim", {
+            mailId: viGift.id,
+        }),
+        "claim gold gift"
+    );
+    if (claimedGift.currency[0]?.amount !== 5000) throw new Error("gift must grant 5000 gold");
+    console.info("✅ system mail: vi / en / fr→vi fallback, gold claimed (world wallet)");
+
+    // --- COD: trả tiền mới lấy được đính kèm; tiền về người gửi bằng thư hệ thống ---
+    const codItem = firstBagItem();
+    expectOk(
+        await request(global1, "mailSend", {
+            targetName: name2,
+            subject: "cod",
+            items: [{ instanceId: codItem.id, quantity: 1 }],
+            cod: { code: "gold", amount: 1000 },
+        }),
+        "mailSend cod"
+    );
+    const cod2 = find((await list(global2)).mails, (m) => m.subject === "cod", "cod mail");
+    if (cod2.cod?.amount !== 1000) throw new Error("COD price must be listed");
+    expectOk(await request(global2, "mailClaim", { mailId: cod2.id }), "claim cod mail");
+    await until(
+        () => received1.some((m) => m.data.mail.reward?.currency[0]?.amount === 1000),
+        "cod payment mail"
+    );
+    const payment = received1.find((m) => m.data.mail.reward?.currency[0]?.amount === 1000)!;
+    expectOk(
+        await request(global1, "mailClaim", { mailId: payment.data.mail.id }),
+        "claim payment"
+    );
+    console.info("✅ mail COD: recipient pays, sender (online) gets the money by system mail");
+
+    // COD mà người nhận không đủ tiền; nhận hàng loạt bỏ qua COD; trả lại
+    const priceyItem = firstBagItem();
+    expectOk(
+        await request(global1, "mailSend", {
+            targetName: name2,
+            subject: "pricey",
+            items: [{ instanceId: priceyItem.id, quantity: 1 }],
+            cod: { code: "gold", amount: 900_000_000 },
+        }),
+        "mailSend pricey cod"
+    );
+    const pricey = find((await list(global2)).mails, (m) => m.subject === "pricey", "pricey mail");
+    expectCode(
+        await request(global2, "mailClaim", { mailId: pricey.id }),
+        "CURRENCY_NOT_ENOUGH",
+        "claim cod without money"
+    );
+    const all = expectOk(
+        await request<{ claimed: unknown[]; skippedCod: number }>(global2, "mailClaimAll"),
+        "mailClaimAll"
+    );
+    if (all.skippedCod < 1) throw new Error("claimAll must skip COD mails");
+    expectOk(await request(global2, "mailRead", { mailId: pricey.id }), "read pricey");
+    expectCode(
+        await request(global2, "mailDelete", { mailId: pricey.id }),
+        "MAIL_NOT_DELETABLE",
+        "delete unclaimed COD"
+    );
+    const returnedBefore = received1.length;
+    expectOk(await request(global2, "mailReturn", { mailId: pricey.id }), "mailReturn");
+    await until(() => received1.length > returnedBefore, "returned cod push");
+    const backPricey = received1.at(-1)!.data.mail;
+    expectOk(await request(global1, "mailClaim", { mailId: backPricey.id }), "claim returned cod");
+    console.info("✅ mail COD: not enough money, claimAll skips it, return to sender");
+
+    // --- Gem: đính kèm gem và COD bằng gem ---
+    mailTool(`gift ${name1} --gem 100`);
+    mailTool(`gift ${name2} --gem 100`);
+    const hasGem = (mail: MailMsg) => !!mail.reward?.currency.some((c) => c.code === "gem");
+    for (const [target, who] of [
+        [global1, "p1"],
+        [global2, "p2"],
+    ] as const) {
+        const gemGift = find(
+            (await list(target, "vi")).mails,
+            (m) => hasGem(m) && !m.claimed,
+            `gem gift ${who}`
+        );
+        expectOk(
+            await request(target, "mailClaim", { mailId: gemGift.id }),
+            `claim gem gift ${who}`
+        );
+    }
+    expectOk(
+        await request(global1, "mailSend", {
+            targetName: name2,
+            subject: "gems",
+            currency: [{ code: "gem", amount: 30 }],
+            cod: { code: "gem", amount: 20 },
+        }),
+        "mailSend gem with gem COD"
+    );
+    const gems2 = find((await list(global2)).mails, (m) => m.subject === "gems", "gem mail");
+    if (gems2.cod?.code !== "gem") throw new Error("COD must be priced in gem");
+    const gemClaim = expectOk(
+        await request<{ currency: { code: string; amount: number }[] }>(global2, "mailClaim", {
+            mailId: gems2.id,
+        }),
+        "claim gem mail"
+    );
+    if (gemClaim.currency[0]?.code !== "gem" || gemClaim.currency[0].amount !== 30)
+        throw new Error("the attached gems must be granted");
+    await until(
+        () =>
+            received1.some((m) =>
+                m.data.mail.reward?.currency.some((c) => c.code === "gem" && c.amount === 20)
+            ),
+        "gem cod payment mail"
+    );
+    console.info("✅ mail gem: attached gems + COD priced in gem");
+
+    // --- Broadcast (1 ngày để không để lại rác lâu): phát đúng một lần, xoá thư xong không bị phát lại ---
+    const broadcastGold = 1000 + (Date.now() % 9000); // số riêng để phân biệt với broadcast của các lần chạy trước
+    mailTool(`broadcast --gold ${broadcastGold} --days 1`);
+    const isMine = (m: MailMsg) => !!m.reward?.currency.some((c) => c.amount === broadcastGold);
+    const first = await list(global1, "vi");
+    const second = await list(global1, "vi");
+    if (first.mails.filter(isMine).length !== 1)
+        throw new Error("broadcast must reach the player exactly once");
+    if (first.mails.length !== second.mails.length)
+        throw new Error("a broadcast must be delivered only once per player");
+    const broadcastMail = first.mails.find(isMine)!;
+    expectOk(await request(global1, "mailClaim", { mailId: broadcastMail.id }), "claim broadcast");
+    expectOk(
+        await request(global1, "mailDelete", { mailId: broadcastMail.id }),
+        "delete broadcast"
+    );
+    const afterDelete = await list(global1, "vi");
+    if (afterDelete.mails.some(isMine))
+        throw new Error("a deleted broadcast mail must not come back (receipt keeps it delivered)");
+    console.info("✅ mail broadcast delivered once, and a deleted one does not come back");
+
+    // --- Hết hạn: thư người chơi chưa nhận được trả đính kèm về người gửi ---
+    const expiringItem = firstBagItem();
+    expectOk(
+        await request(global1, "mailSend", {
+            targetName: name2,
+            subject: "expiring",
+            items: [{ instanceId: expiringItem.id, quantity: 1 }],
+        }),
+        "mailSend expiring"
+    );
+    mailTool(`expire ${name2}`);
+    const after2 = await list(global2);
+    if (after2.mails.some((m) => m.subject === "expiring"))
+        throw new Error("expired mail must be gone");
+    const back1 = await list(global1);
+    if (!back1.mails.some((m) => m.kind === "system" && m.reward?.items.length === 1 && !m.claimed))
+        throw new Error("expired mail must return its attachment to the sender");
+    console.info("✅ mail expiry sweeps the mail and returns the attachment");
 }
 
 // ---- Party (global): tạo, mời, vào, rời, offline là rời ---------------------------------------------

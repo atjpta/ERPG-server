@@ -19,6 +19,7 @@
         "test:tokens": "node scripts/local-test-tokens.mjs && yarn test:loadout",
         "test:loadout": "dotenvx run -f .env.development -- tsx scripts/local-test-loadout.ts",
         "kick-test": "tsx scripts/kick-test.ts",
+        "mail:tool": "dotenvx run -f .env.development -- tsx scripts/mail-tool.ts",
         "format": "prettier --write \"src/**/*.ts\"",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",

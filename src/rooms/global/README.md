@@ -13,6 +13,7 @@ global/
   modules/
     chat/                   # 4 kênh world / general / party / whisper, lịch sử DB
     party/                  # schemas/ PartiesState + PartyState (luật, lời mời), loot
+    mail/                   # Hộp thư: thư hệ thống đa ngôn ngữ, thư người chơi (đính kèm, COD, thu hồi), broadcast, dọn hết hạn
     friend/                 # Bạn bè: lời mời, danh sách, presence, chặn (schemas/ FriendsState = id bạn của người đang online)
     dungeon-launch/         # LaunchDungeon (điều phối cả party vào dungeon), dungeon expectation
     player-data/            # PlayerData: state + lưu DB + RPC ApplyPlayerChanges / SyncPlayers (xem mục PlayerData)
@@ -93,6 +94,31 @@ chỉ trong cùng game server. Lời mời lưu DB nên người nhận offline 
 - Chặn: xoá luôn quan hệ bạn bè / lời mời; người bị chặn (và người chặn) không mời party hay nhắn riêng được — server trả
   "không tìm thấy" để không lộ việc bị chặn (`partyInvite`, `sendWhisper`, `friendRequest`).
 - Xoá tài khoản: hai bảng có FK `onDelete: cascade` tới `players` nên `purgeUserData` (xoá player) dọn luôn.
+
+## Mail
+
+Dữ liệu ở DB (`modules/mails`): `mails` (một dòng cho mỗi người nhận), `mail_templates` (mẫu thư hệ thống vi/en, seed `mail-template.seed.ts`),
+`mail_broadcasts` (mẫu gửi cả server). Cấu hình ở master data `mail_config` (hạn, hộp thư tối đa, ngôn ngữ, số món đính kèm, rate limit, trần COD).
+Đính kèm của MỌI thư (hệ thống, broadcast, người chơi) là một cột `reward` đúng kiểu `Reward` của quái rớt / quest (`MailRewardSchema`);
+quái rớt / dungeon / quest / consumable vẫn cộng thẳng vào inventory, **không** đi qua mail (túi đầy thì phần dư mất như cũ).
+
+- Thư hệ thống: `mailService.sendSystem` / `sendReward` (gửi từng người, ghi thẳng vào `mails`, người offline vẫn nhận, không tính `maxInbox`) và
+  `sendBroadcast` (bảng riêng, phát lười khi người chơi gọi `mailList`; `skipNewPlayers`). "Đã phát" ghi ở `mail_broadcast_receipts`, không suy ra từ thư còn tồn tại — nếu không thì xoá thư là được phát lại và nhận quà lần nữa. Nội dung là mẫu thư (`templateCode` + `params`) hoặc
+  `content` inline `{ vi: {...}, en: {...} }`; bắt buộc có `mail_config.defaultLocale`. Chưa có API admin: dev dùng `yarn mail:tool` (xem đầu `scripts/mail-tool.ts`).
+- Ngôn ngữ: `mailList { locale }` — server chọn locale → `defaultLocale` → `en` → ngôn ngữ đầu tiên có, trả `locale` thực dùng, và nhớ locale
+  (`GlobalState.mails`) để push `mailReceived` đúng ngôn ngữ. Thư người chơi giữ nguyên chữ người viết.
+- Request: `mailList`, `mailRead`, `mailClaim`, `mailClaimAll` (bỏ qua COD), `mailReturn`, `mailSentList`, `mailRecall`, `mailDelete`, `mailDeleteRead`, `mailSend`.
+  Push: `mailReceived`, `mailRemoved`.
+- Gửi (`mailSend`): người chơi cùng server theo tên (offline vẫn nhận, người đã chặn mình → `MAIL_TARGET_NOT_FOUND`), đính kèm item (`instanceId` trong túi, món khoá
+  không được) và vàng (trừ ở world qua `DebitWalletWorldCommand`, nên cần đang ở world); không có phí gửi. Rút item khỏi túi + ghi thư cùng một transaction
+  (`playerDataGlobalService.save(..., dbOrTx)`); lỗi thì hoàn ví. `cod` = giá người nhận phải trả mới lấy được đính kèm (người gửi tự đặt, trần `maxCodAmount`).
+- Nhận (`mailClaim`): túi phải còn chỗ (`INVENTORY_FULL`, thư giữ nguyên); tiền cộng qua `CreditWalletWorldCommand`; thư COD trừ giá của người nhận trước, rồi cùng
+  transaction với lưu túi + đánh dấu đã nhận có điều kiện (`claimed_at IS NULL`) ghi thư hệ thống `cod_payment` (tiền về người gửi, offline cũng nhận).
+  Mỗi lần thử dùng `eventId` ví mới (world nhớ `eventId` đã áp dụng nên dùng lại sau khi hoàn tiền sẽ bị bỏ qua).
+- Thu hồi (`mailRecall`): người gửi lấy lại thư chưa được claim (đã đọc vẫn được), đính kèm về người gửi bằng thư hệ thống `mail_returned`; thắng / thua với `claim`
+  do DB phân xử (cả hai là câu lệnh có điều kiện). `mailReturn` là người nhận từ chối; hết hạn cũng trả về người gửi (`SweepMailsGlobalCommand`, ~1 giờ/lần).
+- Xoá tay (`mailDelete`): thư đã đọc và (không đính kèm hoặc đã nhận); COD chưa nhận phải nhận hoặc trả lại.
+- Xoá tài khoản: `mails` có FK `onDelete: cascade` tới người nhận (người gửi bị xoá chỉ mất liên kết, `senderName` là bản chụp tên).
 
 ## Dungeon
 

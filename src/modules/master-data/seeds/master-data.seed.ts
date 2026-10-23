@@ -171,6 +171,21 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
         },
         note: "Bạn bè: số bạn / lời mời / người bị chặn tối đa, hạn lời mời (ngày), rate limit gửi lời mời",
     },
+    [MasterDataKey.MAIL_CONFIG]: {
+        value: {
+            retentionDays: 30,
+            maxInbox: 100,
+            locales: ["vi", "en"],
+            defaultLocale: "vi",
+            subjectMaxLength: 50,
+            bodyMaxLength: 500,
+            maxAttachmentItems: 5,
+            sendRateLimit: { limit: 10, windowSeconds: 60 },
+            maxCodAmount: 1_000_000_000,
+            claimAllLimit: 50,
+        },
+        note: "Mail: hạn thư (ngày), số thư tối đa, ngôn ngữ + ngôn ngữ mặc định, độ dài, số món đính kèm, rate limit gửi, trần giá COD",
+    },
 };
 
 export const MasterDataSeed = async () => {

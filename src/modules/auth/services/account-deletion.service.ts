@@ -69,7 +69,7 @@ export class AccountDeletionService {
 
         await UserSessionRepo.revokeAllByUserId({ userId, dbOrTx });
         await UserOauthAccountRepo.deleteByUserId({ userId, dbOrTx });
-        // Xoá player kéo theo friendships / player_blocks (FK onDelete cascade).
+        // Xoá player kéo theo friendships / player_blocks / mails (FK onDelete cascade; người gửi bị xoá chỉ mất liên kết).
         await PlayerIdentityRepo.deleteByUserId({ userId, dbOrTx });
         return UserRepo.updateByIdOrFail({
             id: userId,

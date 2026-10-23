@@ -336,7 +336,13 @@ export class PlayerService extends BaseService<typeof Players> {
      * Lưu một phần hoặc toàn bộ `PlayerSavedState`. Global room là nơi duy nhất gọi hàm này lúc đang chơi;
      * `expectedRevision` là khoá lạc quan của cả bản ghi (lệch thì ném lỗi).
      */
-    async saveState(id: string, data: Partial<PlayerSavedState>, expectedRevision?: number) {
+    async saveState(
+        id: string,
+        data: Partial<PlayerSavedState>,
+        expectedRevision?: number,
+        dbOrTx?: Queryable
+    ) {
+        // `dbOrTx`: chạy trong transaction của nơi gọi (vd mail: lưu player_states cùng lúc ghi thư).
         return withTransaction(async (tx) => {
             const state =
                 expectedRevision !== undefined
@@ -355,7 +361,7 @@ export class PlayerService extends BaseService<typeof Players> {
                 dbOrTx: tx,
             });
             return state;
-        });
+        }, dbOrTx);
     }
 
     private combine(player: PlayerIdentity, state: PlayerState): PlayerWithState {
