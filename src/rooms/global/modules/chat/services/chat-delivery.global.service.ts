@@ -72,7 +72,7 @@ export class ChatDeliveryService {
         if (Response.isError(resolved)) return resolved;
 
         const { playerIds, everyone, scopeKey, targetPlayerId } = resolved.data;
-        const senderName = room.state.players.get(senderId)?.name ?? "";
+        const senderName = room.runtime.players.get(senderId)?.name ?? "";
         const id = generateEntityId();
         const message: ChatReceivedMessage = {
             id,

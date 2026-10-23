@@ -48,7 +48,7 @@ Response.isError(result)                      // type guard (tsconfig tắt stri
 - Tên `<DOMAIN>_<LÝ DO>` (`PARTY_NOT_LEADER`, `INVENTORY_FULL`...), value luôn bằng key. Mỗi enum gọi
   `registerErrorCodes(Enum)` ngay sau khai báo: lúc load sẽ báo lỗi nếu value khác key hoặc **trùng** với enum khác,
   nên mã vẫn unique toàn project. Dùng tiền tố domain để tránh trùng.
-- Room này cần mã của room khác thì import qua `<room>.shared.ts` (vd `PartyErrorCode` export từ `global.shared.ts`).
+- Room này cần mã của room khác thì mã đó phải nằm ở module (hoặc `src/rooms/runtime`, vd `PartyErrorCode`), không import từ room kia.
 - Mã dùng ở cả module lẫn room (item, player, map) đặt ở module; mã chỉ room mới dùng đặt ở `types/` của room.
 - Không trả text lỗi tự do cho client; service trả mã lỗi (hoặc `Result`), không trả chuỗi.
 - Thêm lỗi mới = thêm một giá trị vào enum của domain (client map sang text).
@@ -81,12 +81,8 @@ Có hai kiểu, cùng một envelope:
   `@SdkMessage.replies`. Thất bại không kèm snapshot trạng thái: client giữ state cũ cho tới khi nhận push cập nhật bình thường.
 - Lỗi nội bộ giữa service / command là `ErrorCode | undefined` hoặc `Result<T>`.
 
-## RPC giữa các room
+## Giữa các room
 
-- Gọi bằng `callRoom(roomId, XCommand, payload)` (`src/core/rooms/room.integration.ts`): kiểu payload và kết quả suy ra từ
-  chính class command, Ctrl+click vào tên command nhảy thẳng tới logic.
-- Room nhận RPC liệt kê command được phép gọi: `readonly runRpc = createRpcRunner(this, [XCommand, ...])`.
-  Command ngoài danh sách thì trả `Response.error(CommonCode.NOT_FOUND)`.
-- Command RPC nhận một object payload và ghi `Result<T>` vào `result` (không cần dữ liệu thì `result = Response.success()`).
-- Timeout (mặc định 3 giây, đổi bằng `{ timeoutMs }`) hoặc room không còn: `callRoom` trả `Response.error(CommonCode.ROOM_UNAVAILABLE)`, phân biệt được với lỗi
-  nghiệp vụ (`PARTY_NOT_MEMBER`...) qua `code`.
+Hai room chạy chung process nên không có RPC: lời gọi giữa room đi qua `room.runtime` (`RoomRuntimeService` của game server) (`launchDungeon`, `checkDungeonEntry`,
+`enterDungeon`) và trả `Promise<Result>`; room không còn thì `Response.error(CommonCode.ROOM_UNAVAILABLE)`, phân biệt được với lỗi nghiệp vụ
+(`PARTY_NOT_MEMBER`...) qua `code`. Xem [tương tác giữa các room](room-interactions.md).

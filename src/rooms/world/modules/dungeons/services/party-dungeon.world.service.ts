@@ -1,4 +1,3 @@
-import { callRoom } from "@/core/rooms/room.integration.js";
 import type { ErrorCode } from "@/core/types/result.type.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
@@ -9,10 +8,6 @@ import { mapService } from "@/modules/maps/services/map.service.js";
 import { dungeonWorldService } from "@/rooms/world/modules/dungeons/services/dungeon.world.service.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import {
-    DUNGEON_LAUNCH_TIMEOUT_MS,
-    LaunchDungeonGlobalCommand,
-} from "@/rooms/global/global.shared.js";
 export class PartyDungeonWorldService {
     /**
      * Vào dungeon luôn đi qua party: chưa có thì global tự tạo party 1 người. Chủ yêu cầu global room kiểm cả
@@ -26,17 +21,12 @@ export class PartyDungeonWorldService {
         dungeon: GameMap,
         spawnId: string
     ): Promise<ErrorCode | undefined> {
-        const result = await callRoom(
-            room.serverId,
-            LaunchDungeonGlobalCommand,
-            {
-                leaderPlayerId: player.id,
-                code: dungeon.code,
-                spawnId,
-                retry: false,
-            },
-            { timeoutMs: DUNGEON_LAUNCH_TIMEOUT_MS }
-        );
+        const result = await room.runtime.launchDungeon({
+            leaderPlayerId: player.id,
+            code: dungeon.code,
+            spawnId,
+            retry: false,
+        });
         if (result.success) return undefined;
         return result.code === CommonCode.ROOM_UNAVAILABLE
             ? MapErrorCode.MAP_NOT_OPEN

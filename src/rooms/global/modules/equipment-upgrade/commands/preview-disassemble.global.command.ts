@@ -8,7 +8,6 @@ import { DisassembleItemsSchema } from "@/rooms/global/modules/inventory/validat
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import type { DisassemblePreviewMessage } from "@/rooms/global/modules/equipment-upgrade/interfaces/equipment-upgrade.global.message.js";
 import { PlayerGlobalCommand } from "@/rooms/global/player.global.command.js";
-import { playerDataGlobalService } from "@/rooms/global/modules/player-data/services/player-data.global.service.js";
 
 interface InventoryCommandPayload {
     client: PlayerClient;
@@ -34,13 +33,11 @@ export class PreviewDisassembleGlobalCommand extends PlayerGlobalCommand<
 
     protected override readonly validateSchema = DisassembleItemsSchema;
 
-    async execute({ client }: InventoryCommandPayload) {
+    execute(_payload: InventoryCommandPayload) {
         const { instanceIds } = this.body;
-        const result = await playerDataGlobalService.read(
-            this.room,
-            client.auth.playerId,
-            {},
-            (state) => equipmentUpgradeService.simulateDisassemble(state.inventories, instanceIds)
+        const result = equipmentUpgradeService.simulateDisassemble(
+            this.player.inventories,
+            instanceIds
         );
         if (Response.isError(result)) {
             this.result = Response.error(result.code, undefined, { instanceIds });

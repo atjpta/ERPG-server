@@ -2,7 +2,7 @@ import type {
     CurrencyRewardMessage,
     RewardMessage,
 } from "@/rooms/world/modules/rewards/interfaces/reward.world.message.js";
-import type { ItemRewardMessage } from "@/rooms/global/global.shared.js";
+import type { ItemRewardMessage } from "@/modules/rewards/interfaces/reward.message.js";
 import type { DungeonRewardMemberMessage } from "@/rooms/world/modules/dungeons/interfaces/dungeon.world.message.js";
 
 /** Cộng dồn những gì 1 người nhận được trong lần đi dungeon (để hiện bảng thưởng sau khi clear). */

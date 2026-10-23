@@ -100,8 +100,7 @@ command con. Thời gian chờ mặc định của request phía client là 10 g
   được Colyseus bind vào từng instance room; mỗi lượt nhận message tạo command mới.
   Không dùng arrow function phụ thuộc `this` trong object handler trả về. Thêm/sửa file cần restart
   process; chế độ `yarn dev` dùng watch để restart khi source thay đổi.
-- Hàm này đăng ký message từ client, không đăng ký RPC giữa room. RPC vẫn dùng
-  `callRoom` và command RPC trong danh sách `createRpcRunner` của room.
+- Hàm này đăng ký message từ client; giữa hai room không có RPC (xem [tương tác giữa các room](room-interactions.md)).
 
 Xem thêm [quy tắc command](room-command-pattern.md) và
 [tương tác giữa các room](room-interactions.md).

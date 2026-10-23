@@ -19,6 +19,13 @@ export const env = {
      * và chuyển `cacheService` sang Redis (nonce OAuth, rate limit dùng chung giữa các process).
      */
     REDIS_URI: process.env.REDIS_URI,
+    /**
+     * Mã game server (`game_servers.code`) mà process này phụ trách — một process chỉ chạy MỘT game server (mọi room của nó sống chung
+     * process để dùng chung dữ liệu người chơi trong bộ nhớ). Bỏ trống = server mặc định.
+     */
+    GAME_SERVER_CODE: process.env.GAME_SERVER_CODE || undefined,
+    /** Danh sách game server mà process phụ trách (cách nhau bằng dấu phẩy); ưu tiên hơn `GAME_SERVER_CODE`. */
+    GAME_SERVER_CODES: process.env.GAME_SERVER_CODES || undefined,
     JWT_SECRET: process.env.JWT_SECRET ?? "JWT_SECRET",
     /** Secret riêng cho admin — token user không bao giờ verify lọt được qua middleware admin. */
     ADMIN_JWT_SECRET: process.env.ADMIN_JWT_SECRET ?? "ADMIN_JWT_SECRET",

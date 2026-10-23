@@ -1,11 +1,24 @@
 import type { GlobalRoom } from "@/rooms/global/global.room.js";
-import type { PartyState } from "@/rooms/global/modules/party/schemas/party.global.state.js";
+import type { PartyRuntime } from "@/rooms/runtime/modules/party/runtime/party-runtime.js";
 import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
-import type { PartyNoticeMessage } from "@/rooms/global/modules/party/interfaces/party.global.message.js";
+import type {
+    PartyNoticeMessage,
+    PartyStateMessage,
+} from "@/rooms/global/modules/party/interfaces/party.global.message.js";
 import type { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
 
 /** Gửi message của party xuống client (kết nối global). Không đổi dữ liệu party. */
 export class PartyNotifyGlobalService {
+    /** Snapshot đầy đủ của party gửi cho client (thành viên theo thứ tự vào party). */
+    snapshotOf(party: PartyRuntime): PartyStateMessage {
+        return {
+            partyId: party.id,
+            leaderPlayerId: party.leaderPlayerId,
+            lootMode: party.lootMode,
+            members: [...party.members].map(([playerId, name]) => ({ playerId, name })),
+        };
+    }
+
     private noticeData(notice: PartyNotice, playerName?: string): PartyNoticeMessage {
         return {
             notice,
@@ -19,7 +32,7 @@ export class PartyNotifyGlobalService {
     }
 
     /** Báo sự kiện cho chủ party. */
-    notifyLeader(room: GlobalRoom, party: PartyState, notice: PartyNotice, playerName?: string) {
+    notifyLeader(room: GlobalRoom, party: PartyRuntime, notice: PartyNotice, playerName?: string) {
         this.sendTo(
             room,
             party.leaderPlayerId,
@@ -31,7 +44,7 @@ export class PartyNotifyGlobalService {
     /** Báo sự kiện cho mọi thành viên hiện tại (trừ `exceptPlayerId`). */
     broadcastNotice(
         room: GlobalRoom,
-        party: PartyState,
+        party: PartyRuntime,
         notice: PartyNotice,
         playerName?: string,
         exceptPlayerId?: string
@@ -48,8 +61,8 @@ export class PartyNotifyGlobalService {
     }
 
     /** Gửi snapshot đầy đủ của party cho mọi thành viên (sau mỗi thay đổi). */
-    broadcastState(room: GlobalRoom, party: PartyState) {
-        const snapshot = party.toMessage();
+    broadcastState(room: GlobalRoom, party: PartyRuntime) {
+        const snapshot = this.snapshotOf(party);
         for (const playerId of party.members.keys()) {
             this.sendTo(room, playerId, GlobalMessage.PARTY_STATE, snapshot);
         }

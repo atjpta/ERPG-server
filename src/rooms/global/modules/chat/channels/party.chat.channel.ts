@@ -10,7 +10,7 @@ import { ChatErrorCode } from "@/rooms/global/modules/chat/enums/chat-error-code
 export const partyChatChannel: ChatChannel = {
     key: ChatChannelKey.PARTY,
     async resolveRecipients({ room, senderId }: ChatChannelContext) {
-        const party = room.state.parties.getPartyByPlayerId(senderId);
+        const party = room.runtime.parties.getPartyByPlayerId(senderId);
         if (!party) return Response.error(ChatErrorCode.CHAT_NOT_IN_PARTY);
         return Response.success({ playerIds: party.joinOrder, scopeKey: party.id });
     },

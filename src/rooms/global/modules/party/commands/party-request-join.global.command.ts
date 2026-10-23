@@ -12,7 +12,7 @@ import type {
     PartyNoticeMessage,
 } from "@/rooms/global/modules/party/interfaces/party.global.message.js";
 import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import { PartyErrorCode } from "@/rooms/runtime/modules/party/enums/party-error-code.enum.js";
 
 /**
  * Xin vào party của một người cùng world room: kiểm tra chỗ rồi báo cho chủ; thành công = đã gửi tới chủ,
@@ -52,9 +52,9 @@ export class PartyRequestJoinGlobalCommand extends PlayerGlobalCommand<
         if (!here || !there || here !== there) {
             return refuse(PlayerErrorCode.PLAYER_NOT_HERE);
         }
-        if (room.state.parties.getPartyByPlayerId(requesterId))
+        if (this.room.runtime.parties.getPartyByPlayerId(requesterId))
             return refuse(PartyErrorCode.PARTY_ALREADY_MEMBER);
-        const party = room.state.parties.getPartyByPlayerId(targetId);
+        const party = this.room.runtime.parties.getPartyByPlayerId(targetId);
         if (!party) return refuse(PartyErrorCode.PARTY_TARGET_NOT_IN_PARTY);
 
         const leaderId = party.leaderPlayerId;

@@ -17,7 +17,7 @@ import type {
     PartyNoticeMessage,
 } from "@/rooms/global/modules/party/interfaces/party.global.message.js";
 import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import { PartyErrorCode } from "@/rooms/runtime/modules/party/enums/party-error-code.enum.js";
 
 const INVITE_RATE_WINDOW_SEC = 60;
 const INVITE_RATE_LIMIT = 10;
@@ -67,7 +67,7 @@ export class PartyInviteGlobalCommand extends PartyMemberGlobalCommand<typeof Pa
         }
 
         // Đang ở party khác: từ chối. Chính là party này (tự mời mình / đã là thành viên) thì để `addInvite` báo mã riêng.
-        const targetParty = room.state.parties.getPartyByPlayerId(target.id);
+        const targetParty = this.room.runtime.parties.getPartyByPlayerId(target.id);
         if (targetParty && targetParty !== party) {
             return refuse(PartyErrorCode.PARTY_TARGET_IN_PARTY, target.name);
         }

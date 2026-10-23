@@ -21,7 +21,7 @@ export class PartyDeclineGlobalCommand extends PlayerGlobalCommand<
     protected override readonly validateSchema = PartyInviteReplySchema;
 
     execute({ client }: PartyCommandPayload) {
-        const party = this.room.state.parties.getParty(this.body.partyId);
+        const party = this.room.runtime.parties.getParty(this.body.partyId);
         const { playerId } = client.auth;
         const invite = party?.removeInvite(playerId);
         if (party && invite) {

@@ -12,7 +12,6 @@ import { dialogueService } from "@/modules/dialogues/services/dialogue.service.j
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
-import { playerService } from "@/modules/player/services/player.service.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
 import { playerDataWorldService } from "@/rooms/world/modules/players/services/player-data.world.service.js";
@@ -25,7 +24,6 @@ import type {
     DialogueMessage,
     NpcFunctionOpenMessage,
 } from "@/rooms/world/modules/content/interfaces/content.world.message.js";
-import type { WalletMessage } from "@/rooms/world/modules/rewards/interfaces/reward.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 /** Cuộc thoại đang mở của 1 player (chỉ ở server — client chỉ gửi optionId). */
@@ -218,13 +216,13 @@ export class DialogueWorldService {
                 const item = itemService.getByCode(action.itemCode);
                 if (!item) return ItemErrorCode.ITEM_NOT_FOUND;
                 const items = [{ itemId: item.id, quantity: action.quantity }];
-                const given = await playerDataWorldService.apply(room, client.auth.playerId, [
+                const given = playerDataWorldService.apply(player, [
                     { type: "giveItem", items, source: ItemSource.QUEST, requireFit: true },
                 ]);
                 return Response.isError(given) ? given.code : undefined;
             }
             case "take_item": {
-                const taken = await playerDataWorldService.apply(room, client.auth.playerId, [
+                const taken = playerDataWorldService.apply(player, [
                     { type: "takeItem", itemCode: action.itemCode, quantity: action.quantity },
                 ]);
                 return Response.isError(taken) ? taken.code : undefined;
@@ -238,13 +236,9 @@ export class DialogueWorldService {
                 });
                 return undefined;
             case "take_currency": {
-                const wallet = playerService.debitWallet(player.wallet, [
-                    { code: action.currency, amount: action.amount },
-                ]);
-                if (!wallet) return ItemErrorCode.CURRENCY_NOT_ENOUGH;
-                player.wallet = wallet;
-                const message: WalletMessage = player.wallet;
-                client.sendSuccess(WorldMessage.WALLET, message);
+                if (!player.debitCurrency([{ code: action.currency, amount: action.amount }])) {
+                    return ItemErrorCode.CURRENCY_NOT_ENOUGH;
+                }
                 return undefined;
             }
             case "set_flag":

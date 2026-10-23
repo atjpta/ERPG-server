@@ -1,161 +1,79 @@
-import { callRoom } from "@/core/rooms/room.integration.js";
-import { CommonCode } from "@/core/enums/common-code.enum.js";
-import { generateEntityId } from "@/core/entities/base.entity.js";
 import type { Result } from "@/core/types/result.type.js";
 import { Response } from "@/core/utils/response.util.js";
+import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import type { PlayerRuntime } from "@/rooms/runtime/modules/player/runtime/player-runtime.js";
+import { PLAYER_GROUP_COLUMNS } from "@/rooms/runtime/modules/player/constants/player-runtime.constant.js";
 import {
-    ApplyPlayerChangesGlobalCommand,
-    SyncPlayersGlobalCommand,
-    type PlayerChangeEntry,
-    type PlayerChangeOp,
-    type PlayerDataSnapshot,
-} from "@/rooms/global/global.shared.js";
-import { worldEvents } from "@/rooms/world/utils/world-events.js";
-import type { WorldRoom } from "@/rooms/world/world.room.js";
+    PlayerDataGroup,
+    PlayerRuntimeEvent,
+} from "@/rooms/runtime/modules/player/enums/player-runtime.enum.js";
+import {
+    inventoryService,
+    type GrantOutcome,
+} from "@/modules/player/services/inventory.service.js";
+import type { PlayerSavedState } from "@/modules/player/types/player-fields.type.js";
+import type { PlayerChangeOp } from "@/rooms/world/modules/players/types/player-change.world.type.js";
+import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 
-/** Lô thay đổi đã chốt `eventId` — gửi lại nguyên `eventId` khi lần trước không tới được global. */
-interface Batch {
-    eventId: string;
-    ops: PlayerChangeOp[];
-    /** Số lần global trả lỗi tạm thời cho lô này. */
-    attempts: number;
-}
-
-/** Mã lỗi hạ tầng của global: lô chưa được áp dụng nên gửi lại được. */
-const RETRYABLE_CODES = new Set<unknown>([CommonCode.INTERNAL_ERROR, CommonCode.ROOM_UNAVAILABLE]);
-/** Quá số lần này thì bỏ lô để một lô lỗi mãi không chặn hàng đợi. */
-const MAX_ATTEMPTS = 20;
-
-interface PendingChanges {
-    open: PlayerChangeOp[];
-    sent: Batch[];
+/** Chạy `ops` trên `view`; lỗi nghiệp vụ trả về `Result` thất bại (view có thể đã đổi một phần — người gọi dùng bản thử). */
+function runOps(
+    view: PlayerRuntime,
+    ops: readonly PlayerChangeOp[],
+    grants: GrantOutcome[]
+): Result {
+    for (const op of ops) {
+        if (op.type === "takeItem") {
+            if (!inventoryService.takeByCode(view.inventories, op.itemCode, op.quantity)) {
+                return Response.error(ItemErrorCode.ITEM_NOT_ENOUGH);
+            }
+        } else if (op.type === "giveItem") {
+            if (op.requireFit && !inventoryService.canFit(view.inventories, op.items)) {
+                return Response.error(ItemErrorCode.INVENTORY_FULL);
+            }
+            grants.push(inventoryService.grantItems(view.inventories, op.items, op.source));
+        } else {
+            view.addPoints(op.attributePoints, op.skillPoints);
+        }
+    }
+    return Response.success();
 }
 
 /**
- * Cầu nối world ↔ PlayerData của global (xem `PlayerDataState`): world chỉ giữ bản sao chỉ-đọc của túi / trang bị /
- * điểm, mọi thay đổi chúng đi qua global. Thay đổi cần kết quả ngay (quest, thoại, bình thuốc) gọi `apply`; thay đổi
- * dày đặc (item rơi, điểm lên level) gom bằng `queue` rồi `flush` định kỳ. `sync` là backup phần world làm chủ.
+ * Cầu nối world → túi đồ trong `PlayerRuntime` (dùng chung với global): item rơi, vật phẩm của quest / thoại / bình thuốc,
+ * điểm khi lên level. Đồng bộ và nguyên tử (kiểm tra cả lô rồi mới ghi), lưu sớm ≤ 500 ms; global tự gửi `inventoryChanged`
+ * cho client khi runtime báo túi đổi.
  */
 export class PlayerDataWorldService {
-    private readonly pending = new WeakMap<WorldRoom, Map<string, PendingChanges>>();
-
-    /** Nhận snapshot từ global; túi đổi thì báo (quest "collect" cập nhật tiến độ). */
-    applySnapshot(room: WorldRoom, playerId: string, data: PlayerDataSnapshot): void {
-        const player = room.state.players.get(playerId);
-        if (!player || !player.applyPlayerData(data)) return;
-        const client = room.clientOf(playerId);
-        if (client) worldEvents.emitInventoryChanged(client, player);
-    }
-
-    /** Thay đổi cần kết quả ngay: gửi hàng đợi trước (giữ thứ tự) rồi gửi lô này; thất bại thì không đổi gì. */
-    async apply(room: WorldRoom, playerId: string, ops: PlayerChangeOp[]): Promise<Result> {
-        await this.flush(room);
-        const eventId = generateEntityId();
-        const called = await callRoom(room.serverId, ApplyPlayerChangesGlobalCommand, {
-            entries: [{ eventId, playerId, ops }],
-        });
-        if (Response.isError(called)) return called;
-        const entry = called.data.find((result) => result.eventId === eventId);
-        if (!entry) return Response.error(CommonCode.ROOM_UNAVAILABLE);
-        return Response.isError(entry.result) ? entry.result : Response.success();
-    }
-
-    /** Ghi nhớ thay đổi để gửi ở lần `flush` kế tiếp (không chờ kết quả). */
-    queue(room: WorldRoom, playerId: string, ops: PlayerChangeOp[]): void {
-        if (ops.length === 0) return;
-        const byPlayer = this.pendingOf(room);
-        const changes = byPlayer.get(playerId) ?? { open: [], sent: [] };
-        changes.open.push(...ops);
-        byPlayer.set(playerId, changes);
-    }
-
-    /** Gửi mọi thay đổi đang chờ lên global; lô không tới được giữ lại (cùng `eventId`) cho lần sau. */
-    async flush(room: WorldRoom): Promise<void> {
-        const byPlayer = this.pendingOf(room);
-        const entries: PlayerChangeEntry[] = [];
-        for (const [playerId, changes] of byPlayer) {
-            if (changes.open.length > 0) {
-                changes.sent.push({ eventId: generateEntityId(), ops: changes.open, attempts: 0 });
-                changes.open = [];
+    apply(player: PlayerWorldState, ops: readonly PlayerChangeOp[]): Result {
+        if (ops.length === 0) return Response.success();
+        const { runtime } = player;
+        // Lô có thể thất bại giữa chừng (thiếu item, hết chỗ) thì thử trước trên bản sao của túi.
+        const mayFail = ops.some(
+            (op) => op.type === "takeItem" || (op.type === "giveItem" && op.requireFit)
+        );
+        if (mayFail) {
+            const trial = {} as Record<string, unknown>;
+            for (const column of PLAYER_GROUP_COLUMNS[PlayerDataGroup.BAG]) {
+                trial[column] = structuredClone(runtime.data[column]);
             }
-            for (const batch of changes.sent) entries.push({ ...batch, playerId });
+            const checked = runOps(runtime.fork(trial as PlayerSavedState), ops, []);
+            if (Response.isError(checked)) return checked;
         }
-        if (entries.length === 0) return;
 
-        const called = await callRoom(room.serverId, ApplyPlayerChangesGlobalCommand, {
-            entries,
-        });
-        if (Response.isError(called)) {
-            console.error(`[WorldRoom] Flush player changes failed: ${called.code}`);
-            return;
+        const grants: GrantOutcome[] = [];
+        runtime.owner.mutate(
+            runtime,
+            PlayerDataGroup.BAG,
+            () => {
+                grants.length = 0;
+                runOps(runtime, ops, grants);
+            },
+            { critical: true }
+        );
+        for (const grant of grants) {
+            runtime.owner.emit(PlayerRuntimeEvent.BAG_GRANTED, runtime, grant);
         }
-        for (const { eventId, result } of called.data) {
-            const failed = Response.isError(result);
-            if (failed) {
-                console.error(`[WorldRoom] Player change ${eventId} rejected: ${result.code}`);
-            }
-            for (const [playerId, changes] of byPlayer) {
-                const batch = changes.sent.find((sent) => sent.eventId === eventId);
-                if (!batch) continue;
-                // Lỗi tạm thời (global không lưu được DB...): giữ lô, gửi lại cùng `eventId` — global chưa ghi nhận
-                // nên áp dụng đúng một lần. Lỗi nghiệp vụ hoặc quá số lần thử thì bỏ.
-                if (failed && RETRYABLE_CODES.has(result.code) && ++batch.attempts < MAX_ATTEMPTS) {
-                    continue;
-                }
-                changes.sent = changes.sent.filter((sent) => sent.eventId !== eventId);
-                if (changes.sent.length === 0 && changes.open.length === 0)
-                    byPlayer.delete(playerId);
-            }
-        }
-    }
-
-    /**
-     * Backup phần world làm chủ của các player lên global (global lưu DB) rồi nhận lại revision / snapshot mới.
-     * Trả danh sách player đã được global lưu.
-     */
-    async sync(room: WorldRoom, playerIds: readonly string[]): Promise<Set<string>> {
-        const saved = new Set<string>();
-        await this.flush(room);
-        const entries = playerIds.flatMap((playerId) => {
-            const player = room.state.players.get(playerId);
-            if (!player) return [];
-            // Chụp ngay (không đợi await) để không lẫn thay đổi của tick sau.
-            return [
-                {
-                    playerId,
-                    baseRevision: player.stateRevision,
-                    world: player.toWorldFields(room.map.code),
-                },
-            ];
-        });
-        if (entries.length === 0) return saved;
-
-        const called = await callRoom(room.serverId, SyncPlayersGlobalCommand, { entries });
-        if (Response.isError(called)) {
-            console.error(`[WorldRoom] Sync players to global failed: ${called.code}`);
-            return saved;
-        }
-        for (const result of called.data) {
-            if (result.code !== undefined || result.revision === undefined) {
-                console.error(`[WorldRoom] Sync player ${result.playerId} failed: ${result.code}`);
-                continue;
-            }
-            saved.add(result.playerId);
-            const player = room.state.players.get(result.playerId);
-            if (!player) continue;
-            if (result.data) this.applySnapshot(room, result.playerId, result.data);
-            player.setStateRevision(Math.max(player.stateRevision, result.revision));
-        }
-        return saved;
-    }
-
-    private pendingOf(room: WorldRoom): Map<string, PendingChanges> {
-        let byPlayer = this.pending.get(room);
-        if (!byPlayer) {
-            byPlayer = new Map();
-            this.pending.set(room, byPlayer);
-        }
-        return byPlayer;
+        return Response.success();
     }
 }
 

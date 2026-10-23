@@ -10,7 +10,6 @@ import type {
     CharacterSummary,
     CharacterLimits,
 } from "@/modules/player/types/player.type.js";
-import { DateTime } from "luxon";
 import type { Queryable } from "@/configs/postgres.config.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
 import { BaseService } from "@/core/services/base.service.js";
@@ -35,7 +34,6 @@ import {
     playerStatService,
 } from "@/modules/player/services/player-stat.service.js";
 import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
-import type { PlayerSavedState } from "@/modules/player/types/player-fields.type.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { PlayerStateRepo } from "@/modules/player/repositories/player-state.repository.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
@@ -282,11 +280,6 @@ export class PlayerService extends BaseService<typeof Players> {
         return this.findWithStateById(playerId);
     }
 
-    async getPlayableOrFail(id: string): Promise<PlayerWithState> {
-        await this.assertPlayableOrFail(id);
-        return this.findWithStateById(id);
-    }
-
     async getPlayableSnapshotOrFail(id: string): Promise<PlayerSnapshot> {
         const player = await this.assertPlayableOrFail(id);
         const state = await PlayerStateRepo.findByPlayerId(id);
@@ -330,38 +323,6 @@ export class PlayerService extends BaseService<typeof Players> {
         ]);
         if (!state) throw new Error(`Player state not found for player ${id}`);
         return this.combine(player, state);
-    }
-
-    /**
-     * Lưu một phần hoặc toàn bộ `PlayerSavedState`. Global room là nơi duy nhất gọi hàm này lúc đang chơi;
-     * `expectedRevision` là khoá lạc quan của cả bản ghi (lệch thì ném lỗi).
-     */
-    async saveState(
-        id: string,
-        data: Partial<PlayerSavedState>,
-        expectedRevision?: number,
-        dbOrTx?: Queryable
-    ) {
-        // `dbOrTx`: chạy trong transaction của nơi gọi (vd mail: lưu player_states cùng lúc ghi thư).
-        return withTransaction(async (tx) => {
-            const state =
-                expectedRevision !== undefined
-                    ? await PlayerStateRepo.updateIfUnchanged(id, expectedRevision, data, tx)
-                    : await PlayerStateRepo.updateByPlayerId(id, data, tx);
-            if (!state) {
-                throw new Error(
-                    expectedRevision !== undefined
-                        ? `Player state changed while online for player ${id}`
-                        : `Player state not found for player ${id}`
-                );
-            }
-            await PlayerIdentityRepo.updateById({
-                id,
-                data: { lastPlayedAt: DateTime.now().toJSDate() },
-                dbOrTx: tx,
-            });
-            return state;
-        }, dbOrTx);
     }
 
     private combine(player: PlayerIdentity, state: PlayerState): PlayerWithState {

@@ -25,7 +25,7 @@ Mọi message client → server là **Request/Response** của Colyseus 0.18 (Un
 
 Command của một player trong room kế thừa `PlayerCommand` (`core/rooms/player.command.ts`), thường qua base mỏng của
 từng room: `PlayerWorldCommand` (`this.player` là `PlayerWorldState`) hoặc `PlayerGlobalCommand` (`this.player` là
-`PlayerDataState`). Room mới chỉ cần định nghĩa `findPlayer()`. Thứ tự chạy:
+`PlayerRuntime`). Room mới chỉ cần định nghĩa `findPlayer()`. Thứ tự chạy:
 
 1. `findPlayer()` — player không còn trong room: `result = Response.error(NOT_FOUND)`.
 2. Nếu command khai `validateSchema` (Zod): parse payload vào `this.body`; sai thì `result = Response.error(INVALID_INPUT)`
@@ -60,10 +60,8 @@ tra cứu/trừ tiền/cập nhật trang bị, lưu DB, truy vấn RPC. Không 
   con. **Không trả DTO nghiệp vụ từ `execute()`** — nó bị hiểu là command con. Dữ liệu trả cho client đi qua `this.result`.
 - `dispatch()` không trả kết quả nghiệp vụ và không tuần tự hoá các lời gọi top-level riêng rẽ. Kiểm tra lại giả định
   có thể đổi sau `await`.
-- RPC giữa room (`matchMaker.remoteRoomCall`) cũng chạy trong command: command RPC khai field `result`, gán trong
-  `execute()`; nơi gọi dùng `callRoom(roomId, XCommand, payload, { timeoutMs? })` (mặc định 3 giây); room đích liệt kê command được phép
-  trong `createRpcRunner(this, [...])` (đọc kết quả bằng `dispatchForResult`). Command RPC không có `static message`
-  nên `loadRoomMessages()` bỏ qua.
+- Hai room chạy chung process nên không có command RPC: room gọi nhau qua dữ liệu dùng chung (`PlayerRuntime` + sự kiện của nó)
+  hoặc cổng của `room.runtime` (`RoomRuntimeService` của game server) (xem [tương tác giữa các room](room-interactions.md)).
 
 ## Thư mục trong một module room
 
@@ -73,7 +71,7 @@ Chia theo **mục đích** của file, không theo từ khoá `type` / `interfac
 | ------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | `commands/`   | Một command một file `*.<feature>.<room>.command.ts`                                                            | `party-invite.global.command.ts` |
 | `services/`   | Class xử lý dùng lại, kèm singleton (`partyGlobalService`); gọi room khác, gửi message                          | `party.global.service.ts`        |
-| `schemas/`    | Class Colyseus Schema: state (`*.state.ts`, kể cả state chỉ ở server không `@type` như `PartyState`)            | `party.global.state.ts`          |
+| `schemas/`    | Class Colyseus Schema: state (`*.state.ts`, kể cả state chỉ ở server không `@type`)                             | `party.world.state.ts`           |
 | `interfaces/` | **DTO gửi cho client**: interface tên kết thúc `Message`, file `*.message.ts` (generator SDK tự tìm để sinh C#) | `party.global.message.ts`        |
 | `enums/`      | Mọi enum của module, kể cả enum gửi client (`PartyNotice`) và mã lỗi                                            | `party-error-code.enum.ts`       |
 | `types/`      | Kiểu **chỉ dùng trong server**: payload RPC giữa room, cấu trúc nội bộ, options                                 | `party-rpc.type.ts`              |
@@ -95,7 +93,7 @@ Ví dụ thêm tính năng `friend` vào `global` (với `world` làm tương t�
    khai DTO `...Message` (interface có tên kết thúc `Message`) cho `data` trong `modules/friend/interfaces/friend.global.message.ts`.
 3. **Validator** Zod của payload (`validators/*.validator.ts`), export có tên: SDK đặt tên class C# theo tên export.
 4. **Mã lỗi**: thêm vào enum domain (`enums/friend-error-code.enum.ts`, value = key, có JSDoc từng member) và gọi
-   `registerErrorCodes(FriendErrorCode)`; export qua `global.shared.ts` nếu room khác cần.
+   `registerErrorCodes(FriendErrorCode)`; mã room khác cũng cần thì đặt ở module hoặc `src/rooms/runtime`.
 5. **Command**: kế thừa `PlayerGlobalCommand<Payload, typeof Schema>`, khai `static readonly message` và
    `validateSchema`, xử lý trong `execute()` và gán `this.result`:
 
@@ -123,13 +121,11 @@ Ví dụ thêm tính năng `friend` vào `global` (với `world` làm tương t�
     ```
 
 6. **Không cần sửa `global.room.ts`**: `loadRoomMessages` tự tìm command mới (restart process; `yarn dev` tự restart).
-   Chỉ khi module cần RPC từ room khác mới thêm command RPC vào `createRpcRunner`.
 7. **State/dữ liệu người chơi** mới trong DB: thêm bảng ở `src/modules/<module>` (entity + repository + service) và cập
    nhật `AccountDeletionService.purgeUserData` nếu là dữ liệu người chơi.
 8. `yarn typecheck && yarn lint`, rồi `yarn unity:network` để sinh lại `GlobalRoomClient` (hàm
    `await FriendAdd(...)` trả `Result<FriendListMessage>`, và `OnFriendUpdated(...)` cho push), cuối cùng mở rộng
    `yarn smoke` nếu luồng quan trọng.
 
-Quy tắc ranh giới: world không import implementation của global (chỉ `global.shared.ts` và command RPC), global chỉ
-import `world.shared.ts` và command RPC của world. Quy trình đi qua nhiều room: command của room khởi xướng gọi
-`callRoom`, hoặc đặt thành module riêng của `global` (như `dungeon-launch`).
+Quy tắc ranh giới: world và global không import nhau; thứ cả hai cần nằm ở `src/modules` hoặc `src/rooms/runtime`.
+Quy trình đi qua nhiều room đặt thành module riêng của `global` (như `dungeon-launch`).

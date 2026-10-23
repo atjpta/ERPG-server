@@ -11,13 +11,13 @@ import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item
 import { UpgradeGlobalCommand } from "@/rooms/global/modules/equipment-upgrade/commands/upgrade.global.command.js";
 import { UpgradeEquipmentSchema } from "@/rooms/global/modules/inventory/validators/inventory.global.validator.js";
 import type { PlayerWorldView } from "@/rooms/global/modules/player-data/types/player-data.type.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
+import type { PlayerRuntime } from "@/rooms/runtime/modules/player/runtime/player-runtime.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import { EquipmentUpgradeAction } from "@/rooms/global/modules/equipment-upgrade/enums/equipment-upgrade-action.enum.js";
 import type { z } from "zod";
 
 @SdkMessage({
-    replies: [GlobalMessage.INVENTORY, GlobalMessage.ATTRIBUTES],
+    replies: [GlobalMessage.INVENTORY_CHANGED, GlobalMessage.ATTRIBUTES],
     errors: [
         CommonCode.INVALID_INPUT,
         ItemErrorCode.ITEM_NOT_FOUND,
@@ -39,9 +39,8 @@ export class EnhanceEquipmentGlobalCommand extends UpgradeGlobalCommand<
     static readonly message = GlobalClientMessage.ENHANCE_EQUIPMENT;
 
     protected readonly validateSchema = UpgradeEquipmentSchema;
-    protected override readonly changesStats = true;
     protected run(
-        player: PlayerDataState,
+        player: PlayerRuntime,
         { instanceId }: z.infer<typeof UpgradeEquipmentSchema>,
         world: PlayerWorldView
     ) {
@@ -63,10 +62,12 @@ export class EnhanceEquipmentGlobalCommand extends UpgradeGlobalCommand<
         world.wallet = paid.data.wallet;
 
         const success = equipmentUpgradeService.rollSuccess(cost.data.rate, rng);
-        player.updateEquipment(
-            owned,
-            equipmentUpgradeService.applyEnhance(owned.metadata, cost.data.step, success)
+        owned.entry.metadata = equipmentUpgradeService.applyEnhance(
+            owned.metadata,
+            cost.data.step,
+            success
         );
+        player.refreshStats();
         return Response.success({
             action: EquipmentUpgradeAction.ENHANCE,
             success,

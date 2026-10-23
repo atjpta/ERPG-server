@@ -7,7 +7,7 @@ import {
 import { PartyTargetSchema } from "@/rooms/global/modules/party/validators/member.party.validator.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import { PartyErrorCode } from "@/rooms/runtime/modules/party/enums/party-error-code.enum.js";
 import { partyGlobalService } from "@/rooms/global/modules/party/services/party.global.service.js";
 
 @SdkMessage({

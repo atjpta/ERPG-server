@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { CurrencyRewardSchema } from "@/modules/rewards/schemas/currency-reward.schema.js";
 
-const LocaleSchema = z.string().trim().min(1).max(16);
-
-export const MailListSchema = z.object({ locale: LocaleSchema.optional() });
 export const MailIdSchema = z.object({ mailId: z.string().min(1).max(64) });
 
 /** Giới hạn ở đây chỉ chặn payload khổng lồ; giới hạn thật (độ dài, số món) lấy từ master data `mail_config`. */

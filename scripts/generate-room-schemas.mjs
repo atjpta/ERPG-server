@@ -20,6 +20,9 @@ const unityNetworkOutput = resolve(
     process.argv[2] ?? process.env.UNITY_NETWORK_OUTPUT ?? "../ERPG/Assets/Src/Scripts/Network"
 );
 
+// Enum chỉ dùng ở server (nhóm dữ liệu / sự kiện của PlayerRuntime) nhưng codegen đi theo import của PlayerWorldState nên sinh C# thừa.
+const serverOnlyEnums = ["PlayerDataGroup", "PlayerRuntimeEvent"];
+
 const outputs = [
     {
         directory: join(projectRoot, "generated", "schema", "all"),
@@ -66,7 +69,7 @@ for (const output of outputs) {
 
     if (result.status !== 0) process.exit(result.status ?? 1);
     // State chỉ ở server (không `@type`) không có gì để client giải mã: bỏ C# rỗng do codegen đi theo import.
-    for (const name of findServerOnlySchemaClasses(roomsDirectory)) {
+    for (const name of [...findServerOnlySchemaClasses(roomsDirectory), ...serverOnlyEnums]) {
         rmSync(join(output.directory, `${name}.cs`), { force: true });
     }
     const files = new Map(

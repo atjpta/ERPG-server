@@ -1,57 +1,47 @@
-import { worldRegistryGlobalService } from "@/rooms/global/modules/world-registry/services/world-registry.global.service.js";
-import { generateEntityId } from "@/core/entities/base.entity.js";
-import { callRoom } from "@/core/rooms/room.integration.js";
 import type { GlobalRoom } from "@/rooms/global/global.room.js";
-import type { PartyMembershipEvent } from "@/rooms/global/global.shared.js";
 import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
 import type { PartyLeftMessage } from "@/rooms/global/modules/party/interfaces/party.global.message.js";
-import type { PartyState } from "@/rooms/global/modules/party/schemas/party.global.state.js";
+import type { PartyRuntime } from "@/rooms/runtime/modules/party/runtime/party-runtime.js";
 import { partyNotifyGlobalService } from "@/rooms/global/modules/party/services/party-notify.global.service.js";
 import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
-import { PartySetPlayerPartyWorldCommand } from "@/rooms/world/modules/players/commands/party-set-player-party.world.command.js";
 
 /** Hẹn giờ hết hạn của một lời mời; huỷ được khi lời mời bị dùng / từ chối / party không còn. */
 type InviteTimer = ReturnType<GlobalRoom["clock"]["setTimeout"]>;
 
 /**
- * Thao tác trên party kèm mọi tác dụng phụ: `PartiesState` / `PartyState` chỉ đổi dữ liệu, còn gửi message cho client
- * và báo world room (`PartySetPlayerPartyWorldCommand`) do đây làm.
+ * Thao tác trên party kèm mọi tác dụng phụ: `PartyRuntimeService` / `PartyRuntime` chỉ đổi dữ liệu, còn gửi message cho client
+ * và ghi party vào dữ liệu người chơi (`PlayerRuntime.party`, world đọc) do đây làm.
  */
 export class PartyGlobalService {
     /** `partyId:targetId` → hẹn giờ hết hạn của lời mời (timer thuộc `room.clock`, tự dọn khi room dispose). */
     private readonly inviteTimers = new Map<string, InviteTimer>();
 
     /**
-     * Báo world room đang giữ `playerId` biết họ thuộc party nào (hoặc `null` = đã rời) và cách chia loot hiện tại.
-     * Không có world room (chưa attach / đang đổi map) thì bỏ qua: lúc attach world nhận snapshot mới.
+     * Ghi party của `playerId` (hoặc `null` = đã rời) và cách chia loot hiện tại vào dữ liệu người chơi; world room đang
+     * giữ họ nhận qua sự kiện của runtime, world vào sau đọc thẳng từ đó.
      */
-    async publishMembership(
+    publishMembership(
         room: GlobalRoom,
-        party: PartyState,
+        party: PartyRuntime,
         playerId: string,
         partyId: string | null
-    ): Promise<void> {
-        const worldRoomId = worldRegistryGlobalService.worldRoomOf(room, playerId);
-        if (!worldRoomId) return;
-        const event: PartyMembershipEvent = {
-            eventId: generateEntityId(),
-            sourcePartyId: party.id,
-            revision: ++party.revision,
-            playerId,
-            partyId,
-            lootMode: party.lootMode,
-        };
-        await callRoom(worldRoomId, PartySetPlayerPartyWorldCommand, event);
+    ): void {
+        const runtime = room.runtime.players.get(playerId);
+        if (!runtime) return;
+        room.runtime.players.setParty(
+            runtime,
+            partyId ? { partyId, lootMode: party.lootMode } : undefined
+        );
     }
 
     /**
      * Cho `playerId` rời party (tự rời / bị đá / mất kết nối): báo world, báo người đó `PARTY_LEFT`, báo phần còn lại
      * (`code`, chủ mới nếu đổi chủ) và gửi state mới.
      */
-    removeMember(room: GlobalRoom, party: PartyState, playerId: string, code: PartyNotice): void {
-        const removal = room.state.parties.remove(party, playerId);
+    removeMember(room: GlobalRoom, party: PartyRuntime, playerId: string, code: PartyNotice): void {
+        const removal = room.runtime.parties.remove(party, playerId);
         if (!removal) return;
-        void this.publishMembership(room, party, playerId, null);
+        this.publishMembership(room, party, playerId, null);
         partyNotifyGlobalService.sendTo(room, playerId, GlobalMessage.PARTY_LEFT, {
             partyId: party.id,
         } satisfies PartyLeftMessage);
@@ -80,7 +70,7 @@ export class PartyGlobalService {
     }
 
     /** Hẹn giờ `party_config.inviteTtlSec`: hết giờ thì xoá lời mời và báo chủ `invite_expired`. Gọi sau khi `addInvite` thành công. */
-    scheduleInviteExpiry(room: GlobalRoom, party: PartyState, targetId: string): void {
+    scheduleInviteExpiry(room: GlobalRoom, party: PartyRuntime, targetId: string): void {
         // Mời lại cùng người thì lời mời mới thay lời mời cũ, hẹn giờ cũ không còn đúng.
         this.cancelInviteExpiry(party.id, targetId);
         const key = `${party.id}:${targetId}`;

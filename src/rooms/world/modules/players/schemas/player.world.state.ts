@@ -10,7 +10,11 @@ import { questOf } from "@/rooms/world/modules/content/utils/quest-resolve.world
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { ConsumableEffectType } from "@/modules/items/enums/item.enum.js";
 import type { ConsumableEffect } from "@/modules/items/schemas/item-metadata.schema.js";
-import type { PartyMembershipEvent, PartySnapshot } from "@/rooms/global/global.shared.js";
+import type {
+    PlayerPartyState,
+    PlaceCapture,
+} from "@/rooms/runtime/modules/player/types/player-runtime.type.js";
+import type { PlayerRuntime } from "@/rooms/runtime/modules/player/runtime/player-runtime.js";
 import type { ConsumableGain } from "@/rooms/world/modules/players/types/consumable.world.type.js";
 
 import { big, floorBig, roundBig } from "@/core/utils/big-number.util.js";
@@ -19,7 +23,6 @@ import { classService } from "@/modules/classes/services/class.service.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
 import type { FlagValue } from "@/modules/dialogues/schemas/condition.schema.js";
 import type { DungeonSession } from "@/modules/maps/entities/game-map.entity.js";
-import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
 import {
     toInventories,
@@ -28,11 +31,10 @@ import {
 } from "@/modules/player/schemas/inventory.schema.js";
 import type { Attributes, Stats } from "@/modules/player/schemas/stat.schema.js";
 import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
-import type { PlayerSnapshot } from "@/modules/player/types/player.type.js";
 import type { PlayerDailyQuests } from "@/modules/quests/schemas/daily-quest.schema.js";
 import type { PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
 import { DASH_SKILL_CODE, skillService } from "@/modules/skills/services/skill.service.js";
-import { PartyLootMode } from "@/rooms/global/global.shared.js";
+import { PartyLootMode } from "@/modules/master-data/enums/party-loot-mode.enum.js";
 import { mapExtent } from "@/rooms/world/modules/players/simulation/movement.step.js";
 import type { DamageCombatant } from "@/rooms/world/modules/combat/chains/damage.world.chain.js";
 import { HitboxColliderState } from "@/rooms/world/modules/combat/schemas/hitbox-collider.world.state.js";
@@ -41,12 +43,7 @@ import {
     toOwnedSkillStates,
 } from "@/rooms/world/modules/players/schemas/owned-skill.world.state.js";
 import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
-import type { PlayerWorldFields } from "@/modules/player/types/player-fields.type.js";
-import type { PlayerDataSnapshot } from "@/rooms/global/global.shared.js";
-import {
-    PlayerStatService,
-    playerStatService,
-} from "@/modules/player/services/player-stat.service.js";
+import { PlayerStatService } from "@/modules/player/services/player-stat.service.js";
 
 /** Hồi chiêu giữa hai lần dùng bình cùng loại (HP / MP). */
 const POTION_COOLDOWN_MS = 10_000;
@@ -67,12 +64,11 @@ export class PlayerWorldState extends Schema {
     @type("string") direction: string;
     @type("boolean") moving: boolean = false;
     @type("uint32") hp: number;
-    /** Từ stats do global tính (`maxHp`, `maxMp`, `moveSpeed`) — chỉ ở server, không sync; client lấy từ push `attributes` của global. */
+    /** Từ stats của `PlayerRuntime` (`maxHp`, `maxMp`, `moveSpeed`) — chỉ ở server, không sync; client lấy từ push `attributes` của global. */
     maxHp: number;
     @type("uint32") mp: number;
     maxMp: number;
     moveSpeed: number;
-    @type("uint32") stateRevision: number;
     @type("uint8") attackCooldownTicks: number = 0;
     /**
      * Tick còn lại tới khi được bắt đầu đòn đánh thường kế tiếp: đếm từ lúc bắt đầu đòn, = max(thời lượng
@@ -118,24 +114,58 @@ export class PlayerWorldState extends Schema {
     @type("string") classCode = "";
     @type("string") baseClassCode = "";
 
-    wallet: Wallet;
-    /** Cờ cốt truyện và quest (server-only) — xem `player_states.flags/quests`. */
-    flags: Record<string, FlagValue>;
-    quests: PlayerQuests;
+    /**
+     * Dữ liệu lưu của player (ví, túi, trang bị, điểm, cờ, quest...) nằm trong `PlayerRuntime` dùng chung với global; các
+     * getter dưới đây đọc thẳng từ đó (không giữ bản sao). Ví / túi chỉ đổi qua `PlayerRuntimeService`.
+     */
+    readonly runtime: PlayerRuntime;
+
+    get wallet(): Wallet {
+        return this.runtime.data.wallet;
+    }
+
+    /** Cờ cốt truyện và quest (server-only) — xem `player_states.flags/quests`; sửa tại chỗ, lưu theo autosave. */
+    get flags(): Record<string, FlagValue> {
+        return this.runtime.data.flags;
+    }
+
+    get quests(): PlayerQuests {
+        return this.runtime.data.quests;
+    }
+
     /** Quest hằng ngày đã sinh cho hôm nay (server-only). */
-    dailyQuests: PlayerDailyQuests | null = null;
+    get dailyQuests(): PlayerDailyQuests | null {
+        return this.runtime.data.dailyQuests;
+    }
+
+    set dailyQuests(value: PlayerDailyQuests | null) {
+        this.runtime.data.dailyQuests = value;
+    }
     /** Map đích khi đã bước vào portal/teleport và đang đợi client vào room mới. */
     pendingMapCode?: string;
     /** Vị trí đích chốt lúc bắt đầu đổi map — room cũ còn simulate player tới khi client rời, không được để nó ghi đè vị trí lưu. */
     private pendingX = 0;
     private pendingY = 0;
-    /** Cách chia item của party hiện tại (do chủ chọn; global room đẩy xuống). */
+    /** Cách chia item của party hiện tại (do chủ chọn; lấy từ `PlayerRuntime.party`). */
     partyLootMode: PartyLootMode = PartyLootMode.ROUND_ROBIN;
     /** Làng gần nhất đã đến (server-only) — chết trong dungeon thì hồi sinh ở đây. */
-    lastTownMapCode: string | null = null;
+    get lastTownMapCode(): string | null {
+        return this.runtime.data.lastTownMapCode;
+    }
+
+    set lastTownMapCode(value: string | null) {
+        this.runtime.data.lastTownMapCode = value;
+    }
     /** Lượt dungeon đang diễn ra (từ lúc bước vào portal dungeon tới khi thoát ra). */
     dungeonSession?: DungeonSession;
-    attributePoints: number;
+
+    get attributePoints(): number {
+        return this.runtime.data.attributePoints;
+    }
+
+    get skillPoints(): number {
+        return this.runtime.data.skillPoints;
+    }
     /** `elapsedTime` (ms) của room tới lúc được dùng bình HP / MP tiếp theo (mỗi loại bình một hồi chiêu). */
     hpPotionReadyAt = 0;
     mpPotionReadyAt = 0;
@@ -152,76 +182,77 @@ export class PlayerWorldState extends Schema {
     @type("string") partyId: string | null = null;
 
     classId: string;
-    /**
-     * Bản sao chỉ-đọc của PlayerData do global làm chủ (cộng điểm, túi, trang bị): chỉ được đổi bằng `applyPlayerData`
-     * khi global đẩy snapshot mới. World đọc để tính stats / điều kiện quest, không ghi.
-     */
-    allocatedAttributes: Attributes;
-    equipments: Equipments;
-    inventories: Inventories;
-    attributes: Attributes;
-    stats: Stats;
+
+    get allocatedAttributes(): Attributes {
+        return this.runtime.data.allocatedAttributes;
+    }
+
+    get equipments(): Equipments {
+        return this.runtime.data.equipments;
+    }
+
+    /** Túi theo loại item — view trên dữ liệu thật của runtime (đổi túi qua `PlayerRuntimeService`, không sửa ở đây). */
+    get inventories(): Inventories {
+        return toInventories(this.runtime.data);
+    }
+
+    get attributes(): Attributes {
+        return this.runtime.attributes;
+    }
+
+    get stats(): Stats {
+        return this.runtime.stats;
+    }
+
     /** Tăng mỗi đòn đánh — một phần seed roll combat (`combatSeed`). */
     attackSerial = 0;
-    skillPoints: number;
     /** Phần HP/MP hồi lẻ (< 1) cộng dồn giữa các tick. */
-    /** Revision mới nhất đã áp dụng theo từng party nguồn — bỏ qua thông báo cũ / trùng của global. */
-    private partyRevisions = new Map<string, number>();
     private hpRegenCarry = big(0);
     private mpRegenCarry = big(0);
 
-    constructor(props: { player: PlayerSnapshot }) {
-        const { player } = props;
+    constructor(props: { runtime: PlayerRuntime }) {
+        const { runtime } = props;
         super();
-        this.id = player.id;
-        this.name = player.name;
-        this.level = player.level;
-        this.x = player.x;
-        this.y = player.y;
-        this.direction = player.direction === "left" ? "left" : "right";
-        this.classId = player.classId;
-        this.classCode = classService.getById(player.classId)?.code ?? "";
+        const { data, extras } = runtime;
+        this.runtime = runtime;
+        this.id = runtime.playerId;
+        this.name = runtime.name;
+        this.level = data.level;
+        this.x = data.x;
+        this.y = data.y;
+        this.direction = data.direction === "left" ? "left" : "right";
+        this.classId = runtime.classId;
+        this.classCode = runtime.classCode;
         this.baseClassCode = this.classCode ? classService.getBaseClassCode(this.classCode) : "";
-        this.allocatedAttributes = { ...player.allocatedAttributes };
-        this.equipments = structuredClone(player.equipments);
-        this.inventories = structuredClone(toInventories(player));
-        this.refreshStats();
+        this.syncStats();
         this.hp = this.maxHp;
-        this.mp = player.mp;
-        this.stateRevision = player.stateRevision;
+        this.mp = data.mp;
         // The body follows the class prefab in Unity (not the row, which holds what it was when the character was made).
         const body = entityBodyService.classBody(this.classCode, this.baseClassCode);
-        this.hitbox = new HitboxColliderState(body?.hitbox ?? player.hitbox);
-        this.collider = new HitboxColliderState(body?.collider ?? player.collider);
-        this.skills.push(...toOwnedSkillStates(player.skills));
-        this.applyProgress(player);
+        this.hitbox = new HitboxColliderState(body?.hitbox ?? extras.hitbox);
+        this.collider = new HitboxColliderState(body?.collider ?? extras.collider);
+        this.skills.push(...toOwnedSkillStates(extras.skills));
+        this.setLevelProgress(data.level, data.exp);
+        this.applyParty(runtime.party);
     }
 
-    /** Level, exp, ví tiền, điểm chưa dùng — từ DB (lúc vào room / sau khi đồng bộ lại). */
-    private applyProgress(player: PlayerSnapshot) {
-        this.setLevelProgress(player.level, player.exp);
-        this.wallet = structuredClone(player.wallet);
-        this.attributePoints = player.attributePoints;
-        this.skillPoints = player.skillPoints;
-        this.allocatedAttributes = { ...player.allocatedAttributes };
-        this.flags = { ...player.flags };
-        this.quests = structuredClone(player.quests);
-        this.lastTownMapCode = player.lastTownMapCode;
-        this.dailyQuests = player.dailyQuests ? structuredClone(player.dailyQuests) : null;
-    }
-
+    /** Đặt level / exp (Schema đồng bộ client + dữ liệu lưu của runtime, autosave ghi xuống DB). */
     setLevelProgress(level: number, exp: number) {
         this.level = level;
         this.exp = exp;
+        this.runtime.data.level = level;
+        this.runtime.data.exp = exp;
         this.expToNextLevel = levelService.getExpToNext(level) ?? 0;
     }
 
-    refreshStats() {
-        const { attributes, stats } = playerStatService.compute(this);
+    /**
+     * Lấy lại maxHp / maxMp / moveSpeed từ stats của runtime (gọi khi túi / trang bị / điểm đổi, từ world hay global) và kẹp
+     * HP / MP theo mức tối đa mới.
+     */
+    syncStats() {
+        const { stats } = this.runtime;
         const previousMaxHp = this.maxHp ?? 0;
         const previousMaxMp = this.maxMp ?? 0;
-        this.attributes = attributes;
-        this.stats = stats;
         this.maxHp = PlayerStatService.whole(stats, StatKey.MAX_HP);
         this.maxMp = PlayerStatService.whole(stats, StatKey.MAX_MP);
         this.moveSpeed = stats[StatKey.MOVE_SPEED] ?? 0;
@@ -231,23 +262,6 @@ export class PlayerWorldState extends Schema {
         if (this.mp !== undefined) {
             this.mp = Math.min(this.maxMp, Math.max(0, this.mp + this.maxMp - previousMaxMp));
         }
-    }
-
-    /**
-     * Nhận snapshot PlayerData từ global (bản mới hơn thì mới áp dụng): đổi bản sao túi / trang bị / điểm và tính lại
-     * stats (kẹp HP/MP như `refreshStats`). Trả `true` nếu túi đổi — để quest "collect" cập nhật tiến độ.
-     */
-    applyPlayerData(data: PlayerDataSnapshot): boolean {
-        if (data.revision < this.stateRevision) return false;
-        const bagChanged = JSON.stringify(this.inventories) !== JSON.stringify(data.inventories);
-        this.attributePoints = data.attributePoints;
-        this.skillPoints = data.skillPoints;
-        this.allocatedAttributes = structuredClone(data.allocatedAttributes);
-        this.equipments = structuredClone(data.equipments);
-        this.inventories = structuredClone(data.inventories);
-        this.stateRevision = data.revision;
-        this.refreshStats();
-        return bagChanged;
     }
 
     /** Hồi HP/MP theo `hp_regen`/`mp_regen` (mỗi giây) sau `dt` giây; chết thì không hồi. */
@@ -280,20 +294,30 @@ export class PlayerWorldState extends Schema {
     }
 
     /**
-     * Cộng tiền và exp (thưởng): ví tăng ngay, lên level thì hồi đầy HP/MP. Điểm tiềm năng khi lên level do global làm chủ
-     * nên người gọi tự gửi sang global.
+     * Cộng tiền và exp (thưởng): ví tăng ngay (lưu sớm ≤ 500 ms), lên level thì hồi đầy HP/MP và lưu sớm. Điểm tiềm năng khi
+     * lên level là của nhóm túi nên người gọi cộng riêng (`PlayerDataWorldService.apply`).
      */
     gainCurrencyAndExp(
         currency: readonly CurrencyReward[],
         exp: number
     ): { level: number; levelsGained: number } {
-        this.wallet = playerService.creditWallet(this.wallet, currency);
+        if (currency.some((entry) => entry.amount > 0)) {
+            this.runtime.owner.credit(this.runtime, currency);
+        }
         const progress = playerService.gainExp({ level: this.level, exp: this.exp }, exp, (level) =>
             levelService.getExpToNext(level)
         );
         this.setLevelProgress(progress.level, progress.exp);
-        if (progress.levelsGained > 0) this.restoreFull();
+        if (progress.levelsGained > 0) {
+            this.restoreFull();
+            this.runtime.owner.saveProgressSoon(this.runtime);
+        }
         return { level: progress.level, levelsGained: progress.levelsGained };
+    }
+
+    /** Trừ tiền (mất tiền trong thoại...); `false` (không đổi gì) nếu không đủ. Lưu sớm ≤ 500 ms. */
+    debitCurrency(costs: readonly CurrencyReward[]): boolean {
+        return this.runtime.owner.debit(this.runtime, costs);
     }
 
     /** Hồi đầy HP/MP (lên level). */
@@ -302,8 +326,8 @@ export class PlayerWorldState extends Schema {
         this.mp = this.maxMp;
     }
 
-    /** Phần world làm chủ, gửi global lưu (checkpoint định kỳ, lúc rời room / đổi map). */
-    toWorldFields(mapCode: string): PlayerWorldFields {
+    /** Vị trí / HP / MP / dungeon hiện tại, để `PlayerRuntime` lưu (autosave, lúc rời room / đổi map). */
+    capturePlace(mapCode: string): PlaceCapture {
         // Trong dungeon (hoặc đang bước vào): lưu chỗ quay về — mất kết nối thì đăng nhập lại ở ngoài dungeon.
         const session = this.dungeonSession;
         return {
@@ -311,17 +335,10 @@ export class PlayerWorldState extends Schema {
             mapCode: session?.returnMapCode ?? this.pendingMapCode ?? mapCode,
             x: session?.returnX ?? (this.pendingMapCode ? this.pendingX : this.x),
             y: session?.returnY ?? (this.pendingMapCode ? this.pendingY : this.y),
-            lastTownMapCode: this.lastTownMapCode,
-            dailyQuests: this.dailyQuests ? structuredClone(this.dailyQuests) : null,
             dungeonSession: session ? { ...session } : null,
-            direction: this.direction as PlayerState["direction"],
+            direction: this.direction as PlaceCapture["direction"],
             hp: this.hp,
             mp: this.mp,
-            level: this.level,
-            exp: this.exp,
-            wallet: structuredClone(this.wallet),
-            flags: { ...this.flags },
-            quests: structuredClone(this.quests),
         };
     }
 
@@ -366,20 +383,10 @@ export class PlayerWorldState extends Schema {
         }
     }
 
-    /** Thành viên vào / rời party hoặc đổi cách chia loot (global đẩy xuống). Bản cũ / trùng bị bỏ qua. */
-    applyPartyEvent(event: PartyMembershipEvent) {
-        if (event.revision <= (this.partyRevisions.get(event.sourcePartyId) ?? -1)) return;
-        if (!event.partyId && this.partyId !== event.sourcePartyId) return;
-        this.partyRevisions.set(event.sourcePartyId, event.revision);
-        this.setParty(event.partyId);
-        this.partyLootMode = event.lootMode;
-    }
-
-    /** Snapshot party lúc vừa vào room (global trả khi attach). */
-    applyPartySnapshot(snapshot: PartySnapshot) {
-        this.setParty(snapshot.partyId);
-        this.partyLootMode = snapshot.lootMode;
-        this.partyRevisions = new Map([[snapshot.partyId, snapshot.revision]]);
+    /** Party hiện tại của player (global ghi vào `PlayerRuntime.party`): lúc vào room và mỗi khi đổi. */
+    applyParty(party: PlayerPartyState | undefined) {
+        this.setParty(party?.partyId ?? null);
+        if (party) this.partyLootMode = party.lootMode;
     }
 
     /** Số item (theo code) trong bản sao túi. */
@@ -607,10 +614,6 @@ export class PlayerWorldState extends Schema {
 
         // Chỉ trừ máu: trúng đòn không khựng, không huỷ đòn đang đánh hay di chuyển.
         this.hp = Math.max(0, this.hp - Math.max(0, damage));
-    }
-
-    setStateRevision(revision: number) {
-        this.stateRevision = revision;
     }
 
     setParty(partyId: string | null) {

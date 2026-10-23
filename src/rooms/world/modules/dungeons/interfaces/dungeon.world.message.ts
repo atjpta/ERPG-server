@@ -1,5 +1,5 @@
 import type { CurrencyRewardMessage } from "@/rooms/world/modules/rewards/interfaces/reward.world.message.js";
-import type { ItemRewardMessage } from "@/rooms/global/global.shared.js";
+import type { ItemRewardMessage } from "@/modules/rewards/interfaces/reward.message.js";
 
 export interface DungeonChamberClearMessage {
     chamberIndex: number;

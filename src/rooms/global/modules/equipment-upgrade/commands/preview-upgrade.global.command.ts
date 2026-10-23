@@ -17,7 +17,7 @@ import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import { inventoryService } from "@/modules/player/services/inventory.service.js";
 import { PreviewUpgradeSchema } from "@/rooms/global/modules/inventory/validators/inventory.global.validator.js";
 import type { PlayerWorldView } from "@/rooms/global/modules/player-data/types/player-data.type.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
+import type { PlayerRuntime } from "@/rooms/runtime/modules/player/runtime/player-runtime.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import { EquipmentUpgradeAction } from "@/rooms/global/modules/equipment-upgrade/enums/equipment-upgrade-action.enum.js";
 import type {
@@ -27,7 +27,6 @@ import type {
 import type { StatLineMessage } from "@/rooms/global/modules/player-data/interfaces/player-data.global.message.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { PlayerGlobalCommand } from "@/rooms/global/player.global.command.js";
-import { playerDataGlobalService } from "@/rooms/global/modules/player-data/services/player-data.global.service.js";
 
 interface InventoryCommandPayload {
     client: PlayerClient;
@@ -57,19 +56,18 @@ export class PreviewUpgradeGlobalCommand extends PlayerGlobalCommand<
 
     protected override readonly validateSchema = PreviewUpgradeSchema;
 
-    async execute({ client }: InventoryCommandPayload) {
-        this.result = await playerDataGlobalService.read(
-            this.room,
-            client.auth.playerId,
-            { pullsWorld: true },
-            (state, world) =>
-                this.upgradePreview(state, world, this.body.action, this.body.instanceId)
+    execute(_payload: InventoryCommandPayload) {
+        this.result = this.upgradePreview(
+            this.player,
+            this.player.data,
+            this.body.action,
+            this.body.instanceId
         );
     }
 
     /** Chi phí, tỉ lệ cường hoá / tinh hoá món này và player có đủ không. */
     private upgradePreview(
-        player: PlayerDataState,
+        player: PlayerRuntime,
         world: PlayerWorldView | undefined,
         action: EquipmentUpgradeAction.ENHANCE | EquipmentUpgradeAction.REFINE,
         instanceId: string

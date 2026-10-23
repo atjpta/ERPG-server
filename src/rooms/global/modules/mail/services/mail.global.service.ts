@@ -1,16 +1,15 @@
-import { generateEntityId } from "@/core/entities/base.entity.js";
-import { withTransaction } from "@/core/repositories/base.repository.js";
-import { callRoom } from "@/core/rooms/room.integration.js";
-import type { Result } from "@/core/types/result.type.js";
+import { equipmentMessageService } from "@/modules/equipment/services/equipment-message.service.js";
 import { Response } from "@/core/utils/response.util.js";
+import type { Result } from "@/core/types/result.type.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import type { MailRow } from "@/modules/mails/entities/mail.entity.js";
 import { MailErrorCode } from "@/modules/mails/enums/mail-error-code.enum.js";
 import {
     mailRenderService,
-    type RenderedMail,
+    type MailTextVariant,
 } from "@/modules/mails/services/mail-render.service.js";
+import { mailTransferService } from "@/modules/mails/services/mail-transfer.service.js";
 import { mailService } from "@/modules/mails/services/mail.service.js";
 import type { MailReward } from "@/modules/rewards/schemas/mail-reward.schema.js";
 import type { ItemReward } from "@/modules/rewards/types/reward.type.js";
@@ -24,23 +23,19 @@ import type {
     MailReceivedMessage,
     MailRewardMessage,
 } from "@/rooms/global/modules/mail/interfaces/mail.global.message.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
-import { playerDataGlobalService } from "@/rooms/global/modules/player-data/services/player-data.global.service.js";
-import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
+import type { PlayerRuntime } from "@/rooms/runtime/modules/player/runtime/player-runtime.js";
+import { TransactAbort } from "@/rooms/runtime/modules/player/services/player-runtime.service.js";
 import {
-    CreditWalletWorldCommand,
-    DebitWalletWorldCommand,
-} from "@/rooms/world/modules/players/commands/wallet.world.command.js";
-
-/** Ném trong transaction nhận thư khi thư đã bị thu hồi giữa chừng: huỷ transaction rồi hoàn ví. */
-class MailGoneError extends Error {}
+    inventoryService,
+    type GrantOutcome,
+} from "@/modules/player/services/inventory.service.js";
+import { playerService } from "@/modules/player/services/player.service.js";
+import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
 
 /**
  * Phần dùng chung của các command mail trong global room: dựng DTO, push thư mới và nhận một thư (`claimOne`, dùng cho cả
- * `mailClaim` lẫn `mailClaimAll`). Logic chỉ một command dùng nằm ngay trong command đó; luật nghiệp vụ nằm ở `modules/mails`.
- *
- * Thao tác tiền đi qua world (`DebitWalletWorldCommand` / `CreditWalletWorldCommand`) với `eventId` mới cho mỗi lần thử —
- * world nhớ `eventId` đã áp dụng, dùng lại id cũ sau một lần hoàn tiền sẽ bị coi là lặp và không trừ nữa.
+ * `mailClaim` lẫn `mailClaimAll`). Logic chỉ một command dùng nằm ngay trong command đó; luật nghiệp vụ nằm ở
+ * `modules/mails` (`MailTransferService`).
  */
 export class MailGlobalService {
     // ------------------------------------------------------------------ DTO
@@ -57,7 +52,7 @@ export class MailGlobalService {
         const { metadata, ...base } = inventoryGlobalService.toItemRewardMessage(item);
         return {
             ...base,
-            ...(metadata ? { metadata: inventoryGlobalService.toInstanceMessage(metadata) } : {}),
+            ...(metadata ? { metadata: equipmentMessageService.toInstanceMessage(metadata) } : {}),
         };
     }
 
@@ -68,15 +63,15 @@ export class MailGlobalService {
         };
     }
 
-    toMailMessage(row: MailRow, rendered: RenderedMail): MailMessage {
+    toMailMessage(row: MailRow, texts: MailTextVariant[]): MailMessage {
         return {
             id: row.id,
             kind: row.kind,
             ...(row.senderPlayerId ? { senderId: row.senderPlayerId } : {}),
             ...(row.senderName ? { senderName: row.senderName } : {}),
-            subject: rendered.subject,
-            body: rendered.body,
-            locale: rendered.locale,
+            subject: row.subject ?? "",
+            body: row.body ?? "",
+            texts: texts.map(({ locale, subject, body }) => ({ locale, subject, body })),
             ...(row.reward ? { reward: this.toRewardMessage(row.reward) } : {}),
             ...(row.cod ? { cod: this.toCurrencyMessage(row.cod) } : {}),
             read: row.readAt !== null,
@@ -92,8 +87,7 @@ export class MailGlobalService {
     async notifyReceived(room: GlobalRoom, row: MailRow): Promise<void> {
         const client = room.clientOf(row.recipientPlayerId);
         if (!client) return;
-        const locale = room.state.mails.localeOf(row.recipientPlayerId);
-        const rendered = (await mailRenderService.renderMany([row], locale)).get(row.id)!;
+        const rendered = (await mailRenderService.renderMany([row])).get(row.id)!;
         const data: MailReceivedMessage = {
             mail: this.toMailMessage(row, rendered),
             unreadCount: await mailService.countUnread(row.recipientPlayerId),
@@ -104,106 +98,60 @@ export class MailGlobalService {
     // ------------------------------------------------------------------ nhận
 
     /**
-     * Nhận một thư (đã giữ `exclusive` của người nhận). Thứ tự: kiểm tra chỗ túi → trừ giá COD ở world → cộng tiền đính kèm ở
-     * world → transaction { lưu túi, đánh dấu đã nhận có điều kiện, thư thanh toán COD cho người gửi }. Lỗi ở bước sau thì hoàn
-     * lại các bước trước (túi, ví).
+     * Nhận một thư: MỘT transaction { cộng đính kèm vào túi / ví người nhận, trừ giá COD nếu có, đánh dấu đã nhận có điều kiện, thư
+     * thanh toán COD cho người gửi }. Thiếu chỗ / thiếu tiền / thư vừa bị thu hồi thì rollback cả, thư giữ nguyên.
      */
     async claimOne(
         room: GlobalRoom,
-        state: PlayerDataState,
+        runtime: PlayerRuntime,
         mail: MailRow
     ): Promise<Result<MailClaimedMessage>> {
         const reward = mail.reward!;
-        const playerId = state.playerId;
-        const work = state.workingCopy();
-        if (!work.canFit(reward.items)) return Response.error(ItemErrorCode.INVENTORY_FULL);
-
-        const needsWallet = reward.currency.length > 0 || !!mail.cod;
-        const worldRoomId = state.worldRoomId;
-        if (needsWallet && !worldRoomId) return Response.error(MailErrorCode.MAIL_NEEDS_WORLD);
-
-        const attempt = generateEntityId();
-        const codEventId = `mail-cod:${mail.id}:${attempt}`;
-        const creditEventId = `mail:${mail.id}:${attempt}`;
-        const undoCod = async () => {
-            if (mail.cod && worldRoomId) {
-                await callRoom(worldRoomId, CreditWalletWorldCommand, {
-                    eventId: `${codEventId}:undo`,
-                    playerId,
-                    currencies: [mail.cod],
-                });
-            }
-        };
-        const undoCredit = async () => {
-            if (reward.currency.length > 0 && worldRoomId) {
-                await callRoom(worldRoomId, DebitWalletWorldCommand, {
-                    eventId: `${creditEventId}:undo`,
-                    playerId,
-                    currencies: reward.currency,
-                });
-            }
-        };
-
-        if (mail.cod) {
-            const debited = await callRoom(worldRoomId, DebitWalletWorldCommand, {
-                eventId: codEventId,
-                playerId,
-                currencies: [mail.cod],
-            });
-            if (Response.isError(debited)) return debited;
-        }
-        if (reward.currency.length > 0) {
-            const credited = await callRoom(worldRoomId, CreditWalletWorldCommand, {
-                eventId: creditEventId,
-                playerId,
-                currencies: reward.currency,
-            });
-            if (Response.isError(credited)) {
-                await undoCod();
-                return credited;
-            }
-        }
-
-        const grant = work.grantItems(reward.items, ItemSource.MAIL);
-        const before = state.workingCopy();
-        const revisionBefore = state.revision;
-        state.adopt(work);
         let payment: MailRow | null = null;
-        try {
-            await withTransaction(async (tx) => {
-                await playerDataGlobalService.save(room, state, undefined, tx);
-                const claimed = await mailService.markClaimed({
-                    mailId: mail.id,
-                    recipientId: playerId,
-                    dbOrTx: tx,
-                });
-                // Người gửi thu hồi đúng lúc này (hoặc thư vừa hết hạn): bỏ cả transaction.
-                if (!claimed) throw new MailGoneError();
-                payment = await mailService.sendCodPayment({
+        let grant: GrantOutcome | undefined;
+        const result = await runtime.owner.transact(
+            runtime.playerId,
+            async (draft, tx): Promise<Result<MailClaimedMessage>> => {
+                const work = runtime.fork(draft);
+                if (!inventoryService.canFit(work.inventories, reward.items)) {
+                    throw new TransactAbort(Response.error(ItemErrorCode.INVENTORY_FULL));
+                }
+                if (mail.cod) {
+                    const paid = playerService.debitWallet(draft.wallet, [mail.cod]);
+                    if (!paid) {
+                        throw new TransactAbort(Response.error(ItemErrorCode.CURRENCY_NOT_ENOUGH));
+                    }
+                    draft.wallet = paid;
+                }
+                if (reward.currency.length > 0) {
+                    draft.wallet = playerService.creditWallet(draft.wallet, reward.currency);
+                }
+                grant = inventoryService.grantItems(
+                    work.inventories,
+                    reward.items,
+                    ItemSource.MAIL
+                );
+                const claimed = await mailTransferService.claimInTransaction({
                     mail,
-                    payerName: state.name,
-                    dbOrTx: tx,
+                    recipientId: runtime.playerId,
+                    payerName: runtime.name,
+                    tx,
                 });
-            });
-        } catch (error) {
-            state.adopt(before);
-            state.revision = revisionBefore;
-            await undoCredit();
-            await undoCod();
-            if (error instanceof MailGoneError) return Response.error(MailErrorCode.MAIL_NOT_FOUND);
-            throw error;
-        }
-
-        playerDataGlobalService.pushToWorld(room, state);
-        if (reward.items.length > 0) playerDataGlobalService.sendInventory(room, state);
-        const client = room.clientOf(playerId);
-        if (client) inventoryGlobalService.notifyGrant(client, state, grant);
+                // Thư bị thu hồi / hết hạn đúng lúc này: huỷ cả giao dịch (kể cả giá COD vừa trừ).
+                if (!claimed) throw new TransactAbort(Response.error(MailErrorCode.MAIL_NOT_FOUND));
+                payment = claimed.payment;
+                return Response.success<MailClaimedMessage>({
+                    mailId: mail.id,
+                    items: reward.items.map((item) => this.toItemMessage(item)),
+                    currency: reward.currency.map((entry) => this.toCurrencyMessage(entry)),
+                });
+            }
+        );
+        if (Response.isError(result)) return result;
+        const client = room.clientOf(runtime.playerId);
+        if (client && grant) inventoryGlobalService.notifyGrant(client, runtime, grant);
         if (payment) void this.notifyReceived(room, payment);
-        return Response.success<MailClaimedMessage>({
-            mailId: mail.id,
-            items: reward.items.map((item) => this.toItemMessage(item)),
-            currency: reward.currency.map((entry) => this.toCurrencyMessage(entry)),
-        });
+        return result;
     }
 }
 

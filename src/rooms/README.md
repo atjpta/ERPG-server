@@ -10,7 +10,7 @@ qua `static readonly message`; room không cần bảng `messages` thủ công.
   `options.serverId` khớp token); core không phụ thuộc modules.
 - `world/` chứa command vòng đời, điều phối tick, state và các module tính năng của
   world. Xem [world/README.md](world/README.md).
-- `global/` là room duy nhất của mỗi game server (`filterBy(["serverId"])`, state `GlobalState` không sync cho client): chat, party
+- `global/` là room duy nhất của mỗi game server (`filterBy(["serverId"])`, không có state sync cho client): chat, party
   (logic trong room, không còn room riêng mỗi party), presence (ai đang ở world room nào) và điều phối vào
   dungeon. Xem [global/README.md](global/README.md). Instance dungeon dùng lại world room với bộ lọc
   matchmaking khác. Mỗi player giữ 2 kết nối: world + global.
@@ -24,26 +24,15 @@ qua `static readonly message`; room không cần bảng `messages` thủ công.
 
 Thêm tính năng mới vào một room: [Thêm module mới vào room](../../docs/room-command-pattern.md#thêm-module-mới-vào-room).
 
-World gọi global room bằng `callRoom(serverId, XGlobalCommand, payload)`: `roomId` của global room chính là `serverId`, room được dựng sẵn lúc khởi động (`InitRoom`).
+Global room được dựng sẵn lúc khởi động (`InitRoom`), `roomId` của nó chính là `serverId`; world và global chạy chung process nên dùng chung `PlayerRuntime`
+(`src/rooms/runtime/modules/player`), không có RPC giữa hai room.
 
 Hạ tầng room dùng chung nằm trong `src/core/rooms`; service nghiệp vụ/dữ liệu dùng
 chung nằm trong `src/modules`. Tính năng riêng của world nằm trong
 `world/modules/<feature>`, gồm cả Colyseus `schemas/` của tính năng đó.
 
 Logic và DTO party nằm trong `src/rooms/global/modules/party`, không có module DB party.
-World chỉ import phần công khai qua `global.shared.ts` (DTO, enum, các command RPC của global);
-không import trực tiếp room, state hoặc service implementation của global. Ngược lại global chỉ
-import `world.shared.ts` và các command RPC của world.
-World cũng có `world.shared.ts` cho enum/DTO và hàm dựng cấu hình skill dùng chung;
-message và options của world nằm trong `world/types`.
+World và global không import nhau: DTO, enum dùng chung nằm ở `src/modules`; việc nhờ room kia làm gì đi qua `room.runtime` (`RoomRuntimeService` của game server).
+Message và options của world nằm trong `world/types`.
 Schema `party_config` và enum chế độ loot
 thuộc `modules/master-data` vì cấu hình đó được lưu trong master data.
-
-Gọi room khác bằng `callRoom(roomId, XCommand, payload)`: kiểu payload và kết quả suy ra từ chính class command,
-click vào tên class nhảy thẳng tới logic. Room đích liệt kê command được phép gọi trong
-`createRpcRunner(this, [...])`.
-
-Lời gọi giới hạn chờ 3 giây và trả fallback khi lỗi; timeout không hủy công việc
-ở room đích. Membership mang `eventId`, party nguồn và revision. Báo cáo world mang
-world nguồn và revision để bỏ cập nhật cũ/lặp. Giao tiếp dùng transport của Colyseus;
-khi chạy nhiều process cần cấu hình Redis dùng chung.

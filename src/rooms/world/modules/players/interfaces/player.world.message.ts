@@ -1,4 +1,5 @@
-import type { AttributeValuesMessage, EquipmentsMessage } from "@/rooms/global/global.shared.js";
+import type { EquipmentsMessage } from "@/modules/equipment/interfaces/equipment.message.js";
+import type { AttributeValuesMessage } from "@/modules/player/interfaces/attribute.message.js";
 
 /** `data` của `playerView`; người đó không ở cùng map thì `Result` thất bại `PLAYER_NOT_HERE`. */
 export interface PlayerViewMessage {

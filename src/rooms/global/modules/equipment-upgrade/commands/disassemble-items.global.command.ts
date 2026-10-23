@@ -8,13 +8,13 @@ import { inventoryService } from "@/modules/player/services/inventory.service.js
 import { UpgradeGlobalCommand } from "@/rooms/global/modules/equipment-upgrade/commands/upgrade.global.command.js";
 import { equipmentUpgradeService } from "@/modules/equipment/services/equipment-upgrade.service.js";
 import { DisassembleItemsSchema } from "@/rooms/global/modules/inventory/validators/inventory.global.validator.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
+import type { PlayerRuntime } from "@/rooms/runtime/modules/player/runtime/player-runtime.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import { EquipmentUpgradeAction } from "@/rooms/global/modules/equipment-upgrade/enums/equipment-upgrade-action.enum.js";
 import type { z } from "zod";
 
 @SdkMessage({
-    replies: [GlobalMessage.INVENTORY],
+    replies: [GlobalMessage.INVENTORY_CHANGED],
     errors: [
         CommonCode.INVALID_INPUT,
         ItemErrorCode.ITEM_NOT_FOUND,
@@ -31,10 +31,7 @@ export class DisassembleItemsGlobalCommand extends UpgradeGlobalCommand<
     static readonly message = GlobalClientMessage.DISASSEMBLE_ITEMS;
 
     protected readonly validateSchema = DisassembleItemsSchema;
-    protected run(
-        player: PlayerDataState,
-        { instanceIds }: z.infer<typeof DisassembleItemsSchema>
-    ) {
+    protected run(player: PlayerRuntime, { instanceIds }: z.infer<typeof DisassembleItemsSchema>) {
         const result = equipmentUpgradeService.simulateDisassemble(player.inventories, instanceIds);
         if (Response.isError(result)) return result;
         const { ids, materials, received } = result.data;

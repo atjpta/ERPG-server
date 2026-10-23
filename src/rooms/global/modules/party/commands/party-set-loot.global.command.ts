@@ -8,7 +8,7 @@ import { partyGlobalService } from "@/rooms/global/modules/party/services/party.
 import { partyNotifyGlobalService } from "@/rooms/global/modules/party/services/party-notify.global.service.js";
 import { PartyLootSchema } from "@/rooms/global/modules/party/validators/loot.party.validator.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import { PartyErrorCode } from "@/rooms/runtime/modules/party/enums/party-error-code.enum.js";
 
 @SdkMessage({
     errors: [PartyErrorCode.PARTY_NOT_MEMBER, PartyErrorCode.PARTY_NOT_LEADER],
@@ -29,7 +29,7 @@ export class PartySetLootGlobalCommand extends PartyMemberGlobalCommand<typeof P
         }
         // World room của từng thành viên cần biết cách chia mới để chia item lúc hạ quái.
         for (const playerId of party.members.keys()) {
-            void partyGlobalService.publishMembership(room, party, playerId, party.id);
+            partyGlobalService.publishMembership(this.room, party, playerId, party.id);
         }
         partyNotifyGlobalService.broadcastState(room, party);
         this.result = Response.success();

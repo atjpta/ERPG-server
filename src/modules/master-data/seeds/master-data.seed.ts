@@ -45,6 +45,7 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
             maxCharacters: 4,
             nameMinLength: 3,
             nameMaxLength: 16,
+            autosaveSeconds: 30,
         },
         note: "Cấu hình tạo player",
     },

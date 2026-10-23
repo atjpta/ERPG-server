@@ -105,7 +105,7 @@ Mỗi thư mục room có đúng một cặp enum (cùng file `<room>/types/<roo
 
 4. DTO mới của `data` (response hoặc push) là interface `...Message` (phải có tên kết thúc bằng `Message` để schema-codegen sinh C#). Đặt đúng
    module: room global ở `global/modules/<feat>/interfaces/<feat>.global.message.ts` (script tự tìm file `*.message.ts` trong thư mục `interfaces/`; enum đi kèm để ở `enums/`;
-   export qua `global.shared.ts` nếu world cần), room world ở `world/modules/<feat>/interfaces/<feat>.world.message.ts`. Hai enum message vẫn ở `<room>/types/<room>-message.type.ts`.
+   DTO mà world cũng dùng thì đặt ở `src/modules/<module>/interfaces/` và file này re-export), room world ở `world/modules/<feat>/interfaces/<feat>.world.message.ts`. Hai enum message vẫn ở `<room>/types/<room>-message.type.ts`.
    Xong chạy `yarn unity:network`.
 5. Room mới: `@SdkRoom({ joins: [{ room, options: <Zod|null>, doc }] })` trên class room. Join option của `world`, `dungeon` và `global`
    đều **bắt buộc `serverId`** (khớp server của nhân vật; sai hoặc thiếu thì join bị từ chối). `world`: `{ serverId, mapCode }`;

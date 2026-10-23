@@ -4,7 +4,8 @@ import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.j
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { InventoryGlobalCommand } from "@/rooms/global/modules/inventory/commands/inventory.global.command.js";
 import type { AttributesMessage } from "@/rooms/global/modules/attributes/interfaces/attributes.global.message.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
+import type { InventoryResult } from "@/rooms/global/modules/inventory/types/inventory.global.type.js";
+import type { PlayerRuntime } from "@/rooms/runtime/modules/player/runtime/player-runtime.js";
 import { UpdateAttributesSchema } from "@/rooms/global/modules/attributes/validators/update-attributes.global.validator.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import type { z } from "zod";
@@ -30,9 +31,11 @@ export class UpdateAttributesGlobalCommand extends InventoryGlobalCommand<
     static readonly message = GlobalClientMessage.UPDATE_ATTRIBUTES;
 
     protected readonly validateSchema = UpdateAttributesSchema;
-    protected override readonly sendsInventory = false;
 
-    protected run(player: PlayerDataState, request: z.infer<typeof UpdateAttributesSchema>) {
+    protected run(
+        player: PlayerRuntime,
+        request: z.infer<typeof UpdateAttributesSchema>
+    ): InventoryResult<AttributesMessage> {
         const error = player.updateAttributes(request);
         return error ? Response.error(error) : Response.success(player.getAttributeSummary());
     }

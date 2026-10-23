@@ -152,11 +152,11 @@ export class InteractWorldCommand extends PlayerWorldCommand<
         state: InteractableWorldState
     ): Promise<ErrorCode | undefined> {
         const reward = rewardSpecService.resolveRewardSpec(def.reward, ItemSource.SYSTEM);
-        // Giữ chỗ trước khi chờ global để người khác không nhặt trùng; thất bại thì trả lại.
+        // Giữ chỗ trước để người khác không nhặt trùng; thất bại thì trả lại.
         state.active = false;
-        // Túi đầy thì không cho nhặt (thay vì nhặt xong mất đồ): global kiểm tra và cộng item cùng lúc.
+        // Túi đầy thì không cho nhặt (thay vì nhặt xong mất đồ): kiểm tra và cộng item cùng lúc.
         if (reward.items.length > 0) {
-            const given = await playerDataWorldService.apply(room, client.auth.playerId, [
+            const given = playerDataWorldService.apply(player, [
                 { type: "giveItem", items: reward.items, source: reward.source, requireFit: true },
             ]);
             if (Response.isError(given)) {

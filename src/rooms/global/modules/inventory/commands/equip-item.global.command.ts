@@ -12,7 +12,7 @@ import {} from "@/rooms/global/modules/inventory/services/inventory.global.servi
 import { equipmentInstanceService } from "@/modules/equipment/services/equipment-instance.service.js";
 import { EquipItemSchema } from "@/rooms/global/modules/inventory/validators/inventory.global.validator.js";
 import type { PlayerWorldView } from "@/rooms/global/modules/player-data/types/player-data.type.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
+import type { PlayerRuntime } from "@/rooms/runtime/modules/player/runtime/player-runtime.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import type { z } from "zod";
 
@@ -31,9 +31,8 @@ export class EquipItemGlobalCommand extends InventoryGlobalCommand<
     static readonly message = GlobalClientMessage.EQUIP_ITEM;
 
     protected readonly validateSchema = EquipItemSchema;
-    protected override readonly changesStats = true;
     protected run(
-        player: PlayerDataState,
+        player: PlayerRuntime,
         { instanceId, slot: requestedSlot }: z.infer<typeof EquipItemSchema>,
         world: PlayerWorldView
     ) {
@@ -52,11 +51,13 @@ export class EquipItemGlobalCommand extends InventoryGlobalCommand<
         if (requestedSlot && !slots.includes(requestedSlot))
             return Response.error(ItemErrorCode.INVENTORY_SLOT_INVALID);
         const slot =
-            requestedSlot ?? slots.find((candidate) => !player.equipments[candidate]) ?? slots[0];
+            requestedSlot ??
+            slots.find((candidate) => !player.data.equipments[candidate]) ??
+            slots[0];
 
         inventoryService.takeInstance(bag, instanceId);
-        const previous = player.equipments[slot];
-        player.equipments[slot] = {
+        const previous = player.data.equipments[slot];
+        player.data.equipments[slot] = {
             id: entry.id,
             itemId: entry.itemId,
             source: entry.source,

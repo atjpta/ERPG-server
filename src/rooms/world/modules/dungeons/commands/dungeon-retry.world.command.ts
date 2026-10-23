@@ -1,14 +1,9 @@
-import { callRoom } from "@/core/rooms/room.integration.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { Response } from "@/core/utils/response.util.js";
-import {
-    DUNGEON_LAUNCH_TIMEOUT_MS,
-    LaunchDungeonGlobalCommand,
-    PartyErrorCode,
-} from "@/rooms/global/global.shared.js";
+import { PartyErrorCode } from "@/rooms/runtime/modules/party/enums/party-error-code.enum.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
@@ -47,18 +42,13 @@ export class DungeonRetryWorldCommand extends PlayerWorldCommand<{ client: Playe
         const present = [...room.state.players.values()]
             .filter((other) => !other.pendingMapCode)
             .map((other) => other.id);
-        const result = await callRoom(
-            room.serverId,
-            LaunchDungeonGlobalCommand,
-            {
-                leaderPlayerId: player.id,
-                code: room.map.code,
-                spawnId: "default",
-                retry: true,
-                presentPlayerIds: present,
-            },
-            { timeoutMs: DUNGEON_LAUNCH_TIMEOUT_MS }
-        );
+        const result = await room.runtime.launchDungeon({
+            leaderPlayerId: player.id,
+            code: room.map.code,
+            spawnId: "default",
+            retry: true,
+            presentPlayerIds: present,
+        });
         if (Response.isError(result)) {
             return Response.error(
                 result.code === CommonCode.ROOM_UNAVAILABLE

@@ -8,7 +8,7 @@ import { InventoryGlobalCommand } from "@/rooms/global/modules/inventory/command
 import { inventoryGlobalService } from "@/rooms/global/modules/inventory/services/inventory.global.service.js";
 import { equipmentInstanceService } from "@/modules/equipment/services/equipment-instance.service.js";
 import { UnequipItemSchema } from "@/rooms/global/modules/inventory/validators/inventory.global.validator.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
+import type { PlayerRuntime } from "@/rooms/runtime/modules/player/runtime/player-runtime.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import type { z } from "zod";
 
@@ -22,9 +22,8 @@ export class UnequipItemGlobalCommand extends InventoryGlobalCommand<
     static readonly message = GlobalClientMessage.UNEQUIP_ITEM;
 
     protected readonly validateSchema = UnequipItemSchema;
-    protected override readonly changesStats = true;
-    protected run(player: PlayerDataState, { slot }: z.infer<typeof UnequipItemSchema>) {
-        const equipped = player.equipments[slot];
+    protected run(player: PlayerRuntime, { slot }: z.infer<typeof UnequipItemSchema>) {
+        const equipped = player.data.equipments[slot];
         if (!equipped) return Response.error(ItemErrorCode.INVENTORY_SLOT_EMPTY);
         const bag = player.inventories[ItemType.EQUIPMENT];
         const [slotIndex] = inventoryService.freeSlotIndexes(
@@ -33,7 +32,7 @@ export class UnequipItemGlobalCommand extends InventoryGlobalCommand<
         );
         if (slotIndex === undefined) return Response.error(ItemErrorCode.INVENTORY_FULL);
         bag.push(equipmentInstanceService.toInventoryEquipment(equipped, slotIndex));
-        player.equipments[slot] = null;
+        player.data.equipments[slot] = null;
         player.refreshStats();
         return Response.success(undefined);
     }

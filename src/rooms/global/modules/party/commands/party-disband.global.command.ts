@@ -5,7 +5,7 @@ import { GlobalClientMessage, GlobalMessage } from "@/rooms/global/types/global-
 import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
 import type { PartyLeftMessage } from "@/rooms/global/modules/party/interfaces/party.global.message.js";
 import { partyNotifyGlobalService } from "@/rooms/global/modules/party/services/party-notify.global.service.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import { PartyErrorCode } from "@/rooms/runtime/modules/party/enums/party-error-code.enum.js";
 import { partyGlobalService } from "@/rooms/global/modules/party/services/party.global.service.js";
 
 @SdkMessage({
@@ -22,8 +22,8 @@ export class PartyDisbandGlobalCommand extends PartyMemberGlobalCommand {
         partyGlobalService.cancelInviteExpiries(party.id);
         // Báo trước khi đưa ra để còn đủ thành viên nhận.
         partyNotifyGlobalService.broadcastNotice(room, party, PartyNotice.DISBANDED);
-        for (const playerId of room.state.parties.disband(party)) {
-            void partyGlobalService.publishMembership(room, party, playerId, null);
+        for (const playerId of this.room.runtime.parties.disband(party)) {
+            partyGlobalService.publishMembership(this.room, party, playerId, null);
             partyNotifyGlobalService.sendTo(room, playerId, GlobalMessage.PARTY_LEFT, {
                 partyId: party.id,
             } satisfies PartyLeftMessage);

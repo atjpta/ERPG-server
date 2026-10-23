@@ -15,6 +15,7 @@ import { Players } from "@/modules/auth/entities/player.entity.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { Mails } from "@/modules/mails/entities/mail.entity.js";
+import { mailTransferService } from "@/modules/mails/services/mail-transfer.service.js";
 import { mailService } from "@/modules/mails/services/mail.service.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import type { MailReward } from "@/modules/rewards/schemas/mail-reward.schema.js";
@@ -114,7 +115,7 @@ switch (command) {
             .update(Mails)
             .set({ expiresAt: new Date(Date.now() - 1000) })
             .where(eq(Mails.recipientPlayerId, player.id));
-        const returned = await mailService.sweepExpired({ serverId: player.serverId });
+        const { returned } = await mailTransferService.sweepExpired({ serverId: player.serverId });
         console.info(`✓ Đã dọn thư hết hạn; ${returned.length} thư trả đính kèm về người gửi`);
         break;
     }

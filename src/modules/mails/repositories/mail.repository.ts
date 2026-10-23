@@ -98,7 +98,10 @@ export class MailRepository extends BaseRepository<typeof Mails> {
         const { mailId, recipientId, now, dbOrTx = db } = params;
         const [row] = await dbOrTx
             .update(Mails)
-            .set({ claimedAt: now, readAt: sql`coalesce(${Mails.readAt}, ${now.toISOString()})` })
+            .set({
+                claimedAt: now,
+                readAt: sql`coalesce(${Mails.readAt}, ${now.toISOString()})`,
+            })
             .where(
                 and(
                     eq(Mails.id, mailId),
@@ -177,19 +180,22 @@ export class MailRepository extends BaseRepository<typeof Mails> {
         return row ?? null;
     }
 
+    /** Thư hết hạn của server : cũ trước để dọn tồn đọng theo lô. */
     async findExpired(params: { serverId: string; now: Date; limit: number; dbOrTx?: Queryable }) {
         const { serverId, now, limit, dbOrTx = db } = params;
         return dbOrTx
             .select()
             .from(Mails)
             .where(and(eq(Mails.serverId, serverId), lte(Mails.expiresAt, now)))
+            .orderBy(Mails.id)
             .limit(limit);
     }
 
     /** Xoá một thư hết hạn; `null` nếu đã bị xoá ở nơi khác (tránh trả đính kèm hai lần). */
     async deleteExpiredOne(params: { mailId: string; dbOrTx?: Queryable }) {
-        const { mailId, dbOrTx } = params;
-        return this.deleteById({ id: mailId, dbOrTx });
+        const { mailId, dbOrTx = db } = params;
+        const [row] = await dbOrTx.delete(Mails).where(eq(Mails.id, mailId)).returning();
+        return row ?? null;
     }
 }
 

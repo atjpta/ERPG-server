@@ -8,6 +8,7 @@ import {
     PlayerBlockRepo,
     type PlayerBlockRepository,
 } from "@/modules/friends/repositories/player-block.repository.js";
+import { lockFriendPlayers } from "@/modules/friends/utils/friend-lock.util.js";
 import type { FriendFailure } from "@/modules/friends/services/friendship.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
@@ -50,10 +51,16 @@ export class PlayerBlockService extends BaseService<typeof PlayerBlocks> {
             return { removedFriendship: false };
         }
         const max = masterDataCacheService.get(MasterDataKey.FRIEND_CONFIG).maxBlocked;
-        if ((await this.blockRepo.countByBlocker({ blockerId })) >= max) {
-            return { code: FriendErrorCode.FRIEND_BLOCK_LIST_FULL, data: { max } };
-        }
+        // Khoá cả hai người rồi mới kiểm tra / đếm / ghi: hai lần chặn đồng thời của một người không vượt giới hạn, và lời mời đang
+        // chạy của người bị chặn hoặc ghi xong trước (bị xoá ở đây) hoặc thấy block ở bước kiểm tra của nó.
         return withTransaction(async (tx) => {
+            await lockFriendPlayers(tx, blockerId, blockedId);
+            if (await this.blockRepo.findPair({ blockerId, blockedId, dbOrTx: tx })) {
+                return { removedFriendship: false };
+            }
+            if ((await this.blockRepo.countByBlocker({ blockerId, dbOrTx: tx })) >= max) {
+                return { code: FriendErrorCode.FRIEND_BLOCK_LIST_FULL, data: { max } };
+            }
             await this.blockRepo.create({ data: { blockerId, blockedId }, dbOrTx: tx });
             const removed = await FriendshipRepo.deleteBetween({
                 a: blockerId,

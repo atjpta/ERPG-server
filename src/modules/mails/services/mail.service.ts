@@ -3,8 +3,8 @@ import type { Queryable } from "@/configs/postgres.config.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
 import { BaseService } from "@/core/services/base.service.js";
+import { lockKeys } from "@/core/utils/db-lock.util.js";
 import { serviceError } from "@/core/utils/service-error.js";
-import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import {
     MailBroadcasts,
@@ -36,6 +36,13 @@ export interface SystemMailContent {
     templateCode?: string;
     params?: MailParams;
     content?: MailContent;
+}
+
+/** Hộp thư người nhận đã đầy khi ghi thư (kiểm tra trong khoá hộp thư) — nơi gọi huỷ transaction và hoàn lại những gì đã rút. */
+export class MailInboxFullError extends Error {
+    constructor() {
+        super("Recipient inbox is full");
+    }
 }
 
 export class MailService extends BaseService<typeof Mails> {
@@ -126,8 +133,13 @@ export class MailService extends BaseService<typeof Mails> {
         });
     }
 
-    /** Thư người chơi → người chơi (đã kiểm tra, đã rút đính kèm khỏi túi ở nơi gọi — ghi trong cùng transaction). */
-    createPlayerMail(params: {
+    /**
+     * Thư người chơi → người chơi, ghi cùng transaction với việc rút đính kèm khỏi người gửi. Khoá hộp thư người nhận rồi mới đếm và
+     * ghi, nên nhiều người gửi đồng thời không vượt `maxInbox`; đầy thì ném `MailInboxFullError` (huỷ cả transaction của nơi gọi).
+     * `id` cho phép đặt trước id thư (để lệnh ví tham chiếu được thư trước khi thư tồn tại).
+     */
+    async createPlayerMail(params: {
+        id?: string;
         serverId: string;
         sender: { id: string; name: string };
         recipientId: string;
@@ -137,22 +149,32 @@ export class MailService extends BaseService<typeof Mails> {
         cod: MailCod | null;
         dbOrTx?: Queryable;
     }): Promise<MailRow> {
-        const { serverId, sender, recipientId, subject, body, reward, cod, dbOrTx } = params;
-        return this.mailRepo.create({
-            data: {
-                serverId,
-                recipientPlayerId: recipientId,
-                kind: MailKind.PLAYER,
-                senderPlayerId: sender.id,
-                senderName: sender.name,
-                subject,
-                body,
-                reward,
-                cod,
-                expiresAt: this.expiry(),
-            },
-            dbOrTx,
-        });
+        const { id, serverId, sender, recipientId, subject, body, reward, cod, dbOrTx } = params;
+        return withTransaction(async (tx) => {
+            await lockKeys(tx, [`mail-inbox:${recipientId}`]);
+            const used = await this.mailRepo.countPlayerInbox({
+                recipientId,
+                now: this.now(),
+                dbOrTx: tx,
+            });
+            if (used >= this.config.maxInbox) throw new MailInboxFullError();
+            return this.mailRepo.create({
+                data: {
+                    ...(id ? { id } : {}),
+                    serverId,
+                    recipientPlayerId: recipientId,
+                    kind: MailKind.PLAYER,
+                    senderPlayerId: sender.id,
+                    senderName: sender.name,
+                    subject,
+                    body,
+                    reward,
+                    cod,
+                    expiresAt: this.expiry(),
+                },
+                dbOrTx: tx,
+            });
+        }, dbOrTx);
     }
 
     /**
@@ -286,52 +308,8 @@ export class MailService extends BaseService<typeof Mails> {
         return this.mailRepo.deleteAllDeletable(params);
     }
 
-    deleteRecallable(params: Parameters<MailRepository["deleteRecallable"]>[0]) {
-        return this.mailRepo.deleteRecallable(params);
-    }
-
-    deleteReturnable(params: Parameters<MailRepository["deleteReturnable"]>[0]) {
-        return this.mailRepo.deleteReturnable(params);
-    }
-
     isExpired(mail: MailRow): boolean {
         return mail.expiresAt.getTime() <= this.now().getTime();
-    }
-
-    // ------------------------------------------------------------------ hết hạn
-
-    /**
-     * Xoá thư hết hạn của server. Thư người chơi còn đính kèm chưa nhận được trả về người gửi (thư hệ thống
-     * `mail_returned`); thư hệ thống / đã nhận xoá thẳng. Trả các thư "trả lại" vừa tạo để báo người gửi đang online.
-     */
-    async sweepExpired(params: { serverId: string; limit?: number }): Promise<MailRow[]> {
-        const expired = await this.mailRepo.findExpired({
-            serverId: params.serverId,
-            now: this.now(),
-            limit: params.limit ?? 500,
-        });
-        const returned: MailRow[] = [];
-        for (const mail of expired) {
-            const created = await withTransaction(async (tx) => {
-                // Chỉ người xoá thành công mới trả đính kèm: tránh trả hai lần khi trùng với thao tác khác.
-                if (!(await this.mailRepo.deleteExpiredOne({ mailId: mail.id, dbOrTx: tx }))) {
-                    return null;
-                }
-                const refundable = mail.kind === MailKind.PLAYER && !mail.claimedAt && mail.reward;
-                if (!refundable) return null;
-                const recipient = await PlayerIdentityRepo.findById({
-                    id: mail.recipientPlayerId,
-                    dbOrTx: tx,
-                });
-                return this.returnToSender({
-                    mail,
-                    recipientName: recipient?.name ?? "",
-                    dbOrTx: tx,
-                });
-            });
-            if (created) returned.push(created);
-        }
-        return returned;
     }
 
     // ------------------------------------------------------------------ nội bộ

@@ -1,4 +1,6 @@
 import { DateTime } from "luxon";
+import type { Queryable } from "@/configs/postgres.config.js";
+import { withTransaction } from "@/core/repositories/base.repository.js";
 import { BaseService } from "@/core/services/base.service.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { Friendships, type FriendshipRow } from "@/modules/friends/entities/friendship.entity.js";
@@ -9,6 +11,7 @@ import {
     type FriendshipRepository,
 } from "@/modules/friends/repositories/friendship.repository.js";
 import { PlayerBlockRepo } from "@/modules/friends/repositories/player-block.repository.js";
+import { lockFriendPlayers } from "@/modules/friends/utils/friend-lock.util.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 
@@ -50,6 +53,12 @@ export interface FriendLists {
     sent: FriendRequestEntry[];
 }
 
+/**
+ * Luật nghiệp vụ bạn bè. Mọi thao tác "kiểm tra rồi ghi" (block, giới hạn số bạn / lời mời, trùng lặp) chạy trong MỘT transaction
+ * giữ khoá tư vấn của các người chơi liên quan (`lockFriendPlayers`) nên nhiều yêu cầu đồng thời xếp hàng thay vì đua nhau.
+ * Thao tác kết thúc một lời mời (accept / decline / cancel / remove) là câu lệnh có điều kiện theo trạng thái, nên chỉ một bên thắng
+ * và kết quả báo về luôn khớp với DB.
+ */
 export class FriendshipService extends BaseService<typeof Friendships> {
     constructor(private readonly friendRepo: FriendshipRepository = FriendshipRepo) {
         super(friendRepo);
@@ -89,109 +98,146 @@ export class FriendshipService extends BaseService<typeof Friendships> {
         toId: string;
     }): Promise<FriendRequestOutcome | FriendFailure> {
         const { fromId, toId } = params;
-        const config = this.config;
         if (fromId === toId) return { code: FriendErrorCode.FRIEND_SELF_TARGET };
-        if (await PlayerBlockRepo.findPair({ blockerId: toId, blockedId: fromId })) {
-            return { code: FriendErrorCode.FRIEND_TARGET_NOT_FOUND };
-        }
-        if (await PlayerBlockRepo.findPair({ blockerId: fromId, blockedId: toId })) {
-            return { code: FriendErrorCode.FRIEND_BLOCKED_BY_YOU };
-        }
 
-        const existing = await this.friendRepo.findBetween({ a: fromId, b: toId });
-        if (existing && this.isExpired(existing)) {
-            await this.friendRepo.deleteBetween({ a: fromId, b: toId });
-        } else if (existing) {
-            if (existing.status === FriendshipStatus.ACCEPTED) {
-                return { code: FriendErrorCode.FRIEND_ALREADY_FRIENDS };
+        return withTransaction(async (tx) => {
+            await lockFriendPlayers(tx, fromId, toId);
+
+            // Kiểm tra block trong khoá: block của người kia chạy trước thì thấy ở đây, chạy sau thì xoá dòng ta vừa tạo.
+            if (
+                await PlayerBlockRepo.findPair({ blockerId: toId, blockedId: fromId, dbOrTx: tx })
+            ) {
+                return { code: FriendErrorCode.FRIEND_TARGET_NOT_FOUND };
             }
-            if (existing.requesterId === fromId) {
-                return { code: FriendErrorCode.FRIEND_REQUEST_EXISTS };
+            if (
+                await PlayerBlockRepo.findPair({ blockerId: fromId, blockedId: toId, dbOrTx: tx })
+            ) {
+                return { code: FriendErrorCode.FRIEND_BLOCKED_BY_YOU };
             }
-            // Người kia đã mời mình: gửi lời mời chéo = đồng ý.
-            const accepted = await this.accept({ playerId: fromId, fromId: toId });
-            return isFriendFailure(accepted)
-                ? accepted
-                : { kind: "accepted", friendship: accepted.friendship };
-        }
 
-        const limit = await this.checkLimits(fromId, toId);
-        if (limit) return limit;
-        const [sentCount, receivedCount] = await Promise.all([
-            this.friendRepo.countPending({
-                playerId: fromId,
-                direction: "sent",
-                createdAfter: this.pendingCutoff(),
-            }),
-            this.friendRepo.countPending({
-                playerId: toId,
-                direction: "received",
-                createdAfter: this.pendingCutoff(),
-            }),
-        ]);
-        if (sentCount >= config.maxPendingSent) {
-            return {
-                code: FriendErrorCode.FRIEND_TOO_MANY_SENT,
-                data: { max: config.maxPendingSent },
-            };
-        }
-        if (receivedCount >= config.maxPendingReceived) {
-            return { code: FriendErrorCode.FRIEND_TARGET_TOO_MANY_PENDING };
-        }
+            const existing = await this.friendRepo.findBetween({ a: fromId, b: toId, dbOrTx: tx });
+            if (existing && this.isExpired(existing)) {
+                await this.friendRepo.deleteBetween({ a: fromId, b: toId, dbOrTx: tx });
+            } else if (existing) {
+                if (existing.status === FriendshipStatus.ACCEPTED) {
+                    return { code: FriendErrorCode.FRIEND_ALREADY_FRIENDS };
+                }
+                if (existing.requesterId === fromId) {
+                    return { code: FriendErrorCode.FRIEND_REQUEST_EXISTS };
+                }
+                // Người kia đã mời mình: gửi lời mời chéo = đồng ý.
+                const accepted = await this.acceptLocked(tx, { playerId: fromId, fromId: toId });
+                return isFriendFailure(accepted)
+                    ? accepted
+                    : { kind: "accepted" as const, friendship: accepted.friendship };
+            }
 
-        const friendship = await this.friendRepo.create({
-            data: { requesterId: fromId, addresseeId: toId, status: FriendshipStatus.PENDING },
+            const limit = await this.checkLimits(tx, fromId, toId);
+            if (limit) return limit;
+            const config = this.config;
+            const createdAfter = this.pendingCutoff();
+            const [sentCount, receivedCount] = await Promise.all([
+                this.friendRepo.countPending({
+                    playerId: fromId,
+                    direction: "sent",
+                    createdAfter,
+                    dbOrTx: tx,
+                }),
+                this.friendRepo.countPending({
+                    playerId: toId,
+                    direction: "received",
+                    createdAfter,
+                    dbOrTx: tx,
+                }),
+            ]);
+            if (sentCount >= config.maxPendingSent) {
+                return {
+                    code: FriendErrorCode.FRIEND_TOO_MANY_SENT,
+                    data: { max: config.maxPendingSent },
+                };
+            }
+            if (receivedCount >= config.maxPendingReceived) {
+                return { code: FriendErrorCode.FRIEND_TARGET_TOO_MANY_PENDING };
+            }
+
+            const friendship = await this.friendRepo.create({
+                data: { requesterId: fromId, addresseeId: toId, status: FriendshipStatus.PENDING },
+                dbOrTx: tx,
+            });
+            return { kind: "sent" as const, friendship };
         });
-        return { kind: "sent", friendship };
     }
 
     /** `playerId` chấp nhận lời mời `fromId` đã gửi. */
-    async accept(params: {
+    accept(params: {
         playerId: string;
         fromId: string;
     }): Promise<{ friendship: FriendshipRow } | FriendFailure> {
-        const { playerId, fromId } = params;
-        const row = await this.findIncomingRequest(playerId, fromId);
-        if (!row) return { code: FriendErrorCode.FRIEND_NO_REQUEST };
-        const limit = await this.checkLimits(playerId, fromId);
-        if (limit) return limit;
-        const friendship = await this.friendRepo.updateByIdOrFail({
-            id: row.id,
-            data: {
-                status: FriendshipStatus.ACCEPTED,
-                respondedAt: DateTime.now().toJSDate(),
-            },
+        return withTransaction(async (tx) => {
+            await lockFriendPlayers(tx, params.playerId, params.fromId);
+            return this.acceptLocked(tx, params);
         });
-        return { friendship };
+    }
+
+    /**
+     * Chấp nhận khi đã giữ khoá của hai người: chưa bị chặn, còn chỗ trong cả hai danh sách bạn, rồi mới chuyển trạng thái bằng
+     * câu lệnh có điều kiện (decline / cancel chạy đồng thời không cần khoá — ai thắng thì bên kia nhận `FRIEND_NO_REQUEST`).
+     */
+    private async acceptLocked(
+        tx: Queryable,
+        params: { playerId: string; fromId: string }
+    ): Promise<{ friendship: FriendshipRow } | FriendFailure> {
+        const { playerId, fromId } = params;
+        const request = await this.friendRepo.findBetween({ a: playerId, b: fromId, dbOrTx: tx });
+        if (
+            !request ||
+            request.status !== FriendshipStatus.PENDING ||
+            request.requesterId !== fromId ||
+            this.isExpired(request) ||
+            (await this.isBlocked(tx, playerId, fromId))
+        ) {
+            return { code: FriendErrorCode.FRIEND_NO_REQUEST };
+        }
+        const limit = await this.checkLimits(tx, playerId, fromId);
+        if (limit) return limit;
+
+        const friendship = await this.friendRepo.acceptPending({
+            requesterId: fromId,
+            addresseeId: playerId,
+            createdAfter: this.pendingCutoff(),
+            respondedAt: DateTime.now().toJSDate(),
+            dbOrTx: tx,
+        });
+        return friendship ? { friendship } : { code: FriendErrorCode.FRIEND_NO_REQUEST };
     }
 
     /** `playerId` từ chối lời mời `fromId` đã gửi. */
     async decline(params: { playerId: string; fromId: string }): Promise<null | FriendFailure> {
-        const { playerId, fromId } = params;
-        const row = await this.findIncomingRequest(playerId, fromId);
-        if (!row) return { code: FriendErrorCode.FRIEND_NO_REQUEST };
-        await this.friendRepo.deleteById({ id: row.id });
-        return null;
+        const deleted = await this.friendRepo.deletePending({
+            requesterId: params.fromId,
+            addresseeId: params.playerId,
+            createdAfter: this.pendingCutoff(),
+        });
+        return deleted ? null : { code: FriendErrorCode.FRIEND_NO_REQUEST };
     }
 
     /** `playerId` huỷ lời mời đã gửi cho `toId`. */
     async cancel(params: { playerId: string; toId: string }): Promise<null | FriendFailure> {
-        const { playerId, toId } = params;
-        const row = await this.findIncomingRequest(toId, playerId);
-        if (!row) return { code: FriendErrorCode.FRIEND_NO_REQUEST };
-        await this.friendRepo.deleteById({ id: row.id });
-        return null;
+        const deleted = await this.friendRepo.deletePending({
+            requesterId: params.playerId,
+            addresseeId: params.toId,
+            createdAfter: this.pendingCutoff(),
+        });
+        return deleted ? null : { code: FriendErrorCode.FRIEND_NO_REQUEST };
     }
 
     /** Xoá bạn (hai chiều). */
     async remove(params: { playerId: string; friendId: string }): Promise<null | FriendFailure> {
-        const { playerId, friendId } = params;
-        const row = await this.friendRepo.findBetween({ a: playerId, b: friendId });
-        if (row?.status !== FriendshipStatus.ACCEPTED) {
-            return { code: FriendErrorCode.FRIEND_NOT_FRIEND };
-        }
-        await this.friendRepo.deleteById({ id: row.id });
-        return null;
+        const deleted = await this.friendRepo.deleteAccepted({
+            a: params.playerId,
+            b: params.friendId,
+        });
+        return deleted ? null : { code: FriendErrorCode.FRIEND_NOT_FRIEND };
     }
 
     /** Bạn bè + lời mời đã nhận / đã gửi còn hạn của `playerId`, kèm tên hiện tại của người kia. */
@@ -224,26 +270,33 @@ export class FriendshipService extends BaseService<typeof Friendships> {
         return lists;
     }
 
-    /** Lời mời còn hạn từ `fromId` tới `playerId`. */
-    private async findIncomingRequest(playerId: string, fromId: string) {
-        const row = await this.friendRepo.findBetween({ a: playerId, b: fromId });
-        if (
-            !row ||
-            row.status !== FriendshipStatus.PENDING ||
-            row.requesterId !== fromId ||
-            this.isExpired(row)
-        ) {
-            return null;
-        }
-        return row;
+    /** Dọn lời mời hết hạn (theo lô); trả số dòng đã xoá. Gọi lặp tới khi trả ít hơn `limit`. */
+    async purgeExpiredRequests(limit = 500): Promise<number> {
+        const deleted = await this.friendRepo.deleteExpiredPending({
+            before: this.pendingCutoff(),
+            limit,
+        });
+        return deleted.length;
     }
 
-    /** Cả hai phía còn chỗ trong danh sách bạn. */
-    private async checkLimits(selfId: string, otherId: string): Promise<FriendFailure | null> {
+    private async isBlocked(tx: Queryable, a: string, b: string): Promise<boolean> {
+        const [aBlocksB, bBlocksA] = await Promise.all([
+            PlayerBlockRepo.findPair({ blockerId: a, blockedId: b, dbOrTx: tx }),
+            PlayerBlockRepo.findPair({ blockerId: b, blockedId: a, dbOrTx: tx }),
+        ]);
+        return Boolean(aBlocksB || bBlocksA);
+    }
+
+    /** Cả hai phía còn chỗ trong danh sách bạn (đếm trong transaction đang giữ khoá của hai người). */
+    private async checkLimits(
+        tx: Queryable,
+        selfId: string,
+        otherId: string
+    ): Promise<FriendFailure | null> {
         const max = this.config.maxFriends;
         const [selfCount, otherCount] = await Promise.all([
-            this.friendRepo.countFriends({ playerId: selfId }),
-            this.friendRepo.countFriends({ playerId: otherId }),
+            this.friendRepo.countFriends({ playerId: selfId, dbOrTx: tx }),
+            this.friendRepo.countFriends({ playerId: otherId, dbOrTx: tx }),
         ]);
         if (selfCount >= max) return { code: FriendErrorCode.FRIEND_LIST_FULL, data: { max } };
         if (otherCount >= max) return { code: FriendErrorCode.FRIEND_TARGET_LIST_FULL };

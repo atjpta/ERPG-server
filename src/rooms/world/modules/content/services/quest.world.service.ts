@@ -25,7 +25,7 @@ import {
 } from "@/rooms/world/modules/content/utils/quest-marker.world.util.js";
 import { questOf, questsOf } from "@/rooms/world/modules/content/utils/quest-resolve.world.util.js";
 import { playerDataWorldService } from "@/rooms/world/modules/players/services/player-data.world.service.js";
-import type { PlayerChangeOp } from "@/rooms/global/global.shared.js";
+import type { PlayerChangeOp } from "@/rooms/world/modules/players/types/player-change.world.type.js";
 import { Response } from "@/core/utils/response.util.js";
 import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
 import { rewardWorldService } from "@/rooms/world/modules/rewards/services/reward.world.service.js";
@@ -269,17 +269,12 @@ export class QuestWorldService {
                 requireFit: true,
             });
         }
-        // Đánh dấu xong trước khi chờ global để bấm trùng không nhận thưởng hai lần; thất bại thì trả về như cũ.
+        if (ops.length > 0) {
+            const applied = playerDataWorldService.apply(player, ops);
+            if (Response.isError(applied)) return applied.code;
+        }
         entry.status = "completed";
         entry.completedAt = DateTime.now().toISO()!;
-        if (ops.length > 0) {
-            const applied = await playerDataWorldService.apply(room, client.auth.playerId, ops);
-            if (Response.isError(applied)) {
-                entry.status = "active";
-                delete entry.completedAt;
-                return applied.code;
-            }
-        }
         for (const feature of quest.unlockFeatures)
             player.flags[unlockService.unlockFlagKey(feature)] = true;
         rewardWorldService.grant(room, client.auth.playerId, player, reward, false, false);
