@@ -2,6 +2,7 @@ import { worldRegistryGlobalService } from "@/rooms/global/modules/world-registr
 import { cacheService } from "@/core/cache/cache.service.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { Response } from "@/core/utils/response.util.js";
+import { playerBlockService } from "@/modules/friends/services/player-block.service.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import {
     PartyMemberGlobalCommand,
@@ -60,6 +61,10 @@ export class PartyInviteGlobalCommand extends PartyMemberGlobalCommand<typeof Pa
             name: this.body.playerName,
         });
         if (!target) return refuse(PartyErrorCode.PARTY_TARGET_NOT_FOUND);
+        // Chặn nhau (một trong hai chiều): coi như không tìm thấy, không lộ việc bị chặn.
+        if (await playerBlockService.isBlockedEitherWay(leaderId, target.id)) {
+            return refuse(PartyErrorCode.PARTY_TARGET_NOT_FOUND);
+        }
 
         // Đang ở party khác: từ chối. Chính là party này (tự mời mình / đã là thành viên) thì để `addInvite` báo mã riêng.
         const targetParty = room.state.parties.getPartyByPlayerId(target.id);

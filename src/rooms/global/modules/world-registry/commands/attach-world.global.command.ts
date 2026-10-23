@@ -2,6 +2,7 @@ import { worldRegistryGlobalService } from "@/rooms/global/modules/world-registr
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { Result } from "@/core/types/result.type.js";
 import { Response } from "@/core/utils/response.util.js";
+import { friendGlobalService } from "@/rooms/global/modules/friend/services/friend.global.service.js";
 import type { GlobalRoom } from "@/rooms/global/global.room.js";
 import type { PartySnapshot } from "@/rooms/global/modules/party/types/party-rpc.type.js";
 import { Command } from "@colyseus/command";
@@ -30,6 +31,7 @@ export class AttachWorldGlobalCommand extends Command<GlobalRoom, Payload> {
             { mapCode, instanceId },
             this.clock.currentTime
         );
+        friendGlobalService.announcePresence(room, playerId);
         const party = room.state.parties.getPartyByPlayerId(playerId);
         if (!party) {
             this.result = Response.success<PartySnapshot | null>(null);

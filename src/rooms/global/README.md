@@ -13,6 +13,7 @@ global/
   modules/
     chat/                   # 4 kênh world / general / party / whisper, lịch sử DB
     party/                  # schemas/ PartiesState + PartyState (luật, lời mời), loot
+    friend/                 # Bạn bè: lời mời, danh sách, presence, chặn (schemas/ FriendsState = id bạn của người đang online)
     dungeon-launch/         # LaunchDungeon (điều phối cả party vào dungeon), dungeon expectation
     player-data/            # PlayerData: state + lưu DB + RPC ApplyPlayerChanges / SyncPlayers (xem mục PlayerData)
     inventory/              # Túi đồ: equip / unequip / move / lock, InventoryGlobalCommand, inventoryGlobalService
@@ -76,6 +77,22 @@ Thêm kênh mới (vd `guild`):
 4. Thêm mục `<key>` vào `chat_config.channels` (seed `master-data.seed.ts`), thêm `ChatErrorCode` nếu có lỗi riêng, rồi `yarn unity:network`.
 
 Việc xoá tin cũ hơn `chat_config.retentionDays` chưa làm (job riêng, `chatMessageService.purgeOlderThan`).
+
+## Friend
+
+Dữ liệu nằm DB (`modules/friends`: bảng `friendships` — một dòng cho mỗi cặp, `pending` → `accepted` — và `player_blocks`, một chiều),
+chỉ trong cùng game server. Lời mời lưu DB nên người nhận offline vẫn thấy khi vào game (`friendList`); lời mời quá
+`friend_config.requestTtlDays` coi như không tồn tại. Giới hạn (số bạn, lời mời, người chặn, rate limit) ở master data `friend_config`.
+
+- Request: `friendList`, `friendRequest { playerName }`, `friendAccept` / `friendDecline` / `friendCancel` / `friendRemove` `{ playerId }`,
+  `friendBlock { playerName }`, `friendUnblock { playerId }`. Hai người mời chéo nhau thì thành bạn luôn.
+- Push: `friendChanged` (`added` / `removed` / `request_received`; `removed` dùng cho mọi trường hợp bỏ người đó khỏi danh sách),
+  `friendPresence` (bạn online / offline / đổi map). Từ chối lời mời không báo người gửi.
+- `GlobalState.friends` (`FriendsState`) giữ id bạn của người đang kết nối global (nạp lúc `onJoin`, dọn lúc `onLeave`) để đẩy presence mà
+  không query DB; `AttachWorld` cũng đẩy presence khi đổi map. Presence chỉ có online + `mapCode` (global không giữ level).
+- Chặn: xoá luôn quan hệ bạn bè / lời mời; người bị chặn (và người chặn) không mời party hay nhắn riêng được — server trả
+  "không tìm thấy" để không lộ việc bị chặn (`partyInvite`, `sendWhisper`, `friendRequest`).
+- Xoá tài khoản: hai bảng có FK `onDelete: cascade` tới `players` nên `purgeUserData` (xoá player) dọn luôn.
 
 ## Dungeon
 

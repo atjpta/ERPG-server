@@ -184,9 +184,9 @@ if (!(moved.x > startX)) throw new Error("Player did not move");
     const worn = auth.player.equipments[slot] as { itemId: string };
     expectOk(await request(global1, "unequipItem", { slot }), "unequipItem");
     await until(() => inventories.length > 0 && attributePushes.length > 0, "inventory push");
-    const unequipped = inventories.at(-1)!.data.inventories.equipment.find(
-        (entry) => entry.itemId === worn.itemId
-    );
+    const unequipped = inventories
+        .at(-1)!
+        .data.inventories.equipment.find((entry) => entry.itemId === worn.itemId);
     if (!unequipped) throw new Error("unequipped item must be in the bag");
     expectOk(await request(global1, "equipItem", { instanceId: unequipped.id }), "equipItem");
     console.info("✅ global unequip/equip → inventory + attributes pushed");
@@ -372,6 +372,87 @@ await sleep(500); // chờ world báo presence lên global
     if (general.success && general.data.messages.length > 0)
         throw new Error("general must not have history");
     console.info("✅ chat history + loadmore by uuid v7 cursor");
+}
+
+// ---- Friend (global): lời mời, chấp nhận, presence, xoá, chặn --------------------------------------
+{
+    interface FriendList {
+        friends: { playerId: string; name: string; online: boolean }[];
+        received: { playerId: string }[];
+        sent: { playerId: string }[];
+        blocked: { playerId: string }[];
+    }
+    // Tên đã đổi ở đầu file (PUT /user/players/me/name): lấy tên hiện tại.
+    const name1 = (await api("GET", "/user/players/me", undefined, auth.playerToken))
+        .name as string;
+    const changes2 = inbox<{ change: string; playerId: string }>(global2, "friendChanged");
+    const changes1 = inbox<{ change: string; playerId: string }>(global1, "friendChanged");
+
+    expectCode(
+        await request(global1, "friendRequest", { playerName: "NoSuchPlayerXyz" }),
+        "FRIEND_TARGET_NOT_FOUND",
+        "friend unknown target"
+    );
+    expectCode(
+        await request(global1, "friendRequest", { playerName: name1 }),
+        "FRIEND_SELF_TARGET",
+        "friend self"
+    );
+    const sent = expectOk(
+        await request<{ notice: string }>(global1, "friendRequest", { playerName: name2 }),
+        "friendRequest"
+    );
+    if (sent.notice !== "request_sent") throw new Error(`unexpected notice ${sent.notice}`);
+    expectCode(
+        await request(global1, "friendRequest", { playerName: name2 }),
+        "FRIEND_REQUEST_EXISTS",
+        "friend duplicate request"
+    );
+    await until(
+        () => changes2.some((m) => m.data.change === "request_received"),
+        "request_received push"
+    );
+    const list2 = expectOk(await request<FriendList>(global2, "friendList"), "friendList");
+    if (list2.received.length !== 1 || list2.received[0].playerId !== auth.player.id)
+        throw new Error("receiver must list the pending request");
+
+    expectOk(await request(global2, "friendAccept", { playerId: auth.player.id }), "friendAccept");
+    await until(() => changes1.some((m) => m.data.change === "added"), "added push");
+    const list1 = expectOk(await request<FriendList>(global1, "friendList"), "friendList 1");
+    if (!list1.friends.some((f) => f.playerId === created2.player.id && f.online))
+        throw new Error("friend must be listed online");
+    expectCode(
+        await request(global2, "friendAccept", { playerId: auth.player.id }),
+        "FRIEND_NO_REQUEST",
+        "friend accept twice"
+    );
+    console.info("✅ friend request → accept → both lists + push");
+
+    // Chặn: xoá bạn, người bị chặn không mời party / nhắn riêng / kết bạn lại được.
+    expectOk(await request(global1, "friendBlock", { playerName: name2 }), "friendBlock");
+    await until(() => changes2.some((m) => m.data.change === "removed"), "removed push");
+    expectCode(
+        await request(global2, "friendRequest", { playerName: name1 }),
+        "FRIEND_TARGET_NOT_FOUND",
+        "blocked player request"
+    );
+    expectCode(
+        await request(global2, "sendWhisper", { targetName: name1, content: "hi" }),
+        "CHAT_TARGET_NOT_FOUND",
+        "blocked player whisper"
+    );
+    expectCode(
+        await request(global1, "friendRequest", { playerName: name2 }),
+        "FRIEND_BLOCKED_BY_YOU",
+        "request to blocked player"
+    );
+    expectOk(await request(global1, "friendUnblock", { playerId: created2.player.id }), "unblock");
+    expectCode(
+        await request(global1, "friendUnblock", { playerId: created2.player.id }),
+        "FRIEND_NOT_BLOCKED",
+        "unblock twice"
+    );
+    console.info("✅ friend block removes the tie and denies request / whisper");
 }
 
 // ---- Party (global): tạo, mời, vào, rời, offline là rời ---------------------------------------------

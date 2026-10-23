@@ -69,6 +69,7 @@ export class AccountDeletionService {
 
         await UserSessionRepo.revokeAllByUserId({ userId, dbOrTx });
         await UserOauthAccountRepo.deleteByUserId({ userId, dbOrTx });
+        // Xoá player kéo theo friendships / player_blocks (FK onDelete cascade).
         await PlayerIdentityRepo.deleteByUserId({ userId, dbOrTx });
         return UserRepo.updateByIdOrFail({
             id: userId,

@@ -160,6 +160,17 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
         },
         note: "Chat: số ngày giữ lịch sử + mỗi kênh (bật/tắt, độ dài, rate limit, có lưu DB không, số tin lịch sử khi vào)",
     },
+    [MasterDataKey.FRIEND_CONFIG]: {
+        value: {
+            maxFriends: 100,
+            maxPendingSent: 30,
+            maxPendingReceived: 50,
+            maxBlocked: 50,
+            requestTtlDays: 7,
+            requestRateLimit: { limit: 20, windowSeconds: 60 },
+        },
+        note: "Bạn bè: số bạn / lời mời / người bị chặn tối đa, hạn lời mời (ngày), rate limit gửi lời mời",
+    },
 };
 
 export const MasterDataSeed = async () => {

@@ -17,6 +17,7 @@ import type { GlobalRoomOptions } from "@/rooms/global/types/global-room.type.js
 import { PruneRegistryGlobalCommand } from "@/rooms/global/modules/world-registry/commands/prune-registry.global.command.js";
 import { playerService } from "@/modules/player/services/player.service.js";
 import { PartyNotice } from "@/rooms/global/global.shared.js";
+import { friendGlobalService } from "@/rooms/global/modules/friend/services/friend.global.service.js";
 import { partyGlobalService } from "@/rooms/global/modules/party/services/party.global.service.js";
 
 const RECONNECT_SECONDS = 20;
@@ -75,6 +76,7 @@ export class GlobalRoom extends AuthenticatedPlayerRoom<{
         }
         await this.registerOnlinePlayer(client, { kickDuplicateLogins: false });
         await playerDataGlobalService.sendInitial(this, client);
+        await friendGlobalService.connect(this, playerId);
     }
 
     async onLeave(client: PlayerClient) {
@@ -83,6 +85,7 @@ export class GlobalRoom extends AuthenticatedPlayerRoom<{
         // Kết nối cũ bị thay thế không được xoá phiên của kết nối mới.
         if (this.sessionOf.get(playerId) !== client.sessionId) return;
         this.sessionOf.delete(playerId);
+        friendGlobalService.disconnect(this, playerId);
         // Kết nối global kết thúc (sau thời gian chờ reconnect) = rời party.
         const party = this.state.parties.getPartyByPlayerId(playerId);
         if (party) partyGlobalService.removeMember(this, party, playerId, PartyNotice.MEMBER_LEFT);

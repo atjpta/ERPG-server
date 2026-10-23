@@ -48,6 +48,25 @@ export enum GlobalClientMessage {
     PARTY_DISBAND = "partyDisband",
     /** `{ mode }` — chủ đổi cách chia item (`PartyLootMode`). */
     PARTY_SET_LOOT = "partySetLoot",
+    // ---- Friend ----
+
+    /** Danh sách bạn (kèm presence), lời mời đã nhận / đã gửi và người bị chặn; response là `FriendListMessage`. Gọi lúc vào game. */
+    FRIEND_LIST = "friendList",
+    /** `{ playerName }` — gửi lời mời kết bạn (người nhận offline vẫn nhận được khi vào game). Nếu họ đã mời bạn trước thì thành bạn luôn. Response là `FriendNoticeMessage` (`request_sent` hoặc `friend_added`). */
+    FRIEND_REQUEST = "friendRequest",
+    /** `{ playerId }` — chấp nhận lời mời của người đó. Response là `FriendNoticeMessage` (`friend_added`). */
+    FRIEND_ACCEPT = "friendAccept",
+    /** `{ playerId }` — từ chối lời mời của người đó (họ không được báo). */
+    FRIEND_DECLINE = "friendDecline",
+    /** `{ playerId }` — huỷ lời mời bạn đã gửi cho người đó. */
+    FRIEND_CANCEL = "friendCancel",
+    /** `{ playerId }` — xoá bạn (cả hai phía). */
+    FRIEND_REMOVE = "friendRemove",
+    /** `{ playerName }` — chặn người chơi: huỷ quan hệ bạn bè / lời mời với họ, họ không gửi được lời mời, mời party hay nhắn riêng cho bạn. Response là `BlockedEntryMessage`. */
+    FRIEND_BLOCK = "friendBlock",
+    /** `{ playerId }` — bỏ chặn. */
+    FRIEND_UNBLOCK = "friendUnblock",
+
     // ---- Player data (túi đồ, trang bị, điểm tiềm năng) ----
 
     /** `{ strength?, dexterity?, intelligence?, vitality?, luck? }` — số điểm tiềm năng muốn cộng. */
@@ -95,6 +114,13 @@ export enum GlobalMessage {
     PARTY_JOIN_REQUEST = "partyJoinRequest",
     /** Chủ bấm vào dungeon nhưng có người không đủ điều kiện — không ai vào. `Result` thất bại `DUNGEON_DENIED`, `error` là `PartyDungeonDeniedMessage`. */
     PARTY_DUNGEON_DENIED = "partyDungeonDenied",
+    // ---- Friend ----
+
+    /** Thay đổi danh sách bạn / lời mời (có bạn mới, bị xoá bạn, có lời mời). `data` là `FriendChangedMessage`. */
+    FRIEND_CHANGED = "friendChanged",
+    /** Một người bạn online / offline / đổi map. `data` là `FriendPresenceMessage`. */
+    FRIEND_PRESENCE = "friendPresence",
+
     // ---- Player data ----
 
     /** Điểm còn lại, attribute và stat sau khi tính lại — đẩy khi stat đổi mà không phải do `updateAttributes` (đổi trang bị, nâng cấp...). */

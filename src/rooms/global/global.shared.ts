@@ -6,6 +6,7 @@
 export * from "@/rooms/global/types/global-message.type.js";
 export * from "@/rooms/global/modules/chat/interfaces/chat.global.message.js";
 export * from "@/rooms/global/modules/party/interfaces/party.global.message.js";
+export * from "@/rooms/global/modules/friend/interfaces/friend.global.message.js";
 export * from "@/rooms/global/modules/dungeon-launch/interfaces/dungeon.global.message.js";
 export * from "@/rooms/global/modules/player-data/interfaces/player-data.global.message.js";
 export * from "@/rooms/global/modules/inventory/interfaces/inventory.global.message.js";
@@ -16,6 +17,8 @@ export { EquipmentUpgradeAction } from "@/rooms/global/modules/equipment-upgrade
 export { inventoryGlobalService } from "@/rooms/global/modules/inventory/services/inventory.global.service.js";
 export { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
 export { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+export { FriendNotice } from "@/rooms/global/modules/friend/enums/friend-notice.enum.js";
+export { FriendChange } from "@/rooms/global/modules/friend/enums/friend-change.enum.js";
 export { ChatErrorCode } from "@/rooms/global/modules/chat/enums/chat-error-code.enum.js";
 export type { GlobalRoomOptions } from "@/rooms/global/types/global-room.type.js";
 export { PartyLootMode } from "@/rooms/global/modules/party/types/party-member.type.js";
