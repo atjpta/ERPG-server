@@ -1,4 +1,4 @@
-import type { Result } from "@/core/types/result.type.js";
+import type { Response } from "@/core/response/response.js";
 
-/** Kết quả một thao tác túi đồ: dữ liệu hoặc `ErrorCode` lỗi. */
-export type InventoryResult<T = null> = Result<T>;
+/** Kết quả một thao tác túi đồ: dữ liệu hoặc mã lỗi nghiệp vụ. */
+export type InventoryResult<T = null> = Response<T>;

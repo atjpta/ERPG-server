@@ -38,6 +38,8 @@ export const PlayerConfigSchema = z.object({
     /** Độ dài tên nhân vật (tính theo ký tự). */
     nameMinLength: z.number().int().min(1).default(3),
     nameMaxLength: z.number().int().min(1).max(32).default(16),
+    /** Chu kỳ tự lưu các nhóm dữ liệu không quan trọng của player đang online (giây). */
+    autosaveSeconds: z.number().int().min(5).default(30),
 });
 
 /**

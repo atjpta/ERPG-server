@@ -1,4 +1,4 @@
-import { registerErrorCodes } from "@/core/utils/error-code.util.js";
+import { registerErrorCodes } from "@/core/response/error-code.js";
 
 /** Mã lỗi nhân vật, class và điểm tiềm năng. */
 export enum PlayerErrorCode {
@@ -34,4 +34,9 @@ export enum PlayerErrorCode {
     PLAYER_NOT_HERE = "PLAYER_NOT_HERE",
 }
 
-registerErrorCodes(PlayerErrorCode);
+registerErrorCodes(PlayerErrorCode, {
+    PLAYER_NAME_EXISTS: 409,
+    PLAYER_NOT_FOUND: 404,
+    PLAYER_BANNED: 403,
+    PLAYER_LIMIT_REACHED: 409,
+});

@@ -1,3 +1,4 @@
+import type { ItemRewardMessage } from "@/modules/rewards/interfaces/reward.message.js";
 import type { ItemRarity, ItemSource, ItemType } from "@/modules/items/enums/item.enum.js";
 import type {
     EquipmentInstanceMessage,
@@ -46,6 +47,17 @@ export interface InventoryMessage {
     equipments: EquipmentsMessage;
 }
 
+/**
+ * Chi tiết thay đổi của túi so với lần gửi trước (`inventory` lúc vào room hoặc `inventoryChanged` trước đó). Client áp dụng:
+ * ô trong `upserted` thay / thêm theo `id`, `removed` xoá theo `id`, `equipments` đặt lại các slot có mặt, `emptiedSlots` bỏ đồ ở slot.
+ */
+export interface InventoryChangedMessage {
+    upserted: InventoryEntryMessage[];
+    removed: string[];
+    equipments: EquipmentsMessage;
+    emptiedSlots: string[];
+}
+
 export interface InventoryNearlyFullMessage {
     type: ItemType;
     freeSlots: number;
@@ -56,13 +68,4 @@ export interface InventoryFullMessage {
     lostItems: ItemRewardMessage[];
 }
 
-/** Một món trong thưởng / item bị mất khi túi đầy. */
-export interface ItemRewardMessage {
-    itemId: string;
-    /** Catalog display data so newly dropped items can be shown before the inventory update. */
-    code?: string;
-    rarity?: ItemRarity;
-    quantity: number;
-    /** Trang bị: chỉ số đã roll (quantity = 1). */
-    metadata?: EquipmentInstanceMessage;
-}
+export type { ItemRewardMessage } from "@/modules/rewards/interfaces/reward.message.js";

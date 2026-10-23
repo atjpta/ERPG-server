@@ -1,9 +1,9 @@
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import type { CommandGuard } from "@/core/rooms/player.command.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerGlobalCommand } from "@/rooms/global/player.global.command.js";
-import type { PartyState } from "@/rooms/global/modules/party/schemas/party.global.state.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import type { PartyState } from "@/modules/party/state/party.state.js";
+import { PartyErrorCode } from "@/modules/party/enums/party-error-code.enum.js";
 import type { z } from "zod";
 
 export interface PartyCommandPayload {
@@ -24,7 +24,7 @@ export abstract class PartyMemberGlobalCommand<
 
     protected override readonly guards: readonly CommandGuard<this>[] = [
         (command) => {
-            const party = command.room.state.parties.getPartyByPlayerId(command.player.playerId);
+            const party = command.room.parties.getPartyByPlayerId(command.player.playerId);
             if (!party) return Response.error(PartyErrorCode.PARTY_NOT_MEMBER);
             command.party = party;
             if (command.leaderOnly && !party.isLeader(command.player.playerId)) {

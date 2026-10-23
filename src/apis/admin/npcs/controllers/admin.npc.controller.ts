@@ -1,8 +1,12 @@
 import { createEndpoint } from "colyseus";
-import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/response/http-response.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
-import { adminNpcService } from "@/apis/admin/npcs/services/admin.npc.service.js";
+import { ilike } from "drizzle-orm";
+import { NpcRepo } from "@/modules/npcs/repositories/npc.repository.js";
+import { Npcs } from "@/modules/npcs/entities/npc.entity.js";
+import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
+import { npcService } from "@/modules/npcs/services/npc.service.js";
 import {
     AdminCreateNpcSchema,
     AdminListNpcsQuerySchema,
@@ -18,23 +22,31 @@ export const adminNpcController = {
         { method: "GET", query: AdminListNpcsQuerySchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const result = await adminNpcService.list(ctx.query);
-                return HttpResponse.ok({ data: result });
+                const { search, ...pagination } = ctx.query;
+                const result = await NpcRepo.paginate({
+                    pagination,
+                    where: search ? ilike(Npcs.code, `%${search}%`) : undefined,
+                });
+                return HttpResponse.success(result);
             })
     ),
 
     adminNpcShow: adminEndpoint(`${prefix}/:id`, { method: "GET", params: IdParamSchema }, (ctx) =>
         RouterContainer(ctx, async () => {
-            const npc = await adminNpcService.findById({ id: ctx.params.id });
+            const npc = await NpcRepo.findById({ id: ctx.params.id });
             if (!npc) return HttpResponse.notFound(ctx);
-            return HttpResponse.ok({ data: npc });
+            return HttpResponse.success(npc);
         })
     ),
 
     adminNpcCreate: adminEndpoint(prefix, { method: "POST", body: AdminCreateNpcSchema }, (ctx) =>
         RouterContainer(ctx, async () => {
-            const npc = await adminNpcService.createNpc(ctx.body);
-            return HttpResponse.created(ctx, { data: npc });
+            if (await NpcRepo.findByCode({ code: ctx.body.code })) {
+                return HttpResponse.conflict(ctx, NpcErrorCode.NPC_CODE_EXISTS);
+            }
+            const npc = await NpcRepo.create({ data: ctx.body });
+            await npcService.setCacheData();
+            return HttpResponse.created(ctx, npc);
         })
     ),
 
@@ -43,9 +55,10 @@ export const adminNpcController = {
         { method: "PUT", params: IdParamSchema, body: AdminUpdateNpcSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const npc = await adminNpcService.updateNpc(ctx.params.id, ctx.body);
+                const npc = await NpcRepo.updateById({ id: ctx.params.id, data: ctx.body });
+                if (npc) await npcService.setCacheData();
                 if (!npc) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ data: npc });
+                return HttpResponse.success(npc);
             })
     ),
 };

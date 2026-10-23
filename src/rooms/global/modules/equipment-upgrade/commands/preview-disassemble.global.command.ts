@@ -2,13 +2,12 @@ import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { equipmentUpgradeService } from "@/modules/equipment/services/equipment-upgrade.service.js";
 import { DisassembleItemsSchema } from "@/rooms/global/modules/inventory/validators/inventory.global.validator.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import type { DisassemblePreviewMessage } from "@/rooms/global/modules/equipment-upgrade/interfaces/equipment-upgrade.global.message.js";
 import { PlayerGlobalCommand } from "@/rooms/global/player.global.command.js";
-import { playerDataGlobalService } from "@/rooms/global/modules/player-data/services/player-data.global.service.js";
 
 interface InventoryCommandPayload {
     client: PlayerClient;
@@ -34,16 +33,14 @@ export class PreviewDisassembleGlobalCommand extends PlayerGlobalCommand<
 
     protected override readonly validateSchema = DisassembleItemsSchema;
 
-    async execute({ client }: InventoryCommandPayload) {
+    execute(_payload: InventoryCommandPayload) {
         const { instanceIds } = this.body;
-        const result = await playerDataGlobalService.read(
-            this.room,
-            client.auth.playerId,
-            {},
-            (state) => equipmentUpgradeService.simulateDisassemble(state.inventories, instanceIds)
+        const result = equipmentUpgradeService.simulateDisassemble(
+            this.player.inventories,
+            instanceIds
         );
         if (Response.isError(result)) {
-            this.result = Response.error(result.code, undefined, { instanceIds });
+            this.result = Response.error(result.errorCode, { instanceIds });
             return;
         }
         this.result = Response.success<DisassemblePreviewMessage>({

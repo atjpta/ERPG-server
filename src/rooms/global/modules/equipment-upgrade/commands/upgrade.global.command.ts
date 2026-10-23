@@ -5,7 +5,7 @@ import type { z } from "zod";
 
 @SdkMessage({
     response: "EquipmentUpgradeMessage",
-    note: "Response mang kết quả cường hoá / tinh hoá / phân rã (thành công hay thất bại theo tỉ lệ); túi mới đến qua `inventory`.",
+    note: "Response mang kết quả cường hoá / tinh hoá / phân rã (thành công hay thất bại theo tỉ lệ); chi tiết thay đổi của túi đến qua `inventoryChanged`.",
 })
 export abstract class UpgradeGlobalCommand<
     TSchema extends z.ZodType,

@@ -1,16 +1,13 @@
 import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { QuestErrorCode } from "@/modules/quests/enums/quest-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { QuestCategory } from "@/modules/quests/enums/quest.enum.js";
-import {
-    QuestError,
-    questWorldService,
-} from "@/rooms/world/modules/content/services/quest.world.service.js";
-import { questOf } from "@/rooms/world/modules/content/utils/quest-resolve.world.util.js";
+import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
+import { questOf } from "@/modules/quests/utils/quest-resolve.util.js";
 import { QuestAbandonSchema } from "@/rooms/world/modules/content/validators/content.world.validator.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { PlayerWorldCommand } from "@/rooms/world/player.world.command.js";
@@ -34,8 +31,7 @@ export class QuestAbandonWorldCommand extends PlayerWorldCommand<
     protected override readonly validateSchema = QuestAbandonSchema;
 
     execute({ client }: ContentPayload) {
-        const error = this.abandon(this.room, client, this.player, this.body.questCode);
-        if (error) this.result = Response.error(error);
+        this.result = this.abandon(this.room, client, this.player, this.body.questCode);
     }
 
     private abandon(
@@ -43,15 +39,17 @@ export class QuestAbandonWorldCommand extends PlayerWorldCommand<
         client: PlayerClient,
         player: PlayerWorldState,
         questCode: string
-    ): QuestError {
+    ): Response {
         const quest = questOf(player, questCode);
-        const entry = player.quests[questCode];
-        if (!quest || entry?.status !== "active") return QuestErrorCode.QUEST_NOT_ACTIVE;
-        if (quest.category === QuestCategory.DAILY) return QuestErrorCode.QUEST_CANNOT_ABANDON;
-        delete player.quests[questCode];
+        const entry = player.playerState.questLog.entryOf(questCode);
+        if (!quest || entry?.status !== "active")
+            return Response.error(QuestErrorCode.QUEST_NOT_ACTIVE);
+        if (quest.category === QuestCategory.DAILY)
+            return Response.error(QuestErrorCode.QUEST_CANNOT_ABANDON);
+        player.playerState.questLog.drop(questCode);
         questWorldService.sendUpdate(client, player, quest);
         questWorldService.sendMarkers(room, client, player);
         questWorldService.sendTargets(client, player);
-        return undefined;
+        return Response.success();
     }
 }

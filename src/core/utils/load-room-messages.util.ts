@@ -1,5 +1,6 @@
-import type { Result } from "@/core/types/result.type.js";
-import { Response } from "@/core/utils/response.util.js";
+import type { Result } from "@/core/response/result.type.js";
+import { Response } from "@/core/response/response.js";
+import { RoomResponse } from "@/core/response/room-response.js";
 import { Command, type Dispatcher } from "@colyseus/command";
 import type { Client, Room } from "colyseus";
 import { readdir } from "node:fs/promises";
@@ -55,7 +56,7 @@ type MessageHandler = (
  * Load a declarative messages map; Colyseus binds each handler to its room instance.
  *
  * Handler trả `Result`: client gọi bằng Request/Response (`room.Request<T>`) nhận đúng envelope này; client
- * gửi message thường (`room.Send`) thì Colyseus bỏ qua giá trị trả về. Command không gán `result` thì trả `ok()`.
+ * gửi message thường (`room.Send`) thì Colyseus bỏ qua giá trị trả về. Command gán `result` (`Response`) và `RoomResponse.reply` đổi sang envelope; không gán thì trả thành công rỗng.
  */
 export async function loadRoomMessages(directory: URL): Promise<Record<string, MessageHandler>> {
     const key = directory.href;
@@ -80,9 +81,9 @@ export async function loadRoomMessages(directory: URL): Promise<Record<string, M
                 try {
                     await this.dispatcher.dispatch(command, { client, payload });
                 } catch (error) {
-                    return Response.fromError(error);
+                    return RoomResponse.reply(Response.fromThrown(error));
                 }
-                return (command as { result?: Result<unknown> }).result ?? Response.success();
+                return RoomResponse.reply((command as { result?: Response<unknown> }).result);
             },
         ])
     );

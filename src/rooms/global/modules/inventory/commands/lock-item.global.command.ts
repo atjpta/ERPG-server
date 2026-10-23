@@ -1,9 +1,9 @@
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { InventoryGlobalCommand } from "@/rooms/global/modules/inventory/commands/inventory.global.command.js";
 import {} from "@/rooms/global/modules/inventory/services/inventory.global.service.js";
 import { LockItemSchema } from "@/rooms/global/modules/inventory/validators/inventory.global.validator.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
+import type { PlayerState } from "@/modules/player/state/player.state.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import type { z } from "zod";
 
@@ -14,12 +14,12 @@ export class LockItemGlobalCommand extends InventoryGlobalCommand<
     static readonly message = GlobalClientMessage.LOCK_ITEM;
 
     protected readonly validateSchema = LockItemSchema;
-    protected run(player: PlayerDataState, { instanceId, locked }: z.infer<typeof LockItemSchema>) {
+    protected run(player: PlayerState, { instanceId, locked }: z.infer<typeof LockItemSchema>) {
         const entry =
             Object.values(player.inventories)
                 .flat()
                 .find((candidate) => candidate.id === instanceId) ??
-            Object.values(player.equipments).find((candidate) => candidate?.id === instanceId);
+            Object.values(player.data.equipments).find((candidate) => candidate?.id === instanceId);
         if (!entry) return Response.error(ItemErrorCode.ITEM_NOT_FOUND);
         entry.isLocked = locked;
         return Response.success(undefined);

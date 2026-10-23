@@ -1,10 +1,9 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerCommandPayload } from "@/core/rooms/player.command.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { FriendErrorCode } from "@/modules/friends/enums/friend-error-code.enum.js";
-import { isFriendFailure } from "@/modules/friends/services/friendship.service.js";
 import { playerBlockService } from "@/modules/friends/services/player-block.service.js";
 import type { BlockedEntryMessage } from "@/rooms/global/modules/friend/interfaces/friend.global.message.js";
 import { friendGlobalService } from "@/rooms/global/modules/friend/services/friend.global.service.js";
@@ -42,11 +41,11 @@ export class FriendBlockGlobalCommand extends PlayerGlobalCommand<
             return;
         }
         const outcome = await playerBlockService.block({ blockerId: selfId, blockedId: target.id });
-        if (isFriendFailure(outcome)) {
-            this.result = Response.error(outcome.code, undefined, outcome.data ?? null);
+        if (Response.isError(outcome)) {
+            this.result = outcome;
             return;
         }
-        if (outcome.removedFriendship) {
+        if (outcome.data.removedFriendship) {
             friendGlobalService.unlinkAndNotify(
                 room,
                 { playerId: selfId, name: this.player.name },

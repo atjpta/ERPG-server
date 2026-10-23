@@ -1,4 +1,4 @@
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { ChatChannelKey } from "@/modules/chat/enums/chat-channel-key.enum.js";
 import type { ChatChannel } from "@/rooms/global/modules/chat/channels/chat-channel.type.js";
 

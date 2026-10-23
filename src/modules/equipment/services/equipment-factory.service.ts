@@ -3,10 +3,8 @@ import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
 import { equipmentCodeService } from "@/modules/equipment/services/equipment-code.service.js";
-import {
-    type Rng,
-    equipmentRollService,
-} from "@/modules/equipment/services/equipment-roll.service.js";
+import { equipmentRollService } from "@/modules/equipment/services/equipment-roll.service.js";
+import type { Rng } from "@/modules/equipment/types/equipment-roll.type.js";
 import type { Item } from "@/modules/items/entities/item.entity.js";
 import {
     EQUIPMENT_GROUP_BY_TYPE,

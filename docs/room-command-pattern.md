@@ -7,17 +7,17 @@ Mỗi class command (kể cả abstract) nằm trong một file `*.command.ts` r
 
 Mọi message client → server là **Request/Response** của Colyseus 0.18 (Unity SDK >= 0.18.3:
 `await room.Request<T>(message, payload)`; JS SDK: `room.request(message, payload)`). Handler do
-`loadRoomMessages()` sinh ra dispatch command rồi **trả `command.result`** — envelope `Result` chuẩn
+`loadRoomMessages()` sinh ra dispatch command rồi **trả `command.result`** — `Response`, `RoomResponse.reply` đổi thành envelope `Result` chuẩn
 (xem [định dạng trả về](response-format.md)).
 
-- Thành công: `this.result = Response.success(data)` (không có data: `Response.success()`). Lỗi nghiệp vụ: `this.result = Response.error(<Domain>ErrorCode.X)`.
+- Thành công: `this.result = Response.success(data)` (không có data: `Response.success()`). Lỗi nghiệp vụ: `this.result = Response.error(<Domain>ErrorCode.X)`; service trả `Response` thì gán thẳng `this.result = await svc.x()`.
 - Command không gán `result` thì client nhận `Response.success()` rỗng.
-- Không dùng `client.sendSuccess` để trả lời, không dùng `ctx.reject` hay `validate()` của Colyseus cho lỗi nghiệp vụ
+- Không dùng `RoomResponse.send` để trả lời, không dùng `ctx.reject` hay `validate()` của Colyseus cho lỗi nghiệp vụ
   (payload sai làm Colyseus đóng kết nối, trong khi ta muốn `INVALID_INPUT`).
-- Exception ném ra trong `execute()` được đổi thành `Result` bằng `Response.fromError` (`core/utils/response.util.ts`):
-  `serviceError(...)` → `Response.error(code)`, `PayloadRejected` → `INVALID_INPUT`, lỗi lạ → log + `INTERNAL_ERROR`.
+- Exception ném ra trong `execute()` được đổi thành `Response` bằng `Response.fromThrown` (`core/response/response.ts`):
+  `Response.abort(...)` → `Response.error(code)`, `ZodError` → `INVALID_INPUT`, lỗi lạ → log + `INTERNAL_ERROR`.
 - Message không có command → Colyseus trả lỗi giao thức `no_handler` (không phải `Result`; Unity: `RequestError`).
-- Chỉ còn thông báo server chủ động (không có request đi kèm) mới dùng `client.sendSuccess` / `broadcastSuccess` với
+- Chỉ còn thông báo server chủ động (không có request đi kèm) mới dùng `RoomResponse.send` / `RoomResponse.broadcast` (`core/response/room-response.ts`) với
   enum `WorldMessage` / `GlobalMessage`. Command có thể vừa trả `result` vừa đẩy thêm push (khai ở `@SdkMessage.replies`).
 - Input di chuyển dùng `defineInput` (Netcode), không đi qua cơ chế này.
 
@@ -25,7 +25,7 @@ Mọi message client → server là **Request/Response** của Colyseus 0.18 (Un
 
 Command của một player trong room kế thừa `PlayerCommand` (`core/rooms/player.command.ts`), thường qua base mỏng của
 từng room: `PlayerWorldCommand` (`this.player` là `PlayerWorldState`) hoặc `PlayerGlobalCommand` (`this.player` là
-`PlayerDataState`). Room mới chỉ cần định nghĩa `findPlayer()`. Thứ tự chạy:
+`PlayerState`). Room mới chỉ cần định nghĩa `findPlayer()`. Thứ tự chạy:
 
 1. `findPlayer()` — player không còn trong room: `result = Response.error(NOT_FOUND)`.
 2. Nếu command khai `validateSchema` (Zod): parse payload vào `this.body`; sai thì `result = Response.error(INVALID_INPUT)`
@@ -33,7 +33,7 @@ từng room: `PlayerWorldCommand` (`this.player` là `PlayerWorldState`) hoặc 
 3. `validate()` của command: cổng đồng bộ cho phần còn lại (trạng thái, quyền, tìm đối tượng). Từ chối thì tự gán
    `this.result = Response.error(...)` rồi `return false` (khi `false`, `execute()` không chạy và dispatcher không gửi gì).
 4. `guards`: `protected readonly guards: readonly CommandGuard<this>[]` chạy tuần tự trước `execute()`; guard trả
-   `Result` thất bại (hoặc ném `serviceError`) để từ chối — dùng cho rate limit (`assertRateLimit`), yêu cầu trạng thái,
+   `Result` thất bại (hoặc ném `Response.abort`) để từ chối — dùng cho rate limit (`assertRateLimit`), yêu cầu trạng thái,
    quyền chủ party...
 5. `execute()`: hành động chính, mutation, các kiểm tra cần `await`; gán `this.result`. Method private có thể
    chia nhỏ hành động trong cùng command.
@@ -60,26 +60,25 @@ tra cứu/trừ tiền/cập nhật trang bị, lưu DB, truy vấn RPC. Không 
   con. **Không trả DTO nghiệp vụ từ `execute()`** — nó bị hiểu là command con. Dữ liệu trả cho client đi qua `this.result`.
 - `dispatch()` không trả kết quả nghiệp vụ và không tuần tự hoá các lời gọi top-level riêng rẽ. Kiểm tra lại giả định
   có thể đổi sau `await`.
-- RPC giữa room (`matchMaker.remoteRoomCall`) cũng chạy trong command: command RPC khai field `result`, gán trong
-  `execute()`; nơi gọi dùng `callRoom(roomId, XCommand, payload, { timeoutMs? })` (mặc định 3 giây); room đích liệt kê command được phép
-  trong `createRpcRunner(this, [...])` (đọc kết quả bằng `dispatchForResult`). Command RPC không có `static message`
-  nên `loadRoomMessages()` bỏ qua.
+- Hai room chạy chung process nên không có command RPC: room gọi nhau qua dữ liệu dùng chung (`PlayerState` + sự kiện của nó)
+  hoặc `rooms/bus` (`callRoom`) (xem [tương tác giữa các room](room-interactions.md)).
 
 ## Thư mục trong một module room
 
 Chia theo **mục đích** của file, không theo từ khoá `type` / `interface` của TypeScript (`types/` vẫn chứa `interface`).
 
-| Thư mục       | Chứa gì                                                                                                         | Ví dụ                            |
-| ------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| `commands/`   | Một command một file `*.<feature>.<room>.command.ts`                                                            | `party-invite.global.command.ts` |
-| `services/`   | Class xử lý dùng lại, kèm singleton (`partyGlobalService`); gọi room khác, gửi message                          | `party.global.service.ts`        |
-| `schemas/`    | Class Colyseus Schema: state (`*.state.ts`, kể cả state chỉ ở server không `@type` như `PartyState`)            | `party.global.state.ts`          |
-| `interfaces/` | **DTO gửi cho client**: interface tên kết thúc `Message`, file `*.message.ts` (generator SDK tự tìm để sinh C#) | `party.global.message.ts`        |
-| `enums/`      | Mọi enum của module, kể cả enum gửi client (`PartyNotice`) và mã lỗi                                            | `party-error-code.enum.ts`       |
-| `types/`      | Kiểu **chỉ dùng trong server**: payload RPC giữa room, cấu trúc nội bộ, options                                 | `party-rpc.type.ts`              |
-| `validators/` | Zod schema kiểm tra payload client gửi lên                                                                      | `member.party.validator.ts`      |
+| Thư mục       | Chứa gì                                                                                                                                            | Ví dụ                                        |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `commands/`   | Một command một file `*.<feature>.<room>.command.ts`                                                                                               | `party-invite.global.command.ts`             |
+| `services/`   | Class xử lý dùng lại, kèm singleton (`partyGlobalService`); gọi room khác, gửi message                                                             | `party.global.service.ts`                    |
+| `managers/`   | Class giữ object dữ liệu chạy trong bộ nhớ (`PlayerStateManager`, `PartyStateManager`...): attach / detach, tra cứu, lưu; không gửi message client | `player-state.manager.ts`                    |
+| `schemas/`    | (Không còn) Colyseus Schema / state nay nằm ở `src/modules/<feature>/state/` (`*.state.ts`)                                                        | `modules/player/state/player-world.state.ts` |
+| `interfaces/` | **DTO gửi cho client**: interface tên kết thúc `Message`, file `*.message.ts` (generator SDK tự tìm để sinh C#)                                    | `party.global.message.ts`                    |
+| `enums/`      | Mọi enum của module, kể cả enum gửi client (`PartyNotice`) và mã lỗi                                                                               | `party-error-code.enum.ts`                   |
+| `types/`      | Kiểu **chỉ dùng trong server**: payload RPC giữa room, cấu trúc nội bộ, options                                                                    | `party-rpc.type.ts`                          |
+| `validators/` | Zod schema kiểm tra payload client gửi lên                                                                                                         | `member.party.validator.ts`                  |
 
-Chọn nhanh: gửi xuống client thì `interfaces/` (enum thì `enums/`); là enum thì `enums/`; là Schema / state thì `schemas/`;
+Chọn nhanh: gửi xuống client thì `interfaces/` (enum thì `enums/`); là enum thì `enums/`; là Schema / state thì `src/modules/<feature>/state/`;
 còn lại là kiểu nội bộ server thì `types/`. State Schema chỉ đổi dữ liệu và trả kết quả, việc gửi message hay gọi room khác
 nằm ở `services/` hoặc command. Hai file enum message của room (`global/types/global-message.type.ts`,
 `world/types/world-message.type.ts`) ở đúng đường dẫn đó vì generator đọc cứng.
@@ -95,7 +94,7 @@ Ví dụ thêm tính năng `friend` vào `global` (với `world` làm tương t�
    khai DTO `...Message` (interface có tên kết thúc `Message`) cho `data` trong `modules/friend/interfaces/friend.global.message.ts`.
 3. **Validator** Zod của payload (`validators/*.validator.ts`), export có tên: SDK đặt tên class C# theo tên export.
 4. **Mã lỗi**: thêm vào enum domain (`enums/friend-error-code.enum.ts`, value = key, có JSDoc từng member) và gọi
-   `registerErrorCodes(FriendErrorCode)`; export qua `global.shared.ts` nếu room khác cần.
+   `registerErrorCodes(FriendErrorCode)`; mã room khác cũng cần thì đặt ở module hoặc phần dữ liệu / kiểu của `src/rooms/global/modules/*`.
 5. **Command**: kế thừa `PlayerGlobalCommand<Payload, typeof Schema>`, khai `static readonly message` và
    `validateSchema`, xử lý trong `execute()` và gán `this.result`:
 
@@ -123,13 +122,11 @@ Ví dụ thêm tính năng `friend` vào `global` (với `world` làm tương t�
     ```
 
 6. **Không cần sửa `global.room.ts`**: `loadRoomMessages` tự tìm command mới (restart process; `yarn dev` tự restart).
-   Chỉ khi module cần RPC từ room khác mới thêm command RPC vào `createRpcRunner`.
 7. **State/dữ liệu người chơi** mới trong DB: thêm bảng ở `src/modules/<module>` (entity + repository + service) và cập
    nhật `AccountDeletionService.purgeUserData` nếu là dữ liệu người chơi.
 8. `yarn typecheck && yarn lint`, rồi `yarn unity:network` để sinh lại `GlobalRoomClient` (hàm
    `await FriendAdd(...)` trả `Result<FriendListMessage>`, và `OnFriendUpdated(...)` cho push), cuối cùng mở rộng
    `yarn smoke` nếu luồng quan trọng.
 
-Quy tắc ranh giới: world không import implementation của global (chỉ `global.shared.ts` và command RPC), global chỉ
-import `world.shared.ts` và command RPC của world. Quy trình đi qua nhiều room: command của room khởi xướng gọi
-`callRoom`, hoặc đặt thành module riêng của `global` (như `dungeon-launch`).
+Quy tắc ranh giới: world và global không import nhau; thứ cả hai cần nằm ở `src/modules`; world được import dữ liệu / dịch vụ / kiểu của `rooms/global/modules/*` (không import command của global).
+Quy trình đi qua nhiều room đặt thành module riêng của `global` (như `dungeon-launch`).

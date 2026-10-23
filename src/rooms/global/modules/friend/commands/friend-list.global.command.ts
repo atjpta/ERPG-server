@@ -1,6 +1,6 @@
 import type { PlayerCommandPayload } from "@/core/rooms/player.command.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { friendshipService } from "@/modules/friends/services/friendship.service.js";
 import { playerBlockService } from "@/modules/friends/services/player-block.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";

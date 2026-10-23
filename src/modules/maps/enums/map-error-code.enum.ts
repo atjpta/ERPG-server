@@ -1,4 +1,4 @@
-import { registerErrorCodes } from "@/core/utils/error-code.util.js";
+import { registerErrorCodes } from "@/core/response/error-code.js";
 
 /** Mã lỗi map, teleport và dungeon. */
 export enum MapErrorCode {
@@ -34,4 +34,4 @@ export enum MapErrorCode {
     DUNGEON_NOT_TOGETHER = "DUNGEON_NOT_TOGETHER",
 }
 
-registerErrorCodes(MapErrorCode);
+registerErrorCodes(MapErrorCode, { MAP_NOT_FOUND: 404, MAP_CODE_EXISTS: 409 });

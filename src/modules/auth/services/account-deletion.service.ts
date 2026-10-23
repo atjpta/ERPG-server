@@ -1,4 +1,8 @@
 import { DateTime } from "luxon";
+import { Response } from "@/core/response/response.js";
+import { CommonCode } from "@/core/enums/common-code.enum.js";
+import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
+import type { AccountDeletionRequest } from "@/modules/auth/entities/account-deletion-request.entity.js";
 import type { Queryable } from "@/configs/postgres.config.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
 import {
@@ -60,6 +64,79 @@ export class AccountDeletionService {
                 source: AccountDeletionSource.WEB,
             },
         });
+    }
+
+    /** Admin đã xác minh người gửi là chủ tài khoản → xoá dữ liệu và đóng yêu cầu. */
+    async completeRequest(params: {
+        id: string;
+        adminId: string;
+        userId?: string;
+        note?: string;
+    }): Promise<Response<AccountDeletionRequest>> {
+        const { id, adminId, note } = params;
+        const result = await withTransaction(
+            async (tx): Promise<Response<AccountDeletionRequest>> => {
+                const pending = await this.checkPending(id, tx);
+                if (Response.isError(pending)) return pending;
+                const userId = params.userId ?? pending.data.userId;
+                // Yêu cầu chưa khớp tài khoản nào: admin phải chỉ định `userId`.
+                if (!userId) return Response.error(CommonCode.INVALID_INPUT);
+
+                await this.purgeUserData(userId, tx);
+                const request = await AccountDeletionRequestRepo.updateById({
+                    id,
+                    data: {
+                        userId,
+                        status: AccountDeletionStatus.COMPLETED,
+                        processedAt: DateTime.now().toJSDate(),
+                        processedByAdminId: adminId,
+                        adminNote: note ?? null,
+                    },
+                    dbOrTx: tx,
+                });
+                return Response.success(request);
+            }
+        );
+        if (!Response.isError(result) && result.data?.userId) {
+            playerKickService.kickUser(result.data.userId, KickReason.ACCOUNT_DELETED);
+        }
+        return result;
+    }
+
+    /** Không xác minh được chủ tài khoản (vd thông tin không khớp). */
+    async rejectRequest(params: {
+        id: string;
+        adminId: string;
+        note: string;
+    }): Promise<Response<AccountDeletionRequest>> {
+        const { id, adminId, note } = params;
+        const pending = await this.checkPending(id);
+        if (Response.isError(pending)) return pending;
+        const request = await AccountDeletionRequestRepo.updateById({
+            id,
+            data: {
+                status: AccountDeletionStatus.REJECTED,
+                processedAt: DateTime.now().toJSDate(),
+                processedByAdminId: adminId,
+                adminNote: note,
+            },
+        });
+        return Response.success(request);
+    }
+
+    private async checkPending(
+        id: string,
+        dbOrTx?: Queryable
+    ): Promise<Response<AccountDeletionRequest>> {
+        const request = await AccountDeletionRequestRepo.findByIdOrFail({
+            id,
+            dbOrTx,
+            code: AuthErrorCode.ACCOUNT_DELETION_REQUEST_NOT_FOUND,
+        });
+        if (request.status !== AccountDeletionStatus.PENDING) {
+            return Response.error(AuthErrorCode.ACCOUNT_DELETION_REQUEST_PROCESSED);
+        }
+        return Response.success(request);
     }
 
     /** Xoá dữ liệu của 1 user — gọi trong transaction của caller. Idempotent. */

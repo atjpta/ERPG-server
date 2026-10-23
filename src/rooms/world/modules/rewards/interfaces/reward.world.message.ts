@@ -1,4 +1,4 @@
-import type { ItemRewardMessage } from "@/rooms/global/global.shared.js";
+import type { ItemRewardMessage } from "@/modules/rewards/interfaces/reward.message.js";
 import type { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 
 export interface CurrencyBalanceMessage {

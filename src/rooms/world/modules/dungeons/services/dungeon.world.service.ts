@@ -1,23 +1,22 @@
-import type { ErrorCode } from "@/core/types/result.type.js";
+import { Response } from "@/core/response/response.js";
+import { RoomResponse } from "@/core/response/room-response.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
+import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import type {
     DungeonChamber,
     DungeonClearReward,
-    DungeonConfig,
     DungeonSession,
-    GameMap,
-} from "@/modules/maps/entities/game-map.entity.js";
+} from "@/modules/maps/types/game-map.type.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { dungeonService } from "@/modules/maps/services/dungeon.service.js";
 import { mapFileService } from "@/modules/maps/services/map-file.service.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
-import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { RewardSpec } from "@/modules/rewards/schemas/reward-spec.schema.js";
 import { monsterRewardService } from "@/modules/rewards/services/monster-reward.service.js";
@@ -25,19 +24,16 @@ import { rewardRollService } from "@/modules/rewards/services/reward-roll.servic
 import { rewardSpecService } from "@/modules/rewards/services/reward-spec.service.js";
 import type { ItemReward } from "@/modules/rewards/types/reward.type.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
-import {
-    DungeonGateState,
-    DungeonWorldState,
-} from "@/rooms/world/modules/dungeons/schemas/dungeon.world.state.js";
+import { DungeonGateState, DungeonWorldState } from "@/modules/maps/state/dungeon.state.js";
+import { DungeonInstanceState } from "@/modules/maps/state/dungeon-instance.state.js";
 import {
     newTally,
     toMemberMessage,
     type DungeonRewardTally,
 } from "@/rooms/world/modules/dungeons/utils/dungeon-reward.world.util.js";
-import type { MonsterWorldState } from "@/rooms/world/modules/monsters/schemas/monster.world.state.js";
+import type { MonsterWorldState } from "@/modules/monsters/state/monster.state.js";
 import { monsterWorldService } from "@/rooms/world/modules/monsters/services/monster.world.service.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import type { MoveBounds } from "@/rooms/world/modules/players/simulation/movement.step.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { rewardWorldService } from "@/rooms/world/modules/rewards/services/reward.world.service.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
@@ -52,46 +48,6 @@ import { generateEntityId } from "@/core/entities/base.entity.js";
 
 /** Sau khi hạ boss, ở lại tối đa chừng này giây trước khi bị đưa ra ngoài. */
 export const DUNGEON_LEAVE_DELAY_SEC = 60;
-/** Chờ thành viên party vào đủ trước khi bắt đầu chamber đầu tiên. */
-export const DUNGEON_JOIN_GRACE_MS = 15_000;
-/** Có người đã qua cổng vào chamber kế mà người khác chưa qua thì chờ chừng này ms, rồi đóng cổng và đưa người chưa qua sang chỗ vào. */
-export const DUNGEON_CROSS_GRACE_MS = 10_000;
-
-/** Tiến độ 1 instance dungeon (server-only; phần HUD cần thấy nằm ở `DungeonWorldState`). */
-export interface DungeonRuntime {
-    config: DungeonConfig;
-    instanceId: string;
-    started: boolean;
-    startedAt: number;
-    /** Người được party kỳ vọng vào instance (rỗng = bắt đầu ngay khi người đầu tiên vào). */
-    expected: string[];
-    joined: Set<string>;
-    /** `elapsedTime` lúc người đầu tiên vào; chờ đủ người tối đa `DUNGEON_JOIN_GRACE_MS`. */
-    firstJoinAt: number | null;
-    chamberIndex: number;
-    chamberStartedAt: number;
-    /** Số phase của chamber hiện tại đã spawn. */
-    spawnedPhases: number;
-    spawningPhase: boolean;
-    /** Monster đã spawn của chamber hiện tại. */
-    monsters: MonsterWorldState[];
-    /** Level quái của chamber hiện tại. */
-    monsterLevel: number;
-    chamberCleared: boolean;
-    /** `elapsedTime` lúc người đầu tiên qua cổng vào chamber kế (chờ những người còn lại tới `DUNGEON_CROSS_GRACE_MS`). */
-    crossedAt: number | null;
-    cleared: boolean;
-    /** Những gì từng người nhận được trong lần đi này (key = playerId) — hiện ở bảng thưởng sau khi clear. */
-    rewards: Map<string, DungeonRewardTally>;
-    /** Chủ party lúc vào (nguồn: kỳ vọng do global room ghi) — người duy nhất được bấm "đi lại". Rỗng nếu không rõ. */
-    leaderPlayerId: string;
-    /** Map + cổng chắn của chamber đang chơi (đổi khi vào / dọn xong chamber); chưa có thì dùng địa hình map. */
-    bounds?: MoveBounds;
-}
-
-const isDead = (monster: MonsterWorldState) =>
-    monster.hp <= 0 || monster.status === MonsterStatus.DEAD;
-
 /**
  * Dungeon = một chuỗi chamber trong 1 room. Mỗi chamber có nhiều phase quái spawn theo giây; hạ hết quái
  * mọi phase thì cổng mở, người chơi tự đi sang chamber kế — qua khỏi cổng vào của chamber kế thì chamber đó
@@ -105,26 +61,12 @@ export class DungeonWorldService {
         if (room.map.type !== MapType.DUNGEON || !config || config.chambers.length === 0) {
             throw new Error(`Map "${room.map.code}" is not a playable dungeon`);
         }
-        room.dungeon = {
+        room.dungeon = new DungeonInstanceState<DungeonRewardTally>(
             config,
             instanceId,
-            started: false,
-            startedAt: 0,
             expected,
-            joined: new Set(),
-            firstJoinAt: null,
-            chamberIndex: 0,
-            chamberStartedAt: 0,
-            spawnedPhases: 0,
-            spawningPhase: false,
-            monsters: [],
-            monsterLevel: 1,
-            chamberCleared: false,
-            crossedAt: null,
-            cleared: false,
-            rewards: new Map(),
-            leaderPlayerId,
-        };
+            leaderPlayerId
+        );
         const state = new DungeonWorldState();
         state.chamberCount = config.chambers.length;
         room.state.dungeon = state;
@@ -132,112 +74,62 @@ export class DungeonWorldService {
 
     /** Player vừa vào room dungeon: đặt ở chamber hiện tại; người đầu tiên khởi động chamber 0. */
     onPlayerJoined(room: WorldRoom, player: PlayerWorldState): void {
-        const runtime = room.dungeon!;
-        runtime.joined.add(player.id);
-        if (!runtime.rewards.has(player.id)) runtime.rewards.set(player.id, newTally(player));
-        runtime.firstJoinAt ??= room.clock.elapsedTime;
+        const instance = room.dungeon!;
+        instance.registerJoin(player.id, room.clock.elapsedTime, () => newTally(player));
         // Chờ đủ người của party để level quái tính trên cả nhóm (tối đa DUNGEON_JOIN_GRACE_MS).
-        if (!runtime.started && runtime.expected.every((id) => runtime.joined.has(id))) {
-            this.begin(room);
-        }
-        const entry = runtime.config.chambers[runtime.chamberIndex].entry;
+        if (instance.readyToStart) this.begin(room);
+        const entry = instance.chamber.entry;
         player.placeAt(entry.x, entry.y);
     }
 
     /** Mỗi tick: spawn phase tới hạn, đếm quái, hoàn thành chamber, hết giờ. */
     tick(room: WorldRoom): void {
-        const runtime = room.dungeon;
+        const instance = room.dungeon;
         const state = room.state.dungeon;
-        if (!runtime || !state) return;
+        if (!instance || !state) return;
         const now = room.clock.elapsedTime;
-        if (!runtime.started) {
-            if (
-                runtime.firstJoinAt !== null &&
-                now - runtime.firstJoinAt >= DUNGEON_JOIN_GRACE_MS
-            ) {
-                this.begin(room);
-            }
+        if (!instance.started) {
+            if (instance.joinGraceExpired(now)) this.begin(room);
             return;
         }
 
-        if (runtime.config.timeLimitSec) {
-            const left = Math.max(
-                0,
-                runtime.config.timeLimitSec - Math.floor((now - runtime.startedAt) / 1000)
-            );
+        const left = instance.timeLeftSec(now);
+        if (left !== undefined) {
             state.timeLeftSec = left;
-            if (left === 0 && !runtime.cleared) {
+            if (left === 0 && !instance.cleared) {
                 void this.leaveAll(room);
                 return;
             }
         }
-        if (runtime.cleared) return;
-        state.elapsedSec = Math.floor((now - runtime.startedAt) / 1000);
+        if (instance.cleared) return;
+        state.elapsedSec = instance.elapsedSec(now);
 
-        const chamber = runtime.config.chambers[runtime.chamberIndex];
-        const elapsedSec = (now - runtime.chamberStartedAt) / 1000;
-        const nextPhase = chamber.phases[runtime.spawnedPhases];
-        if (nextPhase && !runtime.spawningPhase && elapsedSec >= nextPhase.delaySec) {
-            void this.spawnPhase(room, chamber);
-        }
+        const chamber = instance.chamber;
+        if (instance.isPhaseDue(now)) void this.spawnPhase(room, chamber);
 
-        const alive = runtime.monsters.filter((monster) => !isDead(monster)).length;
-        const pending = dungeonService.phasesMonsterCount(
-            chamber.phases.slice(runtime.spawnedPhases)
-        );
-        const total = dungeonService.phasesMonsterCount(chamber.phases);
+        const { alive, pending, total } = instance.monsterCounts();
         state.remaining = alive + pending;
         state.total = total;
-        state.phaseIndex = runtime.spawnedPhases;
-        state.nextPhaseInSec = nextPhase
-            ? Math.max(1, Math.ceil(nextPhase.delaySec - elapsedSec))
-            : 0;
+        state.phaseIndex = instance.spawnedPhases;
+        state.nextPhaseInSec = instance.nextPhaseInSec(now);
 
-        if (
-            !runtime.chamberCleared &&
-            runtime.spawnedPhases === chamber.phases.length &&
-            !runtime.spawningPhase &&
-            alive === 0
-        ) {
-            this.completeChamber(room, chamber);
-        }
-        if (runtime.chamberCleared) this.startNextWhenCrossed(room, now);
+        if (instance.isChamberDone(alive)) this.completeChamber(room, chamber);
+        if (instance.chamberCleared) this.startNextWhenCrossed(room, now);
     }
 
     /** Chamber xong, cổng đã mở: ai qua khỏi cổng vào của chamber kế thì chamber kế bắt đầu và cổng đóng lại sau lưng họ. */
     private startNextWhenCrossed(room: WorldRoom, now: number): void {
-        const runtime = room.dungeon!;
-        const next = runtime.config.chambers[runtime.chamberIndex + 1];
-        if (!next || runtime.cleared) return;
+        const instance = room.dungeon!;
+        const next = instance.nextChamber;
+        if (!next || instance.cleared) return;
         const players = [...room.state.players.values()].filter((player) => player.hp > 0);
-        const crossed = players.filter((player) => this.isPastEntry(next, player));
-        if (crossed.length === 0) {
-            runtime.crossedAt = null;
-            return;
+        const crossed = players.filter((player) => instance.hasPassedEntry(next, player));
+        if (!instance.trackCrossing(now, crossed.length, players.length)) return;
+        this.startChamber(room, instance.chamberIndex + 1);
+        // Người tới sau thì được đưa sang chỗ vào của chamber mới, không bị kẹt lại phòng trước sau cổng đã đóng.
+        for (const player of players) {
+            if (!crossed.includes(player)) player.placeAt(next.entry.x, next.entry.y);
         }
-        runtime.crossedAt ??= now;
-        if (
-            crossed.length === players.length ||
-            now - runtime.crossedAt >= DUNGEON_CROSS_GRACE_MS
-        ) {
-            this.startChamber(room, runtime.chamberIndex + 1);
-            // Người tới sau thì được đưa sang chỗ vào của chamber mới, không bị kẹt lại phòng trước sau cổng đã đóng.
-            for (const player of players) {
-                if (!crossed.includes(player)) player.placeAt(next.entry.x, next.entry.y);
-            }
-        }
-    }
-
-    /** Đã vào trong chamber và qua hẳn cổng vào (không thì cổng đóng lên người). */
-    private isPastEntry(chamber: DungeonChamber, player: PlayerWorldState): boolean {
-        const { bounds, entryGate } = chamber;
-        const edge = entryGate ? entryGate.x + entryGate.w : bounds.x;
-        return (
-            player.x >= edge &&
-            player.x < bounds.x + bounds.w &&
-            player.y >= bounds.y &&
-            player.y < bounds.y + bounds.h
-        );
     }
 
     /** Vào dungeon từ portal ở map thường: lưu chỗ đứng cũ, tạo instance mới, báo client join room dungeon. */
@@ -248,10 +140,10 @@ export class DungeonWorldService {
         dungeon: GameMap,
         spawnId: string,
         instanceId: string = generateEntityId()
-    ): Promise<ErrorCode | undefined> {
-        if (player.level < dungeon.minLevel) return PlayerErrorCode.LEVEL_TOO_LOW;
+    ): Promise<Response> {
+        if (player.level < dungeon.minLevel) return Response.error(PlayerErrorCode.LEVEL_TOO_LOW);
         if (!dungeon.dungeon || dungeon.dungeon.chambers.length === 0) {
-            return MapErrorCode.MAP_NOT_OPEN;
+            return Response.error(MapErrorCode.MAP_NOT_OPEN);
         }
         // Đi lại từ trong dungeon: chỗ trở về vẫn là chỗ đứng trước lần vào đầu tiên.
         const previous = room.dungeon ? player.dungeonSession : undefined;
@@ -273,8 +165,8 @@ export class DungeonWorldService {
             instanceId: session.instanceId,
         };
         await worldService.savePlayer(room, client.auth.playerId);
-        client.sendSuccess(WorldMessage.MAP_CHANGE, message);
-        return undefined;
+        RoomResponse.send(client, WorldMessage.MAP_CHANGE, message);
+        return Response.success();
     }
 
     /** Chết trong dungeon: về làng gần nhất đã đến (không ở lại dungeon). */
@@ -294,9 +186,9 @@ export class DungeonWorldService {
         client: PlayerClient,
         player: PlayerWorldState,
         destination: "return" | "town"
-    ): Promise<ErrorCode | undefined> {
+    ): Promise<Response> {
         const session = player.dungeonSession;
-        if (!session) return MapErrorCode.DUNGEON_NOT_IN;
+        if (!session) return Response.error(MapErrorCode.DUNGEON_NOT_IN);
         const config = masterDataCacheService.get(MasterDataKey.PLAYER_CONFIG);
         let mapCode = session.returnMapCode;
         let spawn = { x: session.returnX, y: session.returnY };
@@ -323,15 +215,15 @@ export class DungeonWorldService {
             roomName: WorldRoomName.WORLD,
         };
         await worldService.savePlayer(room, client.auth.playerId);
-        client.sendSuccess(WorldMessage.MAP_CHANGE, message);
-        return undefined;
+        RoomResponse.send(client, WorldMessage.MAP_CHANGE, message);
+        return Response.success();
     }
 
     private async leaveAll(room: WorldRoom): Promise<void> {
-        const runtime = room.dungeon;
-        if (!runtime) return;
+        const instance = room.dungeon;
+        if (!instance) return;
         // Đánh dấu để tick không gọi lại.
-        runtime.cleared = true;
+        instance.markCleared();
         for (const [playerId, player] of room.state.players) {
             const client = room.clientOf(playerId);
             if (client && player.dungeonSession && !player.pendingMapCode) {
@@ -342,50 +234,34 @@ export class DungeonWorldService {
 
     /** Khởi động chamber đầu tiên (đủ người hoặc hết thời gian chờ). */
     private begin(room: WorldRoom): void {
-        const runtime = room.dungeon!;
-        runtime.started = true;
-        runtime.startedAt = room.clock.elapsedTime;
+        room.dungeon!.begin(room.clock.elapsedTime);
         this.startChamber(room, 0);
         // Người đã vào trong lúc chờ đứng ở chamber đầu — không cần làm gì thêm.
     }
 
     private startChamber(room: WorldRoom, index: number): void {
-        const runtime = room.dungeon!;
+        const instance = room.dungeon!;
         const state = room.state.dungeon!;
-        // Dọn xác quái chamber trước khỏi state.
-        this.removeMonsters(room, runtime.monsters);
-        runtime.chamberIndex = index;
-        runtime.chamberStartedAt = room.clock.elapsedTime;
-        runtime.spawnedPhases = 0;
-        runtime.spawningPhase = false;
-        runtime.monsters = [];
-        runtime.chamberCleared = false;
-        runtime.crossedAt = null;
-        runtime.monsterLevel = dungeonService.dungeonMonsterLevel(
+        const monsterLevel = dungeonService.dungeonMonsterLevel(
             [...room.state.players.values()].map((player) => player.level),
-            runtime.config.maxLevel
+            instance.config.maxLevel
+        );
+        // Dọn xác quái chamber trước khỏi state.
+        this.removeMonsters(
+            room,
+            instance.beginChamber(index, room.clock.elapsedTime, monsterLevel)
         );
         state.chamberIndex = index;
-        state.phaseCount = runtime.config.chambers[index].phases.length;
+        state.phaseCount = instance.chamber.phases.length;
         state.phaseIndex = 0;
         state.exitOpen = false;
-        state.monsterLevel = runtime.monsterLevel;
+        state.monsterLevel = instance.monsterLevel;
         this.refreshGates(room);
     }
 
     /** Cổng chắn của chamber hiện tại chặn đường tới khi dọn xong; chamber khác / đã dọn thì không có cổng nào. */
     private refreshGates(room: WorldRoom): void {
-        const runtime = room.dungeon!;
-        const chamber = runtime.config.chambers[runtime.chamberIndex];
-        const gates = runtime.chamberCleared
-            ? []
-            : [chamber.entryGate, chamber.exitGate].filter((gate) => gate !== undefined);
-        runtime.bounds = {
-            width: room.map.width,
-            height: room.map.height,
-            colliders: [...room.map.colliders, ...gates],
-        };
-
+        const gates = room.dungeon!.refreshBounds(room.map);
         const state = room.state.dungeon;
         if (!state) return;
         state.gates.clear();
@@ -400,45 +276,45 @@ export class DungeonWorldService {
     }
 
     private async spawnPhase(room: WorldRoom, chamber: DungeonChamber): Promise<void> {
-        const runtime = room.dungeon!;
-        const phase = chamber.phases[runtime.spawnedPhases];
-        const chamberIndex = runtime.chamberIndex;
-        runtime.spawningPhase = true;
+        const instance = room.dungeon!;
+        const phase = chamber.phases[instance.spawnedPhases];
+        const chamberIndex = instance.chamberIndex;
+        instance.spawningPhase = true;
         try {
             const monsters = await monsterWorldService.createMonsters(
                 room.map.code,
                 phase.monsterSpawns,
-                runtime.monsterLevel,
-                runtime.monsters
+                instance.monsterLevel,
+                instance.monsters
             );
             // Chamber đã đổi trong lúc await (không nên xảy ra) thì bỏ.
-            if (runtime.chamberIndex !== chamberIndex) return;
+            if (instance.chamberIndex !== chamberIndex) return;
             room.state.monsters.push(...monsters);
-            runtime.monsters.push(...monsters);
-            runtime.spawnedPhases++;
+            instance.monsters.push(...monsters);
+            instance.spawnedPhases++;
         } finally {
-            runtime.spawningPhase = false;
+            instance.spawningPhase = false;
         }
     }
 
     private completeChamber(room: WorldRoom, chamber: DungeonChamber): void {
-        const runtime = room.dungeon!;
+        const instance = room.dungeon!;
         const state = room.state.dungeon!;
-        runtime.chamberCleared = true;
+        instance.markChamberCleared();
         state.exitOpen = true;
         this.refreshGates(room);
 
         const message: DungeonChamberClearMessage = {
-            chamberIndex: runtime.chamberIndex,
-            chamberCount: runtime.config.chambers.length,
+            chamberIndex: instance.chamberIndex,
+            chamberCount: instance.config.chambers.length,
         };
-        room.broadcastSuccess(WorldMessage.DUNGEON_CHAMBER_CLEAR, message);
+        RoomResponse.broadcast(room, WorldMessage.DUNGEON_CHAMBER_CLEAR, message);
 
         if (!chamber.isBoss) return;
-        runtime.cleared = true;
+        instance.markCleared();
         state.cleared = true;
-        this.grantToAll(room, runtime.config.clearReward);
-        this.grantClearLoot(room, runtime.config.clearReward);
+        this.grantToAll(room, instance.config.clearReward);
+        this.grantClearLoot(room, instance.config.clearReward);
         for (const [playerId, player] of room.state.players) {
             questWorldService.onEvent(room, playerId, player, {
                 type: QuestObjectiveType.CLEAR_DUNGEON,
@@ -447,10 +323,10 @@ export class DungeonWorldService {
         }
         const clear: DungeonClearMessage = {
             leaveInSec: DUNGEON_LEAVE_DELAY_SEC,
-            members: [...runtime.rewards.values()].map(toMemberMessage),
-            leaderPlayerId: runtime.leaderPlayerId,
+            members: [...instance.rewards.values()].map(toMemberMessage),
+            leaderPlayerId: instance.leaderPlayerId,
         };
-        room.broadcastSuccess(WorldMessage.DUNGEON_CLEAR, clear);
+        RoomResponse.broadcast(room, WorldMessage.DUNGEON_CLEAR, clear);
         room.clock.setTimeout(() => {
             void this.leaveAll(room);
         }, DUNGEON_LEAVE_DELAY_SEC * 1000);

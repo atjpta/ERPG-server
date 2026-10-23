@@ -1,8 +1,6 @@
 import { equipmentFactoryService } from "@/modules/equipment/services/equipment-factory.service.js";
-import {
-    type Rng,
-    equipmentRollService,
-} from "@/modules/equipment/services/equipment-roll.service.js";
+import { equipmentRollService } from "@/modules/equipment/services/equipment-roll.service.js";
+import type { Rng } from "@/modules/equipment/types/equipment-roll.type.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import type { Monster } from "@/modules/monsters/entities/monster.entity.js";
 import { monsterSpawnService } from "@/modules/monsters/services/monster-spawn.service.js";
@@ -11,10 +9,8 @@ import type {
     EquipmentDrop,
     MonsterDrops,
 } from "@/modules/monsters/schemas/monster-drop.schema.js";
-import {
-    type MonsterVariant,
-    monsterStatService,
-} from "@/modules/monsters/services/monster-stat.service.js";
+import { monsterStatService } from "@/modules/monsters/services/monster-stat.service.js";
+import type { MonsterVariant } from "@/modules/monsters/types/monster-stat.type.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import type { ItemReward, Reward } from "@/modules/rewards/types/reward.type.js";

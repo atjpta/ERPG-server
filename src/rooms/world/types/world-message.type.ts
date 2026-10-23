@@ -38,7 +38,7 @@ export enum WorldClientMessage {
 export enum WorldMessage {
     /** Gửi riêng cho người nhận thưởng — client hiện chữ nổi "+exp / +gold / level up". */
     REWARD = "reward",
-    /** Ví (`WalletMessage`) — gửi riêng khi tiền đổi mà không kèm `inventory` (vd nhận tiền khi giết quái). */
+    /** Ví (`WalletMessage`) — gửi riêng khi tiền đổi mà không kèm `inventoryChanged` (vd nhận tiền khi giết quái). */
     WALLET = "wallet",
     /** 1 node thoại để hiện — gửi khi bắt đầu thoại và sau mỗi lần chọn. */
     DIALOGUE = "dialogue",

@@ -7,11 +7,22 @@ import { join, relative, resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const roomsDirectory = join(projectRoot, "src", "rooms");
+// State dùng Colyseus Schema (PlayerWorldState, MonsterWorldState, WorldState...) nằm ở `src/modules/<feature>/state/`.
+const modulesDirectory = join(projectRoot, "src", "modules");
 // Shared client contracts are explicit inputs (enum message mỗi room); DTO theo module nằm trong `modules/*/interfaces/*.message.ts`, tự tìm bởi findRoomSchemaFiles.
 const sharedContractFiles = [
     join(projectRoot, "src", "rooms", "world", "types", "world-message.type.ts"),
     join(projectRoot, "src", "modules", "auth", "enums", "admin.enum.ts"),
     join(projectRoot, "src", "rooms", "global", "types", "global-message.type.ts"),
+    // Kiểu của core / module mà client Unity dùng hoặc đã được sinh sẵn (trước đây chỉ có nhờ codegen đi theo import của state cũ;
+    // khai báo tường minh để không đổi theo cấu trúc thư mục server).
+    join(projectRoot, "src", "core", "enums", "kick-reason.enum.ts"),
+    join(projectRoot, "src", "core", "enums", "client-platform.enum.ts"),
+    join(projectRoot, "src", "core", "enums", "http-status-code.enum.ts"),
+    join(projectRoot, "src", "core", "types", "player-kick.type.ts"),
+    join(projectRoot, "src", "core", "types", "player-rename.type.ts"),
+    join(projectRoot, "src", "core", "rooms", "sdk-room.decorator.ts"),
+    join(projectRoot, "src", "modules", "npcs", "schemas", "npc-function.schema.ts"),
 ];
 const codegen = join(projectRoot, "node_modules", "@colyseus", "schema", "bin", "schema-codegen");
 // Thư mục Network của Unity: schema được xếp theo room (Room/<Room>/Schema, Common) sau khi codegen.
@@ -19,6 +30,9 @@ const unityNetworkOutput = resolve(
     projectRoot,
     process.argv[2] ?? process.env.UNITY_NETWORK_OUTPUT ?? "../ERPG/Assets/Src/Scripts/Network"
 );
+
+// Enum chỉ dùng ở server (nhóm dữ liệu / sự kiện của PlayerRuntime) nhưng codegen đi theo import của PlayerWorldState nên sinh C# thừa.
+const serverOnlyEnums = ["PlayerDataGroup", "PlayerStateEvent"];
 
 const outputs = [
     {
@@ -32,7 +46,10 @@ const outputs = [
     },
 ];
 
-const schemaFiles = findRoomSchemaFiles(roomsDirectory).sort();
+const schemaFiles = [
+    ...findRoomSchemaFiles(roomsDirectory),
+    ...findRoomSchemaFiles(modulesDirectory, { interfaces: false }),
+].sort();
 if (schemaFiles.length === 0) {
     throw new Error("No room schema files were found");
 }
@@ -66,7 +83,11 @@ for (const output of outputs) {
 
     if (result.status !== 0) process.exit(result.status ?? 1);
     // State chỉ ở server (không `@type`) không có gì để client giải mã: bỏ C# rỗng do codegen đi theo import.
-    for (const name of findServerOnlySchemaClasses(roomsDirectory)) {
+    for (const name of [
+        ...findServerOnlySchemaClasses(roomsDirectory),
+        ...findServerOnlySchemaClasses(modulesDirectory),
+        ...serverOnlyEnums,
+    ]) {
         rmSync(join(output.directory, `${name}.cs`), { force: true });
     }
     const files = new Map(

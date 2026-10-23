@@ -23,7 +23,7 @@ export class DialogueCloseWorldCommand extends PlayerWorldCommand<ContentPayload
     }
 
     private close(room: WorldRoom, client: PlayerClient) {
-        const session = dialogueWorldService.sessionsOf(room).get(client.auth.playerId);
+        const session = room.dialogues.get(client.auth.playerId);
         if (session) dialogueWorldService.end(room, client, session.sourceCode);
     }
 }

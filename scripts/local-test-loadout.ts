@@ -24,13 +24,11 @@ import { ItemRepo } from "@/modules/items/repositories/item.repository.js";
 import type { EquipmentMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
-import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
-import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import { PlayerStateRepo } from "@/modules/player/repositories/player-state.repository.js";
 import type { InventoryItem } from "@/modules/player/schemas/inventory.schema.js";
 import { ATTRIBUTE_KEYS } from "@/modules/player/schemas/stat.schema.js";
-import { inventoryService } from "@/modules/player/services/inventory.service.js";
+import { InventoryState } from "@/modules/player/state/inventory.state.js";
 
 /** Mức cấp cho mỗi nhân vật test — sửa số ở đây. */
 const TARGET_LEVEL = 30;
@@ -58,7 +56,6 @@ async function giveLoadout(playerId: string, label: string) {
     if (!state) throw new Error(`${label}: player state not found`);
     const changes: string[] = [];
     const characterClass = classService.getByIdOrFail(state.classId);
-    const config = masterDataCacheService.get(MasterDataKey.PLAYER_CONFIG);
 
     // ---- level + điểm chưa cộng ----
     const level = Math.max(state.level, Math.min(TARGET_LEVEL, levelService.maxLevel));
@@ -111,16 +108,12 @@ async function giveLoadout(playerId: string, label: string) {
         const item = itemService.getById(row.id);
         return item ? [item] : [];
     });
+    const inventory = new InventoryState(bags);
     for (const item of catalog) {
-        const size = config.inventorySize[item.type];
         if (item.type === ItemType.EQUIPMENT) {
             const template = item.metadata as EquipmentMetadata;
             if (template.classCode && template.classCode !== characterClass.code) continue;
-            if (
-                equippedItemIds.has(item.id) ||
-                inventoryService.countItem(bags[item.type], item.id) > 0
-            )
-                continue;
+            if (equippedItemIds.has(item.id) || inventory.count(item.type, item.id) > 0) continue;
             const itemLevel =
                 template.biome === Biome.STARTER
                     ? STARTER_EQUIPMENT_LEVEL
@@ -131,16 +124,10 @@ async function giveLoadout(playerId: string, label: string) {
                     level: itemLevel,
                     rarity: template.biome === Biome.STARTER ? ItemRarity.COMMON : EQUIPMENT_RARITY,
                 });
-                const { overflow } = inventoryService.addToInventory(
-                    bags[item.type],
-                    size,
-                    item,
-                    1,
-                    {
-                        source: ItemSource.SYSTEM,
-                        metadata,
-                    }
-                );
+                const { overflow } = inventory.add(item.type, item, 1, {
+                    source: ItemSource.SYSTEM,
+                    metadata,
+                });
                 if (overflow > 0) skipped.push(`${item.code} (túi trang bị đầy)`);
                 else addedEquipment++;
             } catch (err) {
@@ -149,17 +136,11 @@ async function giveLoadout(playerId: string, label: string) {
             continue;
         }
         const target = item.type === ItemType.CONSUMABLE ? CONSUMABLE_QTY : MATERIAL_QTY;
-        const missing = target - inventoryService.countItem(bags[item.type], item.id);
+        const missing = target - inventory.count(item.type, item.id);
         if (missing <= 0) continue;
-        const { added, overflow } = inventoryService.addToInventory(
-            bags[item.type],
-            size,
-            item,
-            missing,
-            {
-                source: ItemSource.SYSTEM,
-            }
-        );
+        const { added, overflow } = inventory.add(item.type, item, missing, {
+            source: ItemSource.SYSTEM,
+        });
         if (added > 0) addedStacks++;
         if (overflow > 0) skipped.push(`${item.code} (thiếu ${overflow}, túi đầy)`);
     }

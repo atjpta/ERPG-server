@@ -1,13 +1,20 @@
 import { createEndpoint } from "colyseus";
-import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
+import { and, eq, ilike } from "drizzle-orm";
+import { DateTime } from "luxon";
+import { HttpResponse, RouterContainer } from "@/core/response/http-response.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
-import { adminUsersService } from "@/apis/admin/auth/services/admin.users.service.js";
 import {
     AdminBanUserSchema,
     AdminListUsersQuerySchema,
     AdminUserSessionParamSchema,
 } from "@/apis/admin/auth/validators/admin.users.validator.js";
+import { Users } from "@/modules/auth/entities/user.entity.js";
+import { UserStatus } from "@/modules/auth/enums/user.enum.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
+import { UserSessionRepo } from "@/modules/auth/repositories/user-session.repository.js";
+import { UserRepo } from "@/modules/auth/repositories/user.repository.js";
+import { userModerationService } from "@/modules/auth/services/user-moderation.service.js";
+import { omitPassword } from "@/modules/auth/utils/omit-password.util.js";
 
 const adminEndpoint = createEndpoint.create({ use: [adminAuthMiddleware] });
 const prefix = "/users";
@@ -18,8 +25,13 @@ export const adminUsersController = {
         { method: "GET", query: AdminListUsersQuerySchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const result = await adminUsersService.list(ctx.query);
-                return HttpResponse.ok({ data: result });
+                const { search, status, ...pagination } = ctx.query;
+                const where = and(
+                    search ? ilike(Users.email, `%${search}%`) : undefined,
+                    status ? eq(Users.status, status) : undefined
+                );
+                const result = await UserRepo.paginate({ pagination, where });
+                return HttpResponse.success({ ...result, items: result.items.map(omitPassword) });
             })
     ),
 
@@ -28,20 +40,23 @@ export const adminUsersController = {
         { method: "GET", params: IdParamSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const user = await adminUsersService.getDetail(ctx.params.id);
+                const user = omitPassword(await UserRepo.findById({ id: ctx.params.id }));
                 if (!user) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ data: user });
+                return HttpResponse.success(user);
             })
     ),
 
+    /** Ban user (chặn login) + đăng xuất khỏi mọi thiết bị ngay lập tức. */
     adminUsersBan: adminEndpoint(
         `${prefix}/:id/ban`,
         { method: "POST", params: IdParamSchema, body: AdminBanUserSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const user = await adminUsersService.ban(ctx.params.id, ctx.body);
-                if (!user) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ data: user });
+                const result = await userModerationService.ban({
+                    userId: ctx.params.id,
+                    ...ctx.body,
+                });
+                return HttpResponse.from(ctx, result);
             })
     ),
 
@@ -50,9 +65,12 @@ export const adminUsersController = {
         { method: "POST", params: IdParamSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const user = await adminUsersService.unban(ctx.params.id);
+                const user = await UserRepo.updateById({
+                    id: ctx.params.id,
+                    data: { status: UserStatus.ACTIVE, banReason: null, banExpiresAt: null },
+                });
                 if (!user) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ data: user });
+                return HttpResponse.success(omitPassword(user));
             })
     ),
 
@@ -62,9 +80,10 @@ export const adminUsersController = {
         { method: "POST", params: IdParamSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const user = await adminUsersService.forceLogout(ctx.params.id);
-                if (!user) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ message: "User logged out from all devices" });
+                return HttpResponse.from(
+                    ctx,
+                    await userModerationService.forceLogout(ctx.params.id)
+                );
             })
     ),
 
@@ -73,8 +92,10 @@ export const adminUsersController = {
         { method: "GET", params: IdParamSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const sessions = await adminUsersService.listSessions(ctx.params.id);
-                return HttpResponse.ok({ data: sessions });
+                const sessions = await UserSessionRepo.findActiveByUserId({
+                    userId: ctx.params.id,
+                });
+                return HttpResponse.success(sessions);
             })
     ),
 
@@ -84,9 +105,10 @@ export const adminUsersController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const { id, sessionId } = ctx.params;
-                const session = await adminUsersService.revokeSession(id, sessionId);
-                if (!session) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ message: "Session revoked" });
+                return HttpResponse.from(
+                    ctx,
+                    await userModerationService.revokeSession({ userId: id, sessionId })
+                );
             })
     ),
 };

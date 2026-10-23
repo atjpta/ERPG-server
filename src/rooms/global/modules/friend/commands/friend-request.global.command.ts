@@ -2,13 +2,10 @@ import { cacheService } from "@/core/cache/cache.service.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerCommandPayload } from "@/core/rooms/player.command.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { FriendErrorCode } from "@/modules/friends/enums/friend-error-code.enum.js";
-import {
-    friendshipService,
-    isFriendFailure,
-} from "@/modules/friends/services/friendship.service.js";
+import { friendshipService } from "@/modules/friends/services/friendship.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { FriendChange } from "@/rooms/global/modules/friend/enums/friend-change.enum.js";
@@ -54,7 +51,7 @@ export class FriendRequestGlobalCommand extends PlayerGlobalCommand<
         ).requestRateLimit;
         const sent = await cacheService.incr(`friend:request-rate:${selfId}`, windowSeconds);
         if (sent > limit) {
-            this.result = Response.error(CommonCode.TOO_MANY_REQUESTS, undefined, {
+            this.result = Response.error(CommonCode.TOO_MANY_REQUESTS, {
                 retryAfterSeconds: windowSeconds,
             });
             return;
@@ -70,20 +67,20 @@ export class FriendRequestGlobalCommand extends PlayerGlobalCommand<
         }
 
         const outcome = await friendshipService.sendRequest({ fromId: selfId, toId: target.id });
-        if (isFriendFailure(outcome)) {
-            this.result = Response.error(outcome.code, undefined, outcome.data ?? null);
+        if (Response.isError(outcome)) {
+            this.result = outcome;
             return;
         }
 
         const self = { playerId: selfId, name: this.player.name };
-        if (outcome.kind === "accepted") {
+        const { kind } = outcome.data;
+        if (kind === "accepted") {
             friendGlobalService.linkAndNotify(room, self, target.id);
         } else {
             friendGlobalService.pushChange(room, target.id, FriendChange.REQUEST_RECEIVED, self);
         }
         this.result = Response.success<FriendNoticeMessage>({
-            notice:
-                outcome.kind === "accepted" ? FriendNotice.FRIEND_ADDED : FriendNotice.REQUEST_SENT,
+            notice: kind === "accepted" ? FriendNotice.FRIEND_ADDED : FriendNotice.REQUEST_SENT,
             playerName: target.name,
         });
     }

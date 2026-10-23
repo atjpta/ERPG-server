@@ -1,9 +1,9 @@
 import type { PlayerIdentity } from "@/modules/auth/entities/player.entity.js";
 import type { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
-import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
+import type { PlayerDatas } from "@/modules/player/entities/player-data.entity.js";
 
 export type PlayerWithState = PlayerIdentity &
-    Omit<PlayerState, "playerId" | "updatedAt" | "revision">;
+    Omit<PlayerDatas, "playerId" | "updatedAt" | "revision">;
 
 export type PlayerSnapshot = PlayerWithState & { stateRevision: number };
 

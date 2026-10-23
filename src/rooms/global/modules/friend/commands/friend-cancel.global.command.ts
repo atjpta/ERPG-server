@@ -1,12 +1,9 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerCommandPayload } from "@/core/rooms/player.command.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { FriendErrorCode } from "@/modules/friends/enums/friend-error-code.enum.js";
-import {
-    friendshipService,
-    isFriendFailure,
-} from "@/modules/friends/services/friendship.service.js";
+import { friendshipService } from "@/modules/friends/services/friendship.service.js";
 import { FriendChange } from "@/rooms/global/modules/friend/enums/friend-change.enum.js";
 import { friendGlobalService } from "@/rooms/global/modules/friend/services/friend.global.service.js";
 import { FriendTargetSchema } from "@/rooms/global/modules/friend/validators/friend.validator.js";
@@ -31,8 +28,8 @@ export class FriendCancelGlobalCommand extends PlayerGlobalCommand<
             playerId: selfId,
             toId: this.body.playerId,
         });
-        if (isFriendFailure(failure)) {
-            this.result = Response.error(failure.code, undefined, failure.data ?? null);
+        if (Response.isError(failure)) {
+            this.result = failure;
             return;
         }
         friendGlobalService.pushChange(this.room, this.body.playerId, FriendChange.REMOVED, {

@@ -1,12 +1,9 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerCommandPayload } from "@/core/rooms/player.command.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { FriendErrorCode } from "@/modules/friends/enums/friend-error-code.enum.js";
-import {
-    friendshipService,
-    isFriendFailure,
-} from "@/modules/friends/services/friendship.service.js";
+import { friendshipService } from "@/modules/friends/services/friendship.service.js";
 import { friendGlobalService } from "@/rooms/global/modules/friend/services/friend.global.service.js";
 import { FriendTargetSchema } from "@/rooms/global/modules/friend/validators/friend.validator.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
@@ -28,8 +25,8 @@ export class FriendRemoveGlobalCommand extends PlayerGlobalCommand<
         const selfId = client.auth.playerId;
         const friendId = this.body.playerId;
         const failure = await friendshipService.remove({ playerId: selfId, friendId });
-        if (isFriendFailure(failure)) {
-            this.result = Response.error(failure.code, undefined, failure.data ?? null);
+        if (Response.isError(failure)) {
+            this.result = failure;
             return;
         }
         friendGlobalService.unlinkAndNotify(

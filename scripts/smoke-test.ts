@@ -69,6 +69,35 @@ const inbox = <T>(target: Room, type: string) => {
     return list;
 };
 
+interface BagEntry {
+    id: string;
+    itemId: string;
+}
+
+/**
+ * Túi equipment của một room global từ các push `inventoryChanged` (chi tiết thay đổi, không phải cả túi): ô thêm / đổi theo `id`, ô mất bị bỏ.
+ * `pushes` đếm số lần túi đổi. Chỉ biết các ô đã đổi kể từ lúc đăng ký (bản đầy đủ gửi một lần lúc vào room).
+ */
+const trackBag = (target: Room) => {
+    const entries = new Map<string, BagEntry>();
+    const bag = {
+        pushes: 0,
+        entries: () => [...entries.values()],
+    };
+    silence(target);
+    target.onMessage(
+        "inventoryChanged",
+        (message: RoomResult<{ upserted: BagEntry[] & { type: string }[]; removed: string[] }>) => {
+            for (const entry of message.data.upserted as (BagEntry & { type: string })[]) {
+                if (entry.type === "equipment") entries.set(entry.id, entry);
+            }
+            for (const id of message.data.removed) entries.delete(id);
+            bag.pushes++;
+        }
+    );
+    return bag;
+};
+
 const expectOk = <T>(result: RoomResult<T>, label: string) => {
     if (!result.success) throw new Error(`${label}: expected success, got ${result.code}`);
     return result.data;
@@ -176,21 +205,16 @@ if (!(moved.x > startX)) throw new Error("Player did not move");
     console.info(`✅ request previewAttributes → ${attributes.success ? "ok" : attributes.code}`);
 
     // PlayerData do global làm chủ: tháo / mặc lại đồ → global đẩy `inventory` + `attributes`, world cập nhật stats.
-    const inventories = inbox<{ inventories: { equipment: { id: string; itemId: string }[] } }>(
-        global1,
-        "inventory"
-    );
+    const inventories = trackBag(global1);
     const attributePushes = inbox(global1, "attributes");
     const slot = Object.keys(auth.player.equipments)[0];
     const worn = auth.player.equipments[slot] as { itemId: string };
     expectOk(await request(global1, "unequipItem", { slot }), "unequipItem");
-    await until(() => inventories.length > 0 && attributePushes.length > 0, "inventory push");
-    const unequipped = inventories
-        .at(-1)!
-        .data.inventories.equipment.find((entry) => entry.itemId === worn.itemId);
+    await until(() => inventories.pushes > 0 && attributePushes.length > 0, "inventory push");
+    const unequipped = inventories.entries().find((entry) => entry.itemId === worn.itemId);
     if (!unequipped) throw new Error("unequipped item must be in the bag");
     expectOk(await request(global1, "equipItem", { instanceId: unequipped.id }), "equipItem");
-    console.info("✅ global unequip/equip → inventory + attributes pushed");
+    console.info("✅ global unequip/equip → inventoryChanged + attributes pushed");
 
     // Payload sai → INVALID_INPUT (không im lặng, không bị kick).
     expectCode(await request(room, "interact", { nope: 1 }), "INVALID_INPUT", "invalid payload");
@@ -471,7 +495,7 @@ await sleep(500); // chờ world báo presence lên global
         kind: string;
         subject: string;
         body: string;
-        locale: string;
+        texts: { locale: string; subject: string; body: string }[];
         reward?: MailReward;
         cod?: { code: string; amount: number };
         read: boolean;
@@ -480,12 +504,7 @@ await sleep(500); // chờ world báo presence lên global
     interface MailList {
         mails: MailMsg[];
         unreadCount: number;
-        locale: string;
     }
-    interface Bag {
-        inventories: { equipment: { id: string; itemId: string }[] };
-    }
-
     /** Công cụ dev gửi mail hệ thống (chưa có API admin): chạy ở tiến trình riêng, cần DB đã seed. */
     const mailTool = (args: string) =>
         execSync(`yarn -s mail:tool ${args}`, { cwd: process.cwd(), stdio: "pipe" }).toString();
@@ -495,10 +514,10 @@ await sleep(500); // chờ world báo presence lên global
     const received1 = inbox<{ mail: MailMsg }>(global1, "mailReceived");
     const received2 = inbox<{ mail: MailMsg; unreadCount: number }>(global2, "mailReceived");
     const removed2 = inbox<{ mailId: string }>(global2, "mailRemoved");
-    const bag1 = inbox<Bag>(global1, "inventory");
-    const bag2 = inbox<Bag>(global2, "inventory");
-    const list = async (target: Room, locale?: string) =>
-        expectOk(await request<MailList>(target, "mailList", locale ? { locale } : {}), "mailList");
+    const bag1 = trackBag(global1);
+    const bag2 = trackBag(global2);
+    const list = async (target: Room) =>
+        expectOk(await request<MailList>(target, "mailList", {}), "mailList");
     const find = (mails: MailMsg[], pick: (mail: MailMsg) => boolean, label: string) => {
         const mail = mails.find(pick);
         if (!mail) throw new Error(`mail not found: ${label}`);
@@ -508,12 +527,12 @@ await sleep(500); // chờ world báo presence lên global
     // Player 1 tháo vài món vào túi để có thứ đính kèm.
     const slots = Object.keys(auth.player.equipments).slice(0, 3);
     for (const slot of slots) {
-        const before = bag1.length;
+        const before = bag1.pushes;
         expectOk(await request(global1, "unequipItem", { slot }), `unequip ${slot}`);
-        await until(() => bag1.length > before, "inventory push");
+        await until(() => bag1.pushes > before, "inventory push");
     }
-    const firstBagItem = () => bag1.at(-1)!.data.inventories.equipment[0];
-    const bagSize1 = () => bag1.at(-1)!.data.inventories.equipment.length;
+    const firstBagItem = () => bag1.entries()[0];
+    const bagSize1 = () => bag1.entries().length;
     const startBag = bagSize1();
 
     // --- Gửi thư text: lỗi và thành công ---
@@ -537,7 +556,7 @@ await sleep(500); // chờ world báo presence lên global
         "mailSend text"
     );
     await until(() => received2.length === 1, "mailReceived push");
-    const inbox2 = await list(global2, "vi");
+    const inbox2 = await list(global2);
     const text = find(inbox2.mails, (m) => m.subject === "hi", "text mail");
     if (text.kind !== "player" || text.read || inbox2.unreadCount < 1)
         throw new Error(`unexpected text mail ${JSON.stringify(text)}`);
@@ -563,7 +582,7 @@ await sleep(500); // chờ world báo presence lên global
         }),
         "mailSend item"
     );
-    if (bagSize1() !== startBag - 1) throw new Error("attached item must leave the sender's bag");
+    await until(() => bagSize1() === startBag - 1, "attached item leaves the sender's bag");
     const sent = expectOk(
         await request<{ mails: { id: string; subject: string }[] }>(global1, "mailSentList"),
         "mailSentList"
@@ -599,10 +618,10 @@ await sleep(500); // chờ world báo presence lên global
         "mailSend gift"
     );
     const gift2 = find((await list(global2)).mails, (m) => m.subject === "gift", "gift mail");
-    const bag2Before = bag2.length;
+    const bag2Before = bag2.pushes;
     expectOk(await request(global2, "mailClaim", { mailId: gift2.id }), "mailClaim");
-    await until(() => bag2.length > bag2Before, "recipient inventory push");
-    if (!bag2.at(-1)!.data.inventories.equipment.some((e) => e.itemId === claimItem.itemId))
+    await until(() => bag2.pushes > bag2Before, "recipient inventory push");
+    if (!bag2.entries().some((e) => e.itemId === claimItem.itemId))
         throw new Error("claimed item must be in the recipient's bag");
     expectCode(
         await request(global2, "mailClaim", { mailId: gift2.id }),
@@ -624,22 +643,15 @@ await sleep(500); // chờ world báo presence lên global
 
     // --- Thư hệ thống đa ngôn ngữ + tiền (công cụ dev gửi) ---
     mailTool(`gift ${name2} --gold 5000`);
-    const vi = await list(global2, "vi");
     const viGift = find(
-        vi.mails,
+        (await list(global2)).mails,
         (m) => m.kind === "system" && !!m.reward?.currency.length,
         "gift"
     );
-    const en = await list(global2, "en");
-    const enGift = find(en.mails, (m) => m.id === viGift.id, "gift (en)");
-    const fr = await list(global2, "fr"); // chưa có tiếng Pháp → fallback về ngôn ngữ mặc định (vi)
-    const frGift = find(fr.mails, (m) => m.id === viGift.id, "gift (fr)");
-    if (viGift.subject === enGift.subject || viGift.locale !== "vi" || enGift.locale !== "en")
-        throw new Error(
-            `system mail must follow the locale: ${viGift.subject} / ${enGift.subject}`
-        );
-    if (frGift.subject !== viGift.subject || frGift.locale !== "vi")
-        throw new Error(`missing locale must fall back to vi: ${JSON.stringify(frGift)}`);
+    // Server gửi mọi ngôn ngữ, client tự chọn: có cả vi và en với chữ khác nhau.
+    const textOf = (locale: string) => viGift.texts.find((text) => text.locale === locale);
+    if (!textOf("vi") || !textOf("en") || textOf("vi")!.subject === textOf("en")!.subject)
+        throw new Error(`system mail must carry every locale: ${JSON.stringify(viGift.texts)}`);
     const claimedGift = expectOk(
         await request<{ currency: { code: string; amount: number }[] }>(global2, "mailClaim", {
             mailId: viGift.id,
@@ -647,7 +659,7 @@ await sleep(500); // chờ world báo presence lên global
         "claim gold gift"
     );
     if (claimedGift.currency[0]?.amount !== 5000) throw new Error("gift must grant 5000 gold");
-    console.info("✅ system mail: vi / en / fr→vi fallback, gold claimed (world wallet)");
+    console.info("✅ system mail: every locale in texts, gold claimed (world wallet)");
 
     // --- COD: trả tiền mới lấy được đính kèm; tiền về người gửi bằng thư hệ thống ---
     const codItem = firstBagItem();
@@ -718,7 +730,7 @@ await sleep(500); // chờ world báo presence lên global
         [global2, "p2"],
     ] as const) {
         const gemGift = find(
-            (await list(target, "vi")).mails,
+            (await list(target)).mails,
             (m) => hasGem(m) && !m.claimed,
             `gem gift ${who}`
         );
@@ -759,8 +771,8 @@ await sleep(500); // chờ world báo presence lên global
     const broadcastGold = 1000 + (Date.now() % 9000); // số riêng để phân biệt với broadcast của các lần chạy trước
     mailTool(`broadcast --gold ${broadcastGold} --days 1`);
     const isMine = (m: MailMsg) => !!m.reward?.currency.some((c) => c.amount === broadcastGold);
-    const first = await list(global1, "vi");
-    const second = await list(global1, "vi");
+    const first = await list(global1);
+    const second = await list(global1);
     if (first.mails.filter(isMine).length !== 1)
         throw new Error("broadcast must reach the player exactly once");
     if (first.mails.length !== second.mails.length)
@@ -771,7 +783,7 @@ await sleep(500); // chờ world báo presence lên global
         await request(global1, "mailDelete", { mailId: broadcastMail.id }),
         "delete broadcast"
     );
-    const afterDelete = await list(global1, "vi");
+    const afterDelete = await list(global1);
     if (afterDelete.mails.some(isMine))
         throw new Error("a deleted broadcast mail must not come back (receipt keeps it delivered)");
     console.info("✅ mail broadcast delivered once, and a deleted one does not come back");

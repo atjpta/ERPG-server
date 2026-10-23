@@ -16,6 +16,13 @@ export interface MailRewardMessage {
     currency: MailCurrencyMessage[];
 }
 
+/** Nội dung thư hệ thống ở một ngôn ngữ (đã thay `{param}`). */
+export interface MailTextMessage {
+    locale: string;
+    subject: string;
+    body: string;
+}
+
 /** Một thư trong hộp thư. */
 export interface MailMessage {
     id: string;
@@ -24,11 +31,11 @@ export interface MailMessage {
     senderId?: string;
     /** Tên người gửi lúc gửi (thư người chơi). Thư hệ thống không có: client tự hiện "Hệ thống". */
     senderName?: string;
-    /** Thư hệ thống: đã chọn ngôn ngữ (xem `locale`); thư người chơi: chữ người gửi viết. */
+    /** Thư người chơi: chữ người gửi viết (thư hệ thống để trống, dùng `texts`). */
     subject: string;
     body: string;
-    /** Ngôn ngữ thực sự dùng cho thư hệ thống (có thể khác ngôn ngữ yêu cầu do fallback). */
-    locale: string;
+    /** Thư hệ thống: nội dung ở mọi ngôn ngữ — client tự lấy bản đúng ngôn ngữ của nó (không có thì dùng bản mặc định / tiếng Anh). Thư người chơi: rỗng. */
+    texts: MailTextMessage[];
     reward?: MailRewardMessage;
     /** Thư COD: phải trả khoản này mới nhận được `reward`. */
     cod?: MailCurrencyMessage;
@@ -45,8 +52,6 @@ export interface MailMessage {
 export interface MailListMessage {
     mails: MailMessage[];
     unreadCount: number;
-    /** Ngôn ngữ đã dùng để dựng nội dung (server nhớ để push `mailReceived` đúng ngôn ngữ). */
-    locale: string;
 }
 
 /** `data` của response `mailRead`. */
@@ -91,7 +96,7 @@ export interface MailClaimAllMessage {
     claimed: MailClaimedMessage[];
     /** Số thư COD bị bỏ qua (phải nhận từng thư bằng `mailClaim`). */
     skippedCod: number;
-    /** Mã lỗi khiến việc nhận dừng giữa chừng (`INVENTORY_FULL`, `MAIL_NEEDS_WORLD`); không có nghĩa là nhận hết. */
+    /** Mã lỗi khiến việc nhận dừng giữa chừng (`INVENTORY_FULL`); không có nghĩa là nhận hết. */
     stoppedBy?: string;
 }
 

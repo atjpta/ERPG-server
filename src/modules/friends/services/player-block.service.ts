@@ -1,5 +1,5 @@
+import { Response } from "@/core/response/response.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
-import { BaseService } from "@/core/services/base.service.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { PlayerBlocks } from "@/modules/friends/entities/player-block.entity.js";
 import { FriendErrorCode } from "@/modules/friends/enums/friend-error-code.enum.js";
@@ -8,19 +8,13 @@ import {
     PlayerBlockRepo,
     type PlayerBlockRepository,
 } from "@/modules/friends/repositories/player-block.repository.js";
-import type { FriendFailure } from "@/modules/friends/services/friendship.service.js";
+import { lockFriendPlayers } from "@/modules/friends/utils/friend-lock.util.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
+import type { BlockedEntry } from "@/modules/friends/types/player-block.type.js";
 
-export interface BlockedEntry {
-    playerId: string;
-    name: string;
-}
-
-export class PlayerBlockService extends BaseService<typeof PlayerBlocks> {
-    constructor(private readonly blockRepo: PlayerBlockRepository = PlayerBlockRepo) {
-        super(blockRepo);
-    }
+export class PlayerBlockService {
+    constructor(private readonly blockRepo: PlayerBlockRepository = PlayerBlockRepo) {}
 
     /** `blockerId` có đang chặn `blockedId` không. */
     async isBlocked(params: { blockerId: string; blockedId: string }): Promise<boolean> {
@@ -43,30 +37,38 @@ export class PlayerBlockService extends BaseService<typeof PlayerBlocks> {
     async block(params: {
         blockerId: string;
         blockedId: string;
-    }): Promise<{ removedFriendship: boolean } | FriendFailure> {
+    }): Promise<Response<{ removedFriendship: boolean }>> {
         const { blockerId, blockedId } = params;
-        if (blockerId === blockedId) return { code: FriendErrorCode.FRIEND_SELF_TARGET };
+        if (blockerId === blockedId) return Response.error(FriendErrorCode.FRIEND_SELF_TARGET);
         if (await this.blockRepo.findPair({ blockerId, blockedId })) {
-            return { removedFriendship: false };
+            return Response.success({ removedFriendship: false });
         }
         const max = masterDataCacheService.get(MasterDataKey.FRIEND_CONFIG).maxBlocked;
-        if ((await this.blockRepo.countByBlocker({ blockerId })) >= max) {
-            return { code: FriendErrorCode.FRIEND_BLOCK_LIST_FULL, data: { max } };
-        }
+        // Khoá cả hai người rồi mới kiểm tra / đếm / ghi: hai lần chặn đồng thời của một người không vượt giới hạn, và lời mời đang
+        // chạy của người bị chặn hoặc ghi xong trước (bị xoá ở đây) hoặc thấy block ở bước kiểm tra của nó.
         return withTransaction(async (tx) => {
+            await lockFriendPlayers(tx, blockerId, blockedId);
+            if (await this.blockRepo.findPair({ blockerId, blockedId, dbOrTx: tx })) {
+                return Response.success({ removedFriendship: false });
+            }
+            if ((await this.blockRepo.countByBlocker({ blockerId, dbOrTx: tx })) >= max) {
+                return Response.error(FriendErrorCode.FRIEND_BLOCK_LIST_FULL, { max });
+            }
             await this.blockRepo.create({ data: { blockerId, blockedId }, dbOrTx: tx });
             const removed = await FriendshipRepo.deleteBetween({
                 a: blockerId,
                 b: blockedId,
                 dbOrTx: tx,
             });
-            return { removedFriendship: removed.length > 0 };
+            return Response.success({ removedFriendship: removed.length > 0 });
         });
     }
 
-    async unblock(params: { blockerId: string; blockedId: string }): Promise<null | FriendFailure> {
+    async unblock(params: { blockerId: string; blockedId: string }): Promise<Response> {
         const removed = await this.blockRepo.deletePair(params);
-        return removed.length > 0 ? null : { code: FriendErrorCode.FRIEND_NOT_BLOCKED };
+        return removed.length > 0
+            ? Response.success()
+            : Response.error(FriendErrorCode.FRIEND_NOT_BLOCKED);
     }
 
     async listFor(blockerId: string): Promise<BlockedEntry[]> {

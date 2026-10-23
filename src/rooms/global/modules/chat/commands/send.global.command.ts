@@ -5,7 +5,7 @@ import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { PlayerGlobalCommand } from "@/rooms/global/player.global.command.js";
 import { chatDeliveryService } from "@/rooms/global/modules/chat/services/chat-delivery.global.service.js";
 import type { ChatSendPayload } from "@/rooms/global/modules/chat/types/chat-send.type.js";
-import { ChatErrorCode } from "@/rooms/global/modules/chat/enums/chat-error-code.enum.js";
+import { ChatErrorCode } from "@/modules/chat/enums/chat-error-code.enum.js";
 import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
 import type { z } from "zod";
 

@@ -1,4 +1,4 @@
-import { registerErrorCodes } from "@/core/utils/error-code.util.js";
+import { registerErrorCodes } from "@/core/response/error-code.js";
 
 /** Mã lỗi master data / phiên bản client. */
 export enum MasterDataErrorCode {
@@ -12,4 +12,4 @@ export enum MasterDataErrorCode {
     MASTER_DATA_READ_ONLY = "MASTER_DATA_READ_ONLY",
 }
 
-registerErrorCodes(MasterDataErrorCode);
+registerErrorCodes(MasterDataErrorCode, { MASTER_DATA_READ_ONLY: 409, MASTER_DATA_NOT_FOUND: 404 });

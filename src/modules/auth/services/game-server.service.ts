@@ -1,6 +1,6 @@
 import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
 import type { Queryable } from "@/configs/postgres.config.js";
-import { serviceError } from "@/core/utils/service-error.js";
+import { Response } from "@/core/response/response.js";
 import { DEFAULT_GAME_SERVER_CODE } from "@/modules/auth/constants/game-server.constant.js";
 import type { GameServer } from "@/modules/auth/entities/game-server.entity.js";
 import { GameServerStatus } from "@/modules/auth/enums/game-server.enum.js";
@@ -28,7 +28,7 @@ export class GameServerService {
 
     private assertOnline(server: GameServer | null) {
         if (!server || server.status !== GameServerStatus.ONLINE) {
-            serviceError("Game server is unavailable", 503, AuthErrorCode.GAME_SERVER_UNAVAILABLE);
+            Response.abort(AuthErrorCode.GAME_SERVER_UNAVAILABLE);
         }
     }
 }

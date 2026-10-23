@@ -1,14 +1,14 @@
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerGlobalCommand } from "@/rooms/global/player.global.command.js";
 import type { PartyCommandPayload } from "@/rooms/global/modules/party/commands/party-member.global.command.js";
 import { PartyInviteReplySchema } from "@/rooms/global/modules/party/validators/member.party.validator.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import type { PartyStateMessage } from "@/rooms/global/modules/party/interfaces/party.global.message.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import { PartyErrorCode } from "@/modules/party/enums/party-error-code.enum.js";
 import { partyGlobalService } from "@/rooms/global/modules/party/services/party.global.service.js";
 import { partyNotifyGlobalService } from "@/rooms/global/modules/party/services/party-notify.global.service.js";
-import { PartyNotice } from "@/rooms/global/global.shared.js";
+import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
 
 /** Nhận lời mời vào party (còn hạn, còn chỗ). */
 @SdkMessage({
@@ -30,20 +30,20 @@ export class PartyAcceptInviteGlobalCommand extends PlayerGlobalCommand<
 
     execute({ client }: PartyCommandPayload) {
         const { playerId } = client.auth;
-        const party = this.room.state.parties.getParty(this.body.partyId);
+        const party = this.room.parties.getParty(this.body.partyId);
         if (!party) {
             this.result = Response.error(PartyErrorCode.PARTY_NO_INVITE);
             return;
         }
 
-        const error = this.room.state.parties.join(party, playerId);
-        if (error) {
-            this.result = Response.error(error);
+        const joined = this.room.parties.join(party, playerId);
+        if (Response.isError(joined)) {
+            this.result = joined;
             return;
         }
 
         partyGlobalService.cancelInviteExpiry(party.id, playerId);
-        void partyGlobalService.publishMembership(this.room, party, playerId, party.id);
+        partyGlobalService.publishMembership(this.room, party, playerId, party.id);
         partyNotifyGlobalService.broadcastNotice(
             this.room,
             party,
@@ -53,6 +53,8 @@ export class PartyAcceptInviteGlobalCommand extends PlayerGlobalCommand<
         );
         partyNotifyGlobalService.broadcastState(this.room, party);
 
-        this.result = Response.success<PartyStateMessage>(party.toMessage());
+        this.result = Response.success<PartyStateMessage>(
+            partyNotifyGlobalService.snapshotOf(party)
+        );
     }
 }

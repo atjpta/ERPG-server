@@ -1,13 +1,10 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerCommandPayload } from "@/core/rooms/player.command.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { FriendErrorCode } from "@/modules/friends/enums/friend-error-code.enum.js";
-import {
-    friendshipService,
-    isFriendFailure,
-} from "@/modules/friends/services/friendship.service.js";
+import { friendshipService } from "@/modules/friends/services/friendship.service.js";
 import { FriendNotice } from "@/rooms/global/modules/friend/enums/friend-notice.enum.js";
 import type { FriendNoticeMessage } from "@/rooms/global/modules/friend/interfaces/friend.global.message.js";
 import { friendGlobalService } from "@/rooms/global/modules/friend/services/friend.global.service.js";
@@ -38,8 +35,8 @@ export class FriendAcceptGlobalCommand extends PlayerGlobalCommand<
         const fromId = this.body.playerId;
 
         const outcome = await friendshipService.accept({ playerId: selfId, fromId });
-        if (isFriendFailure(outcome)) {
-            this.result = Response.error(outcome.code, undefined, outcome.data ?? null);
+        if (Response.isError(outcome)) {
+            this.result = outcome;
             return;
         }
         const from = await PlayerIdentityRepo.findById({ id: fromId });

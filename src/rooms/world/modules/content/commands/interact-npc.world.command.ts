@@ -1,6 +1,5 @@
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
-import type { ErrorCode } from "@/core/types/result.type.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
 import { DialogueErrorCode } from "@/modules/dialogues/enums/dialogue-error-code.enum.js";
@@ -12,7 +11,7 @@ import { npcService } from "@/modules/npcs/services/npc.service.js";
 import { dialogueWorldService } from "@/rooms/world/modules/content/services/dialogue.world.service.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
 import { InteractNpcSchema } from "@/rooms/world/modules/content/validators/content.world.validator.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { PlayerWorldCommand } from "@/rooms/world/player.world.command.js";
@@ -44,10 +43,10 @@ export class InteractNpcWorldCommand extends PlayerWorldCommand<
     protected override readonly validateSchema = InteractNpcSchema;
 
     async execute({ client }: ContentPayload) {
-        const error = await this.startNpc(this.room, client, this.player, this.body.npcCode);
-        this.result = error
-            ? Response.error(error, undefined, { sourceCode: this.body.npcCode })
-            : Response.success();
+        const started = await this.startNpc(this.room, client, this.player, this.body.npcCode);
+        this.result = Response.isError(started)
+            ? Response.error(started.errorCode, { sourceCode: this.body.npcCode })
+            : started;
     }
 
     /** Nói chuyện với NPC: chọn thoại theo hoàn cảnh rồi vào node `start`. */
@@ -56,9 +55,9 @@ export class InteractNpcWorldCommand extends PlayerWorldCommand<
         client: PlayerClient,
         player: PlayerWorldState,
         npcCode: string
-    ): Promise<ErrorCode | undefined> {
+    ): Promise<Response> {
         const npc = npcService.getByCode(npcCode);
-        if (!npc) return NpcErrorCode.NPC_NOT_FOUND;
+        if (!npc) return Response.error(NpcErrorCode.NPC_NOT_FOUND);
         // 1 NPC có thể đứng ở vài chỗ trong map — lấy chỗ gần player nhất.
         const placement = room.state.npcs
             .filter((n) => n.code === npcCode)
@@ -67,15 +66,15 @@ export class InteractNpcWorldCommand extends PlayerWorldCommand<
                     Math.hypot(a.x - player.x, a.y - player.y) -
                     Math.hypot(b.x - player.x, b.y - player.y)
             )[0];
-        if (!placement) return NpcErrorCode.NPC_NOT_IN_MAP;
+        if (!placement) return Response.error(NpcErrorCode.NPC_NOT_IN_MAP);
         if (!player.isNear(placement.x, placement.y, npc.interactRadius)) {
-            return PlayerErrorCode.TOO_FAR;
+            return Response.error(PlayerErrorCode.TOO_FAR);
         }
         const ctx = player.conditionContext(room.map.code);
         const dialogueCode = dialogueRuleService.selectDialogueCode(npc, ctx);
         if (!dialogueCode || !dialogueService.getByCode(dialogueCode))
-            return DialogueErrorCode.DIALOGUE_NOT_FOUND;
-        const error = await dialogueWorldService.begin(room, client, player, {
+            return Response.error(DialogueErrorCode.DIALOGUE_NOT_FOUND);
+        const begun = await dialogueWorldService.begin(room, client, player, {
             sourceCode: npcCode,
             npcCode,
             dialogueCode,
@@ -84,8 +83,8 @@ export class InteractNpcWorldCommand extends PlayerWorldCommand<
             y: placement.y,
             radius: npc.interactRadius,
         });
-        if (error) return error;
+        if (Response.isError(begun)) return begun;
         questWorldService.sendMarkers(room, client, player);
-        return undefined;
+        return Response.success();
     }
 }

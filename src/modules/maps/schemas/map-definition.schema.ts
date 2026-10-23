@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ConditionSchema } from "@/modules/dialogues/schemas/condition.schema.js";
 import { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
-import { MapSpawnKind } from "@/modules/maps/entities/game-map.entity.js";
+import { MapSpawnKind } from "@/modules/maps/enums/game-map.enum.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { GateCode } from "@/modules/maps/enums/gate-code.enum.js";
 import { InteractableCode } from "@/modules/maps/enums/interactable-code.enum.js";

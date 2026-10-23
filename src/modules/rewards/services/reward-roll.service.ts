@@ -1,38 +1,37 @@
-import { Big, big, floorBig } from "@/core/utils/big-number.util.js";
-import {
-    type Rng,
-    equipmentRollService,
-} from "@/modules/equipment/services/equipment-roll.service.js";
+import { CalcService } from "@/core/calc/calc.service.js";
+import type { CalcValue } from "@/core/calc/calc.interface.js";
+import { equipmentRollService } from "@/modules/equipment/services/equipment-roll.service.js";
+import type { Rng } from "@/modules/equipment/types/equipment-roll.type.js";
 import { ItemRarity, ItemSource } from "@/modules/items/enums/item.enum.js";
 import type {
     EquipmentDrop,
     MonsterDrops,
 } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import type { ItemReward, Reward } from "@/modules/rewards/types/reward.type.js";
+import type { RewardScale } from "@/modules/rewards/types/reward-roll.type.js";
 
-/** Hệ số thưởng của monster (loại × độ hiếm) — `monster_scale_config`. */
-export interface RewardScale {
-    exp: Big;
-    gold: Big;
-    dropRate: Big;
-}
-
-const NO_SCALE: RewardScale = { exp: big(1), gold: big(1), dropRate: big(1) };
+/** Không có hệ số thưởng (tạo mỗi lần). */
+const noScale = (): RewardScale => {
+    const calc = new CalcService("big");
+    return { exp: calc.of(1), gold: calc.of(1), dropRate: calc.of(1) };
+};
 
 export class RewardRollService {
     /** Số nguyên ngẫu nhiên trong [min, max] (gồm cả hai đầu). */
     randomInt(min: number, max: number, rng: Rng = Math.random) {
-        return min + floorBig(big(max - min + 1).times(rng()));
+        return min + Math.floor((max - min + 1) * rng());
     }
 
     /** Trúng tỉ lệ `rate` (0 → 1). */
-    rollChance(rate: Big | number, rng: Rng = Math.random) {
-        return big(rng()).lt(rate);
+    rollChance(rate: CalcValue | number, rng: Rng = Math.random) {
+        const calc = new CalcService("big");
+        return calc.of(rng()).lt(rate);
     }
 
     /** Tỉ lệ sau khi nhân hệ số, tối đa 1. */
-    private scaledRate(rate: number, scale: Big) {
-        return Big.min(1, scale.times(rate));
+    private scaledRate(rate: number, scale: CalcValue) {
+        const calc = new CalcService("big");
+        return calc.min(1, scale.times(rate));
     }
 
     /** Rarity theo trọng số của drop; không cấu hình → common. */
@@ -59,7 +58,7 @@ export class RewardRollService {
             rollEquipment?: (drop: EquipmentDrop) => ItemReward | undefined;
         } = {}
     ): Reward {
-        const { rng = Math.random, scale = NO_SCALE, rollEquipment } = options;
+        const { rng = Math.random, scale = noScale(), rollEquipment } = options;
         const items: ItemReward[] = drops.items
             .filter((drop) => this.rollChance(this.scaledRate(drop.rate, scale.dropRate), rng))
             .map((drop) => ({
@@ -78,12 +77,12 @@ export class RewardRollService {
             currency: drops.currency
                 .map((drop) => ({
                     code: drop.code,
-                    amount: floorBig(scale.gold.times(this.randomInt(drop.min, drop.max, rng))),
+                    amount: scale.gold.times(this.randomInt(drop.min, drop.max, rng)).floor(),
                 }))
                 .filter((reward) => reward.amount > 0),
             items,
             source: ItemSource.DROP,
-            exp: floorBig(scale.exp.times(drops.exp)),
+            exp: scale.exp.times(drops.exp).floor(),
         };
     }
 }

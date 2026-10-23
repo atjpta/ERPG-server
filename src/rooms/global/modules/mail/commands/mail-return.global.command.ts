@@ -1,13 +1,12 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
-import { withTransaction } from "@/core/repositories/base.repository.js";
 import type { PlayerCommandPayload } from "@/core/rooms/player.command.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { MailErrorCode } from "@/modules/mails/enums/mail-error-code.enum.js";
 import { mailService } from "@/modules/mails/services/mail.service.js";
+import { mailTransferService } from "@/modules/mails/services/mail-transfer.service.js";
 import { mailGlobalService } from "@/rooms/global/modules/mail/services/mail.global.service.js";
 import { MailIdSchema } from "@/rooms/global/modules/mail/validators/mail.validator.js";
-import { playerDataGlobalService } from "@/rooms/global/modules/player-data/services/player-data.global.service.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import { PlayerGlobalCommand } from "@/rooms/global/player.global.command.js";
 
@@ -33,35 +32,22 @@ export class MailReturnGlobalCommand extends PlayerGlobalCommand<
         const { room } = this;
         const recipientId = client.auth.playerId;
         const { mailId } = this.body;
-        this.result = await playerDataGlobalService.exclusive(recipientId, async () => {
-            const mail = await mailService.findOwned({ mailId, recipientId });
-            if (!mail || mailService.isExpired(mail)) {
-                return Response.error(MailErrorCode.MAIL_NOT_FOUND);
-            }
-            const state = await playerDataGlobalService.load(room, recipientId);
-            const outcome = await withTransaction(async (tx) => {
-                const deleted = await mailService.deleteReturnable({
-                    mailId,
-                    recipientId,
-                    dbOrTx: tx,
-                });
-                if (!deleted) return null;
-                const returned = await mailService.returnToSender({
-                    mail: deleted,
-                    recipientName: state.name,
-                    dbOrTx: tx,
-                });
-                return { returned };
-            });
-            if (!outcome) {
-                return Response.error(
-                    mail.claimedAt
-                        ? MailErrorCode.MAIL_ALREADY_CLAIMED
-                        : MailErrorCode.MAIL_NOT_RETURNABLE
-                );
-            }
-            if (outcome.returned) void mailGlobalService.notifyReceived(room, outcome.returned);
-            return Response.success();
+        const mail = await mailService.findOwned({ mailId, recipientId });
+        if (!mail || mailService.isExpired(mail)) {
+            this.result = Response.error(MailErrorCode.MAIL_NOT_FOUND);
+            return;
+        }
+        const outcome = await mailTransferService.returnMail({
+            mailId,
+            recipientId,
+            recipientName: this.player.name,
         });
+        if (Response.isError(outcome)) {
+            this.result = outcome;
+            return;
+        }
+        const { returned } = outcome.data;
+        if (returned) void mailGlobalService.notifyReceived(room, returned);
+        this.result = Response.success();
     }
 }

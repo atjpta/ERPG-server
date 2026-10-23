@@ -1,11 +1,12 @@
-import type { GameMap, MonsterSpawn } from "@/modules/maps/entities/game-map.entity.js";
+import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
+import type { MonsterSpawn } from "@/modules/maps/types/game-map.type.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { MonsterStatus } from "@/modules/monsters/enums/monster-status.enum.js";
 import { MonsterType } from "@/modules/monsters/enums/monster-type.enum.js";
 import { monsterSpawnService } from "@/modules/monsters/services/monster-spawn.service.js";
 import { monsterService } from "@/modules/monsters/services/monster.service.js";
-import { WorldChain } from "@/rooms/world/chains/world.chain.js";
+import { WorldChain } from "@/modules/world/chains/world.chain.js";
 import { MonsterIdleHealChain } from "@/rooms/world/modules/monsters/chains/monster-idle-heal.world.chain.js";
 import {
     MonsterAttackChain,
@@ -15,7 +16,7 @@ import {
     MonsterMoveChain,
     MonsterStunChain,
 } from "@/rooms/world/modules/monsters/chains/monster.world.chain.js";
-import { MonsterWorldState } from "@/rooms/world/modules/monsters/schemas/monster.world.state.js";
+import { MonsterWorldState } from "@/modules/monsters/state/monster.state.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 

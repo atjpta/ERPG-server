@@ -1,4 +1,5 @@
-import { Big, big, bigToNumber } from "@/core/utils/big-number.util.js";
+import { CalcService } from "@/core/calc/calc.service.js";
+import type { CalcValue } from "@/core/calc/calc.interface.js";
 import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import type {
     EquipmentDropConfig,
@@ -9,9 +10,7 @@ import type {
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 import type { StatBonus } from "@/modules/player/schemas/stat.schema.js";
-
-/** Nguồn ngẫu nhiên [0, 1) — truyền vào để test được (mặc định `Math.random`). */
-export type Rng = () => number;
+import type { Rng } from "@/modules/equipment/types/equipment-roll.type.js";
 
 /** Thứ tự rarity từ thấp → cao (tinh hoá đi theo thứ tự này). */
 export const RARITY_ORDER: readonly ItemRarity[] = [
@@ -30,11 +29,12 @@ export class EquipmentRollService {
     /** Chọn 1 phần tử theo `weight`; danh sách rỗng / tổng trọng số ≤ 0 → `undefined`. */
     pickWeighted<T>(
         items: readonly T[],
-        weightOf: (item: T) => Big | number,
+        weightOf: (item: T) => CalcValue | number,
         rng: Rng
     ): T | undefined {
-        const weights = items.map((item) => Big.max(0, weightOf(item)));
-        const total = weights.reduce((sum, weight) => sum.plus(weight), big(0));
+        const calc = new CalcService("big");
+        const weights = items.map((item) => calc.max(0, weightOf(item)));
+        const total = weights.reduce((sum, weight) => sum.plus(weight), calc.of(0));
         if (total.lte(0)) return undefined;
         let roll = total.times(rng());
         for (let i = 0; i < items.length; i++) {
@@ -46,10 +46,14 @@ export class EquipmentRollService {
 
     /** Giá trị ngẫu nhiên trong [min, max] (4 chữ số thập phân). */
     rollStatRange(range: StatRange, rng: Rng): StatBonus {
+        const calc = new CalcService("big");
         return {
             stat: range.stat,
             type: range.type,
-            value: bigToNumber(big(range.min).plus(big(range.max).minus(range.min).times(rng()))),
+            value: calc
+                .of(range.min)
+                .plus(calc.of(range.max).minus(range.min).times(rng()))
+                .toNumber(),
         };
     }
 

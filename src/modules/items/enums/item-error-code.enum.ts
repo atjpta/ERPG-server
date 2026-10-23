@@ -1,4 +1,4 @@
-import { registerErrorCodes } from "@/core/utils/error-code.util.js";
+import { registerErrorCodes } from "@/core/response/error-code.js";
 
 /** Mã lỗi túi đồ, item, trang bị và tiền tệ. */
 export enum ItemErrorCode {

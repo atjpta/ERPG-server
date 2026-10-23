@@ -6,29 +6,24 @@ import {
     resolveMonsterAi,
     type MonsterAiRule,
 } from "@/modules/monsters/schemas/monster-ai-config.schema.js";
-import { MonsterWorldState } from "@/rooms/world/modules/monsters/schemas/monster.world.state.js";
-import { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import { MonsterWorldState } from "@/modules/monsters/state/monster.state.js";
+import { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
-import {
-    applyDirectedMove,
-    applyWorldMove,
-} from "@/rooms/world/modules/players/simulation/movement.step.js";
-import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
-import { distanceSquared } from "@/rooms/world/utils/world.util.js";
+import { applyDirectedMove, applyWorldMove } from "@/modules/player/simulation/movement.step.js";
+import { WorldChainAction, WorldChainResult } from "@/modules/world/chains/world.chain.js";
+import { distanceSquared } from "@/modules/world/utils/world.util.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
 import { skillDeliveryWorldService } from "@/rooms/world/modules/combat/services/skill-delivery.world.service.js";
 import { monsterSkillOwner } from "@/rooms/world/modules/combat/utils/skill-owner.world.util.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
+import { millisecondsToTicks } from "@/modules/world/utils/tick.util.js";
 import {
     HorizontalDirection,
-    PendingSkillHit,
-    buildPendingSkillHits,
     getSkillDurationTicks,
     skillReachesTarget,
-    tickPendingSkillHits,
-} from "@/rooms/world/modules/combat/utils/skill-attack.world.util.js";
-import { mapExtent } from "@/rooms/world/modules/players/simulation/movement.step.js";
+} from "@/modules/combat/utils/skill-attack.util.js";
+import { PendingSkillHitState } from "@/modules/combat/state/pending-skill-hit.state.js";
+import { mapExtent } from "@/modules/player/simulation/movement.step.js";
 
 /** Ranges authored in Unity (master data `monster_ai_config`); the defaults when the room runs without the cache (tests). */
 const monsterAi = (monster: MonsterWorldState): MonsterAiRule => {
@@ -49,7 +44,7 @@ interface RoamTarget {
 interface PendingAttack {
     target: PlayerWorldState;
     ticks: number;
-    hitEvents: PendingSkillHit[];
+    hitEvents: PendingSkillHitState[];
     cooldownTicks: number;
 }
 
@@ -252,7 +247,7 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
         const pending = this.pendingAttacks.get(monster);
         if (pending) {
             monster.startAttackWindup();
-            tickPendingSkillHits(pending.hitEvents, (hit) =>
+            PendingSkillHitState.tickAll(pending.hitEvents, (hit) =>
                 skillDeliveryWorldService.deliver(room, {
                     owner: monsterSkillOwner(monster),
                     skill: hit.skill,
@@ -292,7 +287,7 @@ export class MonsterAttackChain implements WorldChainAction<MonsterChainContext>
         this.pendingAttacks.set(monster, {
             target,
             ticks: getSkillDurationTicks(skill, room.tickRate),
-            hitEvents: buildPendingSkillHits(
+            hitEvents: PendingSkillHitState.schedule(
                 skill,
                 monster.attackSerial,
                 attackDirection,

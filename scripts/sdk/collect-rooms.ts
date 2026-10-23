@@ -11,16 +11,23 @@ import type { ClientMessageContract, RoomContract, ServerMessageContract } from 
 /*
  * Contract room suy từ code, không cần file khai báo riêng:
  *  - message client: command có `static readonly message = Enum.X`
- *  - payload: Zod schema mà command (hoặc lớp cha) `safeParse`/`parse`/`client.parsePayload(schema, …)`/gán vào `validateSchema`
+ *  - payload: Zod schema mà command (hoặc lớp cha) `safeParse`/`parse`/gán vào `validateSchema`
  *  - kiểu `data` của response: `@SdkMessage.response` trên command (gộp theo lớp cha)
- *  - kiểu `data` của push (`<Room>Message`): kiểu đối số tại các chỗ gọi `sendSuccess/sendResult/broadcast*`
+ *  - kiểu `data` của push (`<Room>Message`): kiểu đối số tại các chỗ gọi `RoomResponse.send/sendError/broadcast` (và helper `sendTo`)
  *  - state: generic của class room; cách join: `@SdkRoom` trên class room
  *  - tài liệu (replies, errors, note): `@SdkMessage` trên command (gộp theo lớp cha)
  *  - mỗi thư mục room có đúng một enum client `<Room>ClientMessage` và một enum push `<Room>Message`
  */
 
-/** `sendTo` là helper của party/global (gửi `ok(data)` cho một player theo id), tính như `sendSuccess`. */
-const SEND_FUNCTIONS = /^(?:(send|broadcast)(Success|Error|Result)|(sendTo))$/;
+/**
+ * Hàm đẩy message `<Room>Message` xuống client: `RoomResponse.send/sendError/broadcast`; `sendTo` là helper của party/global
+ * (gửi cho một player theo id) tính như `send`.
+ */
+const ROOM_RESPONSE_SENDS: Record<string, "Success" | "Error"> = {
+    send: "Success",
+    sendError: "Error",
+    broadcast: "Success",
+};
 
 function walk(dir: string, filter: (file: string) => boolean, out: string[] = []): string[] {
     if (!existsSync(dir)) return out;
@@ -187,16 +194,21 @@ export async function collectRooms(root: string) {
     const dataNames = new Map<string, Set<string>>();
     for (const file of roomFiles) {
         const visit = (node: ts.Node) => {
-            // `sendSuccess/sendError/sendResult` là method của client (`client.sendSuccess(...)`), `broadcast*` là hàm rời.
-            const callee = ts.isCallExpression(node)
-                ? ts.isIdentifier(node.expression)
-                    ? node.expression.text
-                    : ts.isPropertyAccessExpression(node.expression)
-                      ? node.expression.name.text
+            // `RoomResponse.send/sendError/broadcast(target, Message.X, data)` hoặc helper `sendTo(..., Message.X, data)`.
+            const sendKind = ts.isCallExpression(node)
+                ? ts.isPropertyAccessExpression(node.expression) &&
+                  node.expression.expression.getText() === "RoomResponse"
+                    ? ROOM_RESPONSE_SENDS[node.expression.name.text]
+                    : (ts.isIdentifier(node.expression)
+                            ? node.expression.text
+                            : ts.isPropertyAccessExpression(node.expression)
+                              ? node.expression.name.text
+                              : undefined) === "sendTo"
+                      ? "Success"
                       : undefined
                 : undefined;
-            if (ts.isCallExpression(node) && callee) {
-                const match = SEND_FUNCTIONS.exec(callee);
+            if (ts.isCallExpression(node) && sendKind) {
+                const match = sendKind;
                 // Chỉ push: enum `<Room>Message` (bỏ `<Room>ClientMessage`).
                 const index = match
                     ? node.arguments.findIndex(
@@ -211,21 +223,9 @@ export async function collectRooms(root: string) {
                     const names = dataNames.get(info.value) ?? new Set<string>();
                     dataNames.set(info.value, names);
                     const dataArg = node.arguments[index + 1];
-                    const kind = match[2] ?? "Success";
-                    if (kind !== "Error" && dataArg) {
-                        const type = dataArgType(dataArg);
-                        if (kind === "Success") {
-                            const name = typeName(type);
-                            if (name) names.add(name);
-                        } else {
-                            for (const part of type.isUnion() ? type.types : [type]) {
-                                const property = checker.getPropertyOfType(part, "data");
-                                const inner = property
-                                    ? typeName(checker.getTypeOfSymbolAtLocation(property, dataArg))
-                                    : undefined;
-                                if (inner) names.add(inner);
-                            }
-                        }
+                    if (sendKind === "Success" && dataArg) {
+                        const name = typeName(dataArgType(dataArg));
+                        if (name) names.add(name);
                     }
                 }
             }

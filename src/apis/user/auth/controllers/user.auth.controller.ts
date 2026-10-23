@@ -1,10 +1,11 @@
 import { createEndpoint } from "colyseus";
 import { createRateLimitMiddleware } from "@/core/middlewares/rate-limit.middleware.js";
-import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, HttpStatusCode, RouterContainer } from "@/core/response/http-response.js";
+import { Response } from "@/core/response/response.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { AUTH_IP_RATE_LIMIT } from "@/modules/auth/constants/rate-limit.constant.js";
 import { userAuthMiddleware } from "@/modules/auth/middlewares/user.auth.middleware.js";
-import { userAuthService } from "@/apis/user/auth/services/user.auth.service.js";
+import { userAuthService } from "@/modules/auth/services/user-auth.service.js";
 import {
     UserGoogleLinkSchema,
     UserGoogleLoginSchema,
@@ -50,8 +51,11 @@ export const userAuthController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const result = await userAuthService.register(ctx.body);
-                return HttpResponse.created(ctx, { data: result });
+                return HttpResponse.from(
+                    ctx,
+                    await userAuthService.register(ctx.body),
+                    HttpStatusCode.CREATED
+                );
             })
     ),
 
@@ -77,7 +81,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await userAuthService.login(ctx.body);
-                return HttpResponse.ok({ data: result });
+                return HttpResponse.from(ctx, result);
             })
     ),
 
@@ -103,7 +107,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await userAuthService.loginAsGuest(ctx.body, ctx.context.clientIp);
-                return HttpResponse.ok({ data: result });
+                return HttpResponse.from(ctx, result);
             })
     ),
 
@@ -121,7 +125,7 @@ export const userAuthController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                return HttpResponse.ok({ data: { nonce: userAuthService.issueOauthNonce() } });
+                return HttpResponse.success({ nonce: userAuthService.issueOauthNonce() });
             })
     ),
 
@@ -151,7 +155,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await userAuthService.loginWithGoogle(ctx.body);
-                return HttpResponse.ok({ data: result });
+                return HttpResponse.from(ctx, result);
             })
     ),
 
@@ -181,7 +185,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await userAuthService.loginWithPlayGames(ctx.body);
-                return HttpResponse.ok({ data: result });
+                return HttpResponse.from(ctx, result);
             })
     ),
 
@@ -199,7 +203,7 @@ export const userAuthController = {
             RouterContainer(ctx, async () => {
                 const profile = await userAuthService.getProfile(ctx.context.userId);
                 if (!profile) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ data: profile });
+                return HttpResponse.success(profile);
             })
     ),
 
@@ -224,17 +228,18 @@ export const userAuthController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const linked = await userAuthService.linkGoogle({
+                const result = await userAuthService.linkGoogle({
                     userId: ctx.context.userId,
                     body: ctx.body,
                 });
-                return HttpResponse.ok({
-                    data: {
+                return HttpResponse.from(
+                    ctx,
+                    Response.map(result, (linked) => ({
                         provider: linked.provider,
                         email: linked.email,
                         linkedAt: linked.createdAt.toISOString(),
-                    },
-                });
+                    }))
+                );
             })
     ),
 
@@ -252,13 +257,13 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const accounts = await userAuthService.listOauthAccounts(ctx.context.userId);
-                return HttpResponse.ok({
-                    data: accounts.map((account) => ({
+                return HttpResponse.success(
+                    accounts.map((account) => ({
                         provider: account.provider,
                         email: account.email,
                         linkedAt: account.createdAt.toISOString(),
-                    })),
-                });
+                    }))
+                );
             })
     ),
 
@@ -275,7 +280,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 await userAuthService.logout(ctx.context.userId, ctx.context.userSessionId);
-                return HttpResponse.ok({ message: "Logged out" });
+                return HttpResponse.success();
             })
     ),
 
@@ -288,7 +293,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 await userAuthService.logoutAll(ctx.context.userId);
-                return HttpResponse.ok({ message: "Logged out from all devices" });
+                return HttpResponse.success();
             })
     ),
 
@@ -305,7 +310,7 @@ export const userAuthController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const sessions = await userAuthService.listSessions(ctx.context.userId);
-                return HttpResponse.ok({ data: sessions });
+                return HttpResponse.success(sessions);
             })
     ),
 
@@ -323,11 +328,13 @@ export const userAuthController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                await userAuthService.revokeSession({
-                    userId: ctx.context.userId,
-                    sessionId: ctx.params.id,
-                });
-                return HttpResponse.ok({ message: "Session revoked" });
+                return HttpResponse.from(
+                    ctx,
+                    await userAuthService.revokeSession({
+                        userId: ctx.context.userId,
+                        sessionId: ctx.params.id,
+                    })
+                );
             })
     ),
 };

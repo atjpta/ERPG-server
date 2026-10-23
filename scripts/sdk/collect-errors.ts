@@ -71,7 +71,7 @@ export function collectErrorEnums(root: string): ErrorEnumDoc[] {
     const result: ErrorEnumDoc[] = [];
     for (const file of walk(join(root, "src"))) {
         const text = readFileSync(file, "utf8");
-        const match = text.match(/^registerErrorCodes\((\w+)\);/m);
+        const match = text.match(/^registerErrorCodes\((\w+)(?:,[\s\S]*?\}\s*)?\);/m);
         if (!match) continue;
         const { doc, members } = readEnum(file, match[1]);
         result.push({

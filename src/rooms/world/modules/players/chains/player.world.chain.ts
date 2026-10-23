@@ -1,36 +1,34 @@
 import { worldService } from "@/rooms/world/services/world.service.js";
-import { distanceSquared } from "@/rooms/world/utils/world.util.js";
-import { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import { distanceSquared } from "@/modules/world/utils/world.util.js";
+import { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import {
     MoveCommand,
     DIAGONAL_FACTOR,
     applyDirectedMove,
     applyWorldMove,
-} from "@/rooms/world/modules/players/simulation/movement.step.js";
-import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
+} from "@/modules/player/simulation/movement.step.js";
+import { WorldChainAction, WorldChainResult } from "@/modules/world/chains/world.chain.js";
 import { skillService } from "@/modules/skills/services/skill.service.js";
-import type { HitboxColliderState } from "@/rooms/world/modules/combat/schemas/hitbox-collider.world.state.js";
+import type { HitboxColliderState } from "@/modules/combat/state/hitbox-collider.state.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
-import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
+import { millisecondsToTicks } from "@/modules/world/utils/tick.util.js";
 import {
     getApproachDeadzone,
     getAutoTargetRange,
     getFaceTargetRange,
     getKeepTargetRange,
-} from "@/rooms/world/modules/players/utils/player-target.world.util.js";
+} from "@/modules/player/utils/player-target.util.js";
 import { skillDeliveryWorldService } from "@/rooms/world/modules/combat/services/skill-delivery.world.service.js";
 import {
-    PendingSkillHit,
-    buildPendingSkillHits,
     getAuraEvent,
     getSkillCastTicks,
     getSkillCooldownTicks,
     getSkillDurationTicks,
     skillReachesTarget,
-    tickPendingSkillHits,
     toHorizontalDirection,
-} from "@/rooms/world/modules/combat/utils/skill-attack.world.util.js";
+} from "@/modules/combat/utils/skill-attack.util.js";
+import { PendingSkillHitState } from "@/modules/combat/state/pending-skill-hit.state.js";
 import {
     findPlayerAimTarget,
     playerSkillOwner,
@@ -209,7 +207,7 @@ export class PlayerMoveChain implements WorldChainAction<PlayerChainContext> {
 }
 
 export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
-    private readonly pendingHits = new WeakMap<PlayerWorldState, PendingSkillHit[]>();
+    private readonly pendingHits = new WeakMap<PlayerWorldState, PendingSkillHitState[]>();
 
     interrupt(state: PlayerWorldState): void {
         this.pendingHits.delete(state);
@@ -281,7 +279,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         state.attackSerial++;
         this.pendingHits.set(
             state,
-            buildPendingSkillHits(skill, state.attackSerial, direction, room.tickRate)
+            PendingSkillHitState.schedule(skill, state.attackSerial, direction, room.tickRate)
         );
         state.startAttack(
             getSkillDurationTicks(skill, room.tickRate),
@@ -357,7 +355,14 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         state.attackSerial++;
         this.pendingHits.set(
             state,
-            buildPendingSkillHits(skill, state.attackSerial, direction, room.tickRate, 1, aim)
+            PendingSkillHitState.schedule(
+                skill,
+                state.attackSerial,
+                direction,
+                room.tickRate,
+                1,
+                aim
+            )
         );
         state.startSkill(slot, getSkillDurationTicks(skill, room.tickRate), cooldownTicks);
         // Skill AURA: vùng buff bắt đầu ngay, bám theo người dùng (hit event AURA không nằm trong lịch hit).
@@ -471,7 +476,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         state.attackSerial++;
         this.pendingHits.set(
             state,
-            buildPendingSkillHits(skill, state.attackSerial, direction, room.tickRate)
+            PendingSkillHitState.schedule(skill, state.attackSerial, direction, room.tickRate)
         );
         state.beginChargeStrike(getSkillDurationTicks(skill, room.tickRate));
     }
@@ -480,7 +485,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         const hits = this.pendingHits.get(state);
         if (!hits) return;
 
-        tickPendingSkillHits(hits, (hit) => this.applyHit(room, playerId, state, hit));
+        PendingSkillHitState.tickAll(hits, (hit) => this.applyHit(room, playerId, state, hit));
         if (hits.length === 0) this.pendingHits.delete(state);
     }
 
@@ -488,7 +493,7 @@ export class PlayerAttackChain implements WorldChainAction<PlayerChainContext> {
         room: WorldRoom,
         playerId: string,
         state: PlayerWorldState,
-        hit: PendingSkillHit
+        hit: PendingSkillHitState
     ): void {
         // HITBOX trúng ngay; đạn / vùng bay hoặc chờ nổ ở SkillDeliveryWorldService. Vị trí monster đọc
         // đúng chỗ client này đang vẽ (rewind) — cả lúc ngắm lẫn lúc trúng.

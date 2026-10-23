@@ -1,5 +1,5 @@
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import {
     PartyMemberGlobalCommand,
     type PartyCommandPayload,
@@ -8,7 +8,7 @@ import { partyNotifyGlobalService } from "@/rooms/global/modules/party/services/
 import { PartyTargetSchema } from "@/rooms/global/modules/party/validators/member.party.validator.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import { PartyErrorCode } from "@/modules/party/enums/party-error-code.enum.js";
 
 @SdkMessage({
     errors: [
@@ -27,9 +27,9 @@ export class PartyPromoteGlobalCommand extends PartyMemberGlobalCommand<typeof P
     execute({ client }: PartyCommandPayload) {
         const { room, party } = this;
         const targetId = this.body.playerId;
-        const error = party.promote(client.auth.playerId, targetId);
-        if (error) {
-            this.result = Response.error(error, undefined, {
+        const promoted = party.promote(client.auth.playerId, targetId);
+        if (Response.isError(promoted)) {
+            this.result = Response.error(promoted.errorCode, {
                 playerName: party.getMemberName(targetId),
             });
             return;

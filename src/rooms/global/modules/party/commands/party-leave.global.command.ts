@@ -1,12 +1,12 @@
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import {
     PartyMemberGlobalCommand,
     type PartyCommandPayload,
 } from "@/rooms/global/modules/party/commands/party-member.global.command.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import { PartyErrorCode } from "@/modules/party/enums/party-error-code.enum.js";
 import { partyGlobalService } from "@/rooms/global/modules/party/services/party.global.service.js";
 
 @SdkMessage({

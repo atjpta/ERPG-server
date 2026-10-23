@@ -2,16 +2,17 @@ import { ChatChannelKey } from "@/modules/chat/enums/chat-channel-key.enum.js";
 import { generateEntityId } from "@/core/entities/base.entity.js";
 import { cacheService } from "@/core/cache/cache.service.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
-import type { Result } from "@/core/types/result.type.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
+import { RoomResponse } from "@/core/response/room-response.js";
 import type { ChatMessageWithSender } from "@/modules/chat/entities/chat-message.entity.js";
+import { ChatMessageRepo } from "@/modules/chat/repositories/chat-message.repository.js";
 import { chatMessageService } from "@/modules/chat/services/chat-message.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import type { GlobalRoom } from "@/rooms/global/global.room.js";
 import { chatChannelRegistry } from "@/rooms/global/modules/chat/channels/chat-channel.registry.js";
 import type { ChatSendPayload } from "@/rooms/global/modules/chat/types/chat-send.type.js";
-import { ChatErrorCode } from "@/rooms/global/modules/chat/enums/chat-error-code.enum.js";
+import { ChatErrorCode } from "@/modules/chat/enums/chat-error-code.enum.js";
 import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
 import type {
     ChatHistoryMessage,
@@ -34,13 +35,13 @@ const toReceived = (row: ChatMessageWithSender): ChatReceivedMessage => ({
  * nếu kênh bật `saveHistory`. Mọi giới hạn đọc từ `chat_config.channels[key]`; kênh chỉ quyết định người nhận.
  */
 export class ChatDeliveryService {
-    /** Gửi một tin vào kênh. Trả `ok()` khi đã gửi, hoặc `fail(code)` lý do bị từ chối (cho response của request). */
+    /** Gửi một tin vào kênh. Trả `Response.success()` khi đã gửi, hoặc `Response.error(code)` lý do bị từ chối (cho response của request). */
     async send(params: {
         room: GlobalRoom;
         senderId: string;
         channelKey: ChatChannelKey;
         payload: ChatSendPayload;
-    }): Promise<Result> {
+    }): Promise<Response> {
         const { room, senderId, channelKey, payload } = params;
 
         const config = masterDataCacheService.get(MasterDataKey.CHAT_CONFIG).channels[channelKey];
@@ -51,7 +52,7 @@ export class ChatDeliveryService {
         const content = payload.content.trim();
         if (!content) return Response.error(ChatErrorCode.CHAT_EMPTY);
         if (content.length > config.maxLength) {
-            return Response.error(ChatErrorCode.CHAT_TOO_LONG, undefined, {
+            return Response.error(ChatErrorCode.CHAT_TOO_LONG, {
                 maxLength: config.maxLength,
             });
         }
@@ -59,7 +60,7 @@ export class ChatDeliveryService {
         const { limit, windowSeconds } = config.rateLimit;
         const count = await cacheService.incr(`chat:rate:${channelKey}:${senderId}`, windowSeconds);
         if (count > limit) {
-            return Response.error(CommonCode.TOO_MANY_REQUESTS, undefined, {
+            return Response.error(CommonCode.TOO_MANY_REQUESTS, {
                 retryAfterSeconds: windowSeconds,
             });
         }
@@ -72,7 +73,7 @@ export class ChatDeliveryService {
         if (Response.isError(resolved)) return resolved;
 
         const { playerIds, everyone, scopeKey, targetPlayerId } = resolved.data;
-        const senderName = room.state.players.get(senderId)?.name ?? "";
+        const senderName = room.players.get(senderId)?.name ?? "";
         const id = generateEntityId();
         const message: ChatReceivedMessage = {
             id,
@@ -84,28 +85,27 @@ export class ChatDeliveryService {
             ...(targetPlayerId ? { targetId: targetPlayerId } : {}),
         };
         if (everyone) {
-            room.broadcastSuccess(GlobalMessage.CHAT_RECEIVED, message);
+            RoomResponse.broadcast(room, GlobalMessage.CHAT_RECEIVED, message);
         } else {
             for (const playerId of new Set([...playerIds, senderId])) {
-                room.clientOf(playerId)?.sendSuccess(GlobalMessage.CHAT_RECEIVED, message);
+                const client = room.clientOf(playerId);
+                if (client) RoomResponse.send(client, GlobalMessage.CHAT_RECEIVED, message);
             }
         }
 
         if (config.saveHistory) {
             // Không chặn việc gửi: lỗi DB chỉ làm mất dòng lịch sử, tin đã tới người nhận.
-            chatMessageService
-                .create({
-                    data: {
-                        id,
-                        serverId: room.serverId,
-                        channel: channelKey,
-                        senderPlayerId: senderId,
-                        targetPlayerId: targetPlayerId ?? null,
-                        scopeKey: scopeKey ?? null,
-                        content,
-                    },
-                })
-                .catch((error: unknown) => console.warn("[Chat] save history failed:", error));
+            ChatMessageRepo.create({
+                data: {
+                    id,
+                    serverId: room.serverId,
+                    channel: channelKey,
+                    senderPlayerId: senderId,
+                    targetPlayerId: targetPlayerId ?? null,
+                    scopeKey: scopeKey ?? null,
+                    content,
+                },
+            }).catch((error: unknown) => console.warn("[Chat] save history failed:", error));
         }
         return Response.success();
     }

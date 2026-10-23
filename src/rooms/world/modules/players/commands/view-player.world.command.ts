@@ -1,12 +1,12 @@
-import { Response } from "@/core/utils/response.util.js";
+import { equipmentMessageService } from "@/modules/equipment/services/equipment-message.service.js";
+import { Response } from "@/core/response/response.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { inventoryGlobalService } from "@/rooms/global/global.shared.js";
 import { PlayerTargetSchema } from "@/rooms/world/modules/players/validators/player-target.world.validator.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
 import type { PlayerViewMessage } from "@/rooms/world/modules/players/interfaces/player.world.message.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { PlayerWorldCommand } from "@/rooms/world/player.world.command.js";
 
 @SdkMessage({
@@ -43,7 +43,7 @@ export class ViewPlayerWorldCommand extends PlayerWorldCommand<
             level: target.level,
             classCode: target.classCode,
             baseClassCode: target.baseClassCode,
-            equipments: inventoryGlobalService.toEquipmentsMessage(target.equipments),
+            equipments: equipmentMessageService.toEquipmentsMessage(target.equipments),
             attributes: { ...target.attributes },
             stats: { ...target.stats },
         });

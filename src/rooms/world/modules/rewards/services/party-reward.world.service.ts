@@ -3,15 +3,12 @@ import { masterDataCacheService } from "@/modules/master-data/services/master-da
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { Reward } from "@/modules/rewards/types/reward.type.js";
 import { monsterRewardService } from "@/modules/rewards/services/monster-reward.service.js";
-import type { MonsterWorldState } from "@/rooms/world/modules/monsters/schemas/monster.world.state.js";
+import type { MonsterWorldState } from "@/modules/monsters/state/monster.state.js";
 import { partyLootService } from "@/modules/rewards/services/party-loot.service.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { rewardWorldService } from "@/rooms/world/modules/rewards/services/reward.world.service.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-/** Quá ngưỡng này thì dọn con trỏ của party đã không còn ai trong room. */
-const MAX_TRACKED_PARTIES = 64;
-
 export class PartyRewardWorldService {
     /**
      * Thành viên cùng party đang ở **room này** và còn sống (gồm `attacker`). Không party → chỉ `attacker`.
@@ -89,7 +86,9 @@ export class PartyRewardWorldService {
         }
         const config = masterDataCacheService.get(MasterDataKey.PARTY_CONFIG);
         const partyId = attacker.partyId!;
-        const cursors = this.cursorsOf(room);
+        room.partyLoot.prune(
+            new Set([...room.state.players.values()].map((player) => player.partyId))
+        );
         const { rewards, nextCursor } = partyLootService.shareKillReward(
             reward,
             attacker.id,
@@ -100,10 +99,10 @@ export class PartyRewardWorldService {
                 maxLevelGap: config.maxLevelGap,
                 shareGold: config.shareGold,
                 lootMode: attacker.partyLootMode,
-                cursor: cursors.get(partyId) ?? 0,
+                cursor: room.partyLoot.cursorOf(partyId),
             }
         );
-        cursors.set(partyId, nextCursor);
+        room.partyLoot.advance(partyId, nextCursor);
         for (const { playerId, player } of participants) {
             const share = rewards.get(player.id);
             if (share) rewardWorldService.grant(room, playerId, player, share);
@@ -113,25 +112,6 @@ export class PartyRewardWorldService {
                 targetCode: target.code,
             });
         }
-    }
-
-    private readonly cursors = new WeakMap<WorldRoom, Map<string, number>>();
-
-    /** Con trỏ luân phiên của các party trong room; dọn party không còn ai trong room khi map phình to. */
-    private cursorsOf(room: WorldRoom): Map<string, number> {
-        let cursors = this.cursors.get(room);
-        if (!cursors) {
-            cursors = new Map();
-            this.cursors.set(room, cursors);
-        }
-        if (cursors.size > MAX_TRACKED_PARTIES) {
-            const present = new Set(
-                [...room.state.players.values()].map((player) => player.partyId)
-            );
-            for (const partyId of cursors.keys())
-                if (!present.has(partyId)) cursors.delete(partyId);
-        }
-        return cursors;
     }
 }
 export const partyRewardWorldService = new PartyRewardWorldService();

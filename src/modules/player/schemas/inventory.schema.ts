@@ -43,15 +43,6 @@ export const toInventories = (state: Record<InventoryColumn, InventoryItem[]>): 
     [ItemType.MATERIAL]: state.materialInventory,
 });
 
-/** Tách `Inventories` ra lại 3 cột để lưu. */
-export const fromInventories = (
-    inventories: Inventories
-): Record<InventoryColumn, InventoryItem[]> => ({
-    equipmentInventory: inventories[ItemType.EQUIPMENT],
-    consumableInventory: inventories[ItemType.CONSUMABLE],
-    materialInventory: inventories[ItemType.MATERIAL],
-});
-
 /** Trang bị đang mặc ở một slot. */
 export const EquippedItemSchema = z.object({
     /** Giữ nguyên id của món khi chuyển giữa inventory và equipments. */

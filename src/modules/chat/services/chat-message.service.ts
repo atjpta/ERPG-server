@@ -1,15 +1,12 @@
 import { DateTime } from "luxon";
-import { BaseService } from "@/core/services/base.service.js";
 import { ChatMessages } from "@/modules/chat/entities/chat-message.entity.js";
 import {
     ChatMessageRepo,
     type ChatMessageRepository,
 } from "@/modules/chat/repositories/chat-message.repository.js";
 
-export class ChatMessageService extends BaseService<typeof ChatMessages> {
-    constructor(private readonly chatRepo: ChatMessageRepository = ChatMessageRepo) {
-        super(chatRepo);
-    }
+export class ChatMessageService {
+    constructor(private readonly chatRepo: ChatMessageRepository = ChatMessageRepo) {}
 
     findRecentByChannel(params: Parameters<ChatMessageRepository["findRecentByChannel"]>[0]) {
         return this.chatRepo.findRecentByChannel(params);

@@ -1,23 +1,20 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, type Queryable } from "@/configs/postgres.config.js";
-import {
-    PlayerStates,
-    type NewPlayerState,
-} from "@/modules/player/entities/player-state.entity.js";
+import { PlayerDatas, type NewPlayerData } from "@/modules/player/entities/player-data.entity.js";
 
 export class PlayerStateRepository {
     async findByPlayerId(playerId: string, dbOrTx: Queryable = db) {
         const [state] = await dbOrTx
             .select()
-            .from(PlayerStates)
-            .where(eq(PlayerStates.playerId, playerId))
+            .from(PlayerDatas)
+            .where(eq(PlayerDatas.playerId, playerId))
             .limit(1);
         return state ?? null;
     }
 
     async findByPlayerIds(playerIds: string[], dbOrTx: Queryable = db) {
         if (playerIds.length === 0) return [];
-        return dbOrTx.select().from(PlayerStates).where(inArray(PlayerStates.playerId, playerIds));
+        return dbOrTx.select().from(PlayerDatas).where(inArray(PlayerDatas.playerId, playerIds));
     }
 
     /**
@@ -26,44 +23,44 @@ export class PlayerStateRepository {
      */
     async replaceClassSkills(
         classId: string,
-        skills: NonNullable<NewPlayerState["skills"]>,
+        skills: NonNullable<NewPlayerData["skills"]>,
         dbOrTx: Queryable = db
     ) {
         return dbOrTx
-            .update(PlayerStates)
+            .update(PlayerDatas)
             .set({ skills })
             .where(
                 and(
-                    eq(PlayerStates.classId, classId),
-                    sql`${PlayerStates.skills} <> ${JSON.stringify(skills)}::jsonb`
+                    eq(PlayerDatas.classId, classId),
+                    sql`${PlayerDatas.skills} <> ${JSON.stringify(skills)}::jsonb`
                 )
             )
-            .returning({ playerId: PlayerStates.playerId });
+            .returning({ playerId: PlayerDatas.playerId });
     }
 
     /** Gán class cho mọi player chưa có class (không đổi revision — không đụng state online). */
     async fillMissingClass(classId: string, dbOrTx: Queryable = db) {
         return dbOrTx
-            .update(PlayerStates)
+            .update(PlayerDatas)
             .set({ classId })
-            .where(isNull(PlayerStates.classId))
-            .returning({ playerId: PlayerStates.playerId });
+            .where(isNull(PlayerDatas.classId))
+            .returning({ playerId: PlayerDatas.playerId });
     }
 
-    async create(data: NewPlayerState, dbOrTx: Queryable = db) {
-        const [state] = await dbOrTx.insert(PlayerStates).values(data).returning();
+    async create(data: NewPlayerData, dbOrTx: Queryable = db) {
+        const [state] = await dbOrTx.insert(PlayerDatas).values(data).returning();
         return state;
     }
 
     async updateByPlayerId(
         playerId: string,
-        data: Partial<Omit<NewPlayerState, "playerId">>,
+        data: Partial<Omit<NewPlayerData, "playerId">>,
         dbOrTx: Queryable = db
     ) {
         const [state] = await dbOrTx
-            .update(PlayerStates)
-            .set({ ...data, revision: sql`${PlayerStates.revision} + 1` })
-            .where(eq(PlayerStates.playerId, playerId))
+            .update(PlayerDatas)
+            .set({ ...data, revision: sql`${PlayerDatas.revision} + 1` })
+            .where(eq(PlayerDatas.playerId, playerId))
             .returning();
         return state ?? null;
     }
@@ -71,17 +68,14 @@ export class PlayerStateRepository {
     async updateIfUnchanged(
         playerId: string,
         expectedRevision: number,
-        data: Partial<Omit<NewPlayerState, "playerId">>,
+        data: Partial<Omit<NewPlayerData, "playerId">>,
         dbOrTx: Queryable = db
     ) {
         const [state] = await dbOrTx
-            .update(PlayerStates)
-            .set({ ...data, revision: sql`${PlayerStates.revision} + 1` })
+            .update(PlayerDatas)
+            .set({ ...data, revision: sql`${PlayerDatas.revision} + 1` })
             .where(
-                and(
-                    eq(PlayerStates.playerId, playerId),
-                    eq(PlayerStates.revision, expectedRevision)
-                )
+                and(eq(PlayerDatas.playerId, playerId), eq(PlayerDatas.revision, expectedRevision))
             )
             .returning();
         return state ?? null;

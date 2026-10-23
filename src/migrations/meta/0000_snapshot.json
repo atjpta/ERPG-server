@@ -1,5 +1,5 @@
 {
-    "id": "13947bdc-1bfe-41e2-8521-e1e8eabeedac",
+    "id": "0245a272-c620-47a7-8969-a6167f417e5a",
     "prevId": "00000000-0000-0000-0000-000000000000",
     "version": "7",
     "dialect": "postgresql",
@@ -645,6 +645,185 @@
             "checkConstraints": {},
             "isRLSEnabled": false
         },
+        "public.chat_messages": {
+            "name": "chat_messages",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "server_id": {
+                    "name": "server_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "channel": {
+                    "name": "channel",
+                    "type": "chat_channel",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "sender_player_id": {
+                    "name": "sender_player_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "target_player_id": {
+                    "name": "target_player_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "scope_key": {
+                    "name": "scope_key",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "content": {
+                    "name": "content",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "meta": {
+                    "name": "meta",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                }
+            },
+            "indexes": {
+                "chat_messages_channel_idx": {
+                    "name": "chat_messages_channel_idx",
+                    "columns": [
+                        {
+                            "expression": "server_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "channel",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "scope_key",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "chat_messages_target_idx": {
+                    "name": "chat_messages_target_idx",
+                    "columns": [
+                        {
+                            "expression": "target_player_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "chat_messages_sender_idx": {
+                    "name": "chat_messages_sender_idx",
+                    "columns": [
+                        {
+                            "expression": "sender_player_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "chat_messages_server_id_game_servers_id_fk": {
+                    "name": "chat_messages_server_id_game_servers_id_fk",
+                    "tableFrom": "chat_messages",
+                    "tableTo": "game_servers",
+                    "columnsFrom": ["server_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                },
+                "chat_messages_sender_player_id_players_id_fk": {
+                    "name": "chat_messages_sender_player_id_players_id_fk",
+                    "tableFrom": "chat_messages",
+                    "tableTo": "players",
+                    "columnsFrom": ["sender_player_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "chat_messages_target_player_id_players_id_fk": {
+                    "name": "chat_messages_target_player_id_players_id_fk",
+                    "tableFrom": "chat_messages",
+                    "tableTo": "players",
+                    "columnsFrom": ["target_player_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
         "public.classes": {
             "name": "classes",
             "schema": "",
@@ -803,6 +982,248 @@
             "checkConstraints": {},
             "isRLSEnabled": false
         },
+        "public.friendships": {
+            "name": "friendships",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "requester_id": {
+                    "name": "requester_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "addressee_id": {
+                    "name": "addressee_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "status": {
+                    "name": "status",
+                    "type": "friendship_status",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'pending'"
+                },
+                "responded_at": {
+                    "name": "responded_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": false
+                }
+            },
+            "indexes": {
+                "friendships_pair_unique": {
+                    "name": "friendships_pair_unique",
+                    "columns": [
+                        {
+                            "expression": "least(\"requester_id\", \"addressee_id\")",
+                            "asc": true,
+                            "isExpression": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "greatest(\"requester_id\", \"addressee_id\")",
+                            "asc": true,
+                            "isExpression": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "friendships_requester_idx": {
+                    "name": "friendships_requester_idx",
+                    "columns": [
+                        {
+                            "expression": "requester_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "status",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "friendships_addressee_idx": {
+                    "name": "friendships_addressee_idx",
+                    "columns": [
+                        {
+                            "expression": "addressee_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "status",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "friendships_requester_id_players_id_fk": {
+                    "name": "friendships_requester_id_players_id_fk",
+                    "tableFrom": "friendships",
+                    "tableTo": "players",
+                    "columnsFrom": ["requester_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "friendships_addressee_id_players_id_fk": {
+                    "name": "friendships_addressee_id_players_id_fk",
+                    "tableFrom": "friendships",
+                    "tableTo": "players",
+                    "columnsFrom": ["addressee_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.player_blocks": {
+            "name": "player_blocks",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "blocker_id": {
+                    "name": "blocker_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "blocked_id": {
+                    "name": "blocked_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {
+                "player_blocks_pair_unique": {
+                    "name": "player_blocks_pair_unique",
+                    "columns": [
+                        {
+                            "expression": "blocker_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "blocked_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "player_blocks_blocked_idx": {
+                    "name": "player_blocks_blocked_idx",
+                    "columns": [
+                        {
+                            "expression": "blocked_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "player_blocks_blocker_id_players_id_fk": {
+                    "name": "player_blocks_blocker_id_players_id_fk",
+                    "tableFrom": "player_blocks",
+                    "tableTo": "players",
+                    "columnsFrom": ["blocker_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "player_blocks_blocked_id_players_id_fk": {
+                    "name": "player_blocks_blocked_id_players_id_fk",
+                    "tableFrom": "player_blocks",
+                    "tableTo": "players",
+                    "columnsFrom": ["blocked_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
         "public.items": {
             "name": "items",
             "schema": "",
@@ -899,6 +1320,495 @@
                     "columns": ["code"]
                 }
             },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.mail_broadcast_receipts": {
+            "name": "mail_broadcast_receipts",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "broadcast_id": {
+                    "name": "broadcast_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "player_id": {
+                    "name": "player_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {
+                "mail_broadcast_receipts_unique": {
+                    "name": "mail_broadcast_receipts_unique",
+                    "columns": [
+                        {
+                            "expression": "broadcast_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "player_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "mail_broadcast_receipts_player_idx": {
+                    "name": "mail_broadcast_receipts_player_idx",
+                    "columns": [
+                        {
+                            "expression": "player_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "mail_broadcast_receipts_broadcast_id_mail_broadcasts_id_fk": {
+                    "name": "mail_broadcast_receipts_broadcast_id_mail_broadcasts_id_fk",
+                    "tableFrom": "mail_broadcast_receipts",
+                    "tableTo": "mail_broadcasts",
+                    "columnsFrom": ["broadcast_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "mail_broadcast_receipts_player_id_players_id_fk": {
+                    "name": "mail_broadcast_receipts_player_id_players_id_fk",
+                    "tableFrom": "mail_broadcast_receipts",
+                    "tableTo": "players",
+                    "columnsFrom": ["player_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.mail_broadcasts": {
+            "name": "mail_broadcasts",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "server_id": {
+                    "name": "server_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "template_code": {
+                    "name": "template_code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "params": {
+                    "name": "params",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "content": {
+                    "name": "content",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "reward": {
+                    "name": "reward",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "skip_new_players": {
+                    "name": "skip_new_players",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": false
+                },
+                "expires_at": {
+                    "name": "expires_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "mail_broadcasts_server_id_game_servers_id_fk": {
+                    "name": "mail_broadcasts_server_id_game_servers_id_fk",
+                    "tableFrom": "mail_broadcasts",
+                    "tableTo": "game_servers",
+                    "columnsFrom": ["server_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.mail_templates": {
+            "name": "mail_templates",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "code": {
+                    "name": "code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "content": {
+                    "name": "content",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "note": {
+                    "name": "note",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "mail_templates_code_unique": {
+                    "name": "mail_templates_code_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["code"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.mails": {
+            "name": "mails",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "server_id": {
+                    "name": "server_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "recipient_player_id": {
+                    "name": "recipient_player_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "kind": {
+                    "name": "kind",
+                    "type": "mail_kind",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "sender_player_id": {
+                    "name": "sender_player_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "sender_name": {
+                    "name": "sender_name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "template_code": {
+                    "name": "template_code",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "params": {
+                    "name": "params",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "content": {
+                    "name": "content",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "subject": {
+                    "name": "subject",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "body": {
+                    "name": "body",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "reward": {
+                    "name": "reward",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "cod": {
+                    "name": "cod",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "broadcast_id": {
+                    "name": "broadcast_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "read_at": {
+                    "name": "read_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "claimed_at": {
+                    "name": "claimed_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "expires_at": {
+                    "name": "expires_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {
+                "mails_recipient_idx": {
+                    "name": "mails_recipient_idx",
+                    "columns": [
+                        {
+                            "expression": "recipient_player_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "mails_sender_idx": {
+                    "name": "mails_sender_idx",
+                    "columns": [
+                        {
+                            "expression": "sender_player_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "claimed_at",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "mails_expires_idx": {
+                    "name": "mails_expires_idx",
+                    "columns": [
+                        {
+                            "expression": "expires_at",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": false,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                },
+                "mails_broadcast_recipient_unique": {
+                    "name": "mails_broadcast_recipient_unique",
+                    "columns": [
+                        {
+                            "expression": "broadcast_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        },
+                        {
+                            "expression": "recipient_player_id",
+                            "isExpression": false,
+                            "asc": true,
+                            "nulls": "last"
+                        }
+                    ],
+                    "isUnique": true,
+                    "concurrently": false,
+                    "method": "btree",
+                    "with": {}
+                }
+            },
+            "foreignKeys": {
+                "mails_server_id_game_servers_id_fk": {
+                    "name": "mails_server_id_game_servers_id_fk",
+                    "tableFrom": "mails",
+                    "tableTo": "game_servers",
+                    "columnsFrom": ["server_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                },
+                "mails_recipient_player_id_players_id_fk": {
+                    "name": "mails_recipient_player_id_players_id_fk",
+                    "tableFrom": "mails",
+                    "tableTo": "players",
+                    "columnsFrom": ["recipient_player_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "mails_sender_player_id_players_id_fk": {
+                    "name": "mails_sender_player_id_players_id_fk",
+                    "tableFrom": "mails",
+                    "tableTo": "players",
+                    "columnsFrom": ["sender_player_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "set null",
+                    "onUpdate": "no action"
+                },
+                "mails_broadcast_id_mail_broadcasts_id_fk": {
+                    "name": "mails_broadcast_id_mail_broadcasts_id_fk",
+                    "tableFrom": "mails",
+                    "tableTo": "mail_broadcasts",
+                    "columnsFrom": ["broadcast_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
             "policies": {},
             "checkConstraints": {},
             "isRLSEnabled": false
@@ -1347,8 +2257,8 @@
             "checkConstraints": {},
             "isRLSEnabled": false
         },
-        "public.player_states": {
-            "name": "player_states",
+        "public.player_datas": {
+            "name": "player_datas",
             "schema": "",
             "columns": {
                 "player_id": {
@@ -1540,27 +2450,27 @@
             },
             "indexes": {},
             "foreignKeys": {
-                "player_states_player_id_players_id_fk": {
-                    "name": "player_states_player_id_players_id_fk",
-                    "tableFrom": "player_states",
+                "player_datas_player_id_players_id_fk": {
+                    "name": "player_datas_player_id_players_id_fk",
+                    "tableFrom": "player_datas",
                     "tableTo": "players",
                     "columnsFrom": ["player_id"],
                     "columnsTo": ["id"],
                     "onDelete": "cascade",
                     "onUpdate": "no action"
                 },
-                "player_states_class_id_classes_id_fk": {
-                    "name": "player_states_class_id_classes_id_fk",
-                    "tableFrom": "player_states",
+                "player_datas_class_id_classes_id_fk": {
+                    "name": "player_datas_class_id_classes_id_fk",
+                    "tableFrom": "player_datas",
                     "tableTo": "classes",
                     "columnsFrom": ["class_id"],
                     "columnsTo": ["id"],
                     "onDelete": "restrict",
                     "onUpdate": "no action"
                 },
-                "player_states_map_code_game_maps_code_fk": {
-                    "name": "player_states_map_code_game_maps_code_fk",
-                    "tableFrom": "player_states",
+                "player_datas_map_code_game_maps_code_fk": {
+                    "name": "player_datas_map_code_game_maps_code_fk",
+                    "tableFrom": "player_datas",
                     "tableTo": "game_maps",
                     "columnsFrom": ["map_code"],
                     "columnsTo": ["code"],
@@ -1902,6 +2812,16 @@
             "schema": "public",
             "values": ["active", "inactive", "banned", "deleted"]
         },
+        "public.chat_channel": {
+            "name": "chat_channel",
+            "schema": "public",
+            "values": ["world", "general", "party", "whisper"]
+        },
+        "public.friendship_status": {
+            "name": "friendship_status",
+            "schema": "public",
+            "values": ["pending", "accepted"]
+        },
         "public.item_rarity": {
             "name": "item_rarity",
             "schema": "public",
@@ -1911,6 +2831,11 @@
             "name": "item_type",
             "schema": "public",
             "values": ["equipment", "consumable", "material"]
+        },
+        "public.mail_kind": {
+            "name": "mail_kind",
+            "schema": "public",
+            "values": ["player", "system"]
         },
         "public.map_status": {
             "name": "map_status",
@@ -1942,7 +2867,10 @@
                 "party_config",
                 "player_target_config",
                 "monster_ai_config",
-                "npc_config"
+                "npc_config",
+                "chat_config",
+                "friend_config",
+                "mail_config"
             ]
         },
         "public.biome": {

@@ -1,5 +1,5 @@
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { PlayerGlobalCommand } from "@/rooms/global/player.global.command.js";
 import type { PartyCommandPayload } from "@/rooms/global/modules/party/commands/party-member.global.command.js";
@@ -19,17 +19,19 @@ export class PartyCreateGlobalCommand extends PlayerGlobalCommand<PartyCommandPa
 
     execute({ client }: PartyCommandPayload) {
         const { playerId } = client.auth;
-        let party = this.room.state.parties.getPartyByPlayerId(playerId);
+        let party = this.room.parties.getPartyByPlayerId(playerId);
         if (!party) {
-            const player = this.room.state.players.get(playerId);
-            if (!player || !player.inWorld) {
+            const player = this.player;
+            if (!player.presence) {
                 this.result = Response.error(PlayerErrorCode.PLAYER_OFFLINE);
                 return;
             }
-            party = this.room.state.parties.create(player);
-            void partyGlobalService.publishMembership(this.room, party, player.playerId, party.id);
+            party = this.room.parties.create(player);
+            partyGlobalService.publishMembership(this.room, party, player.playerId, party.id);
             partyNotifyGlobalService.broadcastState(this.room, party);
         }
-        this.result = Response.success<PartyStateMessage>(party.toMessage());
+        this.result = Response.success<PartyStateMessage>(
+            partyNotifyGlobalService.snapshotOf(party)
+        );
     }
 }

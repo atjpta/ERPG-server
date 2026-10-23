@@ -36,19 +36,19 @@ Chỉ có một assembly `ERPG.Network` (đã bỏ `ERPG.Schema.asmdef`; namespa
 
 ## Nguồn dữ liệu trên server
 
-| Cái cần sinh                                              | Khai báo ở đâu                                                                                               |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Hàm API                                                   | option `sdk` của endpoint trong `src/apis/<role>/<module>/controllers`                                       |
-| Kiểu request                                              | Zod `body` / `query` / `params` của endpoint (schema export trong `validators/*.validator.ts`)               |
-| Kiểu response                                             | `sdk.response` — Zod schema export trong `validators/*.response.ts`                                          |
-| Message client → server của room (request)                | command có `static readonly message = <Room>ClientMessage.X` (tự suy)                                        |
-| Payload của message                                       | Zod schema mà command `safeParse`/`parse`/`client.parsePayload(schema, …)`/gán vào `validateSchema` (tự suy) |
-| Kiểu `data` của **response**                              | `@SdkMessage({ response: "XxxMessage" })` hoặc `"string"` trên command (bỏ trống = không có data)            |
-| Kiểu `data` của **push** (server → client)                | kiểu đối số `data` tại các chỗ gọi `sendSuccess`/`sendResult`/`sendTo`/`broadcast*` (tự suy)                 |
-| Tài liệu message (response, push đi kèm, mã lỗi, ghi chú) | decorator `@SdkMessage` trên command                                                                         |
-| Cách join room                                            | decorator `@SdkRoom` trên class room                                                                         |
-| Mã lỗi + giải thích                                       | JSDoc từng member của enum mã lỗi (`*-error-code.enum.ts`)                                                   |
-| Mô tả message room                                        | JSDoc từng member của enum message (`world-message.type.ts`, `global-message.type.ts`)                       |
+| Cái cần sinh                                              | Khai báo ở đâu                                                                                    |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Hàm API                                                   | option `sdk` của endpoint trong `src/apis/<role>/<module>/controllers`                            |
+| Kiểu request                                              | Zod `body` / `query` / `params` của endpoint (schema export trong `validators/*.validator.ts`)    |
+| Kiểu response                                             | `sdk.response` — Zod schema export trong `validators/*.response.ts`                               |
+| Message client → server của room (request)                | command có `static readonly message = <Room>ClientMessage.X` (tự suy)                             |
+| Payload của message                                       | Zod schema mà command `safeParse`/`parse`/gán vào `validateSchema` (tự suy)                       |
+| Kiểu `data` của **response**                              | `@SdkMessage({ response: "XxxMessage" })` hoặc `"string"` trên command (bỏ trống = không có data) |
+| Kiểu `data` của **push** (server → client)                | kiểu đối số `data` tại các chỗ gọi `RoomResponse.send`/`RoomResponse.broadcast`/`sendTo` (tự suy) |
+| Tài liệu message (response, push đi kèm, mã lỗi, ghi chú) | decorator `@SdkMessage` trên command                                                              |
+| Cách join room                                            | decorator `@SdkRoom` trên class room                                                              |
+| Mã lỗi + giải thích                                       | JSDoc từng member của enum mã lỗi (`*-error-code.enum.ts`)                                        |
+| Mô tả message room                                        | JSDoc từng member của enum message (`world-message.type.ts`, `global-message.type.ts`)            |
 
 ### Thêm endpoint
 
@@ -105,7 +105,7 @@ Mỗi thư mục room có đúng một cặp enum (cùng file `<room>/types/<roo
 
 4. DTO mới của `data` (response hoặc push) là interface `...Message` (phải có tên kết thúc bằng `Message` để schema-codegen sinh C#). Đặt đúng
    module: room global ở `global/modules/<feat>/interfaces/<feat>.global.message.ts` (script tự tìm file `*.message.ts` trong thư mục `interfaces/`; enum đi kèm để ở `enums/`;
-   export qua `global.shared.ts` nếu world cần), room world ở `world/modules/<feat>/interfaces/<feat>.world.message.ts`. Hai enum message vẫn ở `<room>/types/<room>-message.type.ts`.
+   DTO mà world cũng dùng thì đặt ở `src/modules/<module>/interfaces/` và file này re-export), room world ở `world/modules/<feat>/interfaces/<feat>.world.message.ts`. Hai enum message vẫn ở `<room>/types/<room>-message.type.ts`.
    Xong chạy `yarn unity:network`.
 5. Room mới: `@SdkRoom({ joins: [{ room, options: <Zod|null>, doc }] })` trên class room. Join option của `world`, `dungeon` và `global`
    đều **bắt buộc `serverId`** (khớp server của nhân vật; sai hoặc thiếu thì join bị từ chối). `world`: `{ serverId, mapCode }`;

@@ -1,7 +1,7 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { env } from "@/configs/env.config.js";
 import { cacheService } from "@/core/cache/cache.service.js";
-import { serviceError } from "@/core/utils/service-error.js";
+import { Response } from "@/core/response/response.js";
 
 export interface RateLimitRule {
     /** Tên bucket — phân biệt các giới hạn khác nhau (vd `auth-login-ip`). */
@@ -13,7 +13,7 @@ export interface RateLimitRule {
 
 /**
  * Fixed-window rate limit qua `cacheService.incr` (Redis khi có `REDIS_URI` → dùng chung mọi process).
- * Vượt giới hạn → `serviceError` 429. Dùng trong service cho giới hạn theo danh tính (email...),
+ * Vượt giới hạn → `Response.abort` (TOO_MANY_REQUESTS, HTTP 429). Dùng trong service cho giới hạn theo danh tính (email...),
  * còn giới hạn theo IP dùng `createRateLimitMiddleware`.
  */
 export async function assertRateLimit(rule: RateLimitRule, identity: string) {
@@ -22,11 +22,7 @@ export async function assertRateLimit(rule: RateLimitRule, identity: string) {
         rule.windowSeconds
     );
     if (count > rule.limit) {
-        serviceError(
-            `Too many requests, try again in ${rule.windowSeconds}s`,
-            429,
-            CommonCode.TOO_MANY_REQUESTS
-        );
+        Response.abort(CommonCode.TOO_MANY_REQUESTS, { retryAfterSeconds: rule.windowSeconds });
     }
 }
 

@@ -1,9 +1,9 @@
 import { createEndpoint } from "colyseus";
 import { createRateLimitMiddleware } from "@/core/middlewares/rate-limit.middleware.js";
-import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/response/http-response.js";
 import { ACCOUNT_DELETION_WEB_RATE_LIMIT } from "@/modules/auth/constants/rate-limit.constant.js";
 import { userAuthMiddleware } from "@/modules/auth/middlewares/user.auth.middleware.js";
-import { userAccountDeletionPageService } from "@/apis/user/auth/services/user.account-deletion-page.service.js";
+import { renderAccountDeletionPage } from "@/modules/auth/templates/account-deletion-page.template.js";
 import { accountDeletionService } from "@/modules/auth/services/account-deletion.service.js";
 import {
     UserDeleteMyAccountSchema,
@@ -33,7 +33,7 @@ export const userAccountDeletionController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 await accountDeletionService.deleteMyAccount(ctx.context.userId, ctx.body?.reason);
-                return HttpResponse.ok({ message: "Account deleted" });
+                return HttpResponse.success();
             })
     ),
 
@@ -52,7 +52,7 @@ export const userAccountDeletionController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 await accountDeletionService.submitWebRequest(ctx.body);
-                return HttpResponse.created(ctx, { message: "Request received" });
+                return HttpResponse.created(ctx);
             })
     ),
 
@@ -69,12 +69,9 @@ export const userAccountDeletionController = {
             },
         },
         async () => {
-            return new globalThis.Response(
-                userAccountDeletionPageService.userRenderAccountDeletionPage(),
-                {
-                    headers: { "content-type": "text/html; charset=utf-8" },
-                }
-            );
+            return new globalThis.Response(renderAccountDeletionPage(), {
+                headers: { "content-type": "text/html; charset=utf-8" },
+            });
         }
     ),
 };

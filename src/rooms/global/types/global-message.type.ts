@@ -69,7 +69,7 @@ export enum GlobalClientMessage {
 
     // ---- Mail ----
 
-    /** `{ locale? }` — hộp thư còn hạn (mới → cũ); thư hệ thống đã dựng theo ngôn ngữ (fallback `mail_config.defaultLocale` → `en`). Cũng phát các broadcast chưa nhận. Response là `MailListMessage`. */
+    /** Không có payload — hộp thư còn hạn (mới → cũ); thư hệ thống mang nội dung mọi ngôn ngữ (`texts`). Cũng phát các broadcast chưa nhận. Response là `MailListMessage`. */
     MAIL_LIST = "mailList",
     /** `{ mailId }` — đánh dấu đã đọc. Response là `MailReadMessage`. */
     MAIL_READ = "mailRead",
@@ -155,8 +155,10 @@ export enum GlobalMessage {
 
     /** Điểm còn lại, attribute và stat sau khi tính lại — đẩy khi stat đổi mà không phải do `updateAttributes` (đổi trang bị, nâng cấp...). */
     ATTRIBUTES = "attributes",
-    /** Túi + đồ đang mặc + ví — gửi lúc vào room và sau mỗi thao tác inventory thành công. */
+    /** Toàn bộ túi + đồ đang mặc — chỉ gửi MỘT lần lúc vào room. Mọi thay đổi sau đó đến qua `inventoryChanged`. */
     INVENTORY = "inventory",
+    /** Chi tiết thay đổi của túi / đồ đang mặc (ô thêm / đổi, ô mất, slot đổi) — gửi sau mỗi thao tác hoặc khi nhận item. `data` là `InventoryChangedMessage`. */
+    INVENTORY_CHANGED = "inventoryChanged",
     /** Túi còn ≤ `inventoryNearlyFullThreshold` ô trống sau khi nhận item. */
     INVENTORY_NEARLY_FULL = "inventoryNearlyFull",
     /** Túi đầy — các item nhận được nhưng không còn chỗ (bị mất). */

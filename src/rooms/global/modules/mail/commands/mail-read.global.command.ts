@@ -1,7 +1,7 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerCommandPayload } from "@/core/rooms/player.command.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { MailErrorCode } from "@/modules/mails/enums/mail-error-code.enum.js";
 import { mailService } from "@/modules/mails/services/mail.service.js";
 import type { MailReadMessage } from "@/rooms/global/modules/mail/interfaces/mail.global.message.js";

@@ -1,11 +1,12 @@
 import { createEndpoint } from "colyseus";
-import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/response/http-response.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
-import { adminMasterDataService } from "@/apis/admin/master-data/services/admin.master-data.service.js";
 import {
     AdminMasterDataKeyParamSchema,
     AdminUpdateMasterDataSchema,
 } from "@/apis/admin/master-data/validators/admin.master-data.validator.js";
+import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
+import { masterDataUpdateService } from "@/modules/master-data/services/master-data-update.service.js";
 
 const adminEndpoint = createEndpoint.create({ use: [adminAuthMiddleware] });
 const prefix = "/master-data";
@@ -13,8 +14,8 @@ const prefix = "/master-data";
 export const adminMasterDataController = {
     adminMasterDataIndex: adminEndpoint(prefix, { method: "GET" }, (ctx) =>
         RouterContainer(ctx, async () => {
-            const result = await adminMasterDataService.getAll();
-            return HttpResponse.ok({ data: result });
+            const result = await MasterDataRepo.findMany();
+            return HttpResponse.success(result);
         })
     ),
 
@@ -23,11 +24,11 @@ export const adminMasterDataController = {
         { method: "GET", params: AdminMasterDataKeyParamSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const result = await adminMasterDataService.getByKey(
-                    AdminMasterDataKeyParamSchema.parse(ctx.params).key
-                );
+                const result = await MasterDataRepo.findByKey({
+                    key: AdminMasterDataKeyParamSchema.parse(ctx.params).key,
+                });
                 if (!result) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ data: result });
+                return HttpResponse.success(result);
             })
     ),
 
@@ -36,11 +37,11 @@ export const adminMasterDataController = {
         { method: "PUT", params: AdminMasterDataKeyParamSchema, body: AdminUpdateMasterDataSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const result = await adminMasterDataService.update(
-                    AdminMasterDataKeyParamSchema.parse(ctx.params).key,
-                    ctx.body
-                );
-                return HttpResponse.ok({ data: result });
+                const result = await masterDataUpdateService.update({
+                    key: AdminMasterDataKeyParamSchema.parse(ctx.params).key,
+                    ...ctx.body,
+                });
+                return HttpResponse.from(ctx, result);
             })
     ),
 };

@@ -1,10 +1,10 @@
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { QuestErrorCode } from "@/modules/quests/enums/quest-error-code.enum.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
-import { questOf } from "@/rooms/world/modules/content/utils/quest-resolve.world.util.js";
+import { questOf } from "@/modules/quests/utils/quest-resolve.util.js";
 import { QuestPreviewSchema } from "@/rooms/world/modules/content/validators/content.world.validator.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { WorldClientMessage } from "@/rooms/world/types/world-message.type.js";
 import type { QuestPreviewMessage } from "@/rooms/world/modules/content/interfaces/content.world.message.js";
 import {

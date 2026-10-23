@@ -1,4 +1,4 @@
-import { and, count, eq, gt, lt, or, type SQL } from "drizzle-orm";
+import { and, count, eq, gt, inArray, lt, or, type SQL } from "drizzle-orm";
 import { db, type Queryable } from "@/configs/postgres.config.js";
 import { BaseRepository } from "@/core/repositories/base.repository.js";
 import { Friendships } from "@/modules/friends/entities/friendship.entity.js";
@@ -75,22 +75,82 @@ export class FriendshipRepository extends BaseRepository<typeof Friendships> {
         return total;
     }
 
+    /**
+     * Chấp nhận lời mời `requesterId` → `addresseeId` còn hạn. Một câu lệnh có điều kiện (`status = pending`): khi accept / decline /
+     * cancel chạy đồng thời chỉ một lệnh thắng. `null` = không còn lời mời nào để chấp nhận.
+     */
+    async acceptPending(params: {
+        requesterId: string;
+        addresseeId: string;
+        createdAfter: Date;
+        respondedAt: Date;
+        dbOrTx?: Queryable;
+    }) {
+        const { requesterId, addresseeId, createdAfter, respondedAt, dbOrTx = db } = params;
+        const [row] = await dbOrTx
+            .update(Friendships)
+            .set({ status: FriendshipStatus.ACCEPTED, respondedAt })
+            .where(this.pendingRequest(requesterId, addresseeId, createdAfter))
+            .returning();
+        return row ?? null;
+    }
+
+    /** Xoá lời mời `requesterId` → `addresseeId` còn hạn (decline / cancel); `null` = không còn lời mời nào (đã bị xử lý trước). */
+    async deletePending(params: {
+        requesterId: string;
+        addresseeId: string;
+        createdAfter: Date;
+        dbOrTx?: Queryable;
+    }) {
+        const { requesterId, addresseeId, createdAfter, dbOrTx = db } = params;
+        const [row] = await dbOrTx
+            .delete(Friendships)
+            .where(this.pendingRequest(requesterId, addresseeId, createdAfter))
+            .returning();
+        return row ?? null;
+    }
+
+    /** Xoá quan hệ bạn bè đã chấp nhận giữa hai người; `null` nếu không còn. */
+    async deleteAccepted(params: { a: string; b: string; dbOrTx?: Queryable }) {
+        const { a, b, dbOrTx = db } = params;
+        const [row] = await dbOrTx
+            .delete(Friendships)
+            .where(and(this.pair(a, b), eq(Friendships.status, FriendshipStatus.ACCEPTED)))
+            .returning();
+        return row ?? null;
+    }
+
     async deleteBetween(params: { a: string; b: string; dbOrTx?: Queryable }) {
         const { a, b, dbOrTx = db } = params;
         return dbOrTx.delete(Friendships).where(this.pair(a, b)).returning();
     }
 
-    async deleteExpiredPending(params: { before: Date; dbOrTx?: Queryable }) {
-        const { before, dbOrTx = db } = params;
-        return dbOrTx
-            .delete(Friendships)
+    /** Xoá tối đa `limit` lời mời hết hạn (theo lô để không khoá bảng lâu); trả id đã xoá — ít hơn `limit` nghĩa là đã hết. */
+    async deleteExpiredPending(params: { before: Date; limit: number; dbOrTx?: Queryable }) {
+        const { before, limit, dbOrTx = db } = params;
+        const batch = dbOrTx
+            .select({ id: Friendships.id })
+            .from(Friendships)
             .where(
                 and(
                     eq(Friendships.status, FriendshipStatus.PENDING),
                     lt(Friendships.createdAt, before)
                 )
             )
+            .limit(limit);
+        return dbOrTx
+            .delete(Friendships)
+            .where(inArray(Friendships.id, batch))
             .returning({ id: Friendships.id });
+    }
+
+    private pendingRequest(requesterId: string, addresseeId: string, createdAfter: Date): SQL {
+        return and(
+            eq(Friendships.requesterId, requesterId),
+            eq(Friendships.addresseeId, addresseeId),
+            eq(Friendships.status, FriendshipStatus.PENDING),
+            gt(Friendships.createdAt, createdAfter)
+        )!;
     }
 
     private pair(a: string, b: string): SQL {

@@ -1,7 +1,7 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import type { ErrorData, Result } from "@/core/types/result.type.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
+import type { ErrorData } from "@/core/response/result.type.js";
 import { Command } from "@colyseus/command";
 import type { Room } from "colyseus";
 import type { z } from "zod";
@@ -12,24 +12,24 @@ export interface PlayerCommandPayload {
 }
 
 /**
- * Guard chạy trước `execute()` của command (rate limit, quyền, trạng thái...). Trả `Result` thất bại hoặc
- * ném `serviceError` để từ chối; trả `undefined` để cho qua.
+ * Guard chạy trước `execute()` của command (rate limit, quyền, trạng thái...). Trả `Response` thất bại hoặc
+ * ném `Response.abort` để từ chối; trả `undefined` để cho qua.
  */
 export type CommandGuard<TCommand = unknown> = (
     command: TCommand
-) => Result<unknown> | undefined | void | Promise<Result<unknown> | undefined | void>;
+) => Response<unknown> | undefined | void | Promise<Response<unknown> | undefined | void>;
 
 /**
  * Base cho command do một player trong room gửi lên (dùng chung mọi room), theo mô hình Request/Response:
- * client gọi `room.Request<T>(message, payload)`, handler trả `this.result` (envelope `Result`).
+ * client gọi `room.Request<T>(message, payload)`, handler trả `this.result` (`Response`, `loadRoomMessages` đổi sang envelope bằng `RoomResponse.reply`).
  *
  * Thứ tự: `findPlayer()` → parse `validateSchema` vào `this.body` → `validate()` của command con →
  * `guards` → `execute()`. Bước nào từ chối thì `result` là `Result` thất bại và các bước sau không chạy:
  * player không còn trong room = `NOT_FOUND`, payload sai = `INVALID_INPUT` (kèm `invalidError`).
- * Lỗi ném ra từ `execute()` (kể cả `serviceError`) được đổi thành `Result` bằng `Response.fromError`.
+ * Lỗi ném ra từ `execute()` (kể cả `Response.abort`) được đổi thành `Response` bằng `Response.fromThrown`.
  *
- * Command thành công gán `this.result = ok(data)`; không gán thì request nhận `ok()` rỗng. Command chỉ đẩy
- * thông báo (không cần trả lời) vẫn dùng như cũ qua `client.send*`.
+ * Command thành công gán `this.result = Response.success(data)`; không gán thì request nhận thành công rỗng. Command chỉ đẩy
+ * thông báo (không cần trả lời) dùng `RoomResponse.send`.
  */
 export abstract class PlayerCommand<
     TRoom extends Room,
@@ -48,7 +48,7 @@ export abstract class PlayerCommand<
     protected readonly guards: readonly CommandGuard<this>[] = [];
 
     /** Kết quả trả cho client (response của request). `undefined` = chưa có / không cần trả lời. */
-    result?: Result<unknown>;
+    result?: Response<unknown>;
 
     /** Tìm player của `client` trong room; `undefined` = không có (request nhận `NOT_FOUND`). */
     protected abstract findPlayer(room: TRoom, playerId: string): TPlayer | undefined;
@@ -65,14 +65,14 @@ export abstract class PlayerCommand<
             try {
                 for (const guard of this.guards) {
                     const denied = await guard(this);
-                    if (denied && !denied.success) {
+                    if (denied && Response.isError(denied)) {
                         this.result = denied;
                         return;
                     }
                 }
                 return await ownExecute.call(this, payload);
             } catch (error) {
-                this.result = Response.fromError(error);
+                this.result = Response.fromThrown(error);
             }
         };
     }
@@ -84,7 +84,7 @@ export abstract class PlayerCommand<
     private prepare({ client, payload }: TPayload & { payload?: unknown }): boolean {
         const player = this.findPlayer(this.room, client.auth.playerId);
         if (player === undefined) {
-            this.result = Response.error(CommonCode.NOT_FOUND, "Player is not in this room");
+            this.result = Response.error(CommonCode.NOT_FOUND);
             return false;
         }
         this.player = player;
@@ -94,7 +94,6 @@ export abstract class PlayerCommand<
         if (!parsed.success) {
             this.result = Response.error(
                 CommonCode.INVALID_INPUT,
-                undefined,
                 this.invalidError ?? {
                     issues: parsed.error.issues.map((issue) => ({
                         path: issue.path.join("."),

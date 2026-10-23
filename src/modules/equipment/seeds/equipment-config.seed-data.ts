@@ -1,8 +1,9 @@
+import type { CalcValue } from "@/core/calc/calc.interface.js";
+import { CalcService } from "@/core/calc/calc.service.js";
 /**
  * Giá trị mặc định cho master data trang bị — sinh bằng công thức để có đủ bảng ban đầu, cân bằng
  * lại qua admin (`PUT /admin/master-data/:key`). Seed chạy lại sẽ ghi đè giá trị đang có.
  */
-import { Big, big, bigToNumber } from "@/core/utils/big-number.util.js";
 import { BIOME_EQUIPMENT_LEVEL, Biome } from "@/modules/biomes/enums/biome.enum.js";
 import {
     STARTER_CLASS_CODES,
@@ -37,7 +38,8 @@ export const SET_BIOMES = Object.keys(
     BIOME_EQUIPMENT_LEVEL
 ) as (keyof typeof BIOME_EQUIPMENT_LEVEL)[];
 
-const round4 = (value: Big | number) => bigToNumber(big(value));
+/** Seed luôn tính bằng BigNumber, mỗi lần tính một instance mới (số lưu DB không phụ thuộc driver mặc định của `calc`). */
+const round4 = (value: CalcValue | number) => new CalcService("big").of(value).toNumber();
 
 /** Tăng theo level: chỉ số thường ×(1 + 0.2 × (lv − 1)); chỉ số tỉ lệ tăng chậm hơn. */
 const SLOW_GROWTH_STATS = new Set<StatKey>([
@@ -47,14 +49,18 @@ const SLOW_GROWTH_STATS = new Set<StatKey>([
     StatKey.PHYSICAL_PENETRATION,
     StatKey.MAGIC_PENETRATION,
 ]);
-const levelFactor = (stat: StatKey, type: StatType, level: number) =>
-    type === StatType.PERCENT || SLOW_GROWTH_STATS.has(stat)
-        ? big(0.03)
+const levelFactor = (stat: StatKey, type: StatType, level: number) => {
+    const calc = new CalcService("big");
+    return type === StatType.PERCENT || SLOW_GROWTH_STATS.has(stat)
+        ? calc
+              .of(0.03)
               .times(level - 1)
               .plus(1)
-        : big(0.2)
+        : calc
+              .of(0.2)
               .times(level - 1)
               .plus(1);
+};
 
 /** Chỉ số tấn công chính của class (đồ dùng chung: cả 2). */
 const attackStats = (classCode: StarterClassCode | null): StatKey[] =>
@@ -194,8 +200,10 @@ const range = (
     level: number,
     classCode: StarterClassCode | null
 ): StatRange => {
+    const calc = new CalcService("big");
     const scale = classCode ? (CLASS_STAT_SCALE[classCode][stat] ?? 1) : 1;
-    const value = big(base)
+    const value = calc
+        .of(base)
         .times(scale)
         .times(levelFactor(stat, type, level));
     return { stat, type, min: round4(value.times(0.8)), max: round4(value.times(1.2)) };
@@ -271,8 +279,13 @@ const BIOME_SET_SIGNATURE: Record<Biome, (atk: StatKey) => StatBonus[]> = {
     ],
 };
 
-const scaleBonuses = (bonuses: StatBonus[], factor: Big): StatBonus[] =>
-    bonuses.map((bonus) => ({ ...bonus, value: round4(big(bonus.value).times(factor)) }));
+const scaleBonuses = (bonuses: StatBonus[], factor: CalcValue): StatBonus[] => {
+    const calc = new CalcService("big");
+    return bonuses.map((bonus) => ({
+        ...bonus,
+        value: round4(calc.of(bonus.value).times(factor)),
+    }));
+};
 
 const setEntry = (
     biome: Biome,
@@ -282,7 +295,9 @@ const setEntry = (
 ): EquipmentSetEntry => {
     const atk = attackStats(classCode)[0];
     // lv10 ×1 → lv50 ×2
-    const factor = big(level - EQUIPMENT_LEVEL_TIERS[0])
+    const calc = new CalcService("big");
+    const factor = calc
+        .of(level - EQUIPMENT_LEVEL_TIERS[0])
         .div(40)
         .plus(1);
     const signature = BIOME_SET_SIGNATURE[biome](atk);
@@ -345,10 +360,11 @@ export const DEFAULT_EQUIPMENT_ENHANCE_CONFIG: EquipmentEnhanceConfig = {
     },
     dustCodeByGroup: DUST_CODE_BY_GROUP,
     steps: Array.from({ length: MAX_ENHANCE_LEVEL }, (_, index) => {
+        const calc = new CalcService("big");
         const target = index + 1;
         return {
-            rate: round4(Big.max(0.15, big(1).minus(big(0.035).times(index)))),
-            gold: big(1.25).pow(index).times(100).integerValue(Big.ROUND_HALF_UP).toNumber(),
+            rate: round4(calc.max(0.15, calc.of(1).minus(calc.of(0.035).times(index)))),
+            gold: calc.of(1.25).pow(index).times(100).roundToInt(),
             stoneCode: `enhance_stone_${Math.ceil(target / 5)}`,
             stoneQty: 1 + (index % 5),
             dustQty: 2 * target,
@@ -384,7 +400,7 @@ export const DEFAULT_EQUIPMENT_DISASSEMBLE_CONFIG: EquipmentDisassembleConfig = 
         [ItemRarity.LEGENDARY]: 16,
     },
     enhanceScale: Array.from({ length: MAX_ENHANCE_LEVEL + 1 }, (_, level) =>
-        round4(big(level).times(0.5).plus(1))
+        round4(new CalcService("big").of(level).times(0.5).plus(1))
     ),
     groupScale: {
         [EquipmentGroup.WEAPON]: 1.5,

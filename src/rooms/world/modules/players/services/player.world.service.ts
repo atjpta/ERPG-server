@@ -1,5 +1,5 @@
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { WorldChain } from "@/rooms/world/chains/world.chain.js";
+import { WorldChain } from "@/modules/world/chains/world.chain.js";
 import { dungeonWorldService } from "@/rooms/world/modules/dungeons/services/dungeon.world.service.js";
 import { transferWorldService } from "@/rooms/world/modules/maps/services/transfer.world.service.js";
 import {
@@ -10,9 +10,9 @@ import {
     PlayerMoveChain,
     PlayerTargetChain,
 } from "@/rooms/world/modules/players/chains/player.world.chain.js";
-import type { MoveWorldInput } from "@/rooms/world/modules/players/schemas/move.world.input.js";
-import { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import { MoveCommand } from "@/rooms/world/modules/players/simulation/movement.step.js";
+import type { MoveWorldInput } from "@/modules/player/simulation/move.input.js";
+import { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
+import { MoveCommand } from "@/modules/player/simulation/movement.step.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { StepContext } from "colyseus";
 const PLAYER_RESPAWN_MS = 5_000;

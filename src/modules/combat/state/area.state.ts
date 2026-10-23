@@ -1,0 +1,58 @@
+import { Schema, type } from "@colyseus/schema";
+
+import { HitShape } from "@/modules/skills/enums/skill.enum.js";
+import type { PendingSkillHitState } from "@/modules/combat/state/pending-skill-hit.state.js";
+import type { SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
+import type { SkillOwner } from "@/modules/combat/types/skill-owner.type.js";
+
+/**
+ * Vùng sát thương đặt trên mặt đất (hit event `AREA`): gây damage cho mọi mục tiêu chạm vùng khi
+ * `ticksUntilImpact` về 0, rồi bị xoá khỏi `WorldState.areas`. Client vẽ hiệu ứng tại (x, y) — chân
+ * mục tiêu — và nổ đúng lúc đó. Toạ độ server: ô, gốc ở giữa map, y hướng lên.
+ */
+export class AreaWorldState extends Schema {
+    @type("string") id: string;
+    @type("string") ownerId: string;
+    @type("string") skillId: string;
+    @type("uint8") eventIndex: number;
+    @type("float32") x: number;
+    @type("float32") y: number;
+    @type("float32") radius: number;
+    @type("uint8") ticksUntilImpact: number;
+
+    owner: SkillOwner;
+    event: SkillHitEvent;
+    attackSerial: number;
+    /** Vùng kéo dài (`area.durationMs`): chu kỳ gây damage (tick) và số lần gây damage còn lại, tính cả lần sắp tới. */
+    pulseEvery = 0;
+    pulsesLeft = 1;
+
+    constructor(props: {
+        id: string;
+        owner: SkillOwner;
+        skillId: string;
+        hit: Pick<PendingSkillHitState, "event" | "attackSerial" | "eventIndex">;
+        x: number;
+        y: number;
+        ticksUntilImpact: number;
+    }) {
+        super();
+        this.id = props.id;
+        this.owner = props.owner;
+        this.ownerId = props.owner.id;
+        this.skillId = props.skillId;
+        this.event = props.hit.event;
+        this.eventIndex = props.hit.eventIndex;
+        this.attackSerial = props.hit.attackSerial;
+        this.x = props.x;
+        this.y = props.y;
+        // Elip: client lấy hai trục từ hit event (skills.json); `radius` ở đây là trục lớn.
+        this.radius =
+            this.event.shape === HitShape.ELLIPSE
+                ? Math.max(this.event.width, this.event.height) / 2
+                : this.event.radius > 0
+                  ? this.event.radius
+                  : this.event.range;
+        this.ticksUntilImpact = props.ticksUntilImpact;
+    }
+}

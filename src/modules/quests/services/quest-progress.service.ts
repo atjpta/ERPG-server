@@ -1,24 +1,12 @@
 import { DateTime } from "luxon";
-import {
-    type ConditionContext,
-    conditionService,
-} from "@/modules/dialogues/services/condition.service.js";
+import { conditionService } from "@/modules/dialogues/services/condition.service.js";
+import type { ConditionContext } from "@/modules/dialogues/types/condition.type.js";
 import { QuestObjectiveType, QuestRepeat, QuestState } from "@/modules/quests/enums/quest.enum.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
 import type { PlayerQuestEntry, PlayerQuests } from "@/modules/quests/schemas/quest.schema.js";
+import type { QuestEvent } from "@/modules/quests/types/quest-progress.type.js";
 
 type QuestRules = Pick<Quest, "objectives">;
-
-/** Sự kiện gameplay có thể đẩy tiến độ quest. */
-export interface QuestEvent {
-    type:
-        | QuestObjectiveType.KILL
-        | QuestObjectiveType.TALK
-        | QuestObjectiveType.INTERACT
-        | QuestObjectiveType.CLEAR_DUNGEON;
-    targetCode: string;
-    amount?: number;
-}
 
 export class QuestProgressService {
     /** Tiến độ hiện tại của 1 mục tiêu (đã kẹp theo `count`). */

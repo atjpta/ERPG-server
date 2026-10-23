@@ -12,20 +12,20 @@ src/
 |-- apis/
 |   |-- admin/foo/
 |   |   |-- controllers/admin.foo.controller.ts
-|   |   |-- services/admin.foo.service.ts
 |   |   `-- validators/admin.foo.validator.ts
 |   `-- user/foo/
 |       |-- controllers/user.foo.controller.ts
-|       |-- services/user.foo.service.ts
 |       `-- validators/user.foo.validator.ts
 |-- modules/foo/
 |   |-- constants/
 |   |-- entities/
 |   |-- enums/
+|   |-- interfaces/
 |   |-- repositories/
 |   |-- middlewares/
 |   |-- schemas/
 |   |-- seeds/
+|   |-- state/         # *.state.ts, class names end with State
 |   |-- types/
 |   |-- data/
 |   `-- services/
@@ -34,14 +34,16 @@ src/
 
 Create folders only when needed. A module may keep a `README.md` documenting its business rules.
 Pure business functions belong in `services`; seed-only helpers belong in `seeds`.
+A class file contains only the class: interfaces/types go to `types/` (or `interfaces/`), enums to `enums/`.
 Unity-authored map definitions live in `src/modules/maps/data/definitions/<code>.json`.
 
 - API and rooms import modules. Modules must not import API or rooms, including type-only imports.
 - Admin and user APIs share business logic through modules, not by importing the other API role.
-- API services coordinate HTTP requests and shape responses; module services own shared business rules.
+- `src/apis` has only `controllers/` and `validators/`. A controller may call repositories directly for basic CRUD and shapes the response. Logic used in >= 2 places, complex or heavy goes to a service in `src/modules`.
+- Services only process and return `Response<T>` (`Response.success(data)` / `Response.error(code)` from `core/response/response.ts`); they never answer the client. The controller (`HttpResponse.from(ctx, response)`) or room command (`this.result = response`) turns it into the client envelope.
 - API validators validate request bodies, queries and params. Shared Zod data schemas belong in modules.
 - Infer types from Zod alongside their schema. Other shared types belong in `modules/<module>/types`.
-- Module middleware calls shared token/session services; API login services handle HTTP login flows.
+- Module middleware calls shared token/session services; login flows live in module services (`user-auth.service.ts`).
 
 `loadControllers()` scans only `src/apis` (or `build/apis`). Operational `/health` and Colyseus protocol
 endpoints remain managed by the entrypoint. Application endpoints use `/admin/...` or `/user/...`.
@@ -108,27 +110,24 @@ export const FooRepo = new FooRepository();
 - `.from(Foos)` chỉ được viết trong repo sở hữu bảng `Foos` — service không tự query.
 - Query lặp lại ≥ 2 nơi → tách thành method riêng trong repo.
 
-## 3. Service
+## 3. Service (`src/modules/foo/services`)
+
+Chỉ viết service khi logic dùng ≥ 2 nơi / phức tạp / nặng. CRUD cơ bản: controller gọi thẳng repo (`FooRepo.findById({ id })`, `create({ data })`, `paginate(...)`). Không có `BaseService`.
 
 ```ts
-export class AdminFooService extends BaseService<typeof Foos> {
-    constructor() {
-        super(FooRepo);
-    }
-
-    async list(query: AdminListFoosQuery) {
-        const { search, page, limit } = query;
-        const where = search ? ilike(Foos.name, `%${search}%`) : undefined;
-        return this.paginate({ pagination: { page, limit }, where });
+export class FooService {
+    async rename(id: string, name: string): Promise<Response<Foo>> {
+        if (await FooRepo.findByName({ name })) return Response.error(FooErrorCode.FOO_NAME_EXISTS);
+        return Response.success(await FooRepo.updateById({ id, data: { name } }));
     }
 }
 
-export const adminFooService = new AdminFooService();
+export const fooService = new FooService();
 ```
 
-- `BaseService` có sẵn các hàm trùng tên/param với `BaseRepository` (`findById({ id })`,
-  `create({ data })`, `updateById({ id, data })`, `paginate(...)`...).
-- Lỗi nghiệp vụ: `serviceError(message, status, <Domain>ErrorCode.X)`.
+- Lỗi nghiệp vụ: `return Response.error(<Domain>ErrorCode.X)`; HTTP status của mã đăng ký cạnh enum: `registerErrorCodes(FooErrorCode, { FOO_NAME_EXISTS: 409 })` (mặc định 400).
+- Luồng nhiều bước / trong `withTransaction`: `Response.abort(code)` rồi bọc hàm công khai bằng `Response.attempt(async () => ...)` để rollback và đổi về `Response.error`.
+- Hàm `*OrFail` của repo / service vẫn ném lỗi (không tìm thấy, lỗi hệ thống); `RouterContainer` và command của room đổi sang envelope.
 - **≥ 2 thao tác ghi** → bọc `withTransaction(async (tx) => ...)`, truyền `tx` vào mọi lệnh repo.
 
 ## 4. Controller
@@ -144,7 +143,7 @@ export const adminFooController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const result = await adminFooService.list(ctx.query);
-                return HttpResponse.ok({ data: result });
+                return HttpResponse.success({ data: result });
             })
     ),
 };
@@ -161,7 +160,7 @@ Mọi response là envelope `Result` `{ success, data, code, message, error }` �
 
 | Helper                                            | HTTP | Dùng khi          |
 | ------------------------------------------------- | ---- | ----------------- |
-| `HttpResponse.ok({ data })`                       | 200  | GET / UPDATE      |
+| `HttpResponse.success({ data })`                  | 200  | GET / UPDATE      |
 | `HttpResponse.created(ctx, { data })`             | 201  | POST tạo mới      |
 | `HttpResponse.notFound(ctx)`                      | 404  | Không tìm thấy    |
 | `HttpResponse.badRequest(ctx, { message, code })` | 400  | Input sai logic   |

@@ -1,8 +1,5 @@
-import { playerService } from "@/modules/player/services/player.service.js";
-import { dialogueWorldService } from "@/rooms/world/modules/content/services/dialogue.world.service.js";
-import { PartyDetachWorldCommand } from "@/rooms/world/modules/players/commands/party-detach.world.command.js";
-import type { MoveBounds } from "@/rooms/world/modules/players/simulation/movement.step.js";
-import { playerDataWorldService } from "@/rooms/world/modules/players/services/player-data.world.service.js";
+import { PlayerDataGroup } from "@/modules/player/enums/player-state.enum.js";
+import type { MoveBounds } from "@/modules/player/simulation/movement.step.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 interface WorldChainState {
@@ -11,8 +8,6 @@ interface WorldChainState {
 }
 
 export class WorldService {
-    private readonly checkpointPromises = new WeakMap<WorldRoom, Promise<void>>();
-
     chainEntities<TItem, TState extends WorldChainState>(
         items: Iterable<TItem>,
         getState: (item: TItem) => TState,
@@ -26,47 +21,13 @@ export class WorldService {
         }
     }
 
-    /** Backup mọi player đang chơi lên global (global lưu DB). Chỉ chạy một lượt tại một thời điểm. */
-    checkpointPlayers(room: WorldRoom): Promise<void> {
-        const runningCheckpoint = this.checkpointPromises.get(room);
-        if (runningCheckpoint) return runningCheckpoint;
-
-        const playerIds = [...room.state.players.keys()].filter(
-            (playerId) => !room.leavingPlayers.has(playerId)
-        );
-        const checkpoint = playerDataWorldService
-            .sync(room, playerIds)
-            .then((): void => undefined)
-            .finally(() => {
-                this.checkpointPromises.delete(room);
-            });
-
-        this.checkpointPromises.set(room, checkpoint);
-        return checkpoint;
-    }
-
     /**
-     * Lưu ngay 1 player (đổi map, vào/ra dungeon, trả quest — không để thoát game chơi lại kết quả).
-     * Chạy nối tiếp với checkpoint của room.
+     * Lưu ngay 1 player (đổi map, vào/ra dungeon, trả quest — không để thoát game chơi lại kết quả): chụp vị trí / HP từ room
+     * rồi ghi nhóm tiến độ + vị trí xuống DB.
      */
     async savePlayer(room: WorldRoom, playerId: string): Promise<void> {
-        for (
-            let running = this.checkpointPromises.get(room);
-            running;
-            running = this.checkpointPromises.get(room)
-        ) {
-            await running;
-        }
         if (!room.state.players.has(playerId) || room.leavingPlayers.has(playerId)) return;
-
-        const save = playerDataWorldService
-            .sync(room, [playerId])
-            .then((): void => undefined)
-            .finally(() => {
-                this.checkpointPromises.delete(room);
-            });
-        this.checkpointPromises.set(room, save);
-        await save;
+        await room.playerStates.save(playerId, [PlayerDataGroup.PROGRESS, PlayerDataGroup.PLACE]);
     }
 
     /** Vùng chặn hiệu lực để di chuyển: địa hình của map, cộng cổng chắn khi đang ở dungeon. */
@@ -78,13 +39,22 @@ export class WorldService {
     async releasePlayer(room: WorldRoom, playerId: string): Promise<void> {
         room.leavingPlayers.add(playerId);
         try {
-            dialogueWorldService.drop(room, playerId);
-            await this.waitForCheckpoint(room);
-            // Lưu trước khi báo global là đã rời: global còn giữ PlayerData tới lúc nhận detach.
-            await this.saveFinal(room, [playerId]);
+            room.dialogues.drop(playerId);
             const leaving = room.state.players.get(playerId);
-            if (leaving)
-                await room.dispatcher.dispatch(new PartyDetachWorldCommand(), { player: leaving });
+            if (leaving) {
+                // Lưu vị trí / tiến độ cuối cùng khi room này còn là nơi giữ player, rồi báo đã rời (đổi map thì giữ party).
+                await room.playerStates.save(playerId, [
+                    PlayerDataGroup.PROGRESS,
+                    PlayerDataGroup.PLACE,
+                ]);
+                const playerState = leaving.playerState;
+                room.playerStates.clearPresence(
+                    playerState,
+                    room.roomId,
+                    leaving.pendingMapCode !== undefined
+                );
+                await room.playerStates.detach(playerId, room.attachUser);
+            }
             room.state.players.delete(playerId);
         } finally {
             room.leavingPlayers.delete(playerId);
@@ -94,36 +64,9 @@ export class WorldService {
 
     /** Room đóng: lưu mọi player còn lại rồi gỡ hết. */
     async disposeRoom(room: WorldRoom): Promise<void> {
-        const playerIds = [...room.state.players.keys()];
-        for (const playerId of playerIds) room.leavingPlayers.add(playerId);
-        await this.waitForCheckpoint(room);
-        await this.saveFinal(room, playerIds);
-        for (const playerId of playerIds) room.state.players.delete(playerId);
-    }
-
-    /**
-     * Lần lưu cuối: backup lên global; global không tới được thì ghi thẳng phần world làm chủ xuống DB (lỗi chỉ log,
-     * không chặn việc dọn).
-     */
-    private async saveFinal(room: WorldRoom, playerIds: readonly string[]): Promise<void> {
-        const saved = await playerDataWorldService.sync(room, playerIds);
-        for (const playerId of playerIds) {
-            const player = room.state.players.get(playerId);
-            if (!player || saved.has(playerId)) continue;
-            try {
-                await playerService.saveState(
-                    player.id,
-                    player.toWorldFields(room.map.code),
-                    player.stateRevision
-                );
-            } catch (err) {
-                console.error(`[WorldRoom] Save player ${player.id} failed:`, err);
-            }
+        for (const playerId of [...room.state.players.keys()]) {
+            await this.releasePlayer(room, playerId);
         }
-    }
-
-    waitForCheckpoint(room: WorldRoom): Promise<void> {
-        return this.checkpointPromises.get(room) ?? Promise.resolve();
     }
 }
 

@@ -1,6 +1,6 @@
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { createMiddleware } from "colyseus";
-import { HttpResponse } from "@/core/utils/response.util.js";
+import { HttpResponse } from "@/core/response/http-response.js";
 import type { AuthUser } from "@/modules/auth/types/auth-user.type.js";
 import { userSessionService } from "@/modules/auth/services/user-session.service.js";
 
@@ -10,19 +10,13 @@ export const userAuthMiddleware = createMiddleware(
     async (ctx): Promise<AuthUser> => {
         const authHeader = ctx.getHeader("authorization");
         if (!authHeader?.startsWith("Bearer ")) {
-            HttpResponse.unauthorized(ctx, {
-                message: "Missing token",
-                code: CommonCode.MISSING_TOKEN,
-            });
+            HttpResponse.unauthorized(ctx, CommonCode.MISSING_TOKEN);
         }
 
         try {
             return await userSessionService.verifyToken(authHeader!.slice(7));
         } catch {
-            HttpResponse.unauthorized(ctx, {
-                message: "Invalid or expired token",
-                code: CommonCode.INVALID_TOKEN,
-            });
+            HttpResponse.unauthorized(ctx, CommonCode.INVALID_TOKEN);
         }
         throw new Error("unreachable");
     }

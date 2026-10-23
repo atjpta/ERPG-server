@@ -1,7 +1,5 @@
-import type { ErrorCode } from "@/core/types/result.type.js";
+import { Response } from "@/core/response/response.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
-import type { CurrencyReward } from "@/modules/rewards/types/reward.type.js";
-import type { Wallet } from "@/modules/player/schemas/wallet.schema.js";
 import { levelService } from "@/modules/levels/services/level.service.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import type {
@@ -10,13 +8,10 @@ import type {
     CharacterSummary,
     CharacterLimits,
 } from "@/modules/player/types/player.type.js";
-import { DateTime } from "luxon";
 import type { Queryable } from "@/configs/postgres.config.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
-import { BaseService } from "@/core/services/base.service.js";
 import { entityBodyService } from "@/modules/bodies/services/entity-body.service.js";
-import { serviceError } from "@/core/utils/service-error.js";
-import { Players, type PlayerIdentity } from "@/modules/auth/entities/player.entity.js";
+import type { PlayerIdentity } from "@/modules/auth/entities/player.entity.js";
 import { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { gameServerService } from "@/modules/auth/services/game-server.service.js";
@@ -34,14 +29,18 @@ import {
     PlayerStatService,
     playerStatService,
 } from "@/modules/player/services/player-stat.service.js";
-import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
-import type { PlayerSavedState } from "@/modules/player/types/player-fields.type.js";
+import type { PlayerDatas } from "@/modules/player/entities/player-data.entity.js";
 import { Direction } from "@/modules/player/enums/player.enum.js";
 import { PlayerStateRepo } from "@/modules/player/repositories/player-state.repository.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataService } from "@/modules/master-data/services/master-data.service.js";
 import { PlayerConfigSchema } from "@/modules/master-data/schemas/master-data-value.schema.js";
+import type {
+    LevelProgress,
+    ExpGainResult,
+    AttributeAllocationResult,
+} from "@/modules/player/types/player-service.type.js";
 
 const PREFIXES = [
     "Ar",
@@ -96,26 +95,7 @@ const SUFFIXES = [
     "el",
 ];
 
-export interface LevelProgress {
-    level: number;
-    /** Exp tích luỹ trong level hiện tại. */
-    exp: number;
-}
-
-export interface ExpGainResult extends LevelProgress {
-    levelsGained: number;
-}
-
-export interface AttributeAllocationResult {
-    allocatedAttributes: Attributes;
-    attributePoints: number;
-}
-
-export class PlayerService extends BaseService<typeof Players> {
-    constructor() {
-        super(PlayerIdentityRepo);
-    }
-
+export class PlayerService {
     /** Giới hạn số nhân vật + độ dài tên; field thiếu trong DB (seed cũ) lấy giá trị mặc định của schema. */
     async getCharacterLimits(dbOrTx?: Queryable): Promise<CharacterLimits> {
         const config = PlayerConfigSchema.parse(
@@ -152,13 +132,13 @@ export class PlayerService extends BaseService<typeof Players> {
     async getOwnedOrFail(userId: string, playerId: string): Promise<PlayerIdentity> {
         const player = await this.assertPlayableOrFail(playerId);
         if (player.userId !== userId) {
-            serviceError("Player not found", 404, PlayerErrorCode.PLAYER_NOT_FOUND);
+            Response.abort(PlayerErrorCode.PLAYER_NOT_FOUND);
         }
         return player;
     }
 
     /** Tên ngẫu nhiên chưa ai dùng trên server mặc định (thử vài lần, thêm số nếu trùng). */
-    async randomName(): Promise<string> {
+    async randomName(): Promise<Response<string>> {
         const limits = await this.getCharacterLimits();
         const server = await gameServerService.getDefaultOnlineOrFail();
         for (let attempt = 0; attempt < 8; attempt++) {
@@ -171,21 +151,18 @@ export class PlayerService extends BaseService<typeof Players> {
                 serverId: server.id,
                 name,
             });
-            if (!taken) return name;
+            if (!taken) return Response.success(name);
         }
-        serviceError("Could not find a free name", 409, PlayerErrorCode.PLAYER_NAME_EXISTS);
+        return Response.error(PlayerErrorCode.PLAYER_NAME_EXISTS);
     }
 
     /** Độ dài tên theo master data; sai → lỗi PLAYER_NAME_INVALID. */
-    private assertNameLength(name: string, limits: CharacterLimits) {
+    private checkNameLength(name: string, limits: CharacterLimits): Response<null> {
         const length = this.nameLength(name);
         if (length < limits.nameMinLength || length > limits.nameMaxLength) {
-            serviceError(
-                `Name must be ${limits.nameMinLength}-${limits.nameMaxLength} characters`,
-                400,
-                PlayerErrorCode.PLAYER_NAME_INVALID
-            );
+            return Response.error(PlayerErrorCode.PLAYER_NAME_INVALID);
         }
+        return Response.success();
     }
 
     /** Player đầu tiên của user; chưa tạo nhân vật → `null`. */
@@ -202,7 +179,7 @@ export class PlayerService extends BaseService<typeof Players> {
         userId: string;
         name: string;
         classCode: string;
-    }): Promise<PlayerWithState> {
+    }): Promise<Response<PlayerWithState>> {
         const { userId, name, classCode } = params;
         const characterClass = classService.getByCode(classCode);
         if (
@@ -210,14 +187,15 @@ export class PlayerService extends BaseService<typeof Players> {
             characterClass.tier !== 1 ||
             !(STARTER_CLASS_CODES as readonly string[]).includes(classCode)
         ) {
-            serviceError("Class is not available", 400, PlayerErrorCode.CLASS_NOT_AVAILABLE);
+            return Response.error(PlayerErrorCode.CLASS_NOT_AVAILABLE);
         }
         return withTransaction(async (tx) => {
             const limits = await this.getCharacterLimits(tx);
-            this.assertNameLength(name, limits);
+            const nameCheck = this.checkNameLength(name, limits);
+            if (Response.isError(nameCheck)) return nameCheck;
             const existing = await PlayerIdentityRepo.findByUserId({ userId, dbOrTx: tx });
             if (existing.length >= limits.maxCharacters) {
-                serviceError("Character limit reached", 409, PlayerErrorCode.PLAYER_LIMIT_REACHED);
+                return Response.error(PlayerErrorCode.PLAYER_LIMIT_REACHED);
             }
             const server = await gameServerService.getDefaultOnlineOrFail(tx);
             const duplicated = await PlayerIdentityRepo.findByServerAndName({
@@ -225,9 +203,7 @@ export class PlayerService extends BaseService<typeof Players> {
                 name,
                 dbOrTx: tx,
             });
-            if (duplicated) {
-                serviceError("Player name is existed", 409, PlayerErrorCode.PLAYER_NAME_EXISTS);
-            }
+            if (duplicated) return Response.error(PlayerErrorCode.PLAYER_NAME_EXISTS);
             const config = await masterDataService.getValue(MasterDataKey.PLAYER_CONFIG, tx);
             const startMap = await mapService.getActiveByCodeOrFail(config.startMapCode, tx);
             const equipments = equipmentFactoryService.createStarterEquipments(classCode);
@@ -259,15 +235,15 @@ export class PlayerService extends BaseService<typeof Players> {
                 },
                 tx
             );
-            return this.combine(player, state);
+            return Response.success(this.combine(player, state));
         });
     }
 
-    async rename(playerId: string, name: string) {
-        this.assertNameLength(name, await this.getCharacterLimits());
+    async rename(playerId: string, name: string): Promise<Response<PlayerWithState>> {
+        const nameCheck = this.checkNameLength(name, await this.getCharacterLimits());
+        if (Response.isError(nameCheck)) return nameCheck;
         const player = await PlayerIdentityRepo.findByIdOrFail({
             id: playerId,
-            message: "Player not found",
             code: PlayerErrorCode.PLAYER_NOT_FOUND,
         });
         const duplicated = await PlayerIdentityRepo.findByServerAndName({
@@ -275,16 +251,9 @@ export class PlayerService extends BaseService<typeof Players> {
             name,
             excludeId: player.id,
         });
-        if (duplicated) {
-            serviceError("Player name is existed", 409, PlayerErrorCode.PLAYER_NAME_EXISTS);
-        }
+        if (duplicated) return Response.error(PlayerErrorCode.PLAYER_NAME_EXISTS);
         await PlayerIdentityRepo.updateById({ id: playerId, data: { name } });
-        return this.findWithStateById(playerId);
-    }
-
-    async getPlayableOrFail(id: string): Promise<PlayerWithState> {
-        await this.assertPlayableOrFail(id);
-        return this.findWithStateById(id);
+        return Response.success(await this.findWithStateById(playerId));
     }
 
     async getPlayableSnapshotOrFail(id: string): Promise<PlayerSnapshot> {
@@ -297,14 +266,13 @@ export class PlayerService extends BaseService<typeof Players> {
     async assertPlayableOrFail(id: string): Promise<PlayerIdentity> {
         const player = await PlayerIdentityRepo.findByIdOrFail({
             id,
-            message: "Player not found",
             code: PlayerErrorCode.PLAYER_NOT_FOUND,
         });
         if (player.status === PlayerStatus.DELETED) {
-            serviceError("Player not found", 404, PlayerErrorCode.PLAYER_NOT_FOUND);
+            Response.abort(PlayerErrorCode.PLAYER_NOT_FOUND);
         }
         if (player.status === PlayerStatus.BANNED) {
-            serviceError("Player is banned", 403, PlayerErrorCode.PLAYER_BANNED);
+            Response.abort(PlayerErrorCode.PLAYER_BANNED);
         }
         return player;
     }
@@ -325,46 +293,18 @@ export class PlayerService extends BaseService<typeof Players> {
 
     async findWithStateById(id: string, dbOrTx?: Queryable): Promise<PlayerWithState> {
         const [player, state] = await Promise.all([
-            PlayerIdentityRepo.findByIdOrFail({ id, dbOrTx, message: "Player not found" }),
+            PlayerIdentityRepo.findByIdOrFail({
+                id,
+                dbOrTx,
+                code: PlayerErrorCode.PLAYER_NOT_FOUND,
+            }),
             PlayerStateRepo.findByPlayerId(id, dbOrTx),
         ]);
         if (!state) throw new Error(`Player state not found for player ${id}`);
         return this.combine(player, state);
     }
 
-    /**
-     * Lưu một phần hoặc toàn bộ `PlayerSavedState`. Global room là nơi duy nhất gọi hàm này lúc đang chơi;
-     * `expectedRevision` là khoá lạc quan của cả bản ghi (lệch thì ném lỗi).
-     */
-    async saveState(
-        id: string,
-        data: Partial<PlayerSavedState>,
-        expectedRevision?: number,
-        dbOrTx?: Queryable
-    ) {
-        // `dbOrTx`: chạy trong transaction của nơi gọi (vd mail: lưu player_states cùng lúc ghi thư).
-        return withTransaction(async (tx) => {
-            const state =
-                expectedRevision !== undefined
-                    ? await PlayerStateRepo.updateIfUnchanged(id, expectedRevision, data, tx)
-                    : await PlayerStateRepo.updateByPlayerId(id, data, tx);
-            if (!state) {
-                throw new Error(
-                    expectedRevision !== undefined
-                        ? `Player state changed while online for player ${id}`
-                        : `Player state not found for player ${id}`
-                );
-            }
-            await PlayerIdentityRepo.updateById({
-                id,
-                data: { lastPlayedAt: DateTime.now().toJSDate() },
-                dbOrTx: tx,
-            });
-            return state;
-        }, dbOrTx);
-    }
-
-    private combine(player: PlayerIdentity, state: PlayerState): PlayerWithState {
+    private combine(player: PlayerIdentity, state: PlayerDatas): PlayerWithState {
         const {
             playerId: _playerId,
             updatedAt: _stateUpdatedAt,
@@ -436,52 +376,28 @@ export class PlayerService extends BaseService<typeof Players> {
         };
     }
 
-    /** Cộng tiền thưởng vào ví (balance + totalEarned), trả ví mới. */
-    creditWallet(wallet: Wallet, rewards: readonly CurrencyReward[]): Wallet {
-        const next = structuredClone(wallet);
-        for (const { code, amount } of rewards) {
-            if (amount <= 0) continue;
-            const balance = (next[code] ??= { balance: 0, totalEarned: 0, totalSpent: 0 });
-            balance.balance += amount;
-            balance.totalEarned += amount;
-        }
-        return next;
-    }
-
     /**
      * Cộng điểm tiềm năng vào attribute: mỗi giá trị là số nguyên ≥ 0, tổng > 0 và không vượt số điểm
-     * đang có. Trả `ErrorCode` lỗi thay vì throw để room trả về cho client.
+     * đang có. Trả `Response` thất bại thay vì throw để room trả về cho client.
      */
     updateAttributePoints(
         allocated: Attributes,
         available: number,
         request: Partial<Record<AttributeKey, number>>
-    ): AttributeAllocationResult | ErrorCode {
+    ): Response<AttributeAllocationResult> {
         let total = 0;
         for (const key of ATTRIBUTE_KEYS) {
             const value = request[key] ?? 0;
-            if (!Number.isInteger(value) || value < 0) return CommonCode.INVALID_INPUT;
+            if (!Number.isInteger(value) || value < 0)
+                return Response.error(CommonCode.INVALID_INPUT);
             total += value;
         }
-        if (total <= 0) return PlayerErrorCode.ATTRIBUTE_NO_POINTS;
-        if (total > available) return PlayerErrorCode.ATTRIBUTE_POINTS_NOT_ENOUGH;
+        if (total <= 0) return Response.error(PlayerErrorCode.ATTRIBUTE_NO_POINTS);
+        if (total > available) return Response.error(PlayerErrorCode.ATTRIBUTE_POINTS_NOT_ENOUGH);
 
         const allocatedAttributes = { ...allocated };
         for (const key of ATTRIBUTE_KEYS) allocatedAttributes[key] += request[key] ?? 0;
-        return { allocatedAttributes, attributePoints: available - total };
-    }
-
-    /** Trừ tiền (balance − amount, totalSpent + amount); không đủ tiền → `undefined`. */
-    debitWallet(wallet: Wallet, costs: readonly CurrencyReward[]): Wallet | undefined {
-        const next = structuredClone(wallet);
-        for (const { code, amount } of costs) {
-            if (amount <= 0) continue;
-            const balance = next[code];
-            if (!balance || balance.balance < amount) return undefined;
-            balance.balance -= amount;
-            balance.totalSpent += amount;
-        }
-        return next;
+        return Response.success({ allocatedAttributes, attributePoints: available - total });
     }
 }
 

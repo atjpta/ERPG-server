@@ -27,7 +27,7 @@ nên có cùng bộ message của world.
 ## Handler trả `Result`
 
 Mỗi handler nhận `(client, payload)`, tạo command mới, `await dispatcher.dispatch(...)` và **trả `command.result`**
-(`Response.success()` nếu command không gán). Lỗi ném ra khỏi dispatch được `Response.fromError` đổi thành `Result` thất bại. Vì vậy:
+(thành công rỗng nếu command không gán). Lỗi ném ra khỏi dispatch được `Response.fromThrown` đổi thành `Response` thất bại; `RoomResponse.reply` đổi nó sang envelope `Result`. Vì vậy:
 
 - Client gọi bằng Request (`room.Request<T>` / `room.request`) nhận đúng envelope `Result` làm response.
 - Client vẫn có thể `Send` (fire-and-forget): Colyseus bỏ qua giá trị trả về, mọi thứ khác như cũ.
@@ -100,8 +100,7 @@ command con. Thời gian chờ mặc định của request phía client là 10 g
   được Colyseus bind vào từng instance room; mỗi lượt nhận message tạo command mới.
   Không dùng arrow function phụ thuộc `this` trong object handler trả về. Thêm/sửa file cần restart
   process; chế độ `yarn dev` dùng watch để restart khi source thay đổi.
-- Hàm này đăng ký message từ client, không đăng ký RPC giữa room. RPC vẫn dùng
-  `callRoom` và command RPC trong danh sách `createRpcRunner` của room.
+- Hàm này đăng ký message từ client; giữa hai room không có RPC (xem [tương tác giữa các room](room-interactions.md)).
 
 Xem thêm [quy tắc command](room-command-pattern.md) và
 [tương tác giữa các room](room-interactions.md).

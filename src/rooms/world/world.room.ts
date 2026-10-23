@@ -1,56 +1,52 @@
+import { Response } from "@/core/response/response.js";
+import { RoomResponse } from "@/core/response/room-response.js";
+import { DialogueSessionsState } from "@/modules/dialogues/state/dialogue-session.state.js";
+import { PartyLootState } from "@/modules/rewards/state/party-loot.state.js";
+import { PlayerStateManager } from "@/rooms/global/modules/player-data/managers/player-state.manager.js";
+import { dispatchRpc, type RoomRpcHandlers } from "@/rooms/bus/room-bus.js";
+import type {
+    PlayerGroupChanged,
+    PlayerPartyChanged,
+} from "@/modules/player/types/player-sync.type.js";
 import { SdkRoom } from "@/core/rooms/sdk-room.decorator.js";
 import { z } from "zod";
 import type { WorldRoomOptions } from "@/rooms/world/types/world-room.type.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { createRpcRunner } from "@/core/rooms/room.integration.js";
 import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import { loadRoomMessages } from "@/core/utils/load-room-messages.util.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
-import { teleportService } from "@/modules/maps/services/teleport.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
-import { playerService } from "@/modules/player/services/player.service.js";
+import { PlayerStateEvent } from "@/modules/player/enums/player-state.enum.js";
+import type { PlayerState } from "@/modules/player/state/player.state.js";
 import { AuthenticatedPlayerRoom } from "@/rooms/authenticated-player.room.js";
-import { dungeonExpectationService } from "@/rooms/global/global.shared.js";
+import { dungeonExpectationService } from "@/modules/maps/services/dungeon-expectation.service.js";
+import { partyDungeonWorldService } from "@/rooms/world/modules/dungeons/services/party-dungeon.world.service.js";
 import { skillDeliveryWorldService } from "@/rooms/world/modules/combat/services/skill-delivery.world.service.js";
-import { InteractableWorldState } from "@/rooms/world/modules/content/schemas/interactable.world.state.js";
-import { NpcWorldState } from "@/rooms/world/modules/content/schemas/npc.world.state.js";
+import { InteractableWorldState } from "@/modules/maps/state/interactable.state.js";
+import { NpcWorldState } from "@/modules/npcs/state/npc.state.js";
 import { dialogueWorldService } from "@/rooms/world/modules/content/services/dialogue.world.service.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
-import type { DungeonRuntime } from "@/rooms/world/modules/dungeons/services/dungeon.world.service.js";
+import type { DungeonInstanceState } from "@/modules/maps/state/dungeon-instance.state.js";
+import type { DungeonRewardTally } from "@/rooms/world/modules/dungeons/utils/dungeon-reward.world.util.js";
 import { dungeonWorldService } from "@/rooms/world/modules/dungeons/services/dungeon.world.service.js";
-import { PartyCheckDungeonWorldCommand } from "@/rooms/world/modules/dungeons/commands/party-check-dungeon.world.command.js";
-import { PartyEnterDungeonWorldCommand } from "@/rooms/world/modules/dungeons/commands/party-enter-dungeon.world.command.js";
-import type { MonsterWorldState } from "@/rooms/world/modules/monsters/schemas/monster.world.state.js";
+import type { MonsterWorldState } from "@/modules/monsters/state/monster.state.js";
 import { monsterWorldService } from "@/rooms/world/modules/monsters/services/monster.world.service.js";
-import { PlayerDataChangedWorldCommand } from "@/rooms/world/modules/players/commands/player-data-changed.world.command.js";
-import { PullPlayerFieldsWorldCommand } from "@/rooms/world/modules/players/commands/pull-player-fields.world.command.js";
-import {
-    CreditWalletWorldCommand,
-    DebitWalletWorldCommand,
-} from "@/rooms/world/modules/players/commands/wallet.world.command.js";
-import { playerDataWorldService } from "@/rooms/world/modules/players/services/player-data.world.service.js";
-import { PartyAttachWorldCommand } from "@/rooms/world/modules/players/commands/party-attach.world.command.js";
-import { PartyHeartbeatWorldCommand } from "@/rooms/world/modules/players/commands/party-heartbeat.world.command.js";
-import { PartySetPlayerPartyWorldCommand } from "@/rooms/world/modules/players/commands/party-set-player-party.world.command.js";
-import { MoveWorldInput } from "@/rooms/world/modules/players/schemas/move.world.input.js";
-import { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import { MoveWorldInput } from "@/modules/player/simulation/move.input.js";
+import { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { playerWorldService } from "@/rooms/world/modules/players/services/player.world.service.js";
 import { partyRewardWorldService } from "@/rooms/world/modules/rewards/services/party-reward.world.service.js";
 import type { WalletMessage } from "@/rooms/world/modules/rewards/interfaces/reward.world.message.js";
-import { WorldState } from "@/rooms/world/schemas/world.state.js";
+import { WorldState } from "@/modules/world/state/world.state.js";
+import { worldEvents } from "@/rooms/world/utils/world-events.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
-import { WORLD_TICK_RATE } from "@/rooms/world/utils/tick.world.util.js";
+import { WORLD_TICK_RATE } from "@/modules/world/utils/tick.util.js";
 import type { Rewind } from "colyseus";
 
 const RECONNECT_SECONDS = 20;
-const CHECKPOINT_INTERVAL_MS = 30_000;
-const PARTY_HEARTBEAT_MS = 30_000;
-/** Chu kỳ gửi item rơi / điểm lên level đang gom lên global (xem `PlayerDataWorldService.queue`). */
-const PLAYER_CHANGES_FLUSH_MS = 500;
 
 const messages = await loadRoomMessages(new URL(".", import.meta.url));
 
@@ -90,20 +86,90 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
 
     map!: GameMap;
     /** Chỉ có ở room dungeon. */
-    dungeon?: DungeonRuntime;
+    dungeon?: DungeonInstanceState<DungeonRewardTally>;
 
     rewind!: Rewind;
-    /** Player đang được lưu và gỡ khỏi room (checkpoint bỏ qua). */
+    /** Player đang được lưu và gỡ khỏi room. */
     readonly leavingPlayers = new Set<string>();
+    /** Con trỏ chia item luân phiên theo party của room này. */
+    readonly partyLoot = new PartyLootState();
+    /** Cuộc thoại đang mở của người chơi trong room này. */
+    readonly dialogues = new DialogueSessionsState();
+    /** Dữ liệu player mà room này đọc / ghi: dùng chung với global room cùng process, hoặc bản sao đồng bộ với global ở process khác. */
+    playerStates!: PlayerStateManager;
+
+    private readonly unsubscribers: (() => void)[] = [];
+
+    /** Nhãn "bên dùng" của room này trong `PlayerStateManager.attach` / `detach`. */
+    get attachUser() {
+        return `world:${this.roomId}`;
+    }
 
     /** Combat báo quái bị hạ (qua room để không import thẳng reward / party). */
     onMonsterKilled(playerId: string, player: PlayerWorldState, monster: MonsterWorldState): void {
         partyRewardWorldService.onMonsterKilled(this, playerId, player, monster);
     }
 
+    /** Lời gọi từ room khác qua `rooms/bus` (global nhờ kiểm tra / đưa thành viên party vào dungeon). */
+    private readonly rpcHandlers: RoomRpcHandlers = {
+        checkDungeonEntry: async (request: {
+            playerId: string;
+            dungeonCode: string;
+            retry: boolean;
+        }) => {
+            const result = await partyDungeonWorldService.checkDungeon(
+                this,
+                request.playerId,
+                request.dungeonCode,
+                request.retry
+            );
+            return result;
+        },
+        enterDungeon: async (request: {
+            playerId: string;
+            dungeonCode: string;
+            instanceId: string;
+            spawnId: string;
+            retry: boolean;
+        }) => {
+            const result = await partyDungeonWorldService.enterDungeon(
+                this,
+                request.playerId,
+                request.dungeonCode,
+                request.instanceId,
+                request.spawnId,
+                request.retry
+            );
+            return result;
+        },
+    };
+
+    /** Global (process khác) đổi dữ liệu / party của player mà world này giữ bản sao. */
+    private readonly playerRpcHandlers: RoomRpcHandlers = {
+        playerGroupChanged: async (message: PlayerGroupChanged) => {
+            PlayerStateManager.of(this.serverId).receiveGroup(message);
+            return Response.success();
+        },
+        playerPartyChanged: async (message: PlayerPartyChanged) => {
+            PlayerStateManager.of(this.serverId).receiveParty(message);
+            return Response.success();
+        },
+    };
+
+    rpc(method: string, payload: unknown) {
+        return dispatchRpc({ ...this.rpcHandlers, ...this.playerRpcHandlers }, method, payload);
+    }
+
+    /** Đổi tên giữa phiên: đổi trong dữ liệu player mà room đang giữ. */
+    protected override onPlayerRenamed(playerId: string, name: string) {
+        const playerState = this.playerStates?.get(playerId);
+        if (playerState) this.playerStates.rename(playerState, name);
+    }
+
     async onCreate(options: WorldRoomOptions) {
         this.bindServer(options);
         const { serverId, mapCode, instanceId, persistent } = options;
+        this.playerStates = PlayerStateManager.of(serverId);
 
         const map = await mapService.getActiveByCodeOrFail(mapCode);
         // Dungeon chỉ mở qua room `dungeon` (có instanceId), map thường không được mở bằng instanceId.
@@ -182,15 +248,32 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
             dungeonWorldService.tick(this);
             dialogueWorldService.tick(this);
         }, this.tickRate);
-        this.clock.setInterval((): void => {
-            void worldService.checkpointPlayers(this);
-        }, CHECKPOINT_INTERVAL_MS);
-        this.clock.setInterval((): void => {
-            void playerDataWorldService.flush(this);
-        }, PLAYER_CHANGES_FLUSH_MS);
-        this.clock.setInterval((): void => {
-            void this.dispatcher.dispatch(new PartyHeartbeatWorldCommand());
-        }, PARTY_HEARTBEAT_MS);
+        this.unsubscribers.push(
+            // Đổi tên giữa phiên: `name` nằm trong state đồng bộ nên mọi client cùng room thấy tên mới ngay.
+            this.playerStates.on(PlayerStateEvent.RENAMED, (playerState) => {
+                const player = this.state.players.get(playerState.playerId);
+                if (player) player.name = playerState.name;
+            }),
+            // Ví đổi (thưởng, trả phí, thư...): gửi ví mới cho client đang ở room này.
+            this.playerStates.on(PlayerStateEvent.WALLET_CHANGED, (playerState) => {
+                const client = this.clientOf(playerState.playerId);
+                if (!client || !this.state.players.has(playerState.playerId)) return;
+                const wallet: WalletMessage = playerState.data.wallet;
+                RoomResponse.send(client, WorldMessage.WALLET, wallet);
+            }),
+            // Túi / trang bị / điểm đổi (từ world hay global): tính lại HP tối đa..., quest "thu thập" cập nhật tiến độ.
+            this.playerStates.on(PlayerStateEvent.BAG_CHANGED, (playerState) => {
+                const player = this.state.players.get(playerState.playerId);
+                if (!player) return;
+                player.syncStats();
+                const client = this.clientOf(playerState.playerId);
+                if (client) worldEvents.emitInventoryChanged(client, player);
+            }),
+            // Global đổi party của player.
+            this.playerStates.on(PlayerStateEvent.PARTY_CHANGED, (playerState) => {
+                this.state.players.get(playerState.playerId)?.applyParty(playerState.party);
+            })
+        );
     }
 
     async onJoin(client: PlayerClient) {
@@ -198,8 +281,10 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
         // Đăng nhập trùng: lưu và gỡ nhân vật của kết nối cũ trước, để `state.players[playerId]` chỉ có một chủ.
         if (this.sessionOf.has(playerId)) await worldService.releasePlayer(this, playerId);
         this.sessionOf.set(playerId, client.sessionId);
+        let playerState: PlayerState | undefined;
         try {
-            const snapshot = await playerService.getPlayableSnapshotOrFail(playerId);
+            playerState = await this.playerStates.attach(playerId, this.attachUser);
+            const snapshot = playerState.data;
             const dungeon = this.dungeon;
             if (dungeon) {
                 // Room dungeon chỉ nhận player có lượt vào đúng instance này (DB giữ map cũ để mất kết nối thì ra ngoài).
@@ -216,13 +301,18 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
                 throw new Error(`Player is on map "${snapshot.mapCode}", not "${this.map.code}"`);
             }
 
-            const joined = new PlayerWorldState({ player: snapshot });
+            const joined = new PlayerWorldState({ playerState });
             // Lượt dungeon cũ còn sót (server tắt giữa chừng) thì bỏ, lần lưu sau sẽ xoá khỏi DB.
             joined.dungeonSession = dungeon ? (snapshot.dungeonSession ?? undefined) : undefined;
             if (this.map.type === MapType.TOWN) joined.lastTownMapCode = this.map.code;
             this.state.players.set(playerId, joined);
+            // Vị trí / HP mới nhất của player này để runtime lưu (autosave, rời room, đổi map).
+            playerState.setCapture(this.attachUser, () =>
+                this.state.players.get(playerId)?.capturePlace(this.map.code)
+            );
         } catch (err) {
             if (this.sessionOf.get(playerId) === client.sessionId) this.sessionOf.delete(playerId);
+            if (playerState) await this.playerStates.detach(playerId, this.attachUser);
             throw err;
         }
 
@@ -232,12 +322,19 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
         const player = this.state.players.get(playerId);
         if (player) {
             // Đã đến map này → về sau teleport tới được.
-            player.flags[teleportService.visitedFlagKey(this.map.code)] = true;
+            player.playerState.visitMap(this.map.code);
             if (this.dungeon !== undefined) dungeonWorldService.onPlayerJoined(this, player);
-            await this.dispatcher.dispatch(new PartyAttachWorldCommand(), { player });
-            // Túi / thuộc tính do global gửi lúc vào global; ví là của world nên gửi ở đây.
+            // Báo vị trí (bạn bè, party, chat cùng map dùng) — ghi đè room cũ khi đổi map.
+            this.playerStates.setPresence(player.playerState, {
+                worldRoomId: this.roomId,
+                mapCode: this.map.code,
+                instanceId: this.dungeon?.instanceId,
+                seenAt: this.clock.currentTime,
+            });
+            player.applyParty(player.playerState.party);
+            // Túi / thuộc tính do global gửi lúc vào global; ví gửi ở đây.
             const wallet: WalletMessage = player.wallet;
-            client.sendSuccess(WorldMessage.WALLET, wallet);
+            RoomResponse.send(client, WorldMessage.WALLET, wallet);
             questWorldService.sendInitial(this, client, player);
         }
     }
@@ -252,12 +349,6 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
         await this.verifyReconnect(client);
     }
 
-    /** Người chơi đổi tên giữa phiên: `name` nằm trong state đồng bộ nên mọi client cùng room thấy tên mới ngay. */
-    protected override onPlayerRenamed(playerId: string, name: string) {
-        const player = this.state.players.get(playerId);
-        if (player) player.name = name;
-    }
-
     async onLeave(client: PlayerClient) {
         await this.unregisterOnlinePlayer(client);
         // Kết nối đã bị thay bởi lần đăng nhập mới thì nhân vật không còn của nó (đã release lúc join).
@@ -266,19 +357,9 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
     }
 
     async onDispose() {
+        for (const unsubscribe of this.unsubscribers) unsubscribe();
+        this.unsubscribers.length = 0;
         await worldService.disposeRoom(this);
         this.dispatcher.stop();
     }
-
-    // ---- RPC: room khác gọi bằng `callRoom(roomId, XCommand, payload)`; chỉ command trong danh sách chạy được ----
-
-    readonly runRpc = createRpcRunner(this, [
-        PartySetPlayerPartyWorldCommand,
-        PartyCheckDungeonWorldCommand,
-        PartyEnterDungeonWorldCommand,
-        PlayerDataChangedWorldCommand,
-        PullPlayerFieldsWorldCommand,
-        DebitWalletWorldCommand,
-        CreditWalletWorldCommand,
-    ]);
 }

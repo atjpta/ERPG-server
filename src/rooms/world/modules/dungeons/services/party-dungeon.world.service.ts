@@ -1,5 +1,5 @@
-import { callRoom } from "@/core/rooms/room.integration.js";
-import type { ErrorCode } from "@/core/types/result.type.js";
+import { launchDungeon } from "@/rooms/bus/room-bus.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
@@ -7,12 +7,8 @@ import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
 import { dungeonWorldService } from "@/rooms/world/modules/dungeons/services/dungeon.world.service.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import {
-    DUNGEON_LAUNCH_TIMEOUT_MS,
-    LaunchDungeonGlobalCommand,
-} from "@/rooms/global/global.shared.js";
 export class PartyDungeonWorldService {
     /**
      * Vào dungeon luôn đi qua party: chưa có thì global tự tạo party 1 người. Chủ yêu cầu global room kiểm cả
@@ -25,49 +21,49 @@ export class PartyDungeonWorldService {
         player: PlayerWorldState,
         dungeon: GameMap,
         spawnId: string
-    ): Promise<ErrorCode | undefined> {
-        const result = await callRoom(
-            room.serverId,
-            LaunchDungeonGlobalCommand,
-            {
-                leaderPlayerId: player.id,
-                code: dungeon.code,
-                spawnId,
-                retry: false,
-            },
-            { timeoutMs: DUNGEON_LAUNCH_TIMEOUT_MS }
-        );
-        if (result.success) return undefined;
-        return result.code === CommonCode.ROOM_UNAVAILABLE
-            ? MapErrorCode.MAP_NOT_OPEN
-            : result.code;
+    ): Promise<Response> {
+        const result = await launchDungeon(room.serverId, {
+            leaderPlayerId: player.id,
+            code: dungeon.code,
+            spawnId,
+            retry: false,
+        });
+        if (!Response.isError(result)) return Response.success();
+        return result.errorCode === CommonCode.ROOM_UNAVAILABLE
+            ? Response.error(MapErrorCode.MAP_NOT_OPEN)
+            : result;
     }
 
     /**
      * Kiểm tra `playerId` (đang ở room này) có vào được dungeon không (nguồn sự thật, dùng cho cả kiểm tra
-     * trước và lúc vào thật): trả mã lỗi hoặc thông tin để vào.
+     * trước và lúc vào thật): trả `Response` thất bại hoặc thông tin để vào.
      */
-    private async validate(room: WorldRoom, playerId: string, dungeonCode: string, retry: boolean) {
+    private async validate(
+        room: WorldRoom,
+        playerId: string,
+        dungeonCode: string,
+        retry: boolean
+    ): Promise<Response<{ client: PlayerClient; player: PlayerWorldState; dungeon: GameMap }>> {
         const player = room.state.players.get(playerId);
         const client = player ? room.clientOf(playerId) : undefined;
-        if (!player || !client) return { error: PlayerErrorCode.PLAYER_OFFLINE };
+        if (!player || !client) return Response.error(PlayerErrorCode.PLAYER_OFFLINE);
         // Đang trong dungeon thì chỉ được sang instance mới của chính dungeon này sau khi đã clear ("đi lại").
         const canRetry = retry && room.dungeon?.cleared && room.map.code === dungeonCode;
         if (room.dungeon !== undefined && !canRetry)
-            return { error: MapErrorCode.DUNGEON_ALREADY_IN };
-        if (player.hp <= 0) return { error: PlayerErrorCode.PLAYER_DEAD };
-        if (player.pendingMapCode) return { error: PlayerErrorCode.PLAYER_OFFLINE };
+            return Response.error(MapErrorCode.DUNGEON_ALREADY_IN);
+        if (player.hp <= 0) return Response.error(PlayerErrorCode.PLAYER_DEAD);
+        if (player.pendingMapCode) return Response.error(PlayerErrorCode.PLAYER_OFFLINE);
         let dungeon: GameMap;
         try {
             dungeon = await mapService.getActiveByCodeOrFail(dungeonCode);
         } catch {
-            return { error: MapErrorCode.MAP_NOT_OPEN };
+            return Response.error(MapErrorCode.MAP_NOT_OPEN);
         }
-        if (player.level < dungeon.minLevel) return { error: PlayerErrorCode.LEVEL_TOO_LOW };
-        return { client, player, dungeon };
+        if (player.level < dungeon.minLevel) return Response.error(PlayerErrorCode.LEVEL_TOO_LOW);
+        return Response.success({ client, player, dungeon });
     }
 
-    /** Global room ra lệnh: đưa `playerId` vào instance dungeon; trả mã lỗi hoặc `undefined` khi đã gửi `mapChange`. */
+    /** Global room ra lệnh: đưa `playerId` vào instance dungeon; thành công khi đã gửi `mapChange`. */
     async enterDungeon(
         room: WorldRoom,
         playerId: string,
@@ -75,21 +71,22 @@ export class PartyDungeonWorldService {
         instanceId: string,
         spawnId: string,
         retry = false
-    ): Promise<ErrorCode | undefined> {
+    ): Promise<Response> {
         const checked = await this.validate(room, playerId, dungeonCode, retry);
-        if ("error" in checked) return checked.error;
-        const { client, player, dungeon } = checked;
+        if (Response.isError(checked)) return checked;
+        const { client, player, dungeon } = checked.data;
         return dungeonWorldService.enter(room, client, player, dungeon, spawnId, instanceId);
     }
 
-    /** Kiểm tra trước khi vào: mã lỗi hoặc `undefined` = vào được. */
+    /** Kiểm tra trước khi vào: thành công = vào được. */
     async checkDungeon(
         room: WorldRoom,
         playerId: string,
         dungeonCode: string,
         retry = false
-    ): Promise<ErrorCode | undefined> {
-        return (await this.validate(room, playerId, dungeonCode, retry)).error;
+    ): Promise<Response> {
+        const checked = await this.validate(room, playerId, dungeonCode, retry);
+        return Response.isError(checked) ? checked : Response.success();
     }
 }
 export const partyDungeonWorldService = new PartyDungeonWorldService();

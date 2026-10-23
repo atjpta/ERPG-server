@@ -1,7 +1,8 @@
 import { createEndpoint } from "colyseus";
 import { UserMapCodeParamSchema } from "@/apis/user/maps/validators/user.map.validator.js";
-import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
-import { userMapService } from "@/apis/user/maps/services/user.map.service.js";
+import { HttpResponse, RouterContainer } from "@/core/response/http-response.js";
+import { GameMapRepo } from "@/modules/maps/repositories/game-map.repository.js";
+import { mapContentService } from "@/modules/maps/services/map-content.service.js";
 import { z } from "zod";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import {
@@ -25,8 +26,20 @@ export const userMapController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const maps = await userMapService.listActive();
-                return HttpResponse.ok({ data: maps });
+                /** Metadata các map active — không kèm layout (xem `getContent`) để danh sách gọn. */
+                const active = await GameMapRepo.findActive();
+                const maps = active.map(
+                    ({
+                        colliders,
+                        npcs,
+                        interactables,
+                        spawnPoints,
+                        monsterSpawns,
+                        dungeon,
+                        ...summary
+                    }) => summary
+                );
+                return HttpResponse.success(maps);
             })
     ),
 
@@ -46,8 +59,8 @@ export const userMapController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const content = await userMapService.getContent(ctx.params.code);
-                return HttpResponse.ok({ data: content });
+                const content = await mapContentService.getContent(ctx.params.code);
+                return HttpResponse.success(content);
             })
     ),
 };

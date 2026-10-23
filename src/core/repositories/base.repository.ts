@@ -1,10 +1,10 @@
-import type { ErrorCode, Paginated } from "@/core/types/result.type.js";
+import type { ErrorCode, Paginated } from "@/core/response/result.type.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { count, desc, eq, type SQL } from "drizzle-orm";
 import type { PgColumn, PgSelect, PgTable, SelectedFields } from "drizzle-orm/pg-core";
 import { db, type Queryable } from "@/configs/postgres.config.js";
 import type { PaginationQuery } from "@/core/validators/pagination.validator.js";
-import { serviceError } from "@/core/utils/service-error.js";
+import { Response } from "@/core/response/response.js";
 
 type BaseTable = PgTable & { id: PgColumn; createdAt: PgColumn };
 
@@ -43,24 +43,22 @@ export abstract class BaseRepository<TTable extends BaseTable> {
     async findByIdOrFail(params: {
         id: string;
         dbOrTx?: Queryable;
-        message?: string;
         code?: ErrorCode;
     }): Promise<TTable["$inferSelect"]> {
-        const { id, dbOrTx, message = "Not found", code = CommonCode.NOT_FOUND } = params;
+        const { id, dbOrTx, code = CommonCode.NOT_FOUND } = params;
         const row = await this.findById({ id, dbOrTx });
-        if (!row) serviceError(message, 404, code);
+        if (!row) Response.abort(code);
         return row;
     }
 
     async findOneOrFail(params: {
         where: SQL;
         dbOrTx?: Queryable;
-        message?: string;
         code?: ErrorCode;
     }): Promise<TTable["$inferSelect"]> {
-        const { where, dbOrTx, message = "Not found", code = CommonCode.NOT_FOUND } = params;
+        const { where, dbOrTx, code = CommonCode.NOT_FOUND } = params;
         const row = await this.findOne({ where, dbOrTx });
-        if (!row) serviceError(message, 404, code);
+        if (!row) Response.abort(code);
         return row;
     }
 
@@ -107,12 +105,11 @@ export abstract class BaseRepository<TTable extends BaseTable> {
         id: string;
         data: Partial<TTable["$inferInsert"]>;
         dbOrTx?: Queryable;
-        message?: string;
         code?: ErrorCode;
     }): Promise<TTable["$inferSelect"]> {
-        const { id, data, dbOrTx, message = "Not found", code = CommonCode.NOT_FOUND } = params;
+        const { id, data, dbOrTx, code = CommonCode.NOT_FOUND } = params;
         const row = await this.updateById({ id, data, dbOrTx });
-        if (!row) serviceError(message, 404, code);
+        if (!row) Response.abort(code);
         return row;
     }
 
@@ -128,12 +125,11 @@ export abstract class BaseRepository<TTable extends BaseTable> {
     async deleteByIdOrFail(params: {
         id: string;
         dbOrTx?: Queryable;
-        message?: string;
         code?: ErrorCode;
     }): Promise<TTable["$inferSelect"]> {
-        const { id, dbOrTx, message = "Not found", code = CommonCode.NOT_FOUND } = params;
+        const { id, dbOrTx, code = CommonCode.NOT_FOUND } = params;
         const row = await this.deleteById({ id, dbOrTx });
-        if (!row) serviceError(message, 404, code);
+        if (!row) Response.abort(code);
         return row;
     }
 

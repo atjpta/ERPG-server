@@ -1,6 +1,6 @@
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import type { Queryable } from "@/configs/postgres.config.js";
-import { serviceError } from "@/core/utils/service-error.js";
+import { Response } from "@/core/response/response.js";
 import { teleportService } from "@/modules/maps/services/teleport.service.js";
 import { MapStatus } from "@/modules/maps/enums/map.enum.js";
 import { GameMapRepo } from "@/modules/maps/repositories/game-map.repository.js";
@@ -22,7 +22,7 @@ export class MapService {
     async getActiveByCodeOrFail(code: string, dbOrTx?: Queryable) {
         const map = await GameMapRepo.findByCode({ code, dbOrTx });
         if (!map || map.status !== MapStatus.ACTIVE) {
-            serviceError(`Map "${code}" not found`, 404, MapErrorCode.MAP_NOT_FOUND);
+            Response.abort(MapErrorCode.MAP_NOT_FOUND);
         }
         return map;
     }

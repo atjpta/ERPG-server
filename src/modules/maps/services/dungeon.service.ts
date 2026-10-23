@@ -1,4 +1,4 @@
-import type { DungeonPhase } from "@/modules/maps/entities/game-map.entity.js";
+import type { DungeonPhase } from "@/modules/maps/types/game-map.type.js";
 
 export class DungeonService {
     /** Level quái = trung bình level người trong instance làm tròn lên, trong [1, maxLevel]. */

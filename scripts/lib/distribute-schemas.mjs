@@ -33,7 +33,11 @@ export function buildRoomIndex(roomsDirectory) {
 }
 
 /** Đường dẫn trong thư mục Network cho file C# sinh ra. */
-export function schemaTarget(fileName, roomIndex) {
+export function schemaTarget(fileName, roomIndex, placed = new Map()) {
+    // File đã có trong Unity (theo manifest lần trước) giữ nguyên chỗ: chuyển code server giữa các thư mục không được làm Unity
+    // đổi đường dẫn (mất GUID trong .meta).
+    const existing = placed.get(fileName);
+    if (existing) return existing;
     const room = roomIndex.get(fileName.replace(/\.cs$/, ""));
     return room ? `Room/${room}/Schema/${fileName}` : `Common/${fileName}`;
 }
@@ -50,21 +54,29 @@ export function distributeSchemas({ flatDirectory, networkDirectory, roomIndex }
     const current = new Set();
     let written = 0;
 
+    const manifestPath = join(networkDirectory, MANIFEST);
+    const previous = existsSync(manifestPath)
+        ? (JSON.parse(readFileSync(manifestPath, "utf8")).files ?? [])
+        : [];
+    const placed = new Map(previous.map((path) => [path.split("/").pop(), path]));
+
     for (const name of files) {
-        const relative = schemaTarget(name, roomIndex);
+        const relative = schemaTarget(name, roomIndex, placed);
         current.add(relative);
         const target = join(networkDirectory, relative);
         const source = readFileSync(join(flatDirectory, name), "utf8");
-        if (existsSync(target) && readFileSync(target, "utf8") === source) continue;
+        // So sánh bỏ qua kiểu xuống dòng: file Unity có thể là CRLF (autocrlf), không ghi lại chỉ vì khác EOL.
+        if (
+            existsSync(target) &&
+            readFileSync(target, "utf8").replaceAll("\r\n", "\n") === source
+        ) {
+            continue;
+        }
         mkdirSync(dirname(target), { recursive: true });
         writeFileSync(target, source);
         written++;
     }
 
-    const manifestPath = join(networkDirectory, MANIFEST);
-    const previous = existsSync(manifestPath)
-        ? (JSON.parse(readFileSync(manifestPath, "utf8")).files ?? [])
-        : [];
     let removed = 0;
     for (const stale of previous.filter((path) => !current.has(path))) {
         const target = join(networkDirectory, stale);

@@ -1,5 +1,5 @@
 import { PlayerCommand, type PlayerCommandPayload } from "@/core/rooms/player.command.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import type { z } from "zod";
 

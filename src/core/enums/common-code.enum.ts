@@ -1,4 +1,4 @@
-import { registerErrorCodes } from "@/core/utils/error-code.util.js";
+import { registerErrorCodes } from "@/core/response/error-code.js";
 
 /** Mã lỗi chung (core): dùng được ở mọi tầng. */
 export enum CommonCode {
@@ -26,4 +26,16 @@ export enum CommonCode {
     ROOM_UNAVAILABLE = "ROOM_UNAVAILABLE",
 }
 
-registerErrorCodes(CommonCode);
+registerErrorCodes(CommonCode, {
+    BAD_REQUEST: 400,
+    UNAUTHORIZED: 401,
+    FORBIDDEN: 403,
+    NOT_FOUND: 404,
+    CONFLICT: 409,
+    INVALID_INPUT: 422,
+    MISSING_TOKEN: 401,
+    INVALID_TOKEN: 401,
+    TOO_MANY_REQUESTS: 429,
+    INTERNAL_ERROR: 500,
+    ROOM_UNAVAILABLE: 503,
+});

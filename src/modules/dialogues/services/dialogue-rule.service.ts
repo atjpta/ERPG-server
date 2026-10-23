@@ -1,7 +1,5 @@
-import {
-    type ConditionContext,
-    conditionService,
-} from "@/modules/dialogues/services/condition.service.js";
+import { conditionService } from "@/modules/dialogues/services/condition.service.js";
+import type { ConditionContext } from "@/modules/dialogues/types/condition.type.js";
 import type { DialogueRule } from "@/modules/dialogues/schemas/dialogue.schema.js";
 
 interface RuleSource {

@@ -6,16 +6,16 @@ import { basename, join } from "node:path";
  * @param {string} directory
  * @returns {string[]}
  */
-export function findRoomSchemaFiles(directory) {
+export function findRoomSchemaFiles(directory, { interfaces = true } = {}) {
     const name = basename(directory);
-    // `schemas/`: Colyseus Schema (state, input) và DTO; `interfaces/`: chỉ DTO gửi client (`*.message.ts`).
-    const isSchemaDirectory = ["schema", "schemas"].includes(name);
-    const isInterfaceDirectory = name === "interfaces";
+    // `schemas/`, `state/`, `simulation/` (input của Netcode): Colyseus Schema (state, input) và DTO; `interfaces/`: chỉ DTO gửi client (`*.message.ts`).
+    const isSchemaDirectory = ["schema", "schemas", "state", "simulation"].includes(name);
+    const isInterfaceDirectory = interfaces && name === "interfaces";
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
         const path = join(directory, entry.name);
-        if (entry.isDirectory()) return findRoomSchemaFiles(path);
+        if (entry.isDirectory()) return findRoomSchemaFiles(path, { interfaces });
         if (isSchemaDirectory && entry.isFile() && /\.(state|input|message)\.ts$/.test(entry.name))
-            // State chỉ ở server (không field `@type`, vd global.state.ts) thì không có gì để client giải mã.
+            // State chỉ ở server (không field `@type`) thì không có gì để client giải mã.
             return /@type\(/.test(readFileSync(path, "utf8")) ? [path] : [];
         if (isInterfaceDirectory && entry.isFile() && /\.message\.ts$/.test(entry.name))
             return [path];
@@ -25,8 +25,8 @@ export function findRoomSchemaFiles(directory) {
 
 /**
  * Tên class Schema chỉ dùng ở server: nằm trong `schemas/*.state.ts` không có field `@type` (state server-only như
- * `PartiesState`). Codegen vẫn sinh C# rỗng cho chúng vì đi theo import, nên script xoá đi. Trừ class state của
- * chính room (`<Room>State`, vd `GlobalState`) — SDK dùng nó làm kiểu state của `<Room>RoomClient`.
+ * một state server-only). Codegen vẫn sinh C# rỗng cho chúng vì đi theo import, nên script xoá đi. Trừ class state của
+ * chính room (`<Room>State`, vd `GlobalState`) — SDK dùng nó làm kiểu state của `<Room>RoomClient` (room không khai báo state, như global, dùng `Colyseus.NoState`).
  * @param {string} roomsDirectory
  * @returns {string[]}
  */
@@ -40,7 +40,7 @@ export function findServerOnlySchemaClasses(roomsDirectory) {
                 walk(path, room ?? entry.name);
             } else if (
                 room &&
-                basename(directory) === "schemas" &&
+                ["schemas", "state"].includes(basename(directory)) &&
                 /\.state\.ts$/.test(entry.name)
             ) {
                 const source = readFileSync(path, "utf8");

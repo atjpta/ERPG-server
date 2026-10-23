@@ -1,24 +1,23 @@
-import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { equipmentConfigService } from "@/modules/equipment/services/equipment-config.service.js";
 import { equipmentUpgradeService } from "@/modules/equipment/services/equipment-upgrade.service.js";
 import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 import { UpgradeGlobalCommand } from "@/rooms/global/modules/equipment-upgrade/commands/upgrade.global.command.js";
 import { UpgradeEquipmentSchema } from "@/rooms/global/modules/inventory/validators/inventory.global.validator.js";
 import type { PlayerWorldView } from "@/rooms/global/modules/player-data/types/player-data.type.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
+import type { PlayerState } from "@/modules/player/state/player.state.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import { EquipmentUpgradeAction } from "@/rooms/global/modules/equipment-upgrade/enums/equipment-upgrade-action.enum.js";
 import type { z } from "zod";
 
 @SdkMessage({
-    replies: [GlobalMessage.INVENTORY, GlobalMessage.ATTRIBUTES],
+    replies: [GlobalMessage.INVENTORY_CHANGED, GlobalMessage.ATTRIBUTES],
     errors: [
         CommonCode.INVALID_INPUT,
         ItemErrorCode.ITEM_NOT_FOUND,
@@ -40,9 +39,8 @@ export class RefineEquipmentGlobalCommand extends UpgradeGlobalCommand<
     static readonly message = GlobalClientMessage.REFINE_EQUIPMENT;
 
     protected readonly validateSchema = UpgradeEquipmentSchema;
-    protected override readonly changesStats = true;
     protected run(
-        player: PlayerDataState,
+        player: PlayerState,
         { instanceId }: z.infer<typeof UpgradeEquipmentSchema>,
         world: PlayerWorldView
     ) {
@@ -60,27 +58,21 @@ export class RefineEquipmentGlobalCommand extends UpgradeGlobalCommand<
             owned.metadata.level
         );
         if (!statEntry) return Response.error(ItemErrorCode.EQUIPMENT_CONFIG_MISSING);
-        const paid = equipmentUpgradeService.pay(
-            player.inventories[ItemType.MATERIAL],
-            world.wallet,
-            cost.data
-        );
+        const paid = equipmentUpgradeService.pay(player.bag, world.wallet, cost.data);
         if (Response.isError(paid)) return paid;
         world.wallet = paid.data.wallet;
 
         const success = equipmentUpgradeService.rollSuccess(cost.data.rate, rng);
         if (success) {
-            player.updateEquipment(
-                owned,
-                equipmentUpgradeService.applyRefine({
-                    instance: owned.metadata,
-                    target: cost.data.target,
-                    rarityLineCount: masterDataCacheService.get(MasterDataKey.EQUIPMENT_STAT_CONFIG)
-                        .rarityLineCount,
-                    rarityPool: statEntry.rarityPool,
-                    rng,
-                })
-            );
+            owned.entry.metadata = equipmentUpgradeService.applyRefine({
+                instance: owned.metadata,
+                target: cost.data.target,
+                rarityLineCount: masterDataCacheService.get(MasterDataKey.EQUIPMENT_STAT_CONFIG)
+                    .rarityLineCount,
+                rarityPool: statEntry.rarityPool,
+                rng,
+            });
+            player.refreshStats();
         }
         return Response.success({
             action: EquipmentUpgradeAction.REFINE,

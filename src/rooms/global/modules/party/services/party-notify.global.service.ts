@@ -1,11 +1,25 @@
+import { RoomResponse } from "@/core/response/room-response.js";
 import type { GlobalRoom } from "@/rooms/global/global.room.js";
-import type { PartyState } from "@/rooms/global/modules/party/schemas/party.global.state.js";
+import type { PartyState } from "@/modules/party/state/party.state.js";
 import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
-import type { PartyNoticeMessage } from "@/rooms/global/modules/party/interfaces/party.global.message.js";
+import type {
+    PartyNoticeMessage,
+    PartyStateMessage,
+} from "@/rooms/global/modules/party/interfaces/party.global.message.js";
 import type { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
 
 /** Gửi message của party xuống client (kết nối global). Không đổi dữ liệu party. */
 export class PartyNotifyGlobalService {
+    /** Snapshot đầy đủ của party gửi cho client (thành viên theo thứ tự vào party). */
+    snapshotOf(party: PartyState): PartyStateMessage {
+        return {
+            partyId: party.id,
+            leaderPlayerId: party.leaderPlayerId,
+            lootMode: party.lootMode,
+            members: [...party.members].map(([playerId, name]) => ({ playerId, name })),
+        };
+    }
+
     private noticeData(notice: PartyNotice, playerName?: string): PartyNoticeMessage {
         return {
             notice,
@@ -15,7 +29,8 @@ export class PartyNotifyGlobalService {
 
     /** Đẩy một message thành công tới kết nối global của `playerId` (không có kết nối thì bỏ qua). */
     sendTo(room: GlobalRoom, playerId: string, type: GlobalMessage, data: unknown) {
-        room.clientOf(playerId)?.sendSuccess(type, data);
+        const client = room.clientOf(playerId);
+        if (client) RoomResponse.send(client, type, data);
     }
 
     /** Báo sự kiện cho chủ party. */
@@ -49,7 +64,7 @@ export class PartyNotifyGlobalService {
 
     /** Gửi snapshot đầy đủ của party cho mọi thành viên (sau mỗi thay đổi). */
     broadcastState(room: GlobalRoom, party: PartyState) {
-        const snapshot = party.toMessage();
+        const snapshot = this.snapshotOf(party);
         for (const playerId of party.members.keys()) {
             this.sendTo(room, playerId, GlobalMessage.PARTY_STATE, snapshot);
         }

@@ -1,13 +1,8 @@
-/** Điểm attribute theo từng attribute. */
-export interface AttributeValuesMessage {
-    strength: number;
-    dexterity: number;
-    intelligence: number;
-    vitality: number;
-    luck: number;
-}
+import type { AttributeValuesMessage } from "@/modules/player/interfaces/attribute.message.js";
 
-/** Điểm + attribute + stat sau khi tính lại (`PlayerDataState.getAttributeSummary`). */
+export type { AttributeValuesMessage } from "@/modules/player/interfaces/attribute.message.js";
+
+/** Điểm + attribute + stat sau khi tính lại (`PlayerState.getAttributeSummary`). */
 export interface AttributesMessage {
     attributePoints: number;
     allocatedAttributes: AttributeValuesMessage;

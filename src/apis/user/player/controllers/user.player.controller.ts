@@ -1,9 +1,10 @@
 import { createEndpoint } from "colyseus";
-import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
+import { HttpResponse, HttpStatusCode, RouterContainer } from "@/core/response/http-response.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { playerAuthMiddleware } from "@/modules/auth/middlewares/player.auth.middleware.js";
 import { userAuthMiddleware } from "@/modules/auth/middlewares/user.auth.middleware.js";
-import { userPlayerService } from "@/apis/user/player/services/user.player.service.js";
+import { characterService } from "@/modules/player/services/character.service.js";
 import { playerService } from "@/modules/player/services/player.service.js";
 import {
     UserCreatePlayerSchema,
@@ -36,9 +37,9 @@ export const userPlayerController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                return HttpResponse.ok({
-                    data: await userPlayerService.listCharacters(ctx.context.userId),
-                });
+                return HttpResponse.success(
+                    await characterService.listCharacters(ctx.context.userId)
+                );
             })
     ),
 
@@ -56,7 +57,10 @@ export const userPlayerController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                return HttpResponse.ok({ data: { name: await playerService.randomName() } });
+                return HttpResponse.from(
+                    ctx,
+                    Response.map(await playerService.randomName(), (name) => ({ name }))
+                );
             })
     ),
 
@@ -76,12 +80,12 @@ export const userPlayerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const { userId, userSessionId } = ctx.context;
-                const result = await userPlayerService.selectCharacter({
+                const result = await characterService.selectCharacter({
                     userId,
                     sessionId: userSessionId,
                     playerId: ctx.params.id,
                 });
-                return HttpResponse.ok({ data: result });
+                return HttpResponse.success(result);
             })
     ),
 
@@ -107,12 +111,15 @@ export const userPlayerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const { userId, userSessionId } = ctx.context;
-                const result = await userPlayerService.createCharacter({
-                    userId,
-                    sessionId: userSessionId,
-                    body: ctx.body,
-                });
-                return HttpResponse.created(ctx, { data: result });
+                return HttpResponse.from(
+                    ctx,
+                    await characterService.createCharacter({
+                        userId,
+                        sessionId: userSessionId,
+                        body: ctx.body,
+                    }),
+                    HttpStatusCode.CREATED
+                );
             })
     ),
 
@@ -132,11 +139,11 @@ export const userPlayerController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                await userPlayerService.deleteCharacter({
+                await characterService.deleteCharacter({
                     userId: ctx.context.userId,
                     playerId: ctx.params.id,
                 });
-                return HttpResponse.ok({ message: "Player deleted" });
+                return HttpResponse.success();
             })
     ),
 
@@ -154,7 +161,7 @@ export const userPlayerController = {
         (ctx) =>
             RouterContainer(ctx, async () => {
                 const player = await playerService.findWithStateById(ctx.context.playerId);
-                return HttpResponse.ok({ data: player });
+                return HttpResponse.success(player);
             })
     ),
 
@@ -176,11 +183,11 @@ export const userPlayerController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const player = await userPlayerService.renameCharacter({
+                const result = await characterService.renameCharacter({
                     playerId: ctx.context.playerId,
                     name: ctx.body.name,
                 });
-                return HttpResponse.ok({ data: player });
+                return HttpResponse.from(ctx, result);
             })
     ),
 };

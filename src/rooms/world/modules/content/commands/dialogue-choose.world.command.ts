@@ -1,17 +1,14 @@
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { WorldErrorCode } from "@/rooms/world/enums/world-error-code.enum.js";
+import { WorldErrorCode } from "@/modules/world/enums/world-error-code.enum.js";
 import { DialogueErrorCode } from "@/modules/dialogues/enums/dialogue-error-code.enum.js";
-import type { ErrorCode, Result } from "@/core/types/result.type.js";
+import type { ErrorCode } from "@/core/response/result.type.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { conditionService } from "@/modules/dialogues/services/condition.service.js";
 import { dialogueService } from "@/modules/dialogues/services/dialogue.service.js";
-import {
-    dialogueWorldService,
-    RANGE_MARGIN,
-} from "@/rooms/world/modules/content/services/dialogue.world.service.js";
+import { dialogueWorldService } from "@/rooms/world/modules/content/services/dialogue.world.service.js";
 import { DialogueChooseSchema } from "@/rooms/world/modules/content/validators/content.world.validator.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { WorldClientMessage, WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { PlayerWorldCommand } from "@/rooms/world/player.world.command.js";
@@ -44,17 +41,15 @@ export class DialogueChooseWorldCommand extends PlayerWorldCommand<
         client: PlayerClient,
         player: PlayerWorldState,
         optionId: string
-    ): Promise<Result<unknown>> {
-        const sessions = dialogueWorldService.sessionsOf(room);
-        const session = sessions.get(client.auth.playerId);
+    ): Promise<Response> {
+        const session = room.dialogues.get(client.auth.playerId);
         if (!session) return Response.error(DialogueErrorCode.DIALOGUE_NOT_FOUND);
         const { sourceCode } = session;
         const refuse = (code: ErrorCode) => {
-            sessions.delete(client.auth.playerId);
-            return Response.error(code, undefined, { sourceCode });
+            room.dialogues.drop(client.auth.playerId);
+            return Response.error(code, { sourceCode });
         };
-        const range = session.radius + RANGE_MARGIN;
-        if (!player.isNear(session.x, session.y, range)) {
+        if (!session.isNear(player)) {
             dialogueWorldService.end(room, client, sourceCode); // quá xa thì đóng thoại, không báo lỗi
             return Response.success();
         }
@@ -65,14 +60,16 @@ export class DialogueChooseWorldCommand extends PlayerWorldCommand<
             if (node.options?.length || !node.next)
                 dialogueWorldService.end(room, client, sourceCode);
             else {
-                const error = await dialogueWorldService.enter(
+                const entered = await dialogueWorldService.enter(
                     room,
                     client,
                     player,
                     session,
                     node.next
                 );
-                if (error) return Response.error(error, undefined, { sourceCode });
+                if (Response.isError(entered)) {
+                    return Response.error(entered.errorCode, { sourceCode });
+                }
             }
             return Response.success();
         }
@@ -83,25 +80,27 @@ export class DialogueChooseWorldCommand extends PlayerWorldCommand<
         if (!option || !conditionService.evaluateConditions(ctx, option.conditions)) {
             return refuse(WorldErrorCode.INTERACT_NOT_AVAILABLE);
         }
-        const error = await dialogueWorldService.runActions(
+        const ran = await dialogueWorldService.runActions(
             room,
             client,
             player,
             session,
             option.actions
         );
-        if (error) return refuse(error);
+        if (Response.isError(ran)) return refuse(ran.errorCode);
         // Action `teleport` có thể đã đóng thoại.
-        if (!sessions.has(client.auth.playerId)) return Response.success();
+        if (!room.dialogues.has(client.auth.playerId)) return Response.success();
         if (option.next) {
-            const nextError = await dialogueWorldService.enter(
+            const entered = await dialogueWorldService.enter(
                 room,
                 client,
                 player,
                 session,
                 option.next
             );
-            if (nextError) return Response.error(nextError, undefined, { sourceCode });
+            if (Response.isError(entered)) {
+                return Response.error(entered.errorCode, { sourceCode });
+            }
         } else dialogueWorldService.end(room, client, sourceCode);
         return Response.success();
     }

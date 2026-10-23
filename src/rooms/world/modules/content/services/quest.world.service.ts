@@ -1,5 +1,5 @@
-import type { ErrorCode } from "@/core/types/result.type.js";
 import { QuestErrorCode } from "@/modules/quests/enums/quest-error-code.enum.js";
+import { RoomResponse } from "@/core/response/room-response.js";
 import { TIME_ZONE } from "@/configs/time.config.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
@@ -13,21 +13,14 @@ import {
 } from "@/modules/quests/enums/quest.enum.js";
 import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
 import { dailyQuestService } from "@/modules/quests/services/daily-quest.service.js";
-import {
-    type QuestEvent,
-    questProgressService,
-} from "@/modules/quests/services/quest-progress.service.js";
-import { unlockService } from "@/modules/quests/services/unlock.service.js";
+import { questProgressService } from "@/modules/quests/services/quest-progress.service.js";
+import type { QuestEvent } from "@/modules/quests/types/quest-progress.type.js";
 import { rewardSpecService } from "@/modules/rewards/services/reward-spec.service.js";
-import {
-    collectQuestTargets,
-    npcMarkerFor,
-} from "@/rooms/world/modules/content/utils/quest-marker.world.util.js";
-import { questOf, questsOf } from "@/rooms/world/modules/content/utils/quest-resolve.world.util.js";
-import { playerDataWorldService } from "@/rooms/world/modules/players/services/player-data.world.service.js";
-import type { PlayerChangeOp } from "@/rooms/global/global.shared.js";
-import { Response } from "@/core/utils/response.util.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import { collectQuestTargets, npcMarkerFor } from "@/modules/quests/utils/quest-marker.util.js";
+import { questOf, questsOf } from "@/modules/quests/utils/quest-resolve.util.js";
+import type { PlayerChangeOp } from "@/modules/player/types/player-change.type.js";
+import { Response } from "@/core/response/response.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { rewardWorldService } from "@/rooms/world/modules/rewards/services/reward.world.service.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
 import { worldEvents } from "@/rooms/world/utils/world-events.js";
@@ -42,9 +35,6 @@ import type {
 } from "@/rooms/world/modules/content/interfaces/content.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 import { DateTime } from "luxon";
-
-/** Lỗi nghiệp vụ trả về dạng chuỗi (giống các world service khác) hoặc `undefined` khi thành công. */
-export type QuestError = ErrorCode | undefined;
 
 /**
  * Quest của player đang online: nhận, tiến độ, trả thưởng. Trạng thái nằm ở `player.quests` (lưu
@@ -94,12 +84,12 @@ export class QuestWorldService {
             return quest && entry.status === "active" ? [this.toMessage(player, quest)] : [];
         });
         const message: QuestListMessage = { quests };
-        client.sendSuccess(WorldMessage.QUEST_LIST, message);
+        RoomResponse.send(client, WorldMessage.QUEST_LIST, message);
     }
 
     sendUpdate(client: PlayerClient, player: PlayerWorldState, quest: Quest) {
         const message: QuestUpdateMessage = { quest: this.toMessage(player, quest) };
-        client.sendSuccess(WorldMessage.QUEST_UPDATE, message);
+        RoomResponse.send(client, WorldMessage.QUEST_UPDATE, message);
     }
 
     /** Dấu trên đầu NPC của riêng player này (màu theo loại quest) — cũng dùng cho minimap. */
@@ -135,7 +125,7 @@ export class QuestWorldService {
             return { npcCode: npc.code, marker, ...(category ? { category } : {}) };
         });
         const message: NpcMarkersMessage = { markers };
-        client.sendSuccess(WorldMessage.NPC_MARKERS, message);
+        RoomResponse.send(client, WorldMessage.NPC_MARKERS, message);
     }
 
     /** Quái / item / vật thể liên quan quest đang làm — client đánh chữ Q. */
@@ -159,7 +149,7 @@ export class QuestWorldService {
                 ];
             })
         );
-        client.sendSuccess(WorldMessage.QUEST_TARGETS, targets);
+        RoomResponse.send(client, WorldMessage.QUEST_TARGETS, targets);
     }
 
     /**
@@ -167,27 +157,28 @@ export class QuestWorldService {
      * Chỉ giao khi đã mở khoá `daily_quest` (hoàn thành quest đăng ký mạo hiểm giả). Trả `true` nếu có đổi.
      */
     ensureDaily(room: WorldRoom, playerId: string, player: PlayerWorldState): boolean {
-        if (!player.flags[unlockService.unlockFlagKey("daily_quest")]) return false;
+        if (!player.playerState.isUnlocked("daily_quest")) return false;
         const config = masterDataCacheService.get(MasterDataKey.DAILY_QUEST_CONFIG);
         const now = DateTime.now().setZone(TIME_ZONE);
         if (!dailyQuestService.needsNewDailyQuests(player.dailyQuests, now, config.resetHour))
             return false;
 
-        for (const code of DAILY_QUEST_CODES) delete player.quests[code];
-        player.dailyQuests = {
-            date: dailyQuestService.dailyDateKey(now, config.resetHour),
-            quests: dailyQuestService.generateDailyQuests(config, player.level),
-        };
-        for (const def of player.dailyQuests.quests)
-            player.quests[def.code] = questProgressService.newQuestEntry(now);
+        player.playerState.questLog.replaceDaily(
+            {
+                date: dailyQuestService.dailyDateKey(now, config.resetHour),
+                quests: dailyQuestService.generateDailyQuests(config, player.level),
+            },
+            DAILY_QUEST_CODES,
+            now
+        );
         void worldService.savePlayer(room, playerId);
         return true;
     }
 
     /** Chức năng đã mở khoá (từ quest hero) — client bật/tắt menu tương ứng. */
     sendFeatures(client: PlayerClient, player: PlayerWorldState) {
-        const message: FeaturesMessage = { features: unlockService.unlockedFeatures(player.flags) };
-        client.sendSuccess(WorldMessage.FEATURES, message);
+        const message: FeaturesMessage = { features: player.playerState.unlockedFeatures() };
+        RoomResponse.send(client, WorldMessage.FEATURES, message);
     }
 
     /** Vào room: gửi quest đang làm + dấu NPC. */
@@ -205,11 +196,12 @@ export class QuestWorldService {
         client: PlayerClient,
         player: PlayerWorldState,
         questCode: string
-    ): QuestError {
+    ): Response {
         const quest = questOf(player, questCode);
-        if (!quest) return QuestErrorCode.QUEST_NOT_FOUND;
+        if (!quest) return Response.error(QuestErrorCode.QUEST_NOT_FOUND);
         // Quest hằng ngày được giao tự động, không nhận qua thoại.
-        if (quest.category === QuestCategory.DAILY) return QuestErrorCode.QUEST_NOT_AVAILABLE;
+        if (quest.category === QuestCategory.DAILY)
+            return Response.error(QuestErrorCode.QUEST_NOT_AVAILABLE);
         const ctx = player.conditionContext(room.map.code);
         if (
             !questProgressService.canAcceptQuest(
@@ -219,13 +211,13 @@ export class QuestWorldService {
                 DateTime.now()
             )
         ) {
-            return QuestErrorCode.QUEST_NOT_AVAILABLE;
+            return Response.error(QuestErrorCode.QUEST_NOT_AVAILABLE);
         }
-        player.quests[questCode] = questProgressService.newQuestEntry(DateTime.now());
+        player.playerState.startQuest(questCode, DateTime.now());
         this.sendUpdate(client, player, quest);
         this.sendMarkers(room, client, player);
         this.sendTargets(client, player);
-        return undefined;
+        return Response.success();
     }
 
     /**
@@ -238,13 +230,14 @@ export class QuestWorldService {
         player: PlayerWorldState,
         questCode: string,
         turnInNpcCode: string
-    ): Promise<QuestError> {
+    ): Promise<Response> {
         const quest = questOf(player, questCode);
         const entry = player.quests[questCode];
-        if (!quest || !entry) return QuestErrorCode.QUEST_NOT_ACTIVE;
-        if (quest.turnInNpcCode !== turnInNpcCode) return QuestErrorCode.QUEST_WRONG_NPC;
+        if (!quest || !entry) return Response.error(QuestErrorCode.QUEST_NOT_ACTIVE);
+        if (quest.turnInNpcCode !== turnInNpcCode)
+            return Response.error(QuestErrorCode.QUEST_WRONG_NPC);
         if (player.questState(questCode) !== QuestState.READY) {
-            return QuestErrorCode.QUEST_NOT_COMPLETED;
+            return Response.error(QuestErrorCode.QUEST_NOT_COMPLETED);
         }
 
         const reward = rewardSpecService.resolveRewardSpec(quest.rewards, ItemSource.QUEST);
@@ -269,19 +262,13 @@ export class QuestWorldService {
                 requireFit: true,
             });
         }
-        // Đánh dấu xong trước khi chờ global để bấm trùng không nhận thưởng hai lần; thất bại thì trả về như cũ.
+        if (ops.length > 0) {
+            const applied = player.applyOps(ops);
+            if (Response.isError(applied)) return applied;
+        }
         entry.status = "completed";
         entry.completedAt = DateTime.now().toISO()!;
-        if (ops.length > 0) {
-            const applied = await playerDataWorldService.apply(room, client.auth.playerId, ops);
-            if (Response.isError(applied)) {
-                entry.status = "active";
-                delete entry.completedAt;
-                return applied.code;
-            }
-        }
-        for (const feature of quest.unlockFeatures)
-            player.flags[unlockService.unlockFlagKey(feature)] = true;
+        for (const feature of quest.unlockFeatures) player.playerState.unlockFeature(feature);
         rewardWorldService.grant(room, client.auth.playerId, player, reward, false, false);
 
         this.sendUpdate(client, player, quest);
@@ -293,7 +280,7 @@ export class QuestWorldService {
             this.sendFeatures(client, player);
         }
         void worldService.savePlayer(room, client.auth.playerId);
-        return undefined;
+        return Response.success();
     }
 
     /** Giết monster / nói chuyện / tương tác → cộng tiến độ cho quest đang làm. */

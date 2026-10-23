@@ -1,6 +1,7 @@
 import { createEndpoint } from "colyseus";
-import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
-import { userClassService } from "@/apis/user/classes/services/user.class.service.js";
+import { HttpResponse, RouterContainer } from "@/core/response/http-response.js";
+import { classService } from "@/modules/classes/services/class.service.js";
+import { toClassView } from "@/modules/classes/utils/class-view.util.js";
 import { z } from "zod";
 import { UserClassResponse } from "@/apis/user/player/validators/user.player.response.js";
 
@@ -20,7 +21,7 @@ export const userClassController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                return HttpResponse.ok({ data: userClassService.listAll() });
+                return HttpResponse.success(classService.listAll().map(toClassView));
             })
     ),
 
@@ -37,7 +38,7 @@ export const userClassController = {
         },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                return HttpResponse.ok({ data: userClassService.listStarter() });
+                return HttpResponse.success(classService.listStarter().map(toClassView));
             })
     ),
 };

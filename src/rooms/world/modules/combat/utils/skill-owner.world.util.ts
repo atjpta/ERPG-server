@@ -1,27 +1,14 @@
 import { CrowdControlType, SkillEffectType } from "@/modules/skills/enums/skill.enum.js";
-import { calculateDamage } from "@/rooms/world/modules/combat/chains/damage.world.chain.js";
-import type { HitboxColliderState } from "@/rooms/world/modules/combat/schemas/hitbox-collider.world.state.js";
-import { combatSeed } from "@/rooms/world/modules/combat/utils/combat-roll.world.util.js";
-import type { PendingSkillHit } from "@/rooms/world/modules/combat/utils/skill-attack.world.util.js";
-import type { MonsterWorldState } from "@/rooms/world/modules/monsters/schemas/monster.world.state.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
+import { calculateDamage } from "@/modules/combat/chains/damage.chain.js";
+import type { HitboxColliderState } from "@/modules/combat/state/hitbox-collider.state.js";
+import { combatSeed } from "@/modules/combat/utils/combat-roll.util.js";
+import type { PendingSkillHitState } from "@/modules/combat/state/pending-skill-hit.state.js";
+import type { SkillOwner } from "@/modules/combat/types/skill-owner.type.js";
+import type { SkillTarget } from "@/modules/combat/types/skill-owner.type.js";
+import type { MonsterWorldState } from "@/modules/monsters/state/monster.state.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
+import { millisecondsToTicks } from "@/modules/world/utils/tick.util.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-
-/**
- * Bên gây ra một hit (đòn đánh, đạn, vùng). Player (`id` = playerId) tra lại mỗi lần trúng (có thể đã
- * rời room trong lúc đạn bay); monster giữ chính object của nó.
- */
-export type SkillOwner =
-    { kind: "player"; id: string } | { kind: "monster"; id: string; monster: MonsterWorldState };
-
-/** Một mục tiêu còn sống của `owner`, ở vị trí mà hit được tính. */
-export interface SkillTarget {
-    id: string;
-    x: number;
-    y: number;
-    hitbox: HitboxColliderState;
-}
 
 export const playerSkillOwner = (player: PlayerWorldState): SkillOwner => ({
     kind: "player",
@@ -73,7 +60,7 @@ export function findPlayerAimTarget(
 }
 
 /** Phần của một hit cần để tính damage (hit đang chờ, đạn hoặc vùng). */
-export type SkillHitSource = Pick<PendingSkillHit, "event" | "attackSerial" | "eventIndex">;
+export type SkillHitSource = Pick<PendingSkillHitState, "event" | "attackSerial" | "eventIndex">;
 
 /**
  * Tính và áp damage của `hit.event` lên `targetId`: trừ HP, hút máu, aggro, thưởng khi kết liễu monster.

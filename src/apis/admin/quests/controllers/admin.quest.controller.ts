@@ -1,8 +1,12 @@
 import { createEndpoint } from "colyseus";
-import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/response/http-response.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
-import { adminQuestService } from "@/apis/admin/quests/services/admin.quest.service.js";
+import { ilike } from "drizzle-orm";
+import { QuestRepo } from "@/modules/quests/repositories/quest.repository.js";
+import { Quests } from "@/modules/quests/entities/quest.entity.js";
+import { QuestErrorCode } from "@/modules/quests/enums/quest-error-code.enum.js";
+import { questService } from "@/modules/quests/services/quest.service.js";
 import {
     AdminCreateQuestSchema,
     AdminListQuestsQuerySchema,
@@ -18,8 +22,12 @@ export const adminQuestController = {
         { method: "GET", query: AdminListQuestsQuerySchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const result = await adminQuestService.list(ctx.query);
-                return HttpResponse.ok({ data: result });
+                const { search, ...pagination } = ctx.query;
+                const result = await QuestRepo.paginate({
+                    pagination,
+                    where: search ? ilike(Quests.code, `%${search}%`) : undefined,
+                });
+                return HttpResponse.success(result);
             })
     ),
 
@@ -28,9 +36,9 @@ export const adminQuestController = {
         { method: "GET", params: IdParamSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const quest = await adminQuestService.findById({ id: ctx.params.id });
+                const quest = await QuestRepo.findById({ id: ctx.params.id });
                 if (!quest) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ data: quest });
+                return HttpResponse.success(quest);
             })
     ),
 
@@ -39,8 +47,12 @@ export const adminQuestController = {
         { method: "POST", body: AdminCreateQuestSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const quest = await adminQuestService.createQuest(ctx.body);
-                return HttpResponse.created(ctx, { data: quest });
+                if (await QuestRepo.findByCode({ code: ctx.body.code })) {
+                    return HttpResponse.conflict(ctx, QuestErrorCode.QUEST_CODE_EXISTS);
+                }
+                const quest = await QuestRepo.create({ data: ctx.body });
+                await questService.setCacheData();
+                return HttpResponse.created(ctx, quest);
             })
     ),
 
@@ -49,9 +61,10 @@ export const adminQuestController = {
         { method: "PUT", params: IdParamSchema, body: AdminUpdateQuestSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const quest = await adminQuestService.updateQuest(ctx.params.id, ctx.body);
+                const quest = await QuestRepo.updateById({ id: ctx.params.id, data: ctx.body });
+                if (quest) await questService.setCacheData();
                 if (!quest) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ data: quest });
+                return HttpResponse.success(quest);
             })
     ),
 };

@@ -1,8 +1,11 @@
 import { createEndpoint } from "colyseus";
-import { HttpResponse, RouterContainer } from "@/core/utils/response.util.js";
+import { HttpResponse, RouterContainer } from "@/core/response/http-response.js";
 import { IdParamSchema } from "@/core/validators/id.validator.js";
 import { adminAuthMiddleware } from "@/modules/auth/middlewares/admin.auth.middleware.js";
-import { adminGameServerService } from "@/apis/admin/auth/services/admin.game-server.service.js";
+import { and, eq, ilike } from "drizzle-orm";
+import { GameServerRepo } from "@/modules/auth/repositories/game-server.repository.js";
+import { GameServers } from "@/modules/auth/entities/game-server.entity.js";
+import { AuthErrorCode } from "@/modules/auth/enums/auth-error-code.enum.js";
 import {
     AdminCreateGameServerSchema,
     AdminListGameServersQuerySchema,
@@ -18,8 +21,13 @@ export const adminGameServerController = {
         { method: "GET", query: AdminListGameServersQuerySchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const result = await adminGameServerService.list(ctx.query);
-                return HttpResponse.ok({ data: result });
+                const { search, status, ...pagination } = ctx.query;
+                const where = and(
+                    search ? ilike(GameServers.code, `%${search}%`) : undefined,
+                    status ? eq(GameServers.status, status) : undefined
+                );
+                const result = await GameServerRepo.paginate({ pagination, where });
+                return HttpResponse.success(result);
             })
     ),
 
@@ -28,9 +36,9 @@ export const adminGameServerController = {
         { method: "GET", params: IdParamSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const server = await adminGameServerService.findById({ id: ctx.params.id });
+                const server = await GameServerRepo.findById({ id: ctx.params.id });
                 if (!server) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ data: server });
+                return HttpResponse.success(server);
             })
     ),
 
@@ -39,8 +47,11 @@ export const adminGameServerController = {
         { method: "POST", body: AdminCreateGameServerSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const server = await adminGameServerService.createServer(ctx.body);
-                return HttpResponse.created(ctx, { data: server });
+                if (await GameServerRepo.findByCode({ code: ctx.body.code })) {
+                    return HttpResponse.conflict(ctx, AuthErrorCode.GAME_SERVER_CODE_EXISTS);
+                }
+                const server = await GameServerRepo.create({ data: ctx.body });
+                return HttpResponse.created(ctx, server);
             })
     ),
 
@@ -49,9 +60,12 @@ export const adminGameServerController = {
         { method: "PUT", params: IdParamSchema, body: AdminUpdateGameServerSchema },
         (ctx) =>
             RouterContainer(ctx, async () => {
-                const server = await adminGameServerService.updateServer(ctx.params.id, ctx.body);
+                const server = await GameServerRepo.updateById({
+                    id: ctx.params.id,
+                    data: ctx.body,
+                });
                 if (!server) return HttpResponse.notFound(ctx);
-                return HttpResponse.ok({ data: server });
+                return HttpResponse.success(server);
             })
     ),
 };

@@ -1,14 +1,12 @@
 import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
-import { inventoryService } from "@/modules/player/services/inventory.service.js";
 import { InventoryGlobalCommand } from "@/rooms/global/modules/inventory/commands/inventory.global.command.js";
-import { inventoryGlobalService } from "@/rooms/global/modules/inventory/services/inventory.global.service.js";
-import { equipmentInstanceService } from "@/modules/equipment/services/equipment-instance.service.js";
+import { EquipmentInstanceState } from "@/modules/equipment/state/equipment-instance.state.js";
 import { UnequipItemSchema } from "@/rooms/global/modules/inventory/validators/inventory.global.validator.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
+import type { PlayerState } from "@/modules/player/state/player.state.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import type { z } from "zod";
 
@@ -22,18 +20,15 @@ export class UnequipItemGlobalCommand extends InventoryGlobalCommand<
     static readonly message = GlobalClientMessage.UNEQUIP_ITEM;
 
     protected readonly validateSchema = UnequipItemSchema;
-    protected override readonly changesStats = true;
-    protected run(player: PlayerDataState, { slot }: z.infer<typeof UnequipItemSchema>) {
-        const equipped = player.equipments[slot];
+    protected run(player: PlayerState, { slot }: z.infer<typeof UnequipItemSchema>) {
+        const equipped = player.data.equipments[slot];
         if (!equipped) return Response.error(ItemErrorCode.INVENTORY_SLOT_EMPTY);
-        const bag = player.inventories[ItemType.EQUIPMENT];
-        const [slotIndex] = inventoryService.freeSlotIndexes(
-            bag,
-            inventoryGlobalService.inventorySize(ItemType.EQUIPMENT)
-        );
+        const [slotIndex] = player.bag.freeSlots(ItemType.EQUIPMENT);
         if (slotIndex === undefined) return Response.error(ItemErrorCode.INVENTORY_FULL);
-        bag.push(equipmentInstanceService.toInventoryEquipment(equipped, slotIndex));
-        player.equipments[slot] = null;
+        player.bag
+            .bag(ItemType.EQUIPMENT)
+            .push(EquipmentInstanceState.toInventoryItem(equipped, slotIndex));
+        player.data.equipments[slot] = null;
         player.refreshStats();
         return Response.success(undefined);
     }

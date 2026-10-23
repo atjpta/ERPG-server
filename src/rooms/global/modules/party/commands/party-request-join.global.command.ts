@@ -1,6 +1,5 @@
-import { worldRegistryGlobalService } from "@/rooms/global/modules/world-registry/services/world-registry.global.service.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { PlayerGlobalCommand } from "@/rooms/global/player.global.command.js";
 import type { PartyCommandPayload } from "@/rooms/global/modules/party/commands/party-member.global.command.js";
@@ -12,7 +11,7 @@ import type {
     PartyNoticeMessage,
 } from "@/rooms/global/modules/party/interfaces/party.global.message.js";
 import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import { PartyErrorCode } from "@/modules/party/enums/party-error-code.enum.js";
 
 /**
  * Xin vào party của một người cùng world room: kiểm tra chỗ rồi báo cho chủ; thành công = đã gửi tới chủ,
@@ -47,14 +46,14 @@ export class PartyRequestJoinGlobalCommand extends PlayerGlobalCommand<
         };
 
         if (targetId === requesterId) return refuse(PartyErrorCode.PARTY_SELF_TARGET);
-        const here = worldRegistryGlobalService.worldRoomOf(room, requesterId);
-        const there = worldRegistryGlobalService.worldRoomOf(room, targetId);
+        const here = room.players.get(requesterId)?.worldRoomId;
+        const there = room.players.get(targetId)?.worldRoomId;
         if (!here || !there || here !== there) {
             return refuse(PlayerErrorCode.PLAYER_NOT_HERE);
         }
-        if (room.state.parties.getPartyByPlayerId(requesterId))
+        if (this.room.parties.getPartyByPlayerId(requesterId))
             return refuse(PartyErrorCode.PARTY_ALREADY_MEMBER);
-        const party = room.state.parties.getPartyByPlayerId(targetId);
+        const party = this.room.parties.getPartyByPlayerId(targetId);
         if (!party) return refuse(PartyErrorCode.PARTY_TARGET_NOT_IN_PARTY);
 
         const leaderId = party.leaderPlayerId;

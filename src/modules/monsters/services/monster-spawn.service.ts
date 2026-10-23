@@ -1,13 +1,11 @@
-import {
-    type Rng,
-    equipmentRollService,
-} from "@/modules/equipment/services/equipment-roll.service.js";
+import { equipmentRollService } from "@/modules/equipment/services/equipment-roll.service.js";
+import type { Rng } from "@/modules/equipment/types/equipment-roll.type.js";
 import { ItemRarity } from "@/modules/items/enums/item.enum.js";
-import type { MonsterSpawn } from "@/modules/maps/entities/game-map.entity.js";
+import type { MonsterSpawn } from "@/modules/maps/types/game-map.type.js";
 import { MonsterType, RANDOM_MONSTER_TYPE } from "@/modules/monsters/enums/monster-type.enum.js";
 import type { MonsterDrops } from "@/modules/monsters/schemas/monster-drop.schema.js";
 import type { MonsterSpawnConfig } from "@/modules/monsters/schemas/monster-spawn-config.schema.js";
-import type { MonsterVariant } from "@/modules/monsters/services/monster-stat.service.js";
+import type { MonsterVariant } from "@/modules/monsters/types/monster-stat.type.js";
 import { rewardRollService } from "@/modules/rewards/services/reward-roll.service.js";
 
 export class MonsterSpawnService {

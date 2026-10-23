@@ -1,4 +1,4 @@
-import { registerErrorCodes } from "@/core/utils/error-code.util.js";
+import { registerErrorCodes } from "@/core/response/error-code.js";
 
 /** Mã lỗi tài khoản, đăng nhập, admin và game server. */
 export enum AuthErrorCode {
@@ -38,4 +38,17 @@ export enum AuthErrorCode {
     GAME_SERVER_UNAVAILABLE = "GAME_SERVER_UNAVAILABLE",
 }
 
-registerErrorCodes(AuthErrorCode);
+registerErrorCodes(AuthErrorCode, {
+    ACCOUNT_DELETION_REQUEST_PROCESSED: 409,
+    ACCOUNT_DELETION_REQUEST_NOT_FOUND: 404,
+    AUTH_EMAIL_EXISTS: 409,
+    OAUTH_ACCOUNT_LINKED_ELSEWHERE: 409,
+    OAUTH_ALREADY_LINKED: 409,
+    AUTH_SESSION_NOT_FOUND: 404,
+    AUTH_ACCOUNT_DELETED: 403,
+    AUTH_ACCOUNT_BANNED: 403,
+    AUTH_ACCOUNT_INACTIVE: 403,
+    OAUTH_PROVIDER_ERROR: 502,
+    GAME_SERVER_UNAVAILABLE: 503,
+    GAME_SERVER_CODE_EXISTS: 409,
+});

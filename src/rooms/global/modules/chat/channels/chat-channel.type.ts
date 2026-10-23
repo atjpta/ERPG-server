@@ -1,5 +1,5 @@
 import { ChatChannelKey } from "@/modules/chat/enums/chat-channel-key.enum.js";
-import type { Result } from "@/core/types/result.type.js";
+import type { Response } from "@/core/response/response.js";
 import type { ChatMessageWithSender } from "@/modules/chat/entities/chat-message.entity.js";
 import type { GlobalRoom } from "@/rooms/global/global.room.js";
 import type { ChatSendPayload } from "@/rooms/global/modules/chat/types/chat-send.type.js";
@@ -29,7 +29,7 @@ export interface ChatChannelContext {
 export interface ChatChannel {
     readonly key: ChatChannelKey;
     /** Thất bại: `fail(ChatErrorCode.X)` — tin không được gửi. */
-    resolveRecipients(ctx: ChatChannelContext): Promise<Result<ChatRecipients>>;
+    resolveRecipients(ctx: ChatChannelContext): Promise<Response<ChatRecipients>>;
     /**
      * Lịch sử gửi cho `playerId` (mới → cũ). Chỉ gọi khi kênh có `saveHistory`; bỏ trống = lấy các tin gần nhất
      * của kênh trong server (không phạm vi), như world.

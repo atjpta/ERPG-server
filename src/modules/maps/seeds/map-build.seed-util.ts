@@ -1,10 +1,10 @@
-import {
-    MapSpawnKind,
-    type DungeonConfig,
-    type MapInteractable,
-    type MonsterSpawn,
-    type NewGameMap,
-} from "@/modules/maps/entities/game-map.entity.js";
+import { type NewGameMap } from "@/modules/maps/entities/game-map.entity.js";
+import { MapSpawnKind } from "@/modules/maps/enums/game-map.enum.js";
+import type {
+    DungeonConfig,
+    MapInteractable,
+    MonsterSpawn,
+} from "@/modules/maps/types/game-map.type.js";
 import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
 import type {
     InteractableDef,

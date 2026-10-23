@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 
 /**
  * Sự kiện nội bộ giữa các world service — để quest (và sau này thứ khác) theo dõi túi đồ mà

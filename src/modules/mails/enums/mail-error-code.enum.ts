@@ -1,4 +1,4 @@
-import { registerErrorCodes } from "@/core/utils/error-code.util.js";
+import { registerErrorCodes } from "@/core/response/error-code.js";
 
 /** Mã lỗi riêng của mail (global room). Lỗi chung của item / ví (`INVENTORY_FULL`, `CURRENCY_NOT_ENOUGH`, `ITEM_LOCKED`...) dùng lại mã của item. */
 export enum MailErrorCode {
@@ -20,8 +20,6 @@ export enum MailErrorCode {
     MAIL_TOO_MANY_ITEMS = "MAIL_TOO_MANY_ITEMS",
     /** Đính kèm bị lặp (cùng một món / cùng một loại tiền xuất hiện hai lần). */
     MAIL_ATTACHMENT_DUPLICATE = "MAIL_ATTACHMENT_DUPLICATE",
-    /** Thao tác cần ví (gửi / nhận tiền, trả COD) nhưng bạn đang không ở trong world. */
-    MAIL_NEEDS_WORLD = "MAIL_NEEDS_WORLD",
     /** Thư đã được nhận (claim) rồi. */
     MAIL_ALREADY_CLAIMED = "MAIL_ALREADY_CLAIMED",
     /** Thư không có đính kèm để nhận. */

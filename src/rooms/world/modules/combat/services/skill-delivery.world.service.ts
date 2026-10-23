@@ -1,4 +1,5 @@
 import { StatKey } from "@/modules/player/enums/stat.enum.js";
+import { RoomResponse } from "@/core/response/room-response.js";
 import { PlayerStatService } from "@/modules/player/services/player-stat.service.js";
 import type { Skill } from "@/modules/skills/entities/skill.entity.js";
 import {
@@ -12,48 +13,34 @@ import {
     SkillEffectType,
 } from "@/modules/skills/enums/skill.enum.js";
 import type { SkillAllies, SkillHitEvent } from "@/modules/skills/schemas/skill-config.schema.js";
-import { AreaWorldState } from "@/rooms/world/modules/combat/schemas/area.world.state.js";
-import { AuraWorldState } from "@/rooms/world/modules/combat/schemas/aura.world.state.js";
-import { ProjectileWorldState } from "@/rooms/world/modules/combat/schemas/projectile.world.state.js";
+import { AreaWorldState } from "@/modules/combat/state/area.state.js";
+import { AuraWorldState } from "@/modules/combat/state/aura.state.js";
+import { ProjectileWorldState } from "@/modules/combat/state/projectile.state.js";
 import {
-    claimGroupHit,
     getAuraDurationTicks,
     getAuraEvent,
     getAuraRadii,
-    type PendingSkillHit,
-} from "@/rooms/world/modules/combat/utils/skill-attack.world.util.js";
+} from "@/modules/combat/utils/skill-attack.util.js";
 import {
     intersectsSkillHitEvent,
     offsetSkillOrigin,
-} from "@/rooms/world/modules/combat/utils/skill-hitbox.world.util.js";
+} from "@/modules/combat/utils/skill-hitbox.util.js";
 import {
-    SkillOwner,
-    SkillTarget,
     applySkillHit,
     findSkillTargets,
     playerSkillOwner,
 } from "@/rooms/world/modules/combat/utils/skill-owner.world.util.js";
-import type { PlayerWorldState } from "@/rooms/world/modules/players/schemas/player.world.state.js";
-import { millisecondsToTicks } from "@/rooms/world/utils/tick.world.util.js";
+import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
+import { millisecondsToTicks } from "@/modules/world/utils/tick.util.js";
 import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import type { PotionUsedMessage } from "@/rooms/world/modules/consumables/interfaces/consumable.world.message.js";
 import type { SkillEffectMessage } from "@/rooms/world/modules/combat/interfaces/combat.world.message.js";
 import type { WorldRoom } from "@/rooms/world/world.room.js";
-import { mapExtent } from "@/rooms/world/modules/players/simulation/movement.step.js";
+import { mapExtent } from "@/modules/player/simulation/movement.step.js";
+import type { SkillDeliveryParams } from "@/rooms/world/modules/combat/types/skill-delivery.world.type.js";
 
 /** Bước kiểm tra va chạm tối đa (ô) của đạn trong 1 tick — đạn nhanh không xuyên qua mục tiêu nhỏ. */
 const PROJECTILE_MAX_SWEEP_STEP = 0.1;
-
-export interface SkillDeliveryParams {
-    owner: SkillOwner;
-    skill: Skill;
-    hit: PendingSkillHit;
-    /** Vị trí bên đánh lúc hit nổ (chân nhân vật, toạ độ server). */
-    originX: number;
-    originY: number;
-    /** Mục tiêu để ngắm (PROJECTILE) / đặt vùng (AREA); không có → theo hướng mặt. */
-    aim?: SkillTarget;
-}
 
 /**
  * Đưa một hit event tới mục tiêu theo `delivery`:
@@ -228,7 +215,7 @@ export class SkillDeliveryWorldService {
         );
         if (healed.length === 0) return;
         const message: SkillEffectMessage = { skillId: skill.id, playerIds: healed };
-        room.broadcastSuccess(WorldMessage.SKILL_EFFECT, message);
+        RoomResponse.broadcast(room, WorldMessage.SKILL_EFFECT, message);
     }
 
     /**
@@ -252,7 +239,7 @@ export class SkillDeliveryWorldService {
             }
             ally.heal(amount);
             const message: PotionUsedMessage = { playerId, hp: amount, mp: 0 };
-            room.broadcastSuccess(WorldMessage.POTION_USED, message);
+            RoomResponse.broadcast(room, WorldMessage.POTION_USED, message);
             healed.push(playerId);
         }
         return healed;
@@ -272,7 +259,7 @@ export class SkillDeliveryWorldService {
         for (const target of findSkillTargets(room, owner)) {
             if (
                 intersectsSkillHitEvent(origin, target.x, target.y, target.hitbox, hit.event) &&
-                claimGroupHit(hit, target.id)
+                hit.claimGroupHit(target.id)
             ) {
                 applySkillHit(room, owner, target.id, hit);
             }

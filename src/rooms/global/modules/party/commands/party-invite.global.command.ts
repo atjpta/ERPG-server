@@ -1,7 +1,6 @@
-import { worldRegistryGlobalService } from "@/rooms/global/modules/world-registry/services/world-registry.global.service.js";
 import { cacheService } from "@/core/cache/cache.service.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { playerBlockService } from "@/modules/friends/services/player-block.service.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import {
@@ -17,7 +16,7 @@ import type {
     PartyNoticeMessage,
 } from "@/rooms/global/modules/party/interfaces/party.global.message.js";
 import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
-import { PartyErrorCode } from "@/rooms/global/modules/party/enums/party-error-code.enum.js";
+import { PartyErrorCode } from "@/modules/party/enums/party-error-code.enum.js";
 
 const INVITE_RATE_WINDOW_SEC = 60;
 const INVITE_RATE_LIMIT = 10;
@@ -47,7 +46,7 @@ export class PartyInviteGlobalCommand extends PartyMemberGlobalCommand<typeof Pa
         const { room, party } = this;
         const leaderId = client.auth.playerId;
         const refuse = (code: string, playerName?: string) => {
-            this.result = Response.error(code, undefined, playerName ? { playerName } : null);
+            this.result = Response.error(code, playerName ? { playerName } : null);
         };
 
         // Chống spam lời mời: tối đa 10 lời mời / phút / người mời (cache dùng chung nhiều process).
@@ -67,25 +66,22 @@ export class PartyInviteGlobalCommand extends PartyMemberGlobalCommand<typeof Pa
         }
 
         // Đang ở party khác: từ chối. Chính là party này (tự mời mình / đã là thành viên) thì để `addInvite` báo mã riêng.
-        const targetParty = room.state.parties.getPartyByPlayerId(target.id);
+        const targetParty = this.room.parties.getPartyByPlayerId(target.id);
         if (targetParty && targetParty !== party) {
             return refuse(PartyErrorCode.PARTY_TARGET_IN_PARTY, target.name);
         }
         // Người được mời phải đang online (có kết nối global để nhận lời mời) và đã vào world.
         // Người được mời phải đã vào world.
-        if (
-            !room.sessionOf.has(target.id) ||
-            !worldRegistryGlobalService.isInWorld(room, target.id)
-        ) {
+        if (!room.sessionOf.has(target.id) || !room.players.get(target.id)?.isInWorld) {
             return refuse(PartyErrorCode.PARTY_TARGET_OFFLINE, target.name);
         }
 
         const ttlSec = party.config.inviteTtlSec;
-        const error = party.addInvite(leaderId, target.id, {
+        const invited = party.addInvite(leaderId, target.id, {
             fromName: party.getMemberName(leaderId),
             targetName: target.name,
         });
-        if (error) return refuse(error, target.name);
+        if (Response.isError(invited)) return refuse(invited.errorCode, target.name);
         partyGlobalService.scheduleInviteExpiry(room, party, target.id);
         const invite: PartyInviteReceivedMessage = {
             partyId: party.id,

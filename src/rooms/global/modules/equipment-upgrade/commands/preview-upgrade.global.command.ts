@@ -1,23 +1,20 @@
+import { CalcService } from "@/core/calc/calc.service.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import type { ErrorCode } from "@/core/types/result.type.js";
+import type { ErrorCode } from "@/core/response/result.type.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
-import { Response } from "@/core/utils/response.util.js";
-import { big, bigToNumber } from "@/core/utils/big-number.util.js";
+import { Response } from "@/core/response/response.js";
 import { equipmentStatService } from "@/modules/equipment/services/equipment-stat.service.js";
-import {
-    type UpgradeCost,
-    equipmentUpgradeService,
-} from "@/modules/equipment/services/equipment-upgrade.service.js";
+import { equipmentUpgradeService } from "@/modules/equipment/services/equipment-upgrade.service.js";
+import type { UpgradeCost } from "@/modules/equipment/types/equipment-upgrade.type.js";
 import { ItemType } from "@/modules/items/enums/item.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
-import { inventoryService } from "@/modules/player/services/inventory.service.js";
 import { PreviewUpgradeSchema } from "@/rooms/global/modules/inventory/validators/inventory.global.validator.js";
 import type { PlayerWorldView } from "@/rooms/global/modules/player-data/types/player-data.type.js";
-import type { PlayerDataState } from "@/rooms/global/modules/player-data/schemas/player-data.global.state.js";
+import type { PlayerState } from "@/modules/player/state/player.state.js";
 import { GlobalClientMessage } from "@/rooms/global/types/global-message.type.js";
 import { EquipmentUpgradeAction } from "@/rooms/global/modules/equipment-upgrade/enums/equipment-upgrade-action.enum.js";
 import type {
@@ -27,7 +24,6 @@ import type {
 import type { StatLineMessage } from "@/rooms/global/modules/player-data/interfaces/player-data.global.message.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { PlayerGlobalCommand } from "@/rooms/global/player.global.command.js";
-import { playerDataGlobalService } from "@/rooms/global/modules/player-data/services/player-data.global.service.js";
 
 interface InventoryCommandPayload {
     client: PlayerClient;
@@ -57,23 +53,23 @@ export class PreviewUpgradeGlobalCommand extends PlayerGlobalCommand<
 
     protected override readonly validateSchema = PreviewUpgradeSchema;
 
-    async execute({ client }: InventoryCommandPayload) {
-        this.result = await playerDataGlobalService.read(
-            this.room,
-            client.auth.playerId,
-            { pullsWorld: true },
-            (state, world) =>
-                this.upgradePreview(state, world, this.body.action, this.body.instanceId)
+    execute(_payload: InventoryCommandPayload) {
+        this.result = this.upgradePreview(
+            this.player,
+            this.player.data,
+            this.body.action,
+            this.body.instanceId
         );
     }
 
     /** Chi phí, tỉ lệ cường hoá / tinh hoá món này và player có đủ không. */
     private upgradePreview(
-        player: PlayerDataState,
+        player: PlayerState,
         world: PlayerWorldView | undefined,
         action: EquipmentUpgradeAction.ENHANCE | EquipmentUpgradeAction.REFINE,
         instanceId: string
     ) {
+        const calc = new CalcService("big");
         const ownedGold = world?.wallet[CurrencyCode.GOLD]?.balance ?? 0;
         const reply = (
             preview: Omit<UpgradePreviewMessage, "action" | "instanceId" | "ownedGold">
@@ -85,12 +81,11 @@ export class PreviewUpgradeGlobalCommand extends PlayerGlobalCommand<
                 ...preview,
             });
         };
-        const refuse = (code: ErrorCode) => Response.error(code, undefined, { action, instanceId });
+        const refuse = (code: ErrorCode) => Response.error(code, { action, instanceId });
 
         const owned = player.findOwned(instanceId);
         if (!owned) return refuse(ItemErrorCode.EQUIPMENT_NOT_FOUND);
 
-        const bag = player.inventories[ItemType.MATERIAL];
         const requirements = (cost: UpgradeCost): MaterialRequirementMessage[] =>
             cost.materials.map(({ code, quantity }) => {
                 const item = itemService.getByCode(code);
@@ -98,7 +93,7 @@ export class PreviewUpgradeGlobalCommand extends PlayerGlobalCommand<
                     itemId: item?.id ?? "",
                     code,
                     quantity,
-                    owned: item ? inventoryService.countItem(bag, item.id) : 0,
+                    owned: item ? player.bag.count(ItemType.MATERIAL, item.id) : 0,
                 };
             });
         const priced = (cost: UpgradeCost) => {
@@ -126,7 +121,7 @@ export class PreviewUpgradeGlobalCommand extends PlayerGlobalCommand<
             });
             return owned.metadata.mainStats.map((line) => ({
                 ...line,
-                value: bigToNumber(big(line.value).times(multiplier)),
+                value: calc.of(line.value).times(multiplier).toNumber(),
             }));
         };
 
@@ -136,7 +131,7 @@ export class PreviewUpgradeGlobalCommand extends PlayerGlobalCommand<
                 owned.group,
                 masterDataCacheService.get(MasterDataKey.EQUIPMENT_ENHANCE_CONFIG)
             );
-            if (Response.isError(cost)) return refuse(cost.code);
+            if (Response.isError(cost)) return refuse(cost.errorCode);
             return reply({
                 ...priced(cost.data),
                 enhanceLevel: owned.metadata.enhanceLevel + 1,
@@ -151,7 +146,7 @@ export class PreviewUpgradeGlobalCommand extends PlayerGlobalCommand<
             owned.metadata,
             masterDataCacheService.get(MasterDataKey.EQUIPMENT_REFINE_CONFIG)
         );
-        if (Response.isError(cost)) return refuse(cost.code);
+        if (Response.isError(cost)) return refuse(cost.errorCode);
         return reply({
             ...priced(cost.data),
             rarity: cost.data.target,

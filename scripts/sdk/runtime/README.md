@@ -140,4 +140,4 @@ yarn unity:network:check   # chỉ so sánh phần SDK (CI)
 - Handler của room chạy trên main thread (Colyseus dùng SynchronizationContext của Unity); không cần `Dispatch`.
 - Body / payload gửi lên được chuyển sang dictionary và **bỏ field `null`** (Zod `.optional()` của server từ chối `null`).
 - Model sinh ra có `[Preserve]` nên không bị IL2CPP strip.
-- Hàm trong `rooms/**/simulation/*.step.ts` của server là hợp đồng với bản C# tương ứng (client prediction) — nằm ngoài thư mục này.
+- Hàm trong `modules/**/simulation/*.step.ts` của server là hợp đồng với bản C# tương ứng (client prediction) — nằm ngoài thư mục này.

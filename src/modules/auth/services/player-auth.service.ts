@@ -1,7 +1,7 @@
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import jwt from "jsonwebtoken";
 import { env } from "@/configs/env.config.js";
-import { serviceError } from "@/core/utils/service-error.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerStatus } from "@/modules/auth/enums/player-status.enum.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { UserSessionRepo } from "@/modules/auth/repositories/user-session.repository.js";
@@ -42,14 +42,13 @@ export class PlayerAuthService {
     private async getPlayableIdentity(playerId: string) {
         const player = await PlayerIdentityRepo.findByIdOrFail({
             id: playerId,
-            message: "Player not found",
             code: PlayerErrorCode.PLAYER_NOT_FOUND,
         });
         if (player.status === PlayerStatus.DELETED) {
-            serviceError("Player not found", 404, PlayerErrorCode.PLAYER_NOT_FOUND);
+            Response.abort(PlayerErrorCode.PLAYER_NOT_FOUND);
         }
         if (player.status === PlayerStatus.BANNED) {
-            serviceError("Player is banned", 403, PlayerErrorCode.PLAYER_BANNED);
+            Response.abort(PlayerErrorCode.PLAYER_BANNED);
         }
         return player;
     }

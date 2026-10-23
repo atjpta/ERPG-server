@@ -56,25 +56,24 @@ init project mới thì làm theo đúng thứ tự này.
 
 ## 4. `src/core/` — hạ tầng dùng chung
 
-| Thành phần                                              | Vai trò                                                                                                                                                                              |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `rooms/base-player.room.ts`                             | Base Colyseus room: identity contract, reconnect hook and online/kick subscriptions; no module dependencies.                                                                         |
-| `entities/base.entity.ts`                               | `baseColumns()` (id UUID v7, createdAt, updatedAt), `baseWithCodeColumns()`                                                                                                          |
-| `repositories/base.repository.ts`                       | CRUD chung, **mọi method nhận 1 object param** (`{ id, data, dbOrTx }`), `withTransaction()`                                                                                         |
-| `services/base.service.ts`                              | Mirror 1-1 các hàm của `BaseRepository` (cùng tên, cùng param) — service kế thừa để có sẵn CRUD                                                                                      |
-| `utils/load-controllers.util.ts`                        | Quét `*.controller.ts` trong `api/admin/` + `api/user/`, gom export tên kết thúc `Controller` (báo lỗi nếu trùng key endpoint)                                                       |
-| `utils/response.util.ts`                                | `HttpResponse.ok/created/badRequest/...` + `RouterContainer` (bắt ZodError → 422, `serviceError` → đúng status) + `routerErrorHandler` (lỗi validate của framework → envelope)       |
-| `types/result.type.ts`, `utils/response.util.ts`        | Envelope chung `Result` `{ success, data, code, message, error }`, `Paginated`, `ErrorCode`, object `Response` (`success/successPage/error/isError`) — xem `docs/response-format.md` |
-| `utils/client-send.util.ts`                             | `client.sendSuccess/sendError/sendResult` (cài vào client transport); `room.broadcastSuccess/broadcastResult` ở `BasePlayerRoom` — mọi message room gửi xuống client                 |
-| `utils/dispatch-result.util.ts`                         | `dispatchForResult` — chạy command và đọc `result`; `callRoom` / `createRpcRunner` (trong `rooms/room.integration.ts`) — gọi và nhận RPC giữa các room                               |
-| `utils/service-error.ts`                                | `serviceError(message, status, code)` — throw trong service                                                                                                                          |
-| `utils/rate-limit.util.ts`                              | `assertRateLimit(rule, identity)` — fixed window qua `cacheService.incr`, vượt → 429. `getClientIp()` chỉ tin header proxy khi `TRUST_PROXY=true`                                    |
-| `utils/big-number.util.ts`                              | `Big`/`big()` (bignumber.js, 20 chữ số thập phân), `clampBig`, `floorBig` — mọi phép tính stat/damage, tránh sai số float                                                            |
-| `middlewares/rate-limit.middleware.ts`                  | `createRateLimitMiddleware(rule)` — giới hạn theo IP, gắn vào `use: [...]` của endpoint                                                                                              |
-| `enums/common-code.enum.ts`, `utils/error-code.util.ts` | `CommonCode` (mã lỗi chung) + `registerErrorCodes` (kiểm tra mã unique); mã theo domain nằm ở module / room — xem `docs/response-format.md`                                          |
-| `enums/client-platform.enum.ts`                         | `android` (Google Play), `pc`                                                                                                                                                        |
-| `cache/`                                                | `cacheService` (Memory mặc định, đổi sang `RedisCacheStore` khi chạy nhiều process)                                                                                                  |
-| `validators/`                                           | `IdParamSchema` (uuidv7), `PaginationSchema`, `LocalizedStringSchema`                                                                                                                |
+| Thành phần                                              | Vai trò                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rooms/base-player.room.ts`                             | Base Colyseus room: identity contract, reconnect hook and online/kick subscriptions; no module dependencies.                                                                                                                                                                                                                                                                |
+| `entities/base.entity.ts`                               | `baseColumns()` (id UUID v7, createdAt, updatedAt), `baseWithCodeColumns()`                                                                                                                                                                                                                                                                                                 |
+| `repositories/base.repository.ts`                       | CRUD chung, **mọi method nhận 1 object param** (`{ id, data, dbOrTx }`), `withTransaction()`                                                                                                                                                                                                                                                                                |
+| `utils/load-controllers.util.ts`                        | Quét `*.controller.ts` trong `api/admin/` + `api/user/`, gom export tên kết thúc `Controller` (báo lỗi nếu trùng key endpoint)                                                                                                                                                                                                                                              |
+| `response/http-response.ts`                             | `HttpResponse.from/success/created/page/notFound/...` + `RouterContainer` (lỗi ném → envelope đúng status) + `routerErrorHandler` (lỗi validate của framework → envelope)                                                                                                                                                                                                   |
+| `response/response.ts`, `response/response.type.ts`     | `Response<T>` nội bộ: `success/error/isError/map/abort/attempt/fromThrown` — kết quả của service / state / manager / cổng giữa room                                                                                                                                                                                                                                         |
+| `response/envelope.ts`, `response/result.type.ts`       | Envelope gửi client `Result` `{ success, data, code, message, error }`, `Paginated`, `ErrorCode`; `toEnvelope` là chỗ duy nhất dựng nó — xem `docs/response-format.md`                                                                                                                                                                                                      |
+| `response/room-response.ts`                             | `RoomResponse.reply/send/sendError/broadcast` — reply Request/Response và push xuống client của room                                                                                                                                                                                                                                                                        |
+| `response/error-code.ts`                                | `registerErrorCodes(enum, statuses)` + `errorStatus(code)` — mã lỗi unique toàn project, HTTP status của mã                                                                                                                                                                                                                                                                 |
+| `utils/rate-limit.util.ts`                              | `assertRateLimit(rule, identity)` — fixed window qua `cacheService.incr`, vượt → 429. `getClientIp()` chỉ tin header proxy khi `TRUST_PROXY=true`                                                                                                                                                                                                                           |
+| `calc/` (`calc.service.ts`, `drivers/`)                 | Phép tính thập phân cho stat / damage / reward / equipment: `calc.of(x).times(y).round()`. Driver `native` (mặc định, số nguyên các ô 1e-8, không nạp thư viện) hoặc `big` (bignumber.js); đổi bất cứ lúc nào bằng `calc.use("big")`; chỗ luôn cần BigNumber tạo bản riêng `new CalcService("big")`. Hai driver cho kết quả GIỐNG HỆT nhau (hợp đồng ở `calc.interface.ts`) |
+| `middlewares/rate-limit.middleware.ts`                  | `createRateLimitMiddleware(rule)` — giới hạn theo IP, gắn vào `use: [...]` của endpoint                                                                                                                                                                                                                                                                                     |
+| `enums/common-code.enum.ts`, `utils/error-code.util.ts` | `CommonCode` (mã lỗi chung) + `registerErrorCodes` (kiểm tra mã unique); mã theo domain nằm ở module / room — xem `docs/response-format.md`                                                                                                                                                                                                                                 |
+| `enums/client-platform.enum.ts`                         | `android` (Google Play), `pc`                                                                                                                                                                                                                                                                                                                                               |
+| `cache/`                                                | `cacheService` (Memory mặc định, đổi sang `RedisCacheStore` khi chạy nhiều process)                                                                                                                                                                                                                                                                                         |
+| `validators/`                                           | `IdParamSchema` (uuidv7), `PaginationSchema`, `LocalizedStringSchema`                                                                                                                                                                                                                                                                                                       |
 
 **Không** làm generic CRUD controller factory — controller luôn viết tường minh từng endpoint.
 
@@ -88,11 +87,9 @@ Authentication and reconnect policies are supplied by application adapters.
 src/modules/<module>/       # shared business/data categories; see docs/module-pattern.md
 src/apis/user/<module>/
 |-- controllers/user.<name>.controller.ts
-|-- services/user.<name>.service.ts
 `-- validators/user.<name>.validator.ts
 src/apis/admin/<module>/
 |-- controllers/admin.<name>.controller.ts
-|-- services/admin.<name>.service.ts
 `-- validators/admin.<name>.validator.ts
 ```
 
@@ -130,10 +127,10 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
   `AuthenticatedPlayerRoom` (`src/rooms/authenticated-player.room.ts`, nối chính sách tài khoản của `modules/auth` và bắt buộc
   `options.serverId` khớp `serverId` trong token). `world` và `global` chỉ viết phần riêng.
 - Message client là **Request/Response**: `loadRoomMessages` (`core/utils/load-room-messages.util.ts`) tự quét `*.command.ts`,
-  mỗi handler dispatch command rồi **trả `command.result`** (envelope `Result`; không gán thì `Response.success()`); ngoại lệ đi qua
-  `Response.fromError(error)` (`core/utils/response.util.ts`): `serviceError` → `Response.error(code)`, `PayloadRejected` → `INVALID_INPUT`, lỗi lạ → log +
+  mỗi handler dispatch command rồi **trả `command.result`** (`Response`, đổi sang envelope `Result` bằng `RoomResponse.reply`; không gán thì thành công rỗng); ngoại lệ đi qua
+  `Response.fromThrown(error)` (`core/response/response.ts`): `Response.abort` → `Response.error(code)`, `ZodError` → `INVALID_INPUT`, lỗi lạ → log +
   `INTERNAL_ERROR`. `PlayerCommand` (`core/rooms/player.command.ts`) chạy `findPlayer` → parse `validateSchema` vào `this.body`
-  → `validate()` → `guards` (`CommandGuard`: rate limit, quyền, trạng thái; trả `Result` thất bại để từ chối) → `execute()`.
+  → `validate()` → `guards` (`CommandGuard`: rate limit, quyền, trạng thái; trả `Response` thất bại để từ chối) → `execute()`.
 - `BasePlayerRoom`, wired to account policies by `AuthenticatedPlayerRoom` — `onAuth` verify player token + quản lý kết nối online qua **presence pub/sub**
   (memory 1 process, `RedisPresence` nhiều process — không đổi code):
     - Room con gọi `registerOnlinePlayer` (cuối `onJoin`), `unregisterOnlinePlayer` (`onLeave`),
@@ -145,17 +142,16 @@ Chi tiết + code mẫu: [docs/module-pattern.md](../../docs/module-pattern.md).
       ở mọi room/process.
     - Thêm chỗ thu hồi quyền chơi mới (ban, khoá...) → gọi `playerKickService` sau khi ghi DB.
 - `world` room — 1 room = 1 kênh của 1 map trong 1 game server (`filterBy(["serverId","mapCode"])`), reconnect 20s khi rớt mạng,
-  checkpoint state mỗi 30 giây và lưu lần cuối khi rời. Save dùng optimistic check qua `player_states.revision`
-  để checkpoint cũ không ghi đè admin edit hoặc state mới hơn.
+  dữ liệu người chơi nằm trong `PlayerState` (`src/rooms/global/modules/player-data`), autosave mỗi `player_config.autosaveSeconds` và lưu lần cuối khi rời.
+  Save dùng optimistic check qua `player_states.revision`; ghi từ ngoài (vd admin) được gộp theo nhóm, không mất thay đổi chưa lưu.
 - `dungeon` (đăng ký thứ hai của `WorldRoom`, không phải room thứ ba) — `filterBy(["serverId","instanceId"])`: mỗi lượt vào dungeon là 1 instance riêng.
   `DungeonWorldService` chạy chuỗi chamber (phase quái theo giây, bộ đếm quái, cổng exit khoá, boss ở chamber cuối);
   vào dungeon lưu `player_states.dungeon_session` (chỗ đứng cũ + `instanceId`), thoát về đúng chỗ cũ, chết thì
   hồi sinh ở `last_town_map_code`. Không có hồi sinh quái trong dungeon.
 - `global` room — một room mỗi `serverId` (chat, party, presence, điều phối dungeon; xem `src/rooms/global`).
-  Party là logic trong room (`PartiesState` giữ các `PartyState`, luật nằm trong `PartyState`; cả hai là Schema server-only), thành viên đến khi rời / bị đá / kết nối
-  global kết thúc. World room nói chuyện với global qua `callRoom` (`AttachWorld`/`DetachWorld`/`HeartbeatWorld`/
-  `LaunchDungeon`); world tìm global room qua cache `global:room:{serverId}`
-  và `dungeon:expect:{serverId}:{instanceId}` (Redis khi có `REDIS_URI`). Đổi map chỉ đổi world room, party giữ nguyên.
+  Party là dữ liệu runtime trong bộ nhớ process (`src/rooms/global/modules/party`: `room.parties` giữ các `PartyState`, luật nằm trong `PartyState`; global room điều khiển), thành viên đến khi rời / bị đá / kết nối
+  global kết thúc. World và global chạy chung process (mỗi game server một `GlobalRoom` giữ dữ liệu, process chạy một hay nhiều server theo `GAME_SERVER_CODES`; khác process thì world dùng bản sao qua bus) và dùng chung `PlayerState`;
+  vào dungeon dùng `launchDungeon` và cache `dungeon:expect:{serverId}:{instanceId}` (Redis khi có `REDIS_URI`). Đổi map chỉ đổi world room, party giữ nguyên.
 - `auth.players` giữ identity, server, tên, trạng thái ban và lần chơi cuối; module `player` sở hữu
   `player_states` (level/exp, HP/MP, map, tọa độ, hướng). Tạo hai bản ghi trong cùng transaction,
   ghép lại trong `PlayerService` để giữ response hiện có; migration backfill dữ liệu cũ.

@@ -1,3 +1,4 @@
+import { RoomResponse } from "@/core/response/room-response.js";
 import { friendshipService } from "@/modules/friends/services/friendship.service.js";
 import type { GlobalRoom } from "@/rooms/global/global.room.js";
 import { FriendChange } from "@/rooms/global/modules/friend/enums/friend-change.enum.js";
@@ -12,19 +13,19 @@ import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
 export class FriendGlobalService {
     /** Người chơi vừa kết nối global: nạp danh sách bạn và báo họ online. */
     async connect(room: GlobalRoom, playerId: string) {
-        room.state.friends.load(playerId, await friendshipService.findFriendIds({ playerId }));
+        room.friends.load(playerId, await friendshipService.findFriendIds({ playerId }));
         this.announcePresence(room, playerId);
     }
 
     /** Kết nối global của người chơi đã kết thúc: báo offline rồi dọn. */
     disconnect(room: GlobalRoom, playerId: string) {
         this.announcePresence(room, playerId, { online: false });
-        room.state.friends.unload(playerId);
+        room.friends.unload(playerId);
     }
 
     /** Đẩy presence hiện tại của `playerId` cho các bạn đang online (người chưa kết nối global thì bỏ qua). */
     announcePresence(room: GlobalRoom, playerId: string, override?: { online: false }) {
-        const friendIds = room.state.friends.friendIdsOf(playerId);
+        const friendIds = room.friends.friendIdsOf(playerId);
         if (!friendIds) return;
         const presence: FriendPresenceMessage = override
             ? { playerId, online: false }
@@ -36,7 +37,7 @@ export class FriendGlobalService {
 
     /** `playerId` vừa đổi tên: báo các bạn đang online để họ đổi tên trong danh sách. */
     announceRename(room: GlobalRoom, playerId: string, name: string) {
-        const friendIds = room.state.friends.friendIdsOf(playerId);
+        const friendIds = room.friends.friendIdsOf(playerId);
         if (!friendIds) return;
         for (const friendId of friendIds) {
             this.pushChange(room, friendId, FriendChange.RENAMED, { playerId, name });
@@ -48,8 +49,8 @@ export class FriendGlobalService {
         playerId: string
     ): Pick<FriendPresenceMessage, "online" | "mapCode"> {
         const online = room.sessionOf.has(playerId);
-        const state = room.state.players.get(playerId);
-        return { online, ...(online && state?.inWorld ? { mapCode: state.mapCode } : {}) };
+        const presence = room.players.get(playerId)?.presence;
+        return { online, ...(online && presence ? { mapCode: presence.mapCode } : {}) };
     }
 
     entryOf(
@@ -61,7 +62,7 @@ export class FriendGlobalService {
 
     /** Hai người vừa thành bạn: cập nhật bản nạp sẵn và báo `friendId` (nếu online) có bạn mới là `self`. */
     linkAndNotify(room: GlobalRoom, self: { playerId: string; name: string }, friendId: string) {
-        room.state.friends.link(self.playerId, friendId);
+        room.friends.link(self.playerId, friendId);
         this.pushChange(room, friendId, FriendChange.ADDED, {
             ...self,
             friend: this.entryOf(room, { ...self, since: Date.now() }),
@@ -70,7 +71,7 @@ export class FriendGlobalService {
 
     /** Hai người không còn là bạn: cập nhật bản nạp sẵn và báo `otherId` (nếu online) bỏ `self` khỏi danh sách. */
     unlinkAndNotify(room: GlobalRoom, self: { playerId: string; name: string }, otherId: string) {
-        room.state.friends.unlink(self.playerId, otherId);
+        room.friends.unlink(self.playerId, otherId);
         this.pushChange(room, otherId, FriendChange.REMOVED, self);
     }
 
@@ -86,7 +87,8 @@ export class FriendGlobalService {
     }
 
     private sendTo(room: GlobalRoom, playerId: string, type: GlobalMessage, data: unknown) {
-        room.clientOf(playerId)?.sendSuccess(type, data);
+        const client = room.clientOf(playerId);
+        if (client) RoomResponse.send(client, type, data);
     }
 }
 

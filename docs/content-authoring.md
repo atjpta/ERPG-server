@@ -91,7 +91,7 @@ marker NPC theo quest của riêng player đến qua message `npcMarkers`.
 
 ## Phía Unity cần làm theo
 
-- Port `applyMove` mới ([movement.step.ts](../src/rooms/world/modules/players/simulation/movement.step.ts)) — va chạm theo `colliders` của map (NPC không chặn) + hình chân `collider` của entity.
+- Port `applyMove` mới ([movement.step.ts](../src/modules/player/simulation/movement.step.ts)) — va chạm theo `colliders` của map (NPC không chặn) + hình chân `collider` của entity.
 - Khớp `contentHash` của `.map.json` trong build với hash server trả.
 - UI thoại / quest / marker; bảng locale theo `locale-keys.json`.
 
@@ -114,7 +114,7 @@ Mọi object art nằm ở layer `MapArt`; minimap chụp đúng layer đó (m�
 
 ## Party
 
-Party là logic trong `global` room (một room / game server, xem `src/rooms/global/README.md`), không còn Colyseus room riêng và không sync Schema state cho client (`GlobalState` chỉ ở server): client nhận snapshot `PartyStateMessage` (`leaderPlayerId`, `lootMode`, `members{playerId, name}`) qua push `partyState`. Global chỉ giữ danh sách thành viên, chủ và cách chia loot; **level, HP, vị trí của thành viên cùng map đọc từ state world**: `PlayerWorldState.partyId` (đồng bộ cho mọi client trong room) khớp với `partyId` của `partyState`, rồi tra `players[playerId]` lấy `level/hp/maxHp/name...`; thành viên ở map khác chỉ hiện tên. Client giữ **hai kết nối**: world room + global room, và giữ nguyên kết nối global khi đổi map. Mọi thao tác party là Request/Response (`room.Request<T>`) gửi lên global room.
+Party là logic trong `global` room (một room / game server, xem `src/rooms/global/README.md`), không còn Colyseus room riêng và không sync Schema state cho client (global không có state Schema): client nhận snapshot `PartyStateMessage` (`leaderPlayerId`, `lootMode`, `members{playerId, name}`) qua push `partyState`. Global chỉ giữ danh sách thành viên, chủ và cách chia loot; **level, HP, vị trí của thành viên cùng map đọc từ state world**: `PlayerWorldState.partyId` (đồng bộ cho mọi client trong room) khớp với `partyId` của `partyState`, rồi tra `players[playerId]` lấy `level/hp/maxHp/name...`; thành viên ở map khác chỉ hiện tên. Client giữ **hai kết nối**: world room + global room, và giữ nguyên kết nối global khi đổi map. Mọi thao tác party là Request/Response (`room.Request<T>`) gửi lên global room.
 
 - Tạo: request `partyCreate` ở global room → response là `PartyStateMessage`. Vào dungeon mà chưa có party thì server tự tạo party 1 người.
 - Chủ gửi request lên global room: `partyInvite {playerName}`, `partyKick {playerId}`, `partyPromote {playerId}`, `partyDisband`, `partySetLoot {mode}`; mọi người: `partyLeave`, `partyRequestJoin {playerId}`. Người được mời nhận push `partyInviteReceived`: chấp nhận = request `partyAcceptInvite {partyId}` trong hạn (`party_config.inviteTtlSec`), từ chối = `partyDecline {partyId}`.

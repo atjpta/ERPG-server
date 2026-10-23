@@ -13,8 +13,7 @@ export interface GameRoomOptions {
  *
  * Room con chỉ viết phần riêng:
  * - `messages = messages` (kết quả `await loadRoomMessages(...)` ở module scope) để tự đăng ký command;
- * - `onCreate` gọi `bindServer(options)`, rồi dispatch command khởi tạo của mình;
- * - `readonly runRpc = createRpcRunner(this, [...])` nếu cho room khác gọi (`callRoom`).
+ * - `onCreate` gọi `bindServer(options)`, rồi dispatch command khởi tạo của mình.
  */
 export abstract class BaseGameRoom<T extends RoomOptions = RoomOptions> extends BasePlayerRoom<T> {
     readonly dispatcher = new Dispatcher(this);

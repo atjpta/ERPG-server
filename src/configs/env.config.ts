@@ -19,6 +19,25 @@ export const env = {
      * và chuyển `cacheService` sang Redis (nonce OAuth, rate limit dùng chung giữa các process).
      */
     REDIS_URI: process.env.REDIS_URI,
+    /**
+     * Mã game server (`game_servers.code`) mà process này phụ trách — một process chỉ chạy MỘT game server (mọi room của nó sống chung
+     * process để dùng chung dữ liệu người chơi trong bộ nhớ). Bỏ trống = server mặc định.
+     */
+    GAME_SERVER_CODE: process.env.GAME_SERVER_CODE || undefined,
+    /**
+     * Vai trò của process: `global` (room global + dữ liệu người chơi chính), `world` (room map / dungeon), cách nhau bằng dấu phẩy.
+     * Bỏ trống = cả hai (một process, world dùng chung dữ liệu với global). Process chỉ có `world` giữ bản sao dữ liệu người chơi
+     * và nói chuyện với global qua `rooms/bus` — cần `REDIS_URI` khi global và world ở process khác nhau.
+     */
+    PROCESS_ROLES: process.env.PROCESS_ROLES || undefined,
+    /**
+     * Địa chỉ công khai mà process này quảng bá cho client khi giữ chỗ vào room (Colyseus `publicAddress`). Bỏ trống = địa chỉ mặc định
+     * của máy. Nhiều process sau reverse proxy: mỗi process một giá trị riêng, ví dụ `https://game.example.com/p2568`
+     * (`scripts/cluster.mjs` tự đặt từ `CLUSTER_PUBLIC_ADDRESS`).
+     */
+    PUBLIC_ADDRESS: process.env.PUBLIC_ADDRESS || undefined,
+    /** Danh sách game server mà process phụ trách (cách nhau bằng dấu phẩy); ưu tiên hơn `GAME_SERVER_CODE`. */
+    GAME_SERVER_CODES: process.env.GAME_SERVER_CODES || undefined,
     JWT_SECRET: process.env.JWT_SECRET ?? "JWT_SECRET",
     /** Secret riêng cho admin — token user không bao giờ verify lọt được qua middleware admin. */
     ADMIN_JWT_SECRET: process.env.ADMIN_JWT_SECRET ?? "ADMIN_JWT_SECRET",

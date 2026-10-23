@@ -1,4 +1,4 @@
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { playerBlockService } from "@/modules/friends/services/player-block.service.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { chatMessageService } from "@/modules/chat/services/chat-message.service.js";
@@ -7,7 +7,7 @@ import type {
     ChatChannel,
     ChatChannelContext,
 } from "@/rooms/global/modules/chat/channels/chat-channel.type.js";
-import { ChatErrorCode } from "@/rooms/global/modules/chat/enums/chat-error-code.enum.js";
+import { ChatErrorCode } from "@/modules/chat/enums/chat-error-code.enum.js";
 
 /** Nhắn riêng: người nhận (tra theo tên trong cùng server) + người gửi nhận bản echo. */
 export const whisperChatChannel: ChatChannel = {

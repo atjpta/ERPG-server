@@ -1,6 +1,6 @@
 import { QuestCode } from "@/modules/quests/enums/quest-code.enum.js";
 import type { DateTime } from "luxon";
-import type { Rng } from "@/modules/equipment/services/equipment-roll.service.js";
+import type { Rng } from "@/modules/equipment/types/equipment-roll.type.js";
 import { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
 import {

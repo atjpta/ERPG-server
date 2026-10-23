@@ -2,9 +2,8 @@ import { DateTime } from "luxon";
 import type { Queryable } from "@/configs/postgres.config.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
-import { BaseService } from "@/core/services/base.service.js";
-import { serviceError } from "@/core/utils/service-error.js";
-import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
+import { lockKeys } from "@/core/utils/db-lock.util.js";
+import { Response } from "@/core/response/response.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import {
     MailBroadcasts,
@@ -16,7 +15,6 @@ import { MailBroadcastReceiptRepo } from "@/modules/mails/repositories/mail-broa
 import { MailBroadcastRepo } from "@/modules/mails/repositories/mail-broadcast.repository.js";
 import { MailTemplateRepo } from "@/modules/mails/repositories/mail-template.repository.js";
 import { MailRepo, type MailRepository } from "@/modules/mails/repositories/mail.repository.js";
-import type { MailContent, MailParams } from "@/modules/mails/schemas/mail-content.schema.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import {
@@ -24,6 +22,8 @@ import {
     type MailCod,
     type MailReward,
 } from "@/modules/rewards/schemas/mail-reward.schema.js";
+import type { SystemMailContent } from "@/modules/mails/types/mail.type.js";
+import { MailErrorCode } from "@/modules/mails/enums/mail-error-code.enum.js";
 
 /** Mã mẫu thư hệ thống mà mail tự dùng (seed `mail-template.seed.ts`). */
 export const MailTemplateCode = {
@@ -31,17 +31,8 @@ export const MailTemplateCode = {
     COD_PAYMENT: "cod_payment",
 } as const;
 
-/** Nội dung của thư / broadcast hệ thống: mẫu thư (+ `params`) hoặc nội dung đa ngôn ngữ viết thẳng. */
-export interface SystemMailContent {
-    templateCode?: string;
-    params?: MailParams;
-    content?: MailContent;
-}
-
-export class MailService extends BaseService<typeof Mails> {
-    constructor(private readonly mailRepo: MailRepository = MailRepo) {
-        super(mailRepo);
-    }
+export class MailService {
+    constructor(private readonly mailRepo: MailRepository = MailRepo) {}
 
     private get config() {
         return masterDataCacheService.get(MasterDataKey.MAIL_CONFIG);
@@ -126,8 +117,13 @@ export class MailService extends BaseService<typeof Mails> {
         });
     }
 
-    /** Thư người chơi → người chơi (đã kiểm tra, đã rút đính kèm khỏi túi ở nơi gọi — ghi trong cùng transaction). */
-    createPlayerMail(params: {
+    /**
+     * Thư người chơi → người chơi, ghi cùng transaction với việc rút đính kèm khỏi người gửi. Khoá hộp thư người nhận rồi mới đếm và
+     * ghi, nên nhiều người gửi đồng thời không vượt `maxInbox`; đầy thì trả `MAIL_TARGET_INBOX_FULL` (nơi gọi huỷ transaction của nó).
+     * `id` cho phép đặt trước id thư (để lệnh ví tham chiếu được thư trước khi thư tồn tại).
+     */
+    async createPlayerMail(params: {
+        id?: string;
         serverId: string;
         sender: { id: string; name: string };
         recipientId: string;
@@ -136,23 +132,36 @@ export class MailService extends BaseService<typeof Mails> {
         reward: MailReward | null;
         cod: MailCod | null;
         dbOrTx?: Queryable;
-    }): Promise<MailRow> {
-        const { serverId, sender, recipientId, subject, body, reward, cod, dbOrTx } = params;
-        return this.mailRepo.create({
-            data: {
-                serverId,
-                recipientPlayerId: recipientId,
-                kind: MailKind.PLAYER,
-                senderPlayerId: sender.id,
-                senderName: sender.name,
-                subject,
-                body,
-                reward,
-                cod,
-                expiresAt: this.expiry(),
-            },
-            dbOrTx,
-        });
+    }): Promise<Response<MailRow>> {
+        const { id, serverId, sender, recipientId, subject, body, reward, cod, dbOrTx } = params;
+        return withTransaction(async (tx) => {
+            await lockKeys(tx, [`mail-inbox:${recipientId}`]);
+            const used = await this.mailRepo.countPlayerInbox({
+                recipientId,
+                now: this.now(),
+                dbOrTx: tx,
+            });
+            if (used >= this.config.maxInbox) {
+                return Response.error(MailErrorCode.MAIL_TARGET_INBOX_FULL);
+            }
+            const created = await this.mailRepo.create({
+                data: {
+                    ...(id ? { id } : {}),
+                    serverId,
+                    recipientPlayerId: recipientId,
+                    kind: MailKind.PLAYER,
+                    senderPlayerId: sender.id,
+                    senderName: sender.name,
+                    subject,
+                    body,
+                    reward,
+                    cod,
+                    expiresAt: this.expiry(),
+                },
+                dbOrTx: tx,
+            });
+            return Response.success(created);
+        }, dbOrTx);
     }
 
     /**
@@ -286,52 +295,8 @@ export class MailService extends BaseService<typeof Mails> {
         return this.mailRepo.deleteAllDeletable(params);
     }
 
-    deleteRecallable(params: Parameters<MailRepository["deleteRecallable"]>[0]) {
-        return this.mailRepo.deleteRecallable(params);
-    }
-
-    deleteReturnable(params: Parameters<MailRepository["deleteReturnable"]>[0]) {
-        return this.mailRepo.deleteReturnable(params);
-    }
-
     isExpired(mail: MailRow): boolean {
         return mail.expiresAt.getTime() <= this.now().getTime();
-    }
-
-    // ------------------------------------------------------------------ hết hạn
-
-    /**
-     * Xoá thư hết hạn của server. Thư người chơi còn đính kèm chưa nhận được trả về người gửi (thư hệ thống
-     * `mail_returned`); thư hệ thống / đã nhận xoá thẳng. Trả các thư "trả lại" vừa tạo để báo người gửi đang online.
-     */
-    async sweepExpired(params: { serverId: string; limit?: number }): Promise<MailRow[]> {
-        const expired = await this.mailRepo.findExpired({
-            serverId: params.serverId,
-            now: this.now(),
-            limit: params.limit ?? 500,
-        });
-        const returned: MailRow[] = [];
-        for (const mail of expired) {
-            const created = await withTransaction(async (tx) => {
-                // Chỉ người xoá thành công mới trả đính kèm: tránh trả hai lần khi trùng với thao tác khác.
-                if (!(await this.mailRepo.deleteExpiredOne({ mailId: mail.id, dbOrTx: tx }))) {
-                    return null;
-                }
-                const refundable = mail.kind === MailKind.PLAYER && !mail.claimedAt && mail.reward;
-                if (!refundable) return null;
-                const recipient = await PlayerIdentityRepo.findById({
-                    id: mail.recipientPlayerId,
-                    dbOrTx: tx,
-                });
-                return this.returnToSender({
-                    mail,
-                    recipientName: recipient?.name ?? "",
-                    dbOrTx: tx,
-                });
-            });
-            if (created) returned.push(created);
-        }
-        return returned;
     }
 
     // ------------------------------------------------------------------ nội bộ
@@ -341,28 +306,16 @@ export class MailService extends BaseService<typeof Mails> {
         const { defaultLocale } = this.config;
         if (params.content) {
             if (!params.content[defaultLocale]) {
-                serviceError(
-                    `System mail content must include the default locale "${defaultLocale}"`,
-                    400,
-                    CommonCode.INVALID_INPUT
-                );
+                Response.abort(CommonCode.INVALID_INPUT, { defaultLocale });
             }
             return;
         }
         if (!params.templateCode) {
-            serviceError(
-                "System mail needs a templateCode or content",
-                400,
-                CommonCode.INVALID_INPUT
-            );
+            Response.abort(CommonCode.INVALID_INPUT);
         }
         const [template] = await MailTemplateRepo.findByCodes({ codes: [params.templateCode] });
         if (!template) {
-            serviceError(
-                `Unknown mail template "${params.templateCode}"`,
-                400,
-                CommonCode.INVALID_INPUT
-            );
+            Response.abort(CommonCode.INVALID_INPUT, { templateCode: params.templateCode });
         }
     }
 
@@ -371,7 +324,7 @@ export class MailService extends BaseService<typeof Mails> {
         if (!reward) return null;
         const parsed = MailRewardSchema.parse(reward);
         if (parsed.exp > 0) {
-            serviceError("Mail rewards cannot carry exp yet", 400, CommonCode.INVALID_INPUT);
+            Response.abort(CommonCode.INVALID_INPUT);
         }
         return parsed.items.length === 0 && parsed.currency.length === 0 ? null : parsed;
     }

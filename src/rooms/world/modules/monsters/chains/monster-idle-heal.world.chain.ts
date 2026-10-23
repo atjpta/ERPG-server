@@ -1,4 +1,4 @@
-import { WorldChainAction, WorldChainResult } from "@/rooms/world/chains/world.chain.js";
+import { WorldChainAction, WorldChainResult } from "@/modules/world/chains/world.chain.js";
 import type { MonsterChainContext } from "@/rooms/world/modules/monsters/chains/monster.world.chain.js";
 
 /**

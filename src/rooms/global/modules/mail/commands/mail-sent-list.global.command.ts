@@ -1,6 +1,6 @@
 import type { PlayerCommandPayload } from "@/core/rooms/player.command.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
-import { Response } from "@/core/utils/response.util.js";
+import { Response } from "@/core/response/response.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
 import { mailService } from "@/modules/mails/services/mail.service.js";
 import type { MailSentListMessage } from "@/rooms/global/modules/mail/interfaces/mail.global.message.js";

@@ -1,11 +1,12 @@
-import type { PlayerState } from "@/modules/player/entities/player-state.entity.js";
+import type { PlayerDatas } from "@/modules/player/entities/player-data.entity.js";
 
 /**
- * Cột `player_states` do global room làm chủ (`PlayerData`): túi đồ, trang bị, điểm và thuộc tính đã cộng.
- * Ít đổi, global lưu liền; world chỉ giữ bản sao chỉ-đọc.
+ * Cột `player_states` mà `PlayerState` giữ và lưu (xem `PLAYER_GROUP_COLUMNS`): ví, túi / trang bị / điểm, level / exp / quest / cờ,
+ * vị trí / HP / MP / dungeon. Không gồm khoá, class, hitbox, skills (chỉ đọc lúc đang chơi).
  */
-export type PlayerGlobalFields = Pick<
-    PlayerState,
+export type PlayerSavedState = Pick<
+    PlayerDatas,
+    | "wallet"
     | "attributePoints"
     | "skillPoints"
     | "allocatedAttributes"
@@ -13,14 +14,12 @@ export type PlayerGlobalFields = Pick<
     | "equipmentInventory"
     | "consumableInventory"
     | "materialInventory"
->;
-
-/**
- * Cột `player_states` do world room làm chủ: vị trí, HP/MP, dungeon, level/exp, ví, quest và cờ cốt truyện.
- * Đổi liên tục; world gửi snapshot cho global lưu (backup) theo checkpoint.
- */
-export type PlayerWorldFields = Pick<
-    PlayerState,
+    | "level"
+    | "exp"
+    | "flags"
+    | "quests"
+    | "dailyQuests"
+    | "lastTownMapCode"
     | "mapCode"
     | "x"
     | "y"
@@ -28,14 +27,4 @@ export type PlayerWorldFields = Pick<
     | "hp"
     | "mp"
     | "dungeonSession"
-    | "level"
-    | "exp"
-    | "wallet"
-    | "flags"
-    | "quests"
-    | "dailyQuests"
-    | "lastTownMapCode"
 >;
-
-/** Toàn bộ phần state ghi được xuống DB (`player_states` trừ khoá, class, hitbox, skills). */
-export type PlayerSavedState = PlayerGlobalFields & PlayerWorldFields;

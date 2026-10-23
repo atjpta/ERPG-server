@@ -1,6 +1,6 @@
 import { MasterDataErrorCode } from "@/modules/master-data/enums/master-data-error-code.enum.js";
 import type { Queryable } from "@/configs/postgres.config.js";
-import { serviceError } from "@/core/utils/service-error.js";
+import { Response } from "@/core/response/response.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { MasterDataRepo } from "@/modules/master-data/repositories/master-data.repository.js";
 import type { MasterDataValueMap } from "@/modules/master-data/schemas/master-data-value.schema.js";
@@ -13,11 +13,7 @@ export class MasterDataService {
     ): Promise<MasterDataValueMap[K]> {
         const row = await MasterDataRepo.findByKey({ key, dbOrTx });
         if (!row) {
-            serviceError(
-                `Master data "${key}" chưa được seed`,
-                404,
-                MasterDataErrorCode.MASTER_DATA_NOT_FOUND
-            );
+            Response.abort(MasterDataErrorCode.MASTER_DATA_NOT_FOUND);
         }
         return row.value as MasterDataValueMap[K];
     }

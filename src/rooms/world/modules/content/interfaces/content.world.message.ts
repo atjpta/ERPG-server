@@ -1,6 +1,6 @@
 import type { QuestCategory, QuestState } from "@/modules/quests/enums/quest.enum.js";
 import type { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
-import type { NpcMarker } from "@/rooms/world/modules/content/enums/npc-marker.enum.js";
+import type { NpcMarker } from "@/modules/npcs/enums/npc-marker.enum.js";
 
 /** `data` của `interactResult`; thất bại thì `error` mang `id`. */
 export interface InteractResultMessage {
