@@ -237,6 +237,14 @@ export class DialogueWorldService {
                     ?.functions.find((f) => f.id === action.function);
                 if (!fn || !session.npcCode)
                     return Response.error(NpcErrorCode.NPC_FUNCTION_NOT_FOUND);
+                room.npcFunctions.open(client.auth.playerId, {
+                    npcCode: session.npcCode,
+                    functionId: fn.id,
+                    type: fn.type,
+                    x: session.x,
+                    y: session.y,
+                    radius: session.radius,
+                });
                 const message: NpcFunctionOpenMessage = {
                     npcCode: session.npcCode,
                     functionId: fn.id,

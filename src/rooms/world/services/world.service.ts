@@ -40,6 +40,7 @@ export class WorldService {
         room.leavingPlayers.add(playerId);
         try {
             room.dialogues.drop(playerId);
+            room.npcFunctions.drop(playerId);
             const leaving = room.state.players.get(playerId);
             if (leaving) {
                 // Lưu vị trí / tiến độ cuối cùng khi room này còn là nơi giữ player, rồi báo đã rời (đổi map thì giữ party).

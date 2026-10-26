@@ -1,4 +1,7 @@
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
+import { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
+import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
@@ -38,6 +41,7 @@ export class RefineEquipmentGlobalCommand extends UpgradeGlobalCommand<
 > {
     static readonly message = GlobalClientMessage.REFINE_EQUIPMENT;
 
+    protected readonly functionType = NpcFunctionType.REFINE;
     protected readonly validateSchema = UpgradeEquipmentSchema;
     protected run(
         player: PlayerState,

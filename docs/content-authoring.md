@@ -84,6 +84,21 @@ Server → client: `interactResult` (lỗi chuyển map: `level_too_low`, `map_n
 `mapChange {mapCode, spawnId, roomName, instanceId?}` (`roomName = "dungeon"` thì join room `dungeon` với option `{mapCode, instanceId}`), `questList`, `questUpdate`, `questPreview`,
 `npcMarkers` (dấu `!`/`?` + `category` + minimap), `questTargets` (chữ Q), `features`, `dungeonChamberClear`, `dungeonClear`; state `dungeon` (HUD chamber/phase/bộ đếm quái).
 
+## Chức năng của NPC cần đứng gần
+
+`npcFunctionOpen` (action `open_function`) không chỉ báo client mở màn hình: world room ghi lại player đang mở chức năng nào ở NPC nào (`room.npcFunctions`, kèm vị trí + bán kính của NPC).
+Các lệnh làm việc của chức năng chạy ở global room (`enhanceEquipment`, `refineEquipment`, `disassembleItems`) hỏi world room qua `rooms/bus` (rpc `checkNpcFunction`) trước khi chạy:
+
+- chưa mở chức năng đúng loại (hoặc chưa ở world room nào) → `NPC_FUNCTION_NOT_OPEN`;
+- đã bước ra khỏi tầm (bán kính tương tác + 0.5 tile) → `TOO_FAR`, chức năng đóng; tick cũng đóng chức năng của người đã đi xa / rời room.
+
+Quy tắc chung: mọi tương tác với NPC đều phải kiểm tra tầm đứng. Phần chạy trong world đã được chặn sẵn: `interactNpc` kiểm `interactRadius`, `dialogueChoose` kiểm lại mỗi lần chọn
+(`DialogueSessionState.isNear`) nên mọi action của thoại (`start_quest`, `complete_quest`, `give_item`...) chỉ chạy khi còn đứng gần. Chức năng NPC xử lý ngay trong world room (shop, storage, quest_board sau này) gọi thẳng
+`room.npcFunctions.check(playerId, type, room.state.players)`; chỉ chức năng xử lý ở global room mới đi qua rpc `checkNpcFunction` (cùng hàm `check` đó).
+
+Lệnh xem trước (`previewUpgrade`, `previewDisassemble`) chỉ đọc nên không bị chặn. Thêm chức năng NPC mới (shop, storage, quest_board): lệnh của nó gọi `npcFunctionGlobalService.require(player, NpcFunctionType.X)` trước khi làm việc
+(với lệnh túi đồ, `UpgradeGlobalCommand` đã làm sẵn qua `functionType`).
+
 ## Minimap
 
 Server không render ảnh: client dùng sprite theo `map.code`. `GET /user/maps/:code/content` trả layout (collider, spawn, NPC, portal, `contentHash`);

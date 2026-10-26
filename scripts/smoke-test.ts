@@ -852,6 +852,25 @@ await sleep(500); // chờ world báo presence lên global
     console.info("✅ gift code: redeem → mail → claim, once per character, disabled code refused");
 }
 
+// ---- NPC function (global): cường hoá / tinh hoá / phân rã chỉ dùng được khi đã mở chức năng ở NPC ------
+{
+    const NO_ITEM = "00000000-0000-4000-8000-000000000000"; // payload hợp lệ: lỗi phải đến từ việc chưa mở chức năng
+    for (const [message, payload] of [
+        ["enhanceEquipment", { instanceId: NO_ITEM }],
+        ["refineEquipment", { instanceId: NO_ITEM }],
+        ["disassembleItems", { instanceIds: [NO_ITEM] }],
+    ] as const) {
+        expectCode(
+            await request(global1, message, payload),
+            "NPC_FUNCTION_NOT_OPEN",
+            `${message} without opening the NPC function`
+        );
+    }
+    console.info(
+        "✅ npc functions (enhance / refine / disassemble) refused until opened at the NPC"
+    );
+}
+
 // ---- Party (global): tạo, mời, vào, rời, offline là rời ---------------------------------------------
 {
     interface PartyState {

@@ -19,7 +19,8 @@ global/
     dungeon-launch/         # DungeonLaunchGlobalService (điều phối cả party vào dungeon; world gọi `launchDungeon` qua `rooms/bus`)
     player-data/            # PlayerStateManager: dữ liệu chính, `host*` (nhận lời gọi từ world) và bản sao phía world (có `upstream`)
     inventory/              # Túi đồ: equip / unequip / move / lock, InventoryGlobalCommand, inventoryGlobalService
-    equipment-upgrade/      # Cường hoá, tinh hoá, phân rã và các lệnh xem trước
+    equipment-upgrade/      # Cường hoá, tinh hoá, phân rã (phải đang mở chức năng ở NPC và còn đứng gần: npc-function) và các lệnh xem trước
+    npc-function/           # Hỏi world room: người chơi có đang mở chức năng NPC loại này và còn gần NPC không (rpc checkNpcFunction)
     attributes/             # Xem trước / cộng điểm thuộc tính
 ```
 

@@ -1,4 +1,7 @@
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
+import { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
+import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
+import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { CommonCode } from "@/core/enums/common-code.enum.js";
 import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
 import { SdkMessage } from "@/core/rooms/sdk-room.decorator.js";
@@ -29,6 +32,7 @@ export class DisassembleItemsGlobalCommand extends UpgradeGlobalCommand<
 > {
     static readonly message = GlobalClientMessage.DISASSEMBLE_ITEMS;
 
+    protected readonly functionType = NpcFunctionType.DISASSEMBLE;
     protected readonly validateSchema = DisassembleItemsSchema;
     protected run(player: PlayerState, { instanceIds }: z.infer<typeof DisassembleItemsSchema>) {
         const result = equipmentUpgradeService.simulateDisassemble(player.inventories, instanceIds);

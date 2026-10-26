@@ -1,6 +1,8 @@
 import { Response } from "@/core/response/response.js";
 import { RoomResponse } from "@/core/response/room-response.js";
 import { DialogueSessionsState } from "@/modules/dialogues/state/dialogue-session.state.js";
+import type { NpcFunctionCheckRequest } from "@/modules/npcs/types/npc-function-check.type.js";
+import { NpcFunctionSessionManager } from "@/rooms/world/modules/content/managers/npc-function-session.manager.js";
 import { PartyLootState } from "@/modules/rewards/state/party-loot.state.js";
 import { PlayerStateManager } from "@/rooms/global/modules/player-data/managers/player-state.manager.js";
 import { dispatchRpc, type RoomRpcHandlers } from "@/rooms/bus/room-bus.js";
@@ -95,6 +97,8 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
     readonly partyLoot = new PartyLootState();
     /** Cuộc thoại đang mở của người chơi trong room này. */
     readonly dialogues = new DialogueSessionsState();
+    /** Chức năng NPC (cường hoá, tinh hoá...) mà mỗi player đang mở; global hỏi qua rpc `checkNpcFunction` trước khi thực hiện. */
+    readonly npcFunctions = new NpcFunctionSessionManager();
     /** Dữ liệu player mà room này đọc / ghi: dùng chung với global room cùng process, hoặc bản sao đồng bộ với global ở process khác. */
     playerStates!: PlayerStateManager;
 
@@ -144,6 +148,12 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
         },
     };
 
+    /** Global hỏi: player có đang mở chức năng NPC loại này và còn đứng gần NPC không (trước khi làm việc của chức năng đó). */
+    private readonly npcRpcHandlers: RoomRpcHandlers = {
+        checkNpcFunction: async (request: NpcFunctionCheckRequest) =>
+            this.npcFunctions.check(request.playerId, request.type, this.state.players),
+    };
+
     /** Global (process khác) đổi dữ liệu / party của player mà world này giữ bản sao. */
     private readonly playerRpcHandlers: RoomRpcHandlers = {
         playerGroupChanged: async (message: PlayerGroupChanged) => {
@@ -157,7 +167,11 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
     };
 
     rpc(method: string, payload: unknown) {
-        return dispatchRpc({ ...this.rpcHandlers, ...this.playerRpcHandlers }, method, payload);
+        return dispatchRpc(
+            { ...this.rpcHandlers, ...this.playerRpcHandlers, ...this.npcRpcHandlers },
+            method,
+            payload
+        );
     }
 
     /** Đổi tên giữa phiên: đổi trong dữ liệu player mà room đang giữ. */
@@ -247,6 +261,7 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
             skillDeliveryWorldService.chain(this, ctx.dt);
             dungeonWorldService.tick(this);
             dialogueWorldService.tick(this);
+            this.npcFunctions.tick(this.state.players);
         }, this.tickRate);
         this.unsubscribers.push(
             // Đổi tên giữa phiên: `name` nằm trong state đồng bộ nên mọi client cùng room thấy tên mới ngay.
