@@ -81,7 +81,7 @@ export function emitApi(endpoints: ApiEndpointInfo[], codes: CodeIndex): ApiEmit
             "",
             `namespace ${NAMESPACE}`,
             "{",
-            `    /// <summary>Endpoint <c>/${role}</c> — module <c>${module}</c> (src/apis/${role}/${module}). Mọi hàm trả <see cref="Result{T}"/>, không ném exception với lỗi nghiệp vụ.</summary>`,
+            `    /// <summary>Endpoint <c>/${role}</c> — module <c>${module}</c> (src/apis/${role}/${module}). Mọi hàm trả <see cref="Result{T}"/> khi thành công, lỗi thì ném <see cref="NetworkException"/> (mang <see cref="Result"/> thất bại).</summary>`,
             `    public static class ${className}`,
             "    {",
         ];

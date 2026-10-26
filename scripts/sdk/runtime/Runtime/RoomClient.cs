@@ -66,7 +66,7 @@ namespace ERPG.Network
     /// hàm request (<c>await EquipItem(...)</c> trả <c>Result&lt;T&gt;</c>) và hàm nhận push (<c>OnChatReceived(...)</c>).
     /// <list type="bullet">
     /// <item>Tạo một lần, đăng ký handler trước hay sau khi join đều được; join lại thì handler tự gắn lại.</item>
-    /// <item>Thao tác hỏi-đáp là Request/Response của Colyseus (SDK &gt;= 0.18.3): không ném exception, lỗi mạng / timeout / bị từ chối đổi thành <see cref="Result"/> thất bại.</item>
+    /// <item>Thao tác hỏi-đáp là Request/Response của Colyseus (SDK &gt;= 0.18.3): thất bại (nghiệp vụ / mạng / timeout / bị từ chối) ném <see cref="NetworkException"/> mang <see cref="Result"/> thất bại; dùng try/catch.</item>
     /// <item>Mọi message server đẩy xuống là <see cref="Result{T}"/>: <c>OnX(onOk, onFail)</c> chỉ gọi <c>onOk</c> khi thành công.</item>
     /// <item>Join cần player token (<see cref="NetworkSettings.PlayerToken"/>).</item>
     /// </list>
@@ -328,9 +328,9 @@ namespace ERPG.Network
         public int RequestTimeoutMs { get; set; } = 15000;
 
         /// <summary>
-        /// Gửi request và chờ response <see cref="Result{T}"/>. Không ném exception: chưa kết nối → <c>NETWORK_ERROR</c>,
-        /// quá hạn → <c>REQUEST_TIMEOUT</c>, server từ chối / không có handler → <c>REQUEST_FAILED</c>.
-        /// Thất bại luôn bắn <see cref="RoomClient.Failed"/> đúng một lần trước khi trả về.
+        /// Gửi request và chờ response <see cref="Result{T}"/>. Thất bại ném <see cref="NetworkException"/> mang <see cref="Result"/> thất bại:
+        /// chưa kết nối → <c>NETWORK_ERROR</c>, quá hạn → <c>REQUEST_TIMEOUT</c>, server từ chối / không có handler → <c>REQUEST_FAILED</c>,
+        /// lỗi nghiệp vụ → mã của server. Thất bại luôn bắn <see cref="RoomClient.Failed"/> đúng một lần trước khi ném.
         /// </summary>
         protected async Task<Result<TData>> Call<TData>(string type, object payload = null)
         {
@@ -347,7 +347,11 @@ namespace ERPG.Network
 
         private TResult Finish<TResult>(string type, TResult result) where TResult : Result
         {
-            if (!result.success) RaiseFailed(new RoomFailure(RoomName, type, result));
+            if (!result.success)
+            {
+                RaiseFailed(new RoomFailure(RoomName, type, result));
+                throw new NetworkException(result);
+            }
             return result;
         }
 

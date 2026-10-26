@@ -5,7 +5,7 @@ API / room → chạy lại lệnh là client dùng được ngay. RPC giữa c�
 
 **Yêu cầu Unity:** Colyseus Unity SDK **>= 0.18.3** (Request/Response; 0.18.0 đến 0.18.2 thiếu file `.meta` nên `Room.cs` không build). Room dùng
 `await room.Request<T>(type, payload, timeoutMs)`; lỗi giao thức là `RequestError { Name, Code, Payload, Faulted }` hoặc `TimeoutException`
-(SDK sinh ra đã bọc thành `Result` thất bại).
+(SDK sinh ra đã bọc thành `NetworkException` mang `Result` thất bại).
 
 Đường dẫn xuất đổi được: `yarn unity:network <thư-mục>` (hoặc env `UNITY_NETWORK_OUTPUT` cho bước schema), vd để thử vào thư mục tạm.
 
@@ -118,7 +118,7 @@ Zod schema đặt tên.
 
 ### Hình dạng C# sinh ra
 
-Mỗi request là một hàm `async`, không ném exception:
+Mỗi request là một hàm `async`: thành công trả `Result`, thất bại ném `NetworkException` (mang đúng `Result` thất bại: `ex.Result`, `ex.Code`, `ex.Error`):
 
 ```csharp
 // WorldRoomClient (response có data)
@@ -135,7 +135,7 @@ public Action OnChatReceived(Action<ERPG.Schema.ChatReceivedMessage> onOk, Actio
 ```
 
 `Call` (trong `RoomClient<T>`, `scripts/sdk/runtime`) gọi `room.Request<Result<T>>` với `RequestTimeoutMs` (mặc định 15 giây), bắn
-`RoomClient.Failed` đúng một lần khi thất bại và quy lỗi ngoài nghiệp vụ về mã phía client:
+`RoomClient.Failed` đúng một lần khi thất bại, rồi ném `NetworkException`; lỗi ngoài nghiệp vụ được quy về mã phía client:
 
 | Tình huống                                       | `Result.code`                                                           |
 | ------------------------------------------------ | ----------------------------------------------------------------------- |
@@ -155,14 +155,16 @@ Gọi **thẳng** code sinh ra từ scene / HUD / view — không viết lớp w
 ```csharp
 // Khởi động (một lần): NetworkSession.Initialize(serverUrl) — nối ServerUrl, token (lưu PlayerPrefs), tự xoá phiên khi token hỏng.
 
-// API: không ném exception, luôn là Result<T>. Có overload tham số phẳng cho body/payload đơn giản.
-var created = await UserPlayerApi.Create(name: "An", classCode: "swordsman");
-if (!created.success)
+// API: thành công là Result<T>, thất bại ném NetworkException (cùng envelope). Có overload tham số phẳng cho body/payload đơn giản.
+try
 {
-    if (created.Is(PlayerErrorCode.PLAYER_NAME_EXISTS)) { /* chọn tên khác */ }
-    return;
+    var created = await UserPlayerApi.Create(name: "An", classCode: "swordsman");
+    NetworkSession.SetPlayer(created.data.playerToken);
 }
-NetworkSession.SetPlayer(created.data.playerToken);
+catch (NetworkException ex) when (ex.Is(PlayerErrorCode.PLAYER_NAME_EXISTS))
+{
+    /* chọn tên khác */
+}
 
 // Room: hai client (world + global), tạo một lần. Push đăng ký trước hay sau khi join đều được (tự gắn lại khi join lại).
 var world = new WorldRoomClient();
@@ -173,16 +175,18 @@ await world.JoinWorld(new WorldJoinOptions { serverId = serverId, mapCode = "gre
 await global.JoinGlobal(new GlobalJoinOptions { serverId = serverId });
 await world.WaitForFirstState();
 
-// Request/Response: await ra Result<T>, không ném exception.
-var preview = await world.PreviewAttributes(strength: 1);
-if (!preview.success) { /* preview.code; RoomClient.Failed đã bắn */ }
-var sent = await global.SendWorld("xin chào");
-if (sent.Is(ChatErrorCode.CHAT_TOO_LONG)) { /* ... */ }
+// Request/Response: await ra Result<T>; thất bại ném NetworkException (RoomClient.Failed đã bắn trước).
+try
+{
+    var preview = await world.PreviewAttributes(strength: 1);
+    var sent = await global.SendWorld("xin chào");
+}
+catch (NetworkException ex) when (ex.Is(ChatErrorCode.CHAT_TOO_LONG)) { /* ... */ }
 ```
 
 - **Lỗi tập trung:** `ApiClient.Failed` (API) và `RoomClient.Failed` (mọi request / push của room thất bại) bắn trước khi handler riêng chạy — bootstrap của game
   đăng ký một lần để log + toast theo locale. `ApiClient.Unauthorized` đưa về màn đăng nhập. Close code khi bị đá khỏi room: `KickCode`.
-- **Request:** `await room.X(...)` trả `Result<T>` (hoặc `Result` khi response không có data); thành công đọc `data`, thất bại đọc `code`/`error`.
+- **Request:** `await room.X(...)` trả `Result<T>` (hoặc `Result` khi response không có data); thành công đọc `data`; thất bại ném `NetworkException`, `catch` rồi đọc `ex.Code` / `ex.Error`. Push (`OnX`) và join (`JoinWorld`... trả `bool` + `JoinError`) không ném.
 - **`OnX(onOk, onFail = null)` (push):** chỉ có cho message server chủ động đẩy xuống. `onOk` nhận `data` khi thành công; `onFail` nhận `Result` (có `code`, `error`)
   khi cần xử lý lỗi riêng. Push không có dữ liệu nhận `Action<Result>` cho cả hai nhánh.
 - **Overload phẳng:** sinh thêm khi payload / body chỉ gồm field đơn giản; field bắt buộc đứng trước, tuỳ chọn có mặc định `null`. Tên message trùng

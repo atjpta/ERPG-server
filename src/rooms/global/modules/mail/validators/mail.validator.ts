@@ -12,7 +12,7 @@ export const MailSendSchema = z.object({
         .array(
             z.object({
                 instanceId: z.string().min(1).max(64),
-                quantity: z.number().int().positive(),
+                quantity: z.number().int().positive().max(2_000_000_000),
             })
         )
         .max(50)

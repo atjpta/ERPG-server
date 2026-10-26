@@ -46,11 +46,12 @@ public class Result       { bool success; string code; string message; object er
 public class Result<T> : Result { T data; }   // data chỉ có khi success
 ```
 
-- **Không ném exception** với lỗi nghiệp vụ / mạng. Kiểm tra `success` trước, nhận biết lỗi bằng `code`.
+- **Thất bại ném `NetworkException`** (cả API lẫn request room), mang đúng `Result` thất bại: `ex.Result`, `ex.Code`, `ex.Error`, `ex.Is(code)`, `ex.ErrorAs<T>()`. Thành công trả `Result<T>` như cũ (`success == true`). Dùng `try/catch`; `ApiClient.Failed` / `RoomClient.Failed` vẫn bắn trước khi ném.
 - Lỗi mạng (mất kết nối, phản hồi không đọc được) là `ClientErrorCode.NETWORK_ERROR`; request room quá hạn là `REQUEST_TIMEOUT`, server từ chối ở tầng giao thức (không có handler...) là `REQUEST_FAILED`.
 - `message` là tiếng Anh cho dev; hiển thị cho người chơi thì tra locale theo `code`.
 - Hằng số mã lỗi: `CommonCode.X`, `AuthErrorCode.X`, `PlayerErrorCode.X`... — mỗi hàm sinh ra liệt kê mã nó có thể trả trong XML doc (hover trong IDE).
-- Chỉ ném `OperationCanceledException` khi `CancellationToken` bị huỷ.
+- Ném `OperationCanceledException` khi `CancellationToken` bị huỷ (không phải `NetworkException`).
+- Push (`OnX`) và join (`JoinWorld`... trả `bool` + `JoinError`) không ném.
 
 ## Gọi API
 
@@ -58,20 +59,26 @@ Gọi thẳng `User*Api`; token tự gắn theo `auth` của endpoint (`none` / 
 
 ```csharp
 // Đăng nhập khách (hoặc Login / Register / GoogleLogin / PlayGamesLogin)
-var login = await UserAuthApi.GuestLogin(NetworkSession.Platform, NetworkSession.ClientVersion, NetworkSession.Device);
-if (!login.success)
+try
 {
-    if (login.Is(MasterDataErrorCode.CLIENT_OUTDATED)) { /* bắt buộc cập nhật */ }
-    return;
+    var login = await UserAuthApi.GuestLogin(NetworkSession.Platform, NetworkSession.ClientVersion, NetworkSession.Device);
+    NetworkSession.SetUser(login.data.token);
 }
-NetworkSession.SetUser(login.data.token);
+catch (NetworkException ex) when (ex.Is(MasterDataErrorCode.CLIENT_OUTDATED))
+{
+    /* bắt buộc cập nhật */
+}
+catch (NetworkException ex)
+{
+    Debug.LogWarning(ex.Code);
+}
 
 // Danh sách / tạo / chọn nhân vật
 var list = await UserPlayerApi.Index();
 var created = await UserPlayerApi.Create(name: "An", classCode: ClassCode.SWORDSMAN);
-if (created.success) NetworkSession.SetPlayer(created.data.playerToken);
+NetworkSession.SetPlayer(created.data.playerToken);
 var picked = await UserPlayerApi.Select(id);               // → playerToken mới
-if (picked.success) NetworkSession.SetPlayer(picked.data.playerToken, id);
+NetworkSession.SetPlayer(picked.data.playerToken, id);
 ```
 
 - Mỗi endpoint có overload nhận object request và overload "phẳng" (chỉ khi mọi field đơn giản). Field tuỳ chọn có mặc định `null` và bị bỏ khỏi body.
@@ -102,13 +109,19 @@ if (!await world.JoinWorld(new WorldJoinOptions { serverId = serverId, mapCode =
 await global.JoinGlobal(new GlobalJoinOptions { serverId = serverId });
 await world.WaitForFirstState();             // world.State là Colyseus Schema, đọc / subscribe như thường
 
-// Request/Response: await trả Result<T>, không ném exception.
-var equipped = await world.EquipItem(instanceId);
-if (!equipped.success) return;               // RoomClient.Failed đã bắn; equipped.code là mã lỗi
-var sent = await global.SendWorld("xin chào");
+// Request/Response: await trả Result<T>; thất bại ném NetworkException (RoomClient.Failed đã bắn trước).
+try
+{
+    var equipped = await world.EquipItem(instanceId);
+    var sent = await global.SendWorld("xin chào");
+}
+catch (NetworkException ex)
+{
+    Debug.LogWarning(ex.Code);               // mã lỗi nghiệp vụ / NETWORK_ERROR / REQUEST_TIMEOUT / REQUEST_FAILED
+}
 ```
 
-- **Request:** mỗi message client là một hàm `async Task<Result<T>> X(...)` (không có `data` thì `Task<Result>`). Không ném exception: chưa kết nối → `NETWORK_ERROR`, quá `RequestTimeoutMs` (mặc định 15 giây) → `REQUEST_TIMEOUT`, server từ chối → `REQUEST_FAILED`.
+- **Request:** mỗi message client là một hàm `async Task<Result<T>> X(...)` (không có `data` thì `Task<Result>`). Thất bại ném `NetworkException`: chưa kết nối → `NETWORK_ERROR`, quá `RequestTimeoutMs` (mặc định 15 giây) → `REQUEST_TIMEOUT`, server từ chối → `REQUEST_FAILED`.
 - **Push:** `OnX(onOk, onFail = null)` chỉ cho message server tự đẩy xuống (`WorldMessage` / `GlobalMessage`) — `onOk` nhận `data` khi thành công; `onFail` nhận `Result` (`code`, `error`). Message không có dữ liệu: `OnX(Action<Result> handler)` chạy cho cả hai nhánh. Mọi `OnX` trả `Action` để huỷ đăng ký.
 - **Lỗi tập trung:** `RoomClient.Failed` bắn đúng một lần cho mỗi request / push thất bại, trước khi trả về / trước khi handler riêng chạy.
 - **Tên hàm:** theo message (`EquipItem`, `PartyInvite`...); tên trùng thành viên của `RoomClient` được thêm tiền tố `Send` (`SendLeave`). Field `null` không được gửi.

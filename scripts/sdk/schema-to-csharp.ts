@@ -95,7 +95,7 @@ export class ModelCollector {
             case "boolean":
                 return "bool";
             case "array":
-                return `${this.convert(node.items ?? {}, defs, `${hint}Item`, owner)}[]`;
+                return `List<${this.convert(node.items ?? {}, defs, `${hint}Item`, owner)}>`;
             case "object": {
                 if (node.properties) {
                     const name = hint;
@@ -149,9 +149,9 @@ const FLAT_TYPES = new Set([
     "int?",
     "double?",
     "bool?",
-    "string[]",
-    "int[]",
-    "double[]",
+    "List<string>",
+    "List<int>",
+    "List<double>",
 ]);
 
 /**

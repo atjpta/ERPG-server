@@ -101,6 +101,7 @@ export function emitRooms(
         const lines = [
             ...GENERATED_HEADER,
             "using System;",
+            "using System.Collections.Generic;",
             "using System.Threading.Tasks;",
             "using Colyseus.Schema;",
             `using ${SCHEMA};`,
@@ -159,7 +160,7 @@ export function emitRooms(
                     ? [`        /// <summary>${docText(clientMembers.get(key)!.doc)}</summary>`]
                     : []),
                 "        /// <remarks>",
-                `        /// <para>Request <c>${contract.enums.client}.${clientMembers.get(key)!.code}</c> ("${key}"). Không ném exception: lỗi nghiệp vụ / mạng / quá hạn là <see cref="Result"/> thất bại (<see cref="RoomClient.Failed"/> bắn trước khi trả về).</para>`,
+                `        /// <para>Request <c>${contract.enums.client}.${clientMembers.get(key)!.code}</c> ("${key}"). Lỗi nghiệp vụ / mạng / quá hạn ném <see cref="NetworkException"/> mang <see cref="Result"/> thất bại (<see cref="RoomClient.Failed"/> bắn trước khi ném).</para>`,
                 `        /// <para>Response: ${message.response ? (message.response === "string" ? "<c>string</c>" : `<see cref="${SCHEMA}.${message.response}"/>`) : "không có <c>data</c>"}.</para>`,
                 ...(pushes.length
                     ? [`        /// <para>Còn đẩy thêm: ${pushes.join(", ")}.</para>`]

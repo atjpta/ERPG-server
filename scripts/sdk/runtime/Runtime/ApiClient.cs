@@ -41,8 +41,9 @@ namespace ERPG.Network
 
     /// <summary>
     /// Gửi HTTP tới <c>/user/...</c>. Các hàm <c>User*Api</c> sinh ra gọi vào đây; code game không cần gọi trực tiếp.
-    /// Không ném exception với lỗi mạng / nghiệp vụ: luôn trả <see cref="Result{T}"/> (lỗi mạng là <see cref="ClientErrorCode.NETWORK_ERROR"/>).
-    /// Chỉ ném <see cref="OperationCanceledException"/> khi <c>CancellationToken</c> bị huỷ.
+    /// Thành công trả <see cref="Result{T}"/>; lỗi mạng / nghiệp vụ ném <see cref="NetworkException"/> mang đúng <see cref="Result"/> thất bại
+    /// (lỗi mạng là <see cref="ClientErrorCode.NETWORK_ERROR"/>). <see cref="Failed"/> bắn trước khi ném.
+    /// Ném <see cref="OperationCanceledException"/> khi <c>CancellationToken</c> bị huỷ.
     /// </summary>
     public static class ApiClient
     {
@@ -135,7 +136,11 @@ namespace ERPG.Network
                 }
             }
 
-            if (!result.success) Report(method, path, auth, result);
+            if (!result.success)
+            {
+                Report(method, path, auth, result);
+                throw new NetworkException(result);
+            }
             return result;
         }
 

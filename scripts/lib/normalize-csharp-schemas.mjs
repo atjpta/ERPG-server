@@ -22,6 +22,11 @@ export function normalizeCSharpSchemas(files) {
                     (match, type, array, field) =>
                         stringEnums.has(type) ? `public string${array ?? ""} ${field};` : match
                 );
+                // Mảng của DTO thành List<T> để client dùng thẳng (Add/Count/LINQ), không phải đổi từ T[].
+                source = source.replace(
+                    /\bpublic ([\w.:]+)\[\] (@?\w+);/g,
+                    "public global::System.Collections.Generic.List<$1> $2;"
+                );
                 if (name === "EquipmentsMessage.cs" || name === "WalletMessage.cs") {
                     const fields = [...source.matchAll(/public (\w+) (@?\w+);/g)];
                     const type = fields[0][1];
