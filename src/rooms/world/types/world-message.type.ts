@@ -12,9 +12,10 @@ export enum WorldClientMessage {
     USE_ITEM = "useItem",
     /** `{ playerId }` — xin xem thông tin (trang bị + chỉ số) của người chơi khác cùng map; trả `playerView`. */
     VIEW_PLAYER = "viewPlayer",
-    /** `{ id }` — tương tác vật thể trong map (portal, thu thập, biển báo) theo id trong file map. */
-    INTERACT = "interact",
-    /** `{ npcCode }` — bắt đầu nói chuyện với NPC (phải đứng trong `interactRadius`). */
+    /**
+     * `{ id }` — tương tác với NPC hoặc vật thể (cổng, bệ teleport, bảng thông báo, điểm thu thập) theo id slot trong file map; phải đứng trong
+     * bán kính tương tác. NPC thường mở thoại; vật thể `autoOpen` chạy chức năng luôn. Response là `InteractResultMessage`.
+     */
     INTERACT_NPC = "interactNpc",
     /** `{ optionId }` — chọn option của node thoại hiện tại; `optionId` rỗng = "Tiếp tục". */
     DIALOGUE_CHOOSE = "dialogueChoose",

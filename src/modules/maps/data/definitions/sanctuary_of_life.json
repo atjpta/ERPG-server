@@ -12,7 +12,6 @@
     ],
     "monsterGroups": [],
     "npcs": [],
-    "interactables": [],
     "dungeon": {
         "maxLevel": 30,
         "timeLimitSec": 1800,

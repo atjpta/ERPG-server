@@ -267,8 +267,7 @@
             "y": 26.0
         }
     ],
-    "npcs": [],
-    "interactables": [
+    "npcs": [
         {
             "id": "forest_to_village",
             "x": -28.76,

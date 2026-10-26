@@ -14,6 +14,7 @@ import { ItemSource } from "@/modules/items/enums/item.enum.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
+import { npcFunctionWorldService } from "@/rooms/world/modules/content/services/npc-function.world.service.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
 import { transferWorldService } from "@/rooms/world/modules/maps/services/transfer.world.service.js";
 import type { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
@@ -22,7 +23,6 @@ import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import type {
     DialogueEndMessage,
     DialogueMessage,
-    NpcFunctionOpenMessage,
 } from "@/rooms/world/modules/content/interfaces/content.world.message.js";
 import {
     type DialogueSessionProps,
@@ -31,25 +31,6 @@ import {
 import type { WorldRoom } from "@/rooms/world/world.room.js";
 
 export class DialogueWorldService {
-    /** Biển báo / vật thể có thoại (không có NPC). */
-    startSource(
-        room: WorldRoom,
-        client: PlayerClient,
-        player: PlayerWorldState,
-        source: { id: string; x: number; y: number; radius: number; dialogueCode: string }
-    ): Promise<Response> {
-        if (!dialogueService.getByCode(source.dialogueCode))
-            return Promise.resolve(Response.error(DialogueErrorCode.DIALOGUE_NOT_FOUND));
-        return this.begin(room, client, player, {
-            sourceCode: source.id,
-            dialogueCode: source.dialogueCode,
-            nodeId: "start",
-            x: source.x,
-            y: source.y,
-            radius: source.radius,
-        });
-    }
-
     /**
      * Mỗi tick: ai đang mở thoại mà đã đứng quá xa nơi nói chuyện thì đóng thoại luôn (client chỉ ẩn hộp thoại,
      * không có thông báo lỗi).
@@ -183,7 +164,7 @@ export class DialogueWorldService {
                     client,
                     player,
                     action.questCode,
-                    session.npcCode ?? ""
+                    session.npcCode
                 );
             case "give_item": {
                 const item = itemService.getByCode(action.itemCode);
@@ -232,35 +213,19 @@ export class DialogueWorldService {
                     );
                 return Response.success();
             case "open_function": {
-                const fn = npcService
-                    .getByCode(session.npcCode ?? "")
-                    ?.functions.find((f) => f.id === action.function);
-                if (!fn || !session.npcCode)
-                    return Response.error(NpcErrorCode.NPC_FUNCTION_NOT_FOUND);
-                room.npcFunctions.open(client.auth.playerId, {
-                    npcCode: session.npcCode,
-                    functionId: fn.id,
-                    type: fn.type,
-                    x: session.x,
-                    y: session.y,
-                    radius: session.radius,
-                });
-                const message: NpcFunctionOpenMessage = {
-                    npcCode: session.npcCode,
-                    functionId: fn.id,
-                    type: fn.type,
-                    config: JSON.stringify(fn.config),
-                };
-                RoomResponse.send(client, WorldMessage.NPC_FUNCTION_OPEN, message);
-                return Response.success();
+                // Chức năng của chỗ đặt này: của slot (vd đích của cổng) hoặc của NPC.
+                const slot = room.map.npcs.find((npc) => npc.id === session.slotId);
+                const fn = slot
+                    ? npcService.functionsOf(slot).find((f) => f.id === action.function)
+                    : undefined;
+                if (!slot || !fn) return Response.error(NpcErrorCode.NPC_FUNCTION_NOT_FOUND);
+                return npcFunctionWorldService.open(room, client, player, slot, fn);
             }
             case "talk":
-                if (session.npcCode) {
-                    questWorldService.onEvent(room, client.auth.playerId, player, {
-                        type: QuestObjectiveType.TALK,
-                        targetCode: session.npcCode,
-                    });
-                }
+                questWorldService.onEvent(room, client.auth.playerId, player, {
+                    type: QuestObjectiveType.TALK,
+                    targetCode: session.npcCode,
+                });
                 return Response.success();
         }
     }

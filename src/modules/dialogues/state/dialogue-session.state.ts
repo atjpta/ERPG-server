@@ -2,10 +2,12 @@
 export const RANGE_MARGIN = 0.5;
 
 export interface DialogueSessionProps {
-    /** NPC code, hoặc id vật thể (biển báo). */
+    /** NPC code (client biết nói chuyện với ai). */
     sourceCode: string;
-    /** Có = đang nói chuyện với NPC (cho action `open_function`, trả quest). */
-    npcCode?: string;
+    /** NPC đang nói chuyện (cho action `open_function`, trả quest). */
+    npcCode: string;
+    /** Id slot của NPC / vật thể trong map (vị trí, chức năng riêng của chỗ đặt). */
+    slotId: string;
     dialogueCode: string;
     nodeId: string;
     x: number;
@@ -16,7 +18,8 @@ export interface DialogueSessionProps {
 /** Cuộc thoại đang mở của 1 player (chỉ ở server — client chỉ gửi optionId). */
 export class DialogueSessionState {
     readonly sourceCode: string;
-    readonly npcCode?: string;
+    readonly npcCode: string;
+    readonly slotId: string;
     readonly dialogueCode: string;
     nodeId: string;
     readonly x: number;
@@ -26,6 +29,7 @@ export class DialogueSessionState {
     constructor(props: DialogueSessionProps) {
         this.sourceCode = props.sourceCode;
         this.npcCode = props.npcCode;
+        this.slotId = props.slotId;
         this.dialogueCode = props.dialogueCode;
         this.nodeId = props.nodeId;
         this.x = props.x;

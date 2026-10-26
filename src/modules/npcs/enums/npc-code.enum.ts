@@ -15,4 +15,9 @@ export enum NpcCode {
     SWORDSMAN_TRAINER = "swordsman_trainer",
     VILLAGE_CHIEF = "village_chief",
     VILLAGE_PRIESTESS = "village_priestess",
+    // ---- Vật thể (kind = object) ----
+    NOTICE_BOARD = "notice_board",
+    PORTAL_DUNGEON = "portal_dungeon",
+    PORTAL_GATE = "portal_gate",
+    TELEPORT_PAD = "teleport_pad",
 }

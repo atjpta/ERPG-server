@@ -426,9 +426,7 @@
             "x": 13.15,
             "y": -2.0,
             "direction": "right"
-        }
-    ],
-    "interactables": [
+        },
         {
             "id": "notice_board",
             "x": 1.5,

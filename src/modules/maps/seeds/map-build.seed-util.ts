@@ -1,17 +1,10 @@
 import { type NewGameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { MapSpawnKind } from "@/modules/maps/enums/game-map.enum.js";
-import type {
-    DungeonConfig,
-    MapInteractable,
-    MonsterSpawn,
-} from "@/modules/maps/types/game-map.type.js";
+import type { DungeonConfig, MonsterSpawn } from "@/modules/maps/types/game-map.type.js";
 import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
-import type {
-    InteractableDef,
-    MapDefinition,
-    MonsterGroup,
-} from "@/modules/maps/schemas/map-definition.schema.js";
+import type { MapDefinition, MonsterGroup } from "@/modules/maps/schemas/map-definition.schema.js";
 import type { MapLayout } from "@/modules/maps/schemas/map-layout.schema.js";
+import { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
 
 /** Khoảng cách (tile) giữa các con trong cùng nhóm quái. */
 export const MONSTER_GROUP_SPACING = 2;
@@ -100,11 +93,6 @@ export const validateLayoutAgainstDefinition = (
         def.npcs.map((n) => n.id)
     );
     unknown(
-        "interactable",
-        layout.interactables.map((p) => p.id),
-        def.interactables.map((i) => i.id)
-    );
-    unknown(
         "chamber",
         layout.chambers.map((c) => c.id),
         def.dungeon?.chambers.map((c) => c.id) ?? []
@@ -117,7 +105,7 @@ export const validateLayoutAgainstDefinition = (
 
 export interface BuiltMap {
     row: NewGameMap;
-    /** Marker định nghĩa có nhưng layout chưa đặt vị trí (`spawn:x`, `monster:x`, `npc:x`, `interactable:x`, `chamber:x`). */
+    /** Marker định nghĩa có nhưng layout chưa đặt vị trí (`spawn:x`, `monster:x`, `npc:x`, `chamber:x`). */
     missing: string[];
 }
 
@@ -131,7 +119,6 @@ export const buildMapRow = (
     const spawnAt = byId(layout.spawnPoints);
     const monsterAt = byId(layout.monsters);
     const npcAt = byId(layout.npcs);
-    const interactableAt = byId(layout.interactables);
 
     const spawnPoints = def.spawnPoints.flatMap((point) => {
         const at = spawnAt.get(point.id);
@@ -163,18 +150,18 @@ export const buildMapRow = (
             missing.push(`npc:${slot.id}`);
             return [];
         }
-        return [{ npcCode: slot.npcCode, x: at.x, y: at.y, direction: at.direction }];
-    });
-
-    const interactables = def.interactables.flatMap((item: InteractableDef) => {
-        const at = interactableAt.get(item.id);
-        if (!at) {
-            missing.push(`interactable:${item.id}`);
-            return [];
-        }
         return [
-            { ...item, x: at.x, y: at.y, ...(at.direction ? { direction: at.direction } : {}) },
-        ] as MapInteractable[];
+            {
+                id: slot.id,
+                npcCode: slot.npcCode,
+                x: at.x,
+                y: at.y,
+                direction: at.direction,
+                ...(slot.radius !== undefined ? { radius: slot.radius } : {}),
+                ...(slot.conditions ? { conditions: slot.conditions } : {}),
+                ...(slot.functions ? { functions: slot.functions } : {}),
+            },
+        ];
     });
 
     const monsterSpawns = expand(def.monsterGroups);
@@ -202,7 +189,6 @@ export const buildMapRow = (
             spawnPoints,
             colliders: layout.colliders,
             npcs,
-            interactables,
             contentHash,
         },
     };
@@ -284,25 +270,28 @@ export const buildPlaceholderRow = (def: MapDefinition): NewGameMap => ({
     contentHash: "",
 });
 
-/** Tham chiếu chéo giữa các định nghĩa: portal trỏ tới map/spawn có thật, id vật thể không trùng giữa các map. */
+/** Tham chiếu chéo giữa các định nghĩa: cổng trỏ tới map/spawn có thật, id slot NPC / vật thể không trùng giữa các map. */
 export const validateDefinitionRefs = (defs: readonly MapDefinition[]): string[] => {
     const errors: string[] = [];
     const byCode = new Map(defs.map((def) => [def.code, def]));
     if (byCode.size !== defs.length) errors.push("map code trùng nhau");
-    const interactableOwner = new Map<string, string>();
+    const slotOwner = new Map<string, string>();
     for (const def of defs) {
-        for (const item of def.interactables) {
-            const owner = interactableOwner.get(item.id);
-            if (owner) errors.push(`${def.code}.${item.id}: id vật thể trùng với map "${owner}"`);
-            interactableOwner.set(item.id, def.code);
-            if (item.type !== "portal") continue;
-            const target = byCode.get(item.targetMapCode);
-            if (!target) {
-                errors.push(`${def.code}.${item.id}: unknown map "${item.targetMapCode}"`);
-            } else if (!target.spawnPoints.some((p) => p.id === item.targetSpawnId)) {
-                errors.push(
-                    `${def.code}.${item.id}: unknown spawn "${item.targetMapCode}.${item.targetSpawnId}"`
-                );
+        for (const slot of def.npcs) {
+            const owner = slotOwner.get(slot.id);
+            if (owner) errors.push(`${def.code}.${slot.id}: id slot trùng với map "${owner}"`);
+            slotOwner.set(slot.id, def.code);
+            for (const fn of slot.functions ?? []) {
+                if (fn.type !== NpcFunctionType.PORTAL) continue;
+                const { targetMapCode, targetSpawnId } = fn.config;
+                const target = byCode.get(targetMapCode);
+                if (!target) {
+                    errors.push(`${def.code}.${slot.id}: unknown map "${targetMapCode}"`);
+                } else if (!target.spawnPoints.some((p) => p.id === targetSpawnId)) {
+                    errors.push(
+                        `${def.code}.${slot.id}: unknown spawn "${targetMapCode}.${targetSpawnId}"`
+                    );
+                }
             }
         }
     }
@@ -326,15 +315,8 @@ export const mapMarkerList = (def: MapDefinition) => ({
     npcs: def.npcs.map((slot) => ({
         id: slot.id,
         npcCode: slot.npcCode,
-    })),
-    interactables: def.interactables.map((item) => ({
-        id: item.id,
-        type: item.type,
-        code: item.code,
-        radius: item.radius,
-        ...(item.type === "portal"
-            ? { targetMapCode: item.targetMapCode, targetSpawnId: item.targetSpawnId }
-            : {}),
+        ...(slot.radius !== undefined ? { radius: slot.radius } : {}),
+        ...(slot.functions ? { functions: slot.functions } : {}),
     })),
     chambers:
         def.dungeon?.chambers.map((chamber, index) => ({

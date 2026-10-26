@@ -3,6 +3,7 @@ import { Response } from "@/core/response/response.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import { MapErrorCode } from "@/modules/maps/enums/map-error-code.enum.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
+import { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
 import { teleportService } from "@/modules/maps/services/teleport.service.js";
 import { transferWorldService } from "@/rooms/world/modules/maps/services/transfer.world.service.js";
@@ -57,13 +58,17 @@ export class TeleportToWorldCommand extends PlayerWorldCommand<
             : Response.success<InteractResultMessage>({ id });
     }
 
-    /** Phải còn sống, không ở dungeon và đứng trên bệ teleport. */
+    /** Phải còn sống, không ở dungeon và đang mở bệ teleport (`interactNpc` vào bệ) còn đứng gần nó. */
     private checkPad(room: WorldRoom, player: PlayerWorldState): Response {
         if (player.hp <= 0 || room.dungeon) return Response.error(MapErrorCode.TELEPORT_NOT_AT_PAD);
-        const atPad = room.map.interactables.some(
-            (it) => it.type === "teleport" && player.isNear(it.x, it.y, it.radius)
+        const open = room.npcFunctions.check(
+            player.id,
+            NpcFunctionType.TELEPORT,
+            room.state.players
         );
-        return atPad ? Response.success() : Response.error(MapErrorCode.TELEPORT_NOT_AT_PAD);
+        return Response.isError(open)
+            ? Response.error(MapErrorCode.TELEPORT_NOT_AT_PAD)
+            : Response.success();
     }
 
     /** Chọn điểm đến. Thành công khi đã dịch chuyển / gửi `mapChange`. */

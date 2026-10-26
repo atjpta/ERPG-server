@@ -120,29 +120,41 @@
             ]
         }
     ],
-    "npcs": [],
-    "interactables": [
+    "npcs": [
         {
             "id": "evergrowth_to_sanctuary",
-            "code": "entry_dungeon",
+            "npcCode": "portal_dungeon",
             "radius": 1.5,
-            "type": "portal",
-            "targetMapCode": "sanctuary_of_life",
-            "targetSpawnId": "from_evergrowth"
+            "functions": [
+                {
+                    "id": "enter",
+                    "type": "portal",
+                    "config": {
+                        "targetMapCode": "sanctuary_of_life",
+                        "targetSpawnId": "from_evergrowth"
+                    }
+                }
+            ]
         },
         {
             "id": "evergrowth_to_forest",
-            "code": "portal",
+            "npcCode": "portal_gate",
             "radius": 1.5,
-            "type": "portal",
-            "targetMapCode": "whispering_forest",
-            "targetSpawnId": "from_evergrowth"
+            "functions": [
+                {
+                    "id": "enter",
+                    "type": "portal",
+                    "config": {
+                        "targetMapCode": "whispering_forest",
+                        "targetSpawnId": "from_evergrowth"
+                    }
+                }
+            ]
         },
         {
             "id": "teleport_evergrowth",
-            "code": "teleport",
-            "radius": 1.5,
-            "type": "teleport"
+            "npcCode": "teleport_pad",
+            "radius": 1.5
         }
     ]
 }

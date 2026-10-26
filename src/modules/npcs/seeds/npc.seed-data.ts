@@ -1,4 +1,5 @@
 import { NpcCode } from "@/modules/npcs/enums/npc-code.enum.js";
+import { NpcKind } from "@/modules/npcs/enums/npc-kind.enum.js";
 import type { NewNpc } from "@/modules/npcs/entities/npc.entity.js";
 import { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
 import { QuestState } from "@/modules/quests/enums/quest.enum.js";
@@ -71,4 +72,22 @@ export const NPCS: NewNpc[] = [
     },
     { code: NpcCode.GUARD_CAPTAIN, defaultDialogueCode: "guard_captain_default" },
     { code: NpcCode.HERBALIST, defaultDialogueCode: "herbalist_default" },
+
+    // ---- Vật thể trong map (kind = object) ------------------------------------------------------------
+    // Cổng không có chức năng ở đây: mỗi chỗ đặt khai báo `functions` ở slot của map (đích của cổng...); bệ teleport thì có sẵn.
+    // Bảng thông báo: chỉ là thoại, không chức năng.
+    {
+        code: NpcCode.NOTICE_BOARD,
+        kind: NpcKind.OBJECT,
+        defaultDialogueCode: "notice_board",
+    },
+    // Cổng sang map khác (`portal`), cổng vào dungeon (`portal` — khác diện mạo), bệ dịch chuyển nhanh (`teleport`).
+    { code: NpcCode.PORTAL_GATE, kind: NpcKind.OBJECT, autoOpen: true },
+    { code: NpcCode.PORTAL_DUNGEON, kind: NpcKind.OBJECT, autoOpen: true },
+    {
+        code: NpcCode.TELEPORT_PAD,
+        kind: NpcKind.OBJECT,
+        autoOpen: true,
+        functions: [{ id: "teleport", type: NpcFunctionType.TELEPORT, config: {} }],
+    },
 ];

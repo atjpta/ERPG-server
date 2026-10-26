@@ -2,7 +2,7 @@ import type { Condition } from "@/modules/dialogues/schemas/condition.schema.js"
 import type { RewardSpec } from "@/modules/rewards/schemas/reward-spec.schema.js";
 import type { Biome } from "@/modules/biomes/enums/biome.enum.js";
 import type { ItemRarity } from "@/modules/items/enums/item.enum.js";
-import type { InteractableCode } from "@/modules/maps/enums/interactable-code.enum.js";
+import type { NpcFunction } from "@/modules/npcs/schemas/npc-function.schema.js";
 import type { MonsterSpawnType } from "@/modules/monsters/enums/monster-type.enum.js";
 import { MapSpawnKind } from "@/modules/maps/enums/game-map.enum.js";
 
@@ -64,53 +64,20 @@ export interface DungeonSession {
     returnY: number;
 }
 
+/** NPC hoặc vật thể đặt trong map: `id` là id slot (duy nhất trong mọi map), phần còn lại ghi đè template trong `npcs`. */
 export interface MapNpc {
+    id: string;
     npcCode: string;
     x: number;
     y: number;
-    direction: "left" | "right";
-}
-
-interface MapInteractableBase {
-    /** Id ổn định trong map — client và quest tham chiếu theo id này. */
-    id: string;
-    x: number;
-    y: number;
-    /** Khoảng cách tối đa (tile) để tương tác. */
-    radius: number;
-    /** Diện mạo (client map sang prefab); bỏ trống = vẽ mặc định. */
-    code?: InteractableCode;
-    /** Hướng mũi tên của portal (layout Unity chọn). */
-    direction?: "up" | "down" | "left" | "right";
+    /** NPC nhìn trái / phải; cổng chỉ hướng mũi tên lên / xuống / trái / phải. */
+    direction: "up" | "down" | "left" | "right";
+    /** Bán kính tương tác riêng của chỗ này; bỏ trống = `npcs.interactRadius`. */
+    radius?: number;
     conditions?: Condition[];
+    /** Thay hẳn `functions` của NPC (vd đích của từng cổng). */
+    functions?: NpcFunction[];
 }
-
-export interface MapPortal extends MapInteractableBase {
-    type: "portal";
-    targetMapCode: string;
-    targetSpawnId: string;
-}
-
-export interface MapGatherable extends MapInteractableBase {
-    type: "gather";
-    reward: RewardSpec;
-    /** Thu thập xong ẩn đi trong kênh, hiện lại sau chừng này giây. */
-    respawnSec: number;
-}
-
-export interface MapSign extends MapInteractableBase {
-    type: "sign";
-    dialogueCode: string;
-}
-
-/** Bệ teleport (dịch chuyển nhanh giữa các map có teleport). */
-export interface MapTeleport extends MapInteractableBase {
-    type: "teleport";
-    /** Ai cũng teleport tới map này được: bỏ điều kiện "đã từng đến" (vẫn kiểm level). */
-    openToAll?: boolean;
-}
-
-export type MapInteractable = MapPortal | MapGatherable | MapSign | MapTeleport;
 
 export interface MapSpawnPoint {
     id: string;

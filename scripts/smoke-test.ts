@@ -217,8 +217,8 @@ if (!(moved.x > startX)) throw new Error("Player did not move");
     console.info("✅ global unequip/equip → inventoryChanged + attributes pushed");
 
     // Payload sai → INVALID_INPUT (không im lặng, không bị kick).
-    expectCode(await request(room, "interact", { nope: 1 }), "INVALID_INPUT", "invalid payload");
-    expectCode(await request(room, "interact"), "INVALID_INPUT", "missing payload");
+    expectCode(await request(room, "interactNpc", { nope: 1 }), "INVALID_INPUT", "invalid payload");
+    expectCode(await request(room, "interactNpc"), "INVALID_INPUT", "missing payload");
     console.info("✅ invalid payload → INVALID_INPUT");
 
     // Message không có handler → server trả lỗi giao thức, promise reject (không phải Result).
@@ -243,27 +243,48 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
     const questUpdates = inbox<{ quest: { code: string; state: string } }>(room, "questUpdate");
 
     // Đứng xa NPC / portal thì bị từ chối (response là Result thất bại).
-    const far = await request(room, "interact", { id: "south_gate" });
-    if (far.success) throw new Error("portal must reject a player standing far away");
-    console.info(`✅ interact far portal rejected (${far.code})`);
-
-    // Đi tới sát Trưởng làng — từ vị trí hiện tại, lái từng step theo vị trí server.
-    const me = (room.state as any).players.get(auth.player.id);
-    for (let i = 0; i < 200 && Math.hypot(me.x - chief.x, me.y - (chief.y - 1)) > 0.5; i++) {
-        input.data.moveX = Math.sign(chief.x - me.x) * (Math.abs(chief.x - me.x) > 0.3 ? 1 : 0);
-        input.data.moveY =
-            Math.sign(chief.y - 1 - me.y) * (Math.abs(chief.y - 1 - me.y) > 0.3 ? 1 : 0);
-        input.send();
-        await sleep(50);
+    // Cổng cũng là NPC (kind object, autoOpen) đặt trong map: cùng message `interactNpc { id }`.
+    const gate = content.npcs.find((npc: { id: string }) => npc.id === "south_gate");
+    if (
+        gate?.kind !== "object" ||
+        !gate.autoOpen ||
+        gate.targetMapCode !== "greenfield_plains" ||
+        gate.direction !== "down"
+    ) {
+        throw new Error(`south_gate must be an auto-open portal object: ${JSON.stringify(gate)}`);
     }
-    input.data.moveX = 0;
-    input.data.moveY = 0;
-    input.send();
-    await sleep(300);
+    const far = await request(room, "interactNpc", { id: "south_gate" });
+    if (far.success) throw new Error("portal must reject a player standing far away");
+    expectCode(far, "TOO_FAR", "far portal");
+    console.info(`✅ interactNpc far portal rejected (${far.code})`);
+    // Bệ teleport chỉ dùng được sau khi đã mở nó (interactNpc vào bệ): chưa mở thì từ chối.
+    expectCode(
+        await request(room, "teleportTo", { mapCode: "greenfield_plains" }),
+        "TELEPORT_NOT_AT_PAD",
+        "teleportTo before opening a pad"
+    );
+
+    // Đi tới sát một điểm — từ vị trí hiện tại, lái từng step theo vị trí server.
+    const me = (room.state as any).players.get(auth.player.id);
+    const walkTo = async (target: { x: number; y: number }) => {
+        for (let i = 0; i < 300 && Math.hypot(me.x - target.x, me.y - target.y) > 0.5; i++) {
+            input.data.moveX =
+                Math.sign(target.x - me.x) * (Math.abs(target.x - me.x) > 0.3 ? 1 : 0);
+            input.data.moveY =
+                Math.sign(target.y - me.y) * (Math.abs(target.y - me.y) > 0.3 ? 1 : 0);
+            input.send();
+            await sleep(50);
+        }
+        input.data.moveX = 0;
+        input.data.moveY = 0;
+        input.send();
+        await sleep(300);
+    };
+    await walkTo({ x: chief.x, y: chief.y - 1 });
     console.info(`✅ walked next to the village chief at (${me.x.toFixed(2)}, ${me.y.toFixed(2)})`);
 
     // Response chỉ báo mở được thoại; node đầu đến qua push `dialogue`.
-    expectOk(await request(room, "interactNpc", { npcCode: "village_chief" }), "interactNpc");
+    expectOk(await request(room, "interactNpc", { id: chief.id }), "interactNpc");
     await until(() => dialogues.length > 0, "dialogue push");
     const first = dialogues[0].data;
     if (first.nodeId !== "start" || !first.options.some((o) => o.id === "accept")) {
@@ -283,6 +304,25 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
     const unknown = await request(room, "dialogueChoose", { optionId: "does_not_exist" });
     if (unknown.success) throw new Error("unknown dialogue option must be rejected");
     console.info(`✅ unknown dialogue option rejected (${unknown.code})`);
+
+    // Bệ teleport cũng là NPC (kind object, autoOpen): đi tới bệ, bấm vào → server gửi `teleportList` và ghi phiên mở bệ;
+    // từ đó `teleportTo` mới qua được bước kiểm bệ (chọn đích bịa thì dừng ở bước sau, không dịch chuyển thật).
+    const pad = content.npcs.find((npc: { id: string }) => npc.id === "teleport_village");
+    if (!pad || pad.kind !== "object" || !pad.autoOpen)
+        throw new Error("teleport_village must be an auto-open object");
+    const teleportLists = inbox<{ destinations: { mapCode: string }[] }>(room, "teleportList");
+    await walkTo({ x: pad.x, y: pad.y - 0.5 });
+    expectOk(
+        await request(room, "interactNpc", { id: "teleport_village" }),
+        "interactNpc teleport pad"
+    );
+    await until(() => teleportLists.length > 0, "teleportList push");
+    expectCode(
+        await request(room, "teleportTo", { mapCode: "no_such_map" }),
+        "TELEPORT_NO_DESTINATION",
+        "teleportTo passes the pad check once the pad is open"
+    );
+    console.info("✅ teleport pad opened by interactNpc: teleportList sent, teleportTo unlocked");
 }
 
 // ---- Người chơi thứ hai: tài khoản + nhân vật + world + global cùng server ---------------------------

@@ -5,7 +5,6 @@ import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
 import type {
     DungeonConfig,
     MapNpc,
-    MapInteractable,
     MapSpawnPoint,
     MapCollider,
     MonsterSpawn,
@@ -52,10 +51,8 @@ export const GameMaps = pgTable("game_maps", {
     colliders: jsonb("colliders").$type<MapCollider[]>().notNull().default([]),
     /** Hash nội dung file `<code>.map.json` đã seed — client so với bản trong build để phát hiện lệch. */
     contentHash: text("content_hash").notNull().default(""),
-    /** NPC đặt trong map (NPC dùng chung nhiều map — định nghĩa ở bảng `npcs`). */
+    /** NPC và vật thể đặt trong map (dùng chung nhiều map — template ở bảng `npcs`, slot ghi đè phần riêng). */
     npcs: jsonb("npcs").$type<MapNpc[]>().notNull().default([]),
-    /** Vật thể tương tác được: portal, thu thập, biển báo. */
-    interactables: jsonb("interactables").$type<MapInteractable[]>().notNull().default([]),
 });
 
 export type GameMap = typeof GameMaps.$inferSelect;

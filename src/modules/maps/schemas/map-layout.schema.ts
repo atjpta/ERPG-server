@@ -6,19 +6,18 @@ const tile = z.number();
 const point = { x: tile, y: tile };
 
 const PositionedSchema = z.object({ id: idSchema, ...point });
-/** Vật thể tương tác: vị trí + hướng mũi tên của portal (Unity chọn ở marker; bỏ trống = client tự suy ra). */
-const InteractablePlacementSchema = PositionedSchema.extend({
-    direction: z.enum(["up", "down", "left", "right"]).optional(),
-});
 const GateRectSchema = z.object({ ...point, w: z.number().positive(), h: z.number().positive() });
-/** NPC: vị trí + hướng nhìn — hướng do Unity chọn ở marker slot, không nằm trong định nghĩa. */
+/**
+ * NPC / vật thể: vị trí + hướng — hướng do Unity chọn ở marker slot, không nằm trong định nghĩa (NPC nhìn trái / phải,
+ * mũi tên của cổng chỉ lên / xuống / trái / phải).
+ */
 const NpcPlacementSchema = PositionedSchema.extend({
-    direction: z.enum(["left", "right"]).default("right"),
+    direction: z.enum(["up", "down", "left", "right"]).default("right"),
 });
 
 /**
  * File `<mapCode>.map.json` do Unity export — **chỉ vị trí và hình học**: kích thước map, vị trí các marker
- * (spawn point, nhóm quái, NPC, vật thể tương tác), collider, hình học chamber của dungeon. Loại map, level,
+ * (spawn point, nhóm quái, NPC và vật thể), collider, hình học chamber của dungeon. Loại map, level,
  * quái nào ở marker nào, portal đi đâu... là config phía server (`map-definition.schema.ts`); danh sách marker
  * cần đặt do server xuất ra `map-markers.json` (`yarn config:export`).
  * Toạ độ theo tile, gốc ở giữa map, y hướng lên (như Unity). Hình chữ nhật neo ở góc nhỏ nhất (dưới-trái).
@@ -35,9 +34,8 @@ export const MapLayoutSchema = z
             .default([]),
         /** Vị trí marker nhóm quái (id = `markerId` của nhóm trong định nghĩa). */
         monsters: z.array(PositionedSchema).default([]),
-        /** Vị trí và hướng nhìn của slot NPC (id = id slot trong định nghĩa). */
+        /** Vị trí và hướng của slot NPC / vật thể (id = id slot trong định nghĩa). */
         npcs: z.array(NpcPlacementSchema).default([]),
-        interactables: z.array(InteractablePlacementSchema).default([]),
         /** Dungeon: hình học từng chamber. */
         chambers: z
             .array(
@@ -85,7 +83,6 @@ export const MapLayoutSchema = z
         check("spawnPoints", map.spawnPoints);
         check("monsters", map.monsters);
         check("npcs", map.npcs);
-        check("interactables", map.interactables);
         map.colliders.forEach((c, i) => {
             if (rectOutside(c)) {
                 ctx.addIssue({ code: "custom", path: ["colliders", i], message: "outside map" });

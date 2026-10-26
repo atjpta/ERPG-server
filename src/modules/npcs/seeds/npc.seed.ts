@@ -4,6 +4,7 @@ import { unityMasterDataService } from "@/modules/master-data/services/unity-mas
 import { resolveNpcRule } from "@/modules/npcs/schemas/npc-config.schema.js";
 import { entityBodyService } from "@/modules/bodies/services/entity-body.service.js";
 import { DialogueRuleSchema } from "@/modules/dialogues/schemas/dialogue.schema.js";
+import { NpcKind } from "@/modules/npcs/enums/npc-kind.enum.js";
 import { Npcs } from "@/modules/npcs/entities/npc.entity.js";
 import { NpcRepo } from "@/modules/npcs/repositories/npc.repository.js";
 import { NpcFunctionSchema } from "@/modules/npcs/schemas/npc-function.schema.js";
@@ -13,7 +14,11 @@ export const NpcSeed = async () => {
     const npcConfig = unityMasterDataService.loadUnityMasterData(MasterDataKey.NPC_CONFIG);
     for (const npc of NPCS) {
         // The foot collider comes from the NPC's Unity prefab (entity-bodies.json), not from the seed.
-        const { width, height } = entityBodyService.npcCollider(npc.code);
+        // A map object does not block the way, so it has no body to read.
+        const { width, height } =
+            npc.kind === NpcKind.OBJECT
+                ? { width: 0, height: 0 }
+                : entityBodyService.npcCollider(npc.code);
         // Talk range is authored in Unity (Ranges tab): a base for every NPC, an NPC's own number over it.
         const { interactRadius } = resolveNpcRule(npcConfig, npc.code);
         const data = {

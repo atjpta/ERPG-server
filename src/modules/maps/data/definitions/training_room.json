@@ -64,14 +64,20 @@
             ]
         }
     ],
-    "npcs": [],
-    "interactables": [
+    "npcs": [
         {
             "id": "teleport_training",
-            "code": "teleport",
+            "npcCode": "teleport_pad",
             "radius": 1.5,
-            "type": "teleport",
-            "openToAll": true
+            "functions": [
+                {
+                    "id": "teleport",
+                    "type": "teleport",
+                    "config": {
+                        "openToAll": true
+                    }
+                }
+            ]
         }
     ]
 }

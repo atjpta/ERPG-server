@@ -106,8 +106,7 @@
             "y": -4.54
         }
     ],
-    "npcs": [],
-    "interactables": [
+    "npcs": [
         {
             "id": "teleport_training",
             "x": 0.0,

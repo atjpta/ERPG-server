@@ -75,37 +75,46 @@
         {
             "id": "npc_guard_captain",
             "npcCode": "guard_captain"
-        }
-    ],
-    "interactables": [
+        },
         {
             "id": "notice_board",
-            "code": "notice_board",
-            "radius": 0.5,
-            "type": "sign",
-            "dialogueCode": "notice_board"
+            "npcCode": "notice_board",
+            "radius": 0.5
         },
         {
             "id": "south_gate",
-            "code": "portal",
+            "npcCode": "portal_gate",
             "radius": 1.8,
-            "type": "portal",
-            "targetMapCode": "greenfield_plains",
-            "targetSpawnId": "from_village"
+            "functions": [
+                {
+                    "id": "enter",
+                    "type": "portal",
+                    "config": {
+                        "targetMapCode": "greenfield_plains",
+                        "targetSpawnId": "from_village"
+                    }
+                }
+            ]
         },
         {
             "id": "east_gate",
-            "code": "portal",
+            "npcCode": "portal_gate",
             "radius": 1,
-            "type": "portal",
-            "targetMapCode": "whispering_forest",
-            "targetSpawnId": "from_village"
+            "functions": [
+                {
+                    "id": "enter",
+                    "type": "portal",
+                    "config": {
+                        "targetMapCode": "whispering_forest",
+                        "targetSpawnId": "from_village"
+                    }
+                }
+            ]
         },
         {
             "id": "teleport_village",
-            "code": "teleport",
-            "radius": 1.5,
-            "type": "teleport"
+            "npcCode": "teleport_pad",
+            "radius": 1.5
         }
     ]
 }

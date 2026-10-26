@@ -489,8 +489,7 @@
             "y": 8.6
         }
     ],
-    "npcs": [],
-    "interactables": [
+    "npcs": [
         {
             "id": "evergrowth_to_sanctuary",
             "x": -2.04,

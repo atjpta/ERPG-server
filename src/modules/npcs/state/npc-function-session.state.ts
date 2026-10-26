@@ -5,6 +5,8 @@ export const NPC_FUNCTION_RANGE_MARGIN = 0.5;
 
 export interface NpcFunctionSessionProps {
     npcCode: string;
+    /** Id slot của NPC / vật thể đã mở chức năng. */
+    slotId: string;
     functionId: string;
     type: NpcFunctionType;
     /** Vị trí NPC lúc mở và bán kính tương tác của NPC đó. */
@@ -16,6 +18,7 @@ export interface NpcFunctionSessionProps {
 /** Chức năng NPC mà một player đang mở (shop, cường hoá...). Chỉ ở server: client chỉ nhận `npcFunctionOpen`. */
 export class NpcFunctionSessionState {
     readonly npcCode: string;
+    readonly slotId: string;
     readonly functionId: string;
     readonly type: NpcFunctionType;
     readonly x: number;
@@ -24,6 +27,7 @@ export class NpcFunctionSessionState {
 
     constructor(props: NpcFunctionSessionProps) {
         this.npcCode = props.npcCode;
+        this.slotId = props.slotId;
         this.functionId = props.functionId;
         this.type = props.type;
         this.x = props.x;

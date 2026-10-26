@@ -1,4 +1,7 @@
 import { MapType } from "@/modules/maps/enums/map.enum.js";
+import type { MapNpc } from "@/modules/maps/types/game-map.type.js";
+import { NpcFunctionType, type NpcFunction } from "@/modules/npcs/schemas/npc-function.schema.js";
+import { npcService } from "@/modules/npcs/services/npc.service.js";
 import type { TeleportDestination, TeleportStatus } from "@/modules/maps/types/teleport.type.js";
 
 interface TeleportMapLike {
@@ -7,18 +10,12 @@ interface TeleportMapLike {
     minLevel: number;
     /** Bỏ trống = coi như đang mở. */
     status?: string;
-    interactables: readonly {
-        id: string;
-        type: string;
-        x: number;
-        y: number;
-        openToAll?: boolean;
-    }[];
+    npcs: readonly MapNpc[];
 }
 
 export class TeleportService {
     /**
-     * Danh sách teleport: **mọi** map trừ dungeon và `currentMapCode`, mỗi map một điểm đến (bệ teleport đầu tiên).
+     * Danh sách teleport: **mọi** map trừ dungeon và `currentMapCode`, mỗi map một điểm đến (NPC / vật thể có chức năng `teleport` đầu tiên).
      * Map chưa có bệ đã đặt vị trí (hoặc chưa mở) vẫn có trong danh sách với `open = false` để client hiện mờ,
      * không cho chọn. Sắp theo level vào map rồi theo code.
      */
@@ -29,21 +26,35 @@ export class TeleportService {
         return maps
             .filter((map) => map.type !== MapType.DUNGEON && map.code !== currentMapCode)
             .map((map): TeleportDestination => {
-                const pad = map.interactables.find((it) => it.type === "teleport");
+                const pad = this.findPad(map);
                 const active = map.status === undefined || map.status === "active";
                 return pad && active
                     ? {
                           mapCode: map.code,
-                          teleportId: pad.id,
+                          teleportId: pad.slot.id,
                           minLevel: map.minLevel,
-                          x: pad.x,
-                          y: pad.y,
+                          x: pad.slot.x,
+                          y: pad.slot.y,
                           open: true,
-                          ...(pad.openToAll ? { openToAll: true } : {}),
+                          ...(pad.config.openToAll ? { openToAll: true } : {}),
                       }
                     : { mapCode: map.code, minLevel: map.minLevel, open: false };
             })
             .sort((a, b) => a.minLevel - b.minLevel || a.mapCode.localeCompare(b.mapCode));
+    }
+
+    /** Bệ teleport đầu tiên của map: slot có chức năng `teleport` (của slot hoặc của NPC) và config của nó. */
+    private findPad(map: TeleportMapLike) {
+        for (const slot of map.npcs) {
+            const fn = npcService
+                .functionsOf(slot)
+                .find(
+                    (f): f is Extract<NpcFunction, { type: NpcFunctionType.TELEPORT }> =>
+                        f.type === NpcFunctionType.TELEPORT
+                );
+            if (fn) return { slot, config: fn.config };
+        }
+        return undefined;
     }
 
     /** Flag ghi vào `player_states.flags` khi player đã đến một map — điều kiện để teleport tới map đó. */

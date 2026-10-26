@@ -29,28 +29,21 @@ export const userMapController = {
                 /** Metadata các map active — không kèm layout (xem `getContent`) để danh sách gọn. */
                 const active = await GameMapRepo.findActive();
                 const maps = active.map(
-                    ({
-                        colliders,
-                        npcs,
-                        interactables,
-                        spawnPoints,
-                        monsterSpawns,
-                        dungeon,
-                        ...summary
-                    }) => summary
+                    ({ colliders, npcs, spawnPoints, monsterSpawns, dungeon, ...summary }) =>
+                        summary
                 );
                 return HttpResponse.success(maps);
             })
     ),
 
-    /** Public — layout map (collider, spawn, NPC, portal) để client đối chiếu và dựng minimap. */
+    /** Public — layout map (collider, spawn, NPC và vật thể) để client đối chiếu và dựng minimap. */
     userMapContent: createEndpoint(
         `${prefix}/:code/content`,
         {
             method: "GET",
             sdk: {
                 summary:
-                    "Layout một map (collider, spawn, NPC, portal) để đối chiếu scene và dựng minimap.",
+                    "Layout một map (collider, spawn, NPC và vật thể) để đối chiếu scene và dựng minimap.",
                 auth: "none",
                 response: UserMapContentResponse,
                 errors: [MapErrorCode.MAP_NOT_FOUND],

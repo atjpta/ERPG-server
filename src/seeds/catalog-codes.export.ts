@@ -15,7 +15,6 @@ const CATALOG_CODE_NAMES: Record<keyof typeof CATALOG_CODES, string> = {
     skills: "SkillCode",
     currencies: "CurrencyCode",
     gates: "GateCode",
-    interactables: "InteractableCode",
 };
 
 /** Offline sync: no database or running Unity Editor required. */

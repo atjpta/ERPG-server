@@ -6,7 +6,7 @@ Mọi nội dung là **data** — thêm mới không sửa code. Server chỉ g�
 
 | Loại                    | Key                                                                        |
 | ----------------------- | -------------------------------------------------------------------------- |
-| Tên map / NPC / vật thể | `map.{code}.name`, `npc.{code}.name`, `interactable.{id}.name`             |
+| Tên map / NPC / vật thể | `map.{code}.name`, `npc.{code}.name` (vật thể cũng là NPC)                 |
 | Quest                   | `quest.{code}.name`, `quest.{code}.desc`, `quest.{code}.obj.{objectiveId}` |
 | Thoại                   | `dialogue.{code}.{nodeId}.text`, `dialogue.{code}.{nodeId}.opt.{optionId}` |
 
@@ -19,15 +19,15 @@ Node/option có `textKey` riêng thì dùng key đó. `yarn config:export` xuấ
 2. `yarn config:export` xuất `map-markers.json`; Unity đặt vị trí các marker đó rồi export `<mapCode>.map.json` (chỉ vị trí) vào `src/modules/maps/data/`.
 3. `yarn seed`. Seed dừng nếu portal trỏ tới map/spawn không có, layout có marker lạ, hoặc code NPC/item/monster/thoại sai (`ContentRefsCheck`). Marker chưa có vị trí chỉ cảnh báo.
 
-Định nghĩa map chứa: `spawnPoints` (id + kind), `monsterGroups` (nhóm quái nhiều loại ở 1 marker), `npcs` (slot đặt NPC — 1 NPC đặt ở nhiều map được), `interactables`:
+Định nghĩa map chứa: `spawnPoints` (id + kind), `monsterGroups` (nhóm quái nhiều loại ở 1 marker), `npcs` (slot đặt NPC **và vật thể** — 1 template đặt ở nhiều map được, slot ghi đè `radius` / `conditions` / `functions`).
+Vật thể là NPC `kind = object` (xem [map-file-format.md](map-file-format.md)); hành vi nằm ở `functions`:
 
-| type     | Trường riêng                     | Tác dụng                                                 |
-| -------- | -------------------------------- | -------------------------------------------------------- |
-| `portal` | `targetMapCode`, `targetSpawnId` | Chuyển map (server gửi `mapChange`, client vào room mới) |
-| `gather` | `reward`, `respawnSec`           | Nhặt, ẩn đi `respawnSec` giây trong kênh                 |
-| `sign`   | `dialogueCode`                   | Mở thoại không cần NPC                                   |
-
-Mọi vật thể có `conditions` tuỳ chọn.
+| Chức năng  | `config`                         | Tác dụng                                                                                  |
+| ---------- | -------------------------------- | ----------------------------------------------------------------------------------------- |
+| `portal`   | `targetMapCode`, `targetSpawnId` | Chuyển map (server gửi `mapChange`, client vào room mới); đích là dungeon thì vào dungeon |
+| `teleport` | `openToAll?`                     | Bệ dịch chuyển nhanh: mở danh sách điểm đến (`teleportList`)                              |
+| `gather`   | `reward`, `respawnSec`           | Nhặt, ẩn đi `respawnSec` giây trong kênh                                                  |
+| (thoại)    | `defaultDialogueCode` của NPC    | Bảng thông báo: mở thoại không cần chức năng                                              |
 
 ## Thêm NPC
 
@@ -79,8 +79,8 @@ trả quest cần còn chỗ túi cho thưởng (không thì báo lỗi, quest g
 
 **Party** (room riêng `party`, mỗi party một room): xem mục "Party" dưới. Thêm vào room `world`: client → `partyCreate`, `partyDecline {partyRoomId}`; server → `party {roomId}`, `partyInviteReceived {partyRoomId, fromName, expiresInSec}`; lỗi `interactResult` khi vào dungeon: `party_not_leader`, `party_denied`.
 
-Client → server: `interact {id}`, `interactNpc {npcCode}`, `dialogueChoose {optionId}` (rỗng = tiếp tục), `dialogueClose`, `questList`, `questPreview {questCode}`, `questAbandon {questCode}`, `dungeonLeave`.
-Server → client: `interactResult` (lỗi chuyển map: `level_too_low`, `map_not_open`, `exit_locked`), `dialogue` (kèm `offerQuestCodes`), `dialogueEnd`, `npcFunctionOpen`,
+Client → server: `interactNpc {id}` (id slot NPC / vật thể trong map), `dialogueChoose {optionId}` (rỗng = tiếp tục), `dialogueClose`, `questList`, `questPreview {questCode}`, `questAbandon {questCode}`, `dungeonLeave`.
+Server → client: `interactResult` (response của `interactNpc` / `teleportTo`; lỗi chuyển map: `level_too_low`, `map_not_open`, `exit_locked`), `dialogue` (kèm `offerQuestCodes`), `dialogueEnd`, `npcFunctionOpen`,
 `mapChange {mapCode, spawnId, roomName, instanceId?}` (`roomName = "dungeon"` thì join room `dungeon` với option `{mapCode, instanceId}`), `questList`, `questUpdate`, `questPreview`,
 `npcMarkers` (dấu `!`/`?` + `category` + minimap), `questTargets` (chữ Q), `features`, `dungeonChamberClear`, `dungeonClear`; state `dungeon` (HUD chamber/phase/bộ đếm quái).
 
@@ -95,6 +95,15 @@ Các lệnh làm việc của chức năng chạy ở global room (`enhanceEquip
 Quy tắc chung: mọi tương tác với NPC đều phải kiểm tra tầm đứng. Phần chạy trong world đã được chặn sẵn: `interactNpc` kiểm `interactRadius`, `dialogueChoose` kiểm lại mỗi lần chọn
 (`DialogueSessionState.isNear`) nên mọi action của thoại (`start_quest`, `complete_quest`, `give_item`...) chỉ chạy khi còn đứng gần. Chức năng NPC xử lý ngay trong world room (shop, storage, quest_board sau này) gọi thẳng
 `room.npcFunctions.check(playerId, type, room.state.players)`; chỉ chức năng xử lý ở global room mới đi qua rpc `checkNpcFunction` (cùng hàm `check` đó).
+
+**Chức năng chạy ở world hay global?** Chạy ở nơi giữ dữ liệu nó cần ghi. World giữ vị trí / map / state room; global giữ ví + túi (`transact` = một transaction DB; bản sao ở world chỉ `credit` / `debit` / `applyOps`, không rollback chung).
+
+| Chức năng                             | Chạy ở | Lý do                                                                                              |
+| ------------------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| `portal`, `teleport`, `gather`, thoại | World  | cần map, vị trí, `mapChange`, state room (`active`, hồi lại)                                       |
+| `quest_board`                         | World  | nhật ký quest do world giữ; chỉ mở danh sách                                                       |
+| `enhance`, `refine`, `disassemble`    | Global | trừ tiền + vật liệu + đổi trang bị phải cùng một transaction; world hỏi qua rpc `checkNpcFunction` |
+| `shop`, `storage` (chưa có logic)     | Global | mua / cất là nhiều bước nguyên tử (hết chỗ túi thì không trừ tiền) → cần `transact`                |
 
 Lệnh xem trước (`previewUpgrade`, `previewDisassemble`) chỉ đọc nên không bị chặn. Thêm chức năng NPC mới (shop, storage, quest_board): lệnh của nó gọi `npcFunctionGlobalService.require(player, NpcFunctionType.X)` trước khi làm việc
 (với lệnh túi đồ, `UpgradeGlobalCommand` đã làm sẵn qua `functionType`).

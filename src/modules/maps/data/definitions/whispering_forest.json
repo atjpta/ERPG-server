@@ -199,37 +199,56 @@
             ]
         }
     ],
-    "npcs": [],
-    "interactables": [
+    "npcs": [
         {
             "id": "forest_to_village",
-            "code": "portal",
+            "npcCode": "portal_gate",
             "radius": 1.5,
-            "type": "portal",
-            "targetMapCode": "greenfield_village",
-            "targetSpawnId": "from_field"
+            "functions": [
+                {
+                    "id": "enter",
+                    "type": "portal",
+                    "config": {
+                        "targetMapCode": "greenfield_village",
+                        "targetSpawnId": "from_field"
+                    }
+                }
+            ]
         },
         {
             "id": "forest_to_werewolf_den",
-            "code": "entry_dungeon",
+            "npcCode": "portal_dungeon",
             "radius": 1.5,
-            "type": "portal",
-            "targetMapCode": "werewolf_den",
-            "targetSpawnId": "from_forest"
+            "functions": [
+                {
+                    "id": "enter",
+                    "type": "portal",
+                    "config": {
+                        "targetMapCode": "werewolf_den",
+                        "targetSpawnId": "from_forest"
+                    }
+                }
+            ]
         },
         {
             "id": "forest_to_evergrowth",
-            "code": "portal",
+            "npcCode": "portal_gate",
             "radius": 1.5,
-            "type": "portal",
-            "targetMapCode": "deep_evergrowth",
-            "targetSpawnId": "from_forest"
+            "functions": [
+                {
+                    "id": "enter",
+                    "type": "portal",
+                    "config": {
+                        "targetMapCode": "deep_evergrowth",
+                        "targetSpawnId": "from_forest"
+                    }
+                }
+            ]
         },
         {
             "id": "teleport_forest",
-            "code": "teleport",
-            "radius": 1.5,
-            "type": "teleport"
+            "npcCode": "teleport_pad",
+            "radius": 1.5
         }
     ]
 }

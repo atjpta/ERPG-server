@@ -2,6 +2,7 @@ import type { Dialogue } from "@/modules/dialogues/entities/dialogue.entity.js";
 import type { MapDefinition } from "@/modules/maps/schemas/map-definition.schema.js";
 import { definitionMonsterCodes } from "@/modules/maps/seeds/map-build.seed-util.js";
 import type { Npc } from "@/modules/npcs/entities/npc.entity.js";
+import { NpcFunctionType, type NpcFunction } from "@/modules/npcs/schemas/npc-function.schema.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
 import { DAILY_QUEST_CODES } from "@/modules/quests/schemas/daily-quest.schema.js";
@@ -9,7 +10,10 @@ import type { Action, Condition } from "@/modules/dialogues/schemas/condition.sc
 
 export interface ContentData {
     maps: readonly MapDefinition[];
-    npcs: readonly Pick<Npc, "code" | "defaultDialogueCode" | "dialogueRules" | "functions">[];
+    npcs: readonly Pick<
+        Npc,
+        "code" | "kind" | "autoOpen" | "defaultDialogueCode" | "dialogueRules" | "functions"
+    >[];
     dialogues: readonly Pick<Dialogue, "code" | "nodes">[];
     quests: readonly Pick<
         Quest,
@@ -36,7 +40,8 @@ export const findContentRefErrors = (data: ContentData): string[] => {
     const npcs = new Map(data.npcs.map((npc) => [npc.code, npc]));
     const dialogues = new Set(data.dialogues.map((d) => d.code));
     const quests = new Set([...data.quests.map((q) => q.code), ...DAILY_QUEST_CODES]);
-    const interactableIds = new Set(data.maps.flatMap((m) => m.interactables.map((i) => i.id)));
+    // Mục tiêu `interact` trỏ tới id slot (NPC / vật thể đặt trong map).
+    const slotIds = new Set(data.maps.flatMap((m) => m.npcs.map((slot) => slot.id)));
     const need = (set: ReadonlySet<string>, code: string, where: string, kind: string) => {
         if (!set.has(code)) errors.push(`${where}: unknown ${kind} "${code}"`);
     };
@@ -81,15 +86,37 @@ export const findContentRefErrors = (data: ContentData): string[] => {
         }
     };
 
-    for (const map of data.maps) {
-        for (const npc of map.npcs) need(npcCodes, npc.npcCode, `map ${map.code}`, "npc");
-        for (const it of map.interactables) {
-            const where = `map ${map.code}.${it.id}`;
-            for (const c of it.conditions ?? []) checkCondition(c, where);
-            if (it.type === "sign") need(dialogues, it.dialogueCode, where, "dialogue");
-            if (it.type === "gather") {
-                for (const item of it.reward.items)
+    /** Cấu hình chức năng tham chiếu code có thật: cổng trỏ map + spawn, vật thu thập cho item có thật. */
+    const checkFunctions = (functions: readonly NpcFunction[], where: string) => {
+        for (const fn of functions) {
+            if (fn.type === NpcFunctionType.PORTAL) {
+                const { targetMapCode, targetSpawnId } = fn.config;
+                const target = data.maps.find((m) => m.code === targetMapCode);
+                if (!target) errors.push(`${where}: unknown map "${targetMapCode}"`);
+                else if (!target.spawnPoints.some((p) => p.id === targetSpawnId))
+                    errors.push(`${where}: unknown spawn "${targetMapCode}.${targetSpawnId}"`);
+            }
+            if (fn.type === NpcFunctionType.GATHER) {
+                for (const item of fn.config.reward.items)
                     need(data.itemCodes, item.itemCode, where, "item");
+            }
+        }
+    };
+
+    for (const map of data.maps) {
+        for (const slot of map.npcs) {
+            const where = `map ${map.code}.${slot.id}`;
+            const template = npcs.get(slot.npcCode);
+            if (!template) {
+                errors.push(`${where}: unknown npc "${slot.npcCode}"`);
+                continue;
+            }
+            for (const c of slot.conditions ?? []) checkCondition(c, where);
+            const functions = slot.functions ?? template.functions;
+            checkFunctions(slot.functions ?? [], where);
+            // Bấm là chạy chức năng luôn: phải có chức năng để chạy (của slot hoặc của NPC).
+            if (template.autoOpen && functions.length === 0) {
+                errors.push(`${where}: npc "${template.code}" is autoOpen but has no function`);
             }
         }
         for (const monsterCode of definitionMonsterCodes(map)) {
@@ -109,6 +136,7 @@ export const findContentRefErrors = (data: ContentData): string[] => {
     }
     for (const npc of data.npcs) {
         const where = `npc ${npc.code}`;
+        checkFunctions(npc.functions, where);
         if (npc.defaultDialogueCode) need(dialogues, npc.defaultDialogueCode, where, "dialogue");
         for (const rule of npc.dialogueRules) {
             need(dialogues, rule.dialogueCode, where, "dialogue");
@@ -149,7 +177,7 @@ export const findContentRefErrors = (data: ContentData): string[] => {
                     need(npcCodes, objective.targetCode, where, "npc");
                     break;
                 case QuestObjectiveType.INTERACT:
-                    need(interactableIds, objective.targetCode, where, "interactable");
+                    need(slotIds, objective.targetCode, where, "npc slot");
                     break;
                 case QuestObjectiveType.CLEAR_DUNGEON:
                     need(data.dungeonMapCodes, objective.targetCode, where, "dungeon map");

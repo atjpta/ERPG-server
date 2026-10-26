@@ -3,6 +3,8 @@ import { RoomResponse } from "@/core/response/room-response.js";
 import { TIME_ZONE } from "@/configs/time.config.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { ItemSource } from "@/modules/items/enums/item.enum.js";
+import { NpcKind } from "@/modules/npcs/enums/npc-kind.enum.js";
+import { npcService } from "@/modules/npcs/services/npc.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
 import { masterDataCacheService } from "@/modules/master-data/services/master-data-cache.service.js";
 import type { Quest } from "@/modules/quests/entities/quest.entity.js";
@@ -120,10 +122,19 @@ export class QuestWorldService {
                 ),
             };
         });
-        const markers = room.state.npcs.map((npc) => {
-            const { marker, category } = npcMarkerFor(npc.code, quests);
-            return { npcCode: npc.code, marker, ...(category ? { category } : {}) };
-        });
+        // Vật thể (cổng, bệ teleport...) không giao / nhận quest nên không có dấu.
+        // (`ArraySchema` không có `flatMap`: lọc rồi `map`.)
+        const seen = new Set<string>();
+        const markers = room.state.npcs
+            .filter((npc) => {
+                if (seen.has(npc.code)) return false;
+                seen.add(npc.code);
+                return npcService.getByCode(npc.code)?.kind !== NpcKind.OBJECT;
+            })
+            .map((npc) => {
+                const { marker, category } = npcMarkerFor(npc.code, quests);
+                return { npcCode: npc.code, marker, ...(category ? { category } : {}) };
+            });
         const message: NpcMarkersMessage = { markers };
         RoomResponse.send(client, WorldMessage.NPC_MARKERS, message);
     }

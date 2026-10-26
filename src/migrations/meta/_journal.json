@@ -15,6 +15,13 @@
       "when": 1793024183461,
       "tag": "0001_flippant_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793032797119,
+      "tag": "0002_happy_prima",
+      "breakpoints": true
     }
   ]
 }

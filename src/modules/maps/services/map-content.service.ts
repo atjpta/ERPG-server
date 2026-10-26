@@ -1,3 +1,5 @@
+import { NpcKind } from "@/modules/npcs/enums/npc-kind.enum.js";
+import { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
 import { mapService } from "@/modules/maps/services/map.service.js";
 export class MapContentService {
@@ -25,27 +27,26 @@ export class MapContentService {
             })),
             /** Monster có thể xuất hiện trong map — client tải trước prefab của chúng. */
             monsterCodes: [...new Set(map.monsterSpawns.map((spawn) => spawn.monsterCode))],
+            /** NPC và vật thể (cổng, bệ teleport, bảng thông báo...) đặt trong map. */
             npcs: map.npcs.map((placement) => {
                 const npc = npcService.getByCode(placement.npcCode);
+                const portal = npcService
+                    .functionsOf(placement)
+                    .find((fn) => fn.type === NpcFunctionType.PORTAL);
                 return {
-                    ...placement,
+                    id: placement.id,
+                    npcCode: placement.npcCode,
+                    kind: npc?.kind ?? NpcKind.NPC,
+                    autoOpen: npc?.autoOpen ?? false,
+                    x: placement.x,
+                    y: placement.y,
+                    direction: placement.direction,
                     colliderWidth: npc?.colliderWidth ?? 0,
                     colliderHeight: npc?.colliderHeight ?? 0,
-                    interactRadius: npc?.interactRadius ?? 0,
+                    interactRadius: npcService.radiusOf(placement),
+                    ...(portal ? portal.config : {}),
                 };
             }),
-            interactables: map.interactables.map((it) => ({
-                id: it.id,
-                type: it.type,
-                code: it.code,
-                direction: it.direction,
-                x: it.x,
-                y: it.y,
-                radius: it.radius,
-                ...(it.type === "portal"
-                    ? { targetMapCode: it.targetMapCode, targetSpawnId: it.targetSpawnId }
-                    : {}),
-            })),
         };
     }
 }

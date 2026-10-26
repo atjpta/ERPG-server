@@ -157,6 +157,7 @@ test("dialogue: phiên thoại theo player, đi tới node khác, đóng khi r�
     const session = sessions.start("p1", {
         sourceCode: "npc",
         npcCode: "npc",
+        slotId: "npc_slot",
         dialogueCode: "d",
         nodeId: "start",
         x: 5,

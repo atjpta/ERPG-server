@@ -345,8 +345,7 @@
             "y": 27.95
         }
     ],
-    "npcs": [],
-    "interactables": [
+    "npcs": [
         {
             "id": "to_village",
             "x": -11.5,

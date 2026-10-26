@@ -5,8 +5,8 @@ import { ItemRarity } from "@/modules/items/enums/item.enum.js";
 import { MapSpawnKind } from "@/modules/maps/enums/game-map.enum.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
 import { GateCode } from "@/modules/maps/enums/gate-code.enum.js";
-import { InteractableCode } from "@/modules/maps/enums/interactable-code.enum.js";
 import { MonsterType, RANDOM_MONSTER_TYPE } from "@/modules/monsters/enums/monster-type.enum.js";
+import { NpcFunctionSchema } from "@/modules/npcs/schemas/npc-function.schema.js";
 import { RewardSpecSchema } from "@/modules/rewards/schemas/reward-spec.schema.js";
 
 /**
@@ -48,46 +48,20 @@ export type MonsterGroup = z.infer<typeof MonsterGroupSchema>;
 
 const SpawnPointDefSchema = z.object({ id: idSchema, kind: z.enum(MapSpawnKind) });
 
-const NpcSlotSchema = z.object({
-    /** Id slot trong map (Unity đặt vị trí theo id này). */
+/**
+ * Một NPC / vật thể đặt trong map. Template (`npcs`) cho thoại, bán kính, chức năng mặc định; slot chỉ ghi đè phần riêng của chỗ đặt này:
+ * `radius`, `conditions` (không thoả thì không tương tác được) và `functions` (thay hẳn `functions` của template — vd đích của từng cổng).
+ */
+export const NpcSlotSchema = z.object({
+    /** Id slot, duy nhất trong mọi map (client, quest `INTERACT` và Unity đặt vị trí theo id này). */
     id: idSchema,
     npcCode: z.string().min(1),
-});
-
-const interactableBase = {
-    id: idSchema,
-    /** Diện mạo để client chọn prefab. */
-    code: z.enum(InteractableCode).optional(),
-    radius: z.number().positive().default(1.5),
+    /** Bán kính tương tác riêng của chỗ này; bỏ trống = `npcs.interactRadius` (từ `npc_config`). */
+    radius: z.number().positive().optional(),
     conditions: z.array(ConditionSchema).optional(),
-};
-
-export const InteractableDefSchema = z.discriminatedUnion("type", [
-    z.object({
-        ...interactableBase,
-        type: z.literal("portal"),
-        targetMapCode: z.string().min(1),
-        targetSpawnId: idSchema,
-    }),
-    z.object({
-        ...interactableBase,
-        type: z.literal("gather"),
-        reward: RewardSpecSchema,
-        respawnSec: z.number().int().positive(),
-    }),
-    z.object({ ...interactableBase, type: z.literal("sign"), dialogueCode: z.string().min(1) }),
-    /**
-     * Bệ teleport (dịch chuyển nhanh): dùng thì mở danh sách mọi map có bệ teleport, chọn map nào là tới
-     * ngay bệ teleport của map đó. Không có đích cố định — map nào có teleport thì là điểm đến.
-     */
-    z.object({
-        ...interactableBase,
-        type: z.literal("teleport"),
-        /** Ai cũng teleport tới map này được, không cần từng đến (ví dụ phòng tập). Vẫn kiểm `minLevel`. */
-        openToAll: z.boolean().optional(),
-    }),
-]);
-export type InteractableDef = z.infer<typeof InteractableDefSchema>;
+    functions: z.array(NpcFunctionSchema).optional(),
+});
+export type NpcSlot = z.infer<typeof NpcSlotSchema>;
 
 const DungeonPhaseDefSchema = z.object({
     id: idSchema,
@@ -209,8 +183,8 @@ export const MapDefinitionSchema = z
         spawnPoints: z.array(SpawnPointDefSchema).min(1),
         /** Nhóm quái của map thường (dungeon dùng nhóm trong từng phase). */
         monsterGroups: z.array(MonsterGroupSchema).default([]),
+        /** NPC và vật thể (cổng, bệ teleport, bảng thông báo...) đặt trong map. */
         npcs: z.array(NpcSlotSchema).default([]),
-        interactables: z.array(InteractableDefSchema).default([]),
         dungeon: DungeonDefSchema.optional(),
     })
     .superRefine((map, ctx) => {
@@ -260,11 +234,6 @@ export const MapDefinitionSchema = z
         map.npcs.forEach((npc, i) => {
             if (npcIds.has(npc.id)) duplicate(["npcs", i, "id"]);
             npcIds.add(npc.id);
-        });
-        const interactableIds = new Set<string>();
-        map.interactables.forEach((it, i) => {
-            if (interactableIds.has(it.id)) duplicate(["interactables", i, "id"]);
-            interactableIds.add(it.id);
         });
     });
 

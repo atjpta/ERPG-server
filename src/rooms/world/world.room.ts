@@ -28,7 +28,6 @@ import { AuthenticatedPlayerRoom } from "@/rooms/authenticated-player.room.js";
 import { dungeonExpectationService } from "@/modules/maps/services/dungeon-expectation.service.js";
 import { partyDungeonWorldService } from "@/rooms/world/modules/dungeons/services/party-dungeon.world.service.js";
 import { skillDeliveryWorldService } from "@/rooms/world/modules/combat/services/skill-delivery.world.service.js";
-import { InteractableWorldState } from "@/modules/maps/state/interactable.state.js";
 import { NpcWorldState } from "@/modules/npcs/state/npc.state.js";
 import { dialogueWorldService } from "@/rooms/world/modules/content/services/dialogue.world.service.js";
 import { questWorldService } from "@/rooms/world/modules/content/services/quest.world.service.js";
@@ -210,25 +209,13 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
                 .map(
                     (placement) =>
                         new NpcWorldState({
+                            id: placement.id,
                             code: placement.npcCode,
                             x: placement.x,
                             y: placement.y,
                             direction: placement.direction,
                         })
                 )
-        );
-        // Dựng state từ `game_maps.interactables` lúc tạo room.
-        this.state.interactables.push(
-            ...map.interactables.map(
-                (it) =>
-                    new InteractableWorldState({
-                        id: it.id,
-                        kind: it.type,
-                        x: it.x,
-                        y: it.y,
-                        code: it.code,
-                    })
-            )
         );
         if (instanceId !== undefined) {
             const expectation = await dungeonExpectationService.get(serverId, instanceId);

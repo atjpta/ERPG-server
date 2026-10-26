@@ -39,8 +39,10 @@ export interface DialogueEndMessage {
 
 export interface NpcFunctionOpenMessage {
     npcCode: string;
+    /** Id slot của NPC / vật thể đã mở chức năng (`interactNpc { id }`). */
+    slotId: string;
     functionId: string;
-    /** NpcFunctionType: shop, storage, enhance, refine, disassemble, quest_board. */
+    /** NpcFunctionType: shop, storage, enhance, refine, disassemble, quest_board (UI); teleport mở bằng `teleportList`. */
     type: string;
     /** Tham số riêng của chức năng, dạng JSON. */
     config: string;

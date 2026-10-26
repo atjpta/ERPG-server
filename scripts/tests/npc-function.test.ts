@@ -27,6 +27,7 @@ function fakeRoom(position: { x: number; y: number } | null) {
 const open = (room: WorldRoom, type: NpcFunctionType) =>
     room.npcFunctions.open(PLAYER, {
         npcCode: "blacksmith",
+        slotId: "npc_blacksmith",
         functionId: "fn",
         type,
         ...NPC,

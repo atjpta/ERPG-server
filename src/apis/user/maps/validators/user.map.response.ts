@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { MapStatus, MapType } from "@/modules/maps/enums/map.enum.js";
-import { InteractableCode } from "@/modules/maps/enums/interactable-code.enum.js";
+import { NpcKind } from "@/modules/npcs/enums/npc-kind.enum.js";
 
 /*
  * Schema `data` của endpoint `/user/maps*` — nguồn để `yarn unity:network` sinh class C#.
@@ -53,27 +53,23 @@ export const UserMapContentResponse = z.object({
     ),
     /** Monster có thể xuất hiện — client tải trước prefab. */
     monsterCodes: z.array(z.string()),
+    /** NPC và vật thể (cổng, bệ teleport, bảng thông báo...) đặt trong map. */
     npcs: z.array(
         z.object({
+            /** Id slot: gửi `interactNpc { id }`; duy nhất trong mọi map. */
+            id: z.string(),
             npcCode: z.string(),
+            kind: z.enum(NpcKind),
+            /** Bấm vào là chạy chức năng ngay, không mở thoại (cổng, bệ teleport). */
+            autoOpen: z.boolean(),
             x: z.number(),
             y: z.number(),
-            direction: z.enum(["left", "right"]),
+            /** NPC nhìn trái / phải; cổng chỉ hướng mũi tên. */
+            direction: z.enum(["up", "down", "left", "right"]),
             colliderWidth: z.number(),
             colliderHeight: z.number(),
             interactRadius: z.number(),
-        })
-    ),
-    interactables: z.array(
-        z.object({
-            id: z.string(),
-            type: z.enum(["portal", "gather", "sign", "teleport"]),
-            code: z.enum(InteractableCode).optional(),
-            direction: z.enum(["up", "down", "left", "right"]).optional(),
-            x: z.number(),
-            y: z.number(),
-            radius: z.number(),
-            /** Chỉ portal. */
+            /** Chỉ cổng (chức năng `portal`). */
             targetMapCode: z.string().optional(),
             targetSpawnId: z.string().optional(),
         })

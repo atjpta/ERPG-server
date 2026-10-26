@@ -3,7 +3,6 @@ import { ClassCode } from "@/modules/classes/enums/class-code.enum.js";
 import { DialogueCode } from "@/modules/dialogues/enums/dialogue-code.enum.js";
 import { ItemCode } from "@/modules/items/enums/item-code.enum.js";
 import { GateCode } from "@/modules/maps/enums/gate-code.enum.js";
-import { InteractableCode } from "@/modules/maps/enums/interactable-code.enum.js";
 import { MapCode } from "@/modules/maps/enums/map-code.enum.js";
 import { MonsterCode } from "@/modules/monsters/enums/monster-code.enum.js";
 import { NpcCode } from "@/modules/npcs/enums/npc-code.enum.js";
@@ -24,5 +23,4 @@ export const CATALOG_CODES = {
     skills: SkillCode,
     currencies: CurrencyCode,
     gates: GateCode,
-    interactables: InteractableCode,
 } as const;

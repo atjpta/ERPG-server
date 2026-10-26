@@ -56,7 +56,7 @@ tick-by-tick fields (position, hp/mp, cooldowns) in the Schema; the room registe
 leaving, map change). Wallet changes go through `room.players.credit/debit`, items and points through `PlayerWorldState.applyOps`
 (synchronous, atomic, saved within 500 ms); the global room resends `inventory` when the runtime emits `bagChanged`.
 Colyseus schemas live in `src/modules/<feature>/state/`: player (`PlayerWorldState`, `MoveWorldInput`),
-owned skills in skills, monsters in monsters, NPCs in npcs, interactables / dungeon state in maps,
+owned skills in skills, monsters in monsters, NPCs and map objects (portals, teleport pads, gatherables) in npcs, dungeon state in maps,
 hitboxes / projectiles / areas / auras in combat, and the aggregate `WorldState` in world.
 `scripts/generate-room-schemas.mjs` discovers them recursively in `src/rooms` and `src/modules`. Generated Unity schemas stay in `Assets/ERPG/Scripts/Network/Schema`.
 Do not manually move or edit generated C# schemas to match feature folders.

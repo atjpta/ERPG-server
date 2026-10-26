@@ -180,29 +180,41 @@
             ]
         }
     ],
-    "npcs": [],
-    "interactables": [
+    "npcs": [
         {
             "id": "to_village",
-            "code": "portal",
+            "npcCode": "portal_gate",
             "radius": 1.2,
-            "type": "portal",
-            "targetMapCode": "greenfield_village",
-            "targetSpawnId": "from_field"
+            "functions": [
+                {
+                    "id": "enter",
+                    "type": "portal",
+                    "config": {
+                        "targetMapCode": "greenfield_village",
+                        "targetSpawnId": "from_field"
+                    }
+                }
+            ]
         },
         {
             "id": "to_slime_hollow",
-            "code": "entry_dungeon",
+            "npcCode": "portal_dungeon",
             "radius": 1.5,
-            "type": "portal",
-            "targetMapCode": "slime_hollow",
-            "targetSpawnId": "from_plains"
+            "functions": [
+                {
+                    "id": "enter",
+                    "type": "portal",
+                    "config": {
+                        "targetMapCode": "slime_hollow",
+                        "targetSpawnId": "from_plains"
+                    }
+                }
+            ]
         },
         {
             "id": "teleport_plains",
-            "code": "teleport",
-            "radius": 1.5,
-            "type": "teleport"
+            "npcCode": "teleport_pad",
+            "radius": 1.5
         }
     ]
 }

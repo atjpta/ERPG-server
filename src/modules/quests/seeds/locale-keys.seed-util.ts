@@ -10,7 +10,7 @@ import type { Quest } from "@/modules/quests/entities/quest.entity.js";
  * tra bảng text theo các key này. Xuất ra `locale-keys.json` để người dịch đối chiếu thiếu sót.
  */
 export const collectLocaleKeys = (data: {
-    maps: readonly Pick<MapDefinition, "code" | "interactables">[];
+    maps: readonly Pick<MapDefinition, "code">[];
     npcs: readonly Pick<Npc, "code">[];
     dialogues: readonly Pick<Dialogue, "code" | "nodes">[];
     quests: readonly Pick<Quest, "code" | "objectives">[];
@@ -18,7 +18,6 @@ export const collectLocaleKeys = (data: {
     const keys = new Set<string>();
     for (const map of data.maps) {
         keys.add(`map.${map.code}.name`);
-        for (const it of map.interactables) keys.add(`interactable.${it.id}.name`);
     }
     for (const npc of data.npcs) {
         keys.add(`npc.${npc.code}.name`);
