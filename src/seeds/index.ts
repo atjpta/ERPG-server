@@ -12,6 +12,7 @@ import { DialogueSeed } from "@/modules/dialogues/seeds/dialogue.seed.js";
 import { NpcSeed } from "@/modules/npcs/seeds/npc.seed.js";
 import { QuestSeed } from "@/modules/quests/seeds/quest.seed.js";
 import { MailTemplateSeed } from "@/modules/mails/seeds/mail-template.seed.js";
+import { GiftCodeSeed } from "@/modules/gift-codes/seeds/gift-code.seed.js";
 import { SkillSeed } from "@/modules/skills/seeds/skill.seed.js";
 
 const force = process.argv.includes("--force");
@@ -30,6 +31,7 @@ await DialogueSeed();
 await NpcSeed();
 await QuestSeed();
 await MailTemplateSeed();
+await GiftCodeSeed();
 await ContentRefsCheck();
 
 process.exit(0);

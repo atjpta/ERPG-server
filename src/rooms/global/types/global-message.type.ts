@@ -90,6 +90,11 @@ export enum GlobalClientMessage {
     /** `{ targetName, subject, body, items:[{instanceId, quantity}], currency:[{code, amount}], cod?:{code, amount} }` — gửi thư cho người chơi cùng server (kể cả offline). Response là `MailSendResultMessage`. */
     MAIL_SEND = "mailSend",
 
+    // ---- Gift code ----
+
+    /** `{ code }` — nhập gift code (không phân biệt hoa thường). Quà vào hộp thư bằng thư hệ thống (`mailReceived`), nhận bằng `mailClaim`. Response là `GiftCodeRedeemedMessage`. */
+    GIFT_CODE_REDEEM = "giftCodeRedeem",
+
     // ---- Player data (túi đồ, trang bị, điểm tiềm năng) ----
 
     /** `{ strength?, dexterity?, intelligence?, vitality?, luck? }` — số điểm tiềm năng muốn cộng. */

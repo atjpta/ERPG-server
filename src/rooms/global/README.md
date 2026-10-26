@@ -13,6 +13,7 @@ global/
   modules/
     chat/                   # 4 kênh world / general / party / whisper, lịch sử DB
     party/                  # lệnh party, thông báo, lời mời hết hạn (dữ liệu + luật ở src/rooms/global/modules/party)
+    gift-code/              # Nhập gift code → thư quà (request giftCodeRedeem)
     mail/                   # Hộp thư: thư hệ thống đa ngôn ngữ, thư người chơi (đính kèm, COD, thu hồi), broadcast, dọn hết hạn
     friend/                 # Bạn bè: lời mời, danh sách, presence, chặn (id bạn của người đang online ở src/rooms/global/modules/friend)
     dungeon-launch/         # DungeonLaunchGlobalService (điều phối cả party vào dungeon; world gọi `launchDungeon` qua `rooms/bus`)
@@ -126,6 +127,17 @@ quái rớt / dungeon / quest / consumable vẫn cộng thẳng vào inventory, 
 
 - Xoá tay (`mailDelete`): thư đã đọc và (không đính kèm hoặc đã nhận); COD chưa nhận phải nhận hoặc trả lại.
 - Xoá tài khoản: `mails` có FK `onDelete: cascade` tới người nhận (người gửi bị xoá chỉ mất liên kết, `senderName` là bản chụp tên).
+
+## Gift code
+
+Dữ liệu ở DB (`modules/gift-codes`): `gift_codes` (mã IN HOA, `serverId` null = mọi server, `startsAt`/`expiresAt`, `maxUses`/`usedCount`, `reward` kiểu `RewardSpec`, `active`) và
+`gift_code_redemptions` (unique `(gift_code_id, player_id)` = mỗi nhân vật một lần; không FK tới thư nên xoá thư không mở khoá nhập lại). Cấu hình ở master data `gift_code_config` (rate limit nhập).
+
+- Request `giftCodeRedeem { code }` (`GiftCodeRedeemGlobalCommand`): rate limit theo `playerId` (tính cả lần sai), rồi `giftCodeService.redeem`: kiểm bật / server / thời hạn, rồi MỘT transaction
+  { ghi biên nhận, tăng `used_count` có điều kiện (`max_uses`), `mailService.sendReward` mẫu `gift_code` }. Hết lượt thì rollback luôn biên nhận. Quà vào **hộp thư** (push `mailReceived`), người chơi nhận bằng `mailClaim`.
+- Lỗi: `GIFT_CODE_NOT_FOUND` (sai mã / tắt / sai server, gộp để không lộ mã nào có thật), `GIFT_CODE_NOT_STARTED`, `GIFT_CODE_EXPIRED`, `GIFT_CODE_ALREADY_REDEEMED`, `GIFT_CODE_EXHAUSTED`, `TOO_MANY_REQUESTS`.
+- Code mẫu để test (`WELCOME`, `GEMS100`, `EXPIRED`, `NOTYET`, `DISABLED`) do `yarn seed` tạo (`gift-code.seed.ts`). Chưa có API admin: dev tạo / tắt code bằng `yarn mail:tool giftcode create|list|disable|enable` (xem đầu `scripts/mail-tool.ts`).
+- Xoá tài khoản: `gift_code_redemptions` có FK `onDelete: cascade` tới nhân vật.
 
 ## Dungeon
 

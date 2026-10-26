@@ -808,6 +808,50 @@ await sleep(500); // chờ world báo presence lên global
     console.info("✅ mail expiry sweeps the mail and returns the attachment");
 }
 
+// ---- Gift code (global): nhập code → thư quà (push mailReceived) → nhận bằng mailClaim --------------------
+{
+    const giftTool = (args: string) =>
+        execSync(`yarn -s mail:tool giftcode ${args}`, {
+            cwd: process.cwd(),
+            stdio: "pipe",
+        }).toString();
+    const code = `SMOKE${Date.now()}`;
+    const received = inbox<{ mail: { id: string; reward?: { currency: { amount: number }[] } } }>(
+        global1,
+        "mailReceived"
+    );
+    expectCode(
+        await request(global1, "giftCodeRedeem", { code: "NOSUCHCODE" }),
+        "GIFT_CODE_NOT_FOUND",
+        "gift code unknown"
+    );
+    giftTool(`create ${code} --gold 100 --max 5`);
+    const before = received.length;
+    const redeemed = expectOk(
+        await request<{ mailId: string }>(global1, "giftCodeRedeem", { code: code.toLowerCase() }),
+        "giftCodeRedeem"
+    );
+    await until(() => received.length > before, "mailReceived push for the gift code");
+    if (received.at(-1)!.data.mail.id !== redeemed.mailId)
+        throw new Error("gift code mail id must match the push");
+    expectCode(
+        await request(global1, "giftCodeRedeem", { code }),
+        "GIFT_CODE_ALREADY_REDEEMED",
+        "gift code twice"
+    );
+    expectOk(
+        await request(global1, "mailClaim", { mailId: redeemed.mailId }),
+        "claim gift code mail"
+    );
+    giftTool(`disable ${code}`);
+    expectCode(
+        await request(global2, "giftCodeRedeem", { code }),
+        "GIFT_CODE_NOT_FOUND",
+        "gift code disabled"
+    );
+    console.info("✅ gift code: redeem → mail → claim, once per character, disabled code refused");
+}
+
 // ---- Party (global): tạo, mời, vào, rời, offline là rời ---------------------------------------------
 {
     interface PartyState {

@@ -187,6 +187,12 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
         },
         note: "Mail: hạn thư (ngày), số thư tối đa, ngôn ngữ + ngôn ngữ mặc định, độ dài, số món đính kèm, rate limit gửi, trần giá COD",
     },
+    [MasterDataKey.GIFT_CODE_CONFIG]: {
+        value: {
+            redeemRateLimit: { limit: 5, windowSeconds: 60 },
+        },
+        note: "Gift code: rate limit nhập code của mỗi nhân vật (chống dò mã)",
+    },
 };
 
 export const MasterDataSeed = async () => {

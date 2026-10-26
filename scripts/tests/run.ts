@@ -9,6 +9,7 @@ const [suite, filter] = process.argv.slice(2);
 const suites: Record<string, () => Promise<unknown>> = {
     friend: () => import("./friend-concurrency.test.js"),
     mail: () => import("./mail-transfer.test.js"),
+    giftcode: () => import("./gift-code.test.js"),
     state: () => import("./player-state.test.js"),
     remote: () => import("./remote-player-state.test.js"),
     world: () => import("./world-state.test.js"),

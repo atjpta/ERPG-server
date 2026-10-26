@@ -19,4 +19,5 @@ export enum MasterDataKey {
     CHAT_CONFIG = "chat_config",
     FRIEND_CONFIG = "friend_config",
     MAIL_CONFIG = "mail_config",
+    GIFT_CODE_CONFIG = "gift_code_config",
 }
