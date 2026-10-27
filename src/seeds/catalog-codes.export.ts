@@ -12,6 +12,8 @@ const CATALOG_CODE_NAMES: Record<keyof typeof CATALOG_CODES, string> = {
     monsters: "MonsterCode",
     npcs: "NpcCode",
     quests: "QuestCode",
+    recipes: "RecipeCode",
+    recipeGroups: "RecipeGroupCode",
     skills: "SkillCode",
     currencies: "CurrencyCode",
     gates: "GateCode",

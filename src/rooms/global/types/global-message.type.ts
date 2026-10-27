@@ -113,6 +113,8 @@ export enum GlobalClientMessage {
     ENHANCE_EQUIPMENT = "enhanceEquipment",
     /** `{ instanceId }` — tinh hoá lên rarity kế tiếp. */
     REFINE_EQUIPMENT = "refineEquipment",
+    /** `{ recipeCode, quantity? }` — chế tạo (mặc định 1 lần): trừ nguyên liệu + tiền, item vào túi. Chỉ chạy khi đang mở chức năng `crafting` của NPC và còn đứng gần; công thức phải thuộc nhóm NPC đó giữ. Response là `CraftResultMessage`. */
+    CRAFT = "craft",
     /** `{ instanceIds }` — phân rã trang bị trong túi ra tinh linh + bụi. */
     DISASSEMBLE_ITEMS = "disassembleItems",
     /** Giống `disassembleItems` nhưng chỉ tính thử — trả `disassemblePreview`, không đổi gì trên player. */

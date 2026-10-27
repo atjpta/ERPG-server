@@ -1,6 +1,8 @@
 import type { Dialogue } from "@/modules/dialogues/entities/dialogue.entity.js";
 import type { MapDefinition } from "@/modules/maps/schemas/map-definition.schema.js";
 import { definitionMonsterCodes } from "@/modules/maps/seeds/map-build.seed-util.js";
+import type { RecipeGroup } from "@/modules/crafting/entities/recipe-group.entity.js";
+import type { Recipe } from "@/modules/crafting/entities/recipe.entity.js";
 import type { Npc } from "@/modules/npcs/entities/npc.entity.js";
 import { NpcFunctionType, type NpcFunction } from "@/modules/npcs/schemas/npc-function.schema.js";
 import { QuestObjectiveType } from "@/modules/quests/enums/quest.enum.js";
@@ -26,6 +28,19 @@ export interface ContentData {
         | "conditions"
     >[];
     itemCodes: ReadonlySet<string>;
+    /** Loại item theo code (kiểm nguyên liệu chế tạo xếp chồng được, `resultMetadata` chỉ cho trang bị). */
+    itemTypes?: ReadonlyMap<string, string>;
+    recipeGroups?: readonly Pick<RecipeGroup, "code">[];
+    recipes?: readonly Pick<
+        Recipe,
+        | "code"
+        | "groupCodes"
+        | "resultItemCode"
+        | "resultLevel"
+        | "resultRarity"
+        | "resultMetadata"
+        | "ingredients"
+    >[];
     monsterCodes: ReadonlySet<string>;
     /** Code map dungeon (kể cả map placeholder chưa có file Unity) — mục tiêu `clear_dungeon` trỏ vào đây. */
     dungeonMapCodes: ReadonlySet<string>;
@@ -86,6 +101,8 @@ export const findContentRefErrors = (data: ContentData): string[] => {
         }
     };
 
+    const recipeGroupCodes = new Set((data.recipeGroups ?? []).map((group) => group.code));
+    const groupsWithRecipes = new Set((data.recipes ?? []).flatMap((recipe) => recipe.groupCodes));
     /** Cấu hình chức năng tham chiếu code có thật: cổng trỏ map + spawn, vật thu thập cho item có thật. */
     const checkFunctions = (functions: readonly NpcFunction[], where: string) => {
         for (const fn of functions) {
@@ -95,6 +112,14 @@ export const findContentRefErrors = (data: ContentData): string[] => {
                 if (!target) errors.push(`${where}: unknown map "${targetMapCode}"`);
                 else if (!target.spawnPoints.some((p) => p.id === targetSpawnId))
                     errors.push(`${where}: unknown spawn "${targetMapCode}.${targetSpawnId}"`);
+            }
+            if (fn.type === NpcFunctionType.CRAFTING) {
+                for (const group of fn.config.recipeGroups) {
+                    need(recipeGroupCodes, group, where, "recipe group");
+                    if (recipeGroupCodes.has(group) && !groupsWithRecipes.has(group)) {
+                        errors.push(`${where}: recipe group "${group}" has no recipe`);
+                    }
+                }
             }
             if (fn.type === NpcFunctionType.GATHER) {
                 for (const item of fn.config.reward.items)
@@ -155,6 +180,35 @@ export const findContentRefErrors = (data: ContentData): string[] => {
                 for (const a of option.actions ?? []) {
                     if (a.type !== "open_function") checkAction(a, where);
                 }
+            }
+        }
+    }
+    for (const recipe of data.recipes ?? []) {
+        const where = `recipe ${recipe.code}`;
+        for (const group of recipe.groupCodes) need(recipeGroupCodes, group, where, "recipe group");
+        need(data.itemCodes, recipe.resultItemCode, where, "item");
+        const resultType = data.itemTypes?.get(recipe.resultItemCode);
+        const isEquipment = resultType === "equipment";
+        if (recipe.resultMetadata && resultType && !isEquipment) {
+            errors.push(
+                `${where}: resultMetadata is only for equipment, "${recipe.resultItemCode}" is ${resultType}`
+            );
+        }
+        if (
+            isEquipment &&
+            !recipe.resultMetadata &&
+            (!recipe.resultLevel || !recipe.resultRarity)
+        ) {
+            errors.push(
+                `${where}: equipment without resultMetadata needs resultLevel and resultRarity`
+            );
+        }
+        for (const ingredient of recipe.ingredients) {
+            need(data.itemCodes, ingredient.itemCode, where, "item");
+            if (data.itemTypes?.get(ingredient.itemCode) === "equipment") {
+                errors.push(
+                    `${where}: ingredient "${ingredient.itemCode}" is equipment (only stackable items can be ingredients)`
+                );
             }
         }
     }

@@ -1,4 +1,6 @@
 import { db } from "@/configs/postgres.config.js";
+import { RecipeGroups } from "@/modules/crafting/entities/recipe-group.entity.js";
+import { Recipes } from "@/modules/crafting/entities/recipe.entity.js";
 import { Dialogues } from "@/modules/dialogues/entities/dialogue.entity.js";
 import { Items } from "@/modules/items/entities/item.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
@@ -10,12 +12,14 @@ import { findContentRefErrors } from "@/modules/quests/seeds/content-refs.seed-u
 
 /** Chạy sau mọi seed nội dung: tham chiếu code sai (NPC, item, quest, thoại...) thì dừng seed. */
 export const ContentRefsCheck = async () => {
-    const [npcs, dialogues, quests, items, monsters] = await Promise.all([
+    const [npcs, dialogues, quests, items, monsters, recipes, recipeGroups] = await Promise.all([
         db.select().from(Npcs),
         db.select().from(Dialogues),
         db.select().from(Quests),
-        db.select({ code: Items.code }).from(Items),
+        db.select({ code: Items.code, type: Items.type }).from(Items),
         db.select({ code: Monsters.code }).from(Monsters),
+        db.select().from(Recipes),
+        db.select({ code: RecipeGroups.code }).from(RecipeGroups),
     ]);
     const errors = findContentRefErrors({
         maps: loadMapDefinitions(),
@@ -23,6 +27,9 @@ export const ContentRefsCheck = async () => {
         dialogues,
         quests,
         itemCodes: new Set(items.map((item) => item.code)),
+        itemTypes: new Map(items.map((item) => [item.code, item.type])),
+        recipes,
+        recipeGroups,
         monsterCodes: new Set(monsters.map((monster) => monster.code)),
         dungeonMapCodes: new Set(
             loadMapDefinitions()

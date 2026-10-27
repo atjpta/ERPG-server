@@ -2,6 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { CATALOG_CODES } from "@/seeds/catalog-codes.constant.js";
 import { SERVERS } from "@/modules/auth/seeds/game-server.seed-data.js";
 import { CLASSES } from "@/modules/classes/seeds/class.seed-data.js";
+import { RECIPE_GROUPS } from "@/modules/crafting/seeds/recipe-group.seed-data.js";
+import { RECIPES } from "@/modules/crafting/seeds/recipe.seed-data.js";
 import { DIALOGUES } from "@/modules/dialogues/seeds/dialogue.seed-data.js";
 import { ITEMS } from "@/modules/items/seeds/item.seed-data.js";
 import { NPCS } from "@/modules/npcs/seeds/npc.seed-data.js";
@@ -42,6 +44,8 @@ export function checkCatalogCodes(requireAuthoredData = true): void {
         monsters: fileCodes(new URL("../modules/monsters/data/", import.meta.url), ".monster.json"),
         npcs: NPCS.map((row) => row.code),
         quests: [...QUESTS.map((row) => row.code), ...DAILY_QUEST_CODES],
+        recipes: RECIPES.map((row) => row.code),
+        recipeGroups: RECIPE_GROUPS.map((row) => row.code),
         skills: fileCodes(new URL("../modules/skills/data/", import.meta.url), ".skill.json"),
     };
     for (const [kind, values] of Object.entries(authored)) {

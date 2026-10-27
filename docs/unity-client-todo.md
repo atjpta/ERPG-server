@@ -150,3 +150,9 @@ Server: room `party` riêng cho mỗi party (xem `docs/content-authoring.md`, m�
 - [ ] SDK: bỏ `WorldRoomClient.Interact(id)` → dùng `InteractNpc(id)` (id slot, không còn `npcCode`); `UserMapContentResponse.interactables` bỏ, `npcs[]` có thêm `id`, `kind` (`npc`/`object`), `autoOpen`, `direction` 4 hướng, `targetMapCode`/`targetSpawnId` (cổng).
 - [ ] `NpcCode` mới cho vật thể: `portal_gate`, `portal_dungeon` (cổng vào dungeon), `teleport_pad`, `notice_board` — prefab thay cho `InteractableCode`. `NpcWorldState` thêm `id` và `active` (điểm thu thập đã nhặt thì ẩn).
 - [ ] Message `npcFunctionOpen` thêm `slotId`; bệ teleport không dùng `npcFunctionOpen` mà gửi `teleportList`.
+
+## Chế tạo (crafting)
+
+- [ ] SDK: `GlobalRoomClient.Craft(recipeCode, quantity?)` → `CraftResultMessage { recipeCode, quantity, items[] }`; mã lỗi `CraftingErrorCode` (`RECIPE_NOT_FOUND`, `RECIPE_NOT_AVAILABLE`, `CRAFT_QUANTITY_TOO_HIGH`) cùng `NPC_FUNCTION_NOT_OPEN` / `TOO_FAR` / `ITEM_NOT_ENOUGH` / `CURRENCY_NOT_ENOUGH` / `INVENTORY_FULL` / `LEVEL_TOO_LOW`.
+- [ ] Màn hình chế tạo mở từ `npcFunctionOpen` loại `crafting`: `config` (JSON) có `recipeGroups` (code nhóm); công thức/nhóm lấy từ `content.json` (`recipeGroups`, `recipes` với `ingredients` đã sắp theo `order`), tên tra locale `recipe.<code>.name` / `recipe_group.<code>.name`. Đóng màn hình khi nhận `NPC_FUNCTION_NOT_OPEN` / `TOO_FAR`.
+- [ ] Catalog mới `RecipeCode`, `RecipeGroupCode` (`yarn codes:generate`).

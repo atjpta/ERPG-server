@@ -1,4 +1,6 @@
 import { GameServerCode } from "@/modules/auth/enums/game-server-code.enum.js";
+import { RecipeCode } from "@/modules/crafting/enums/recipe-code.enum.js";
+import { RecipeGroupCode } from "@/modules/crafting/enums/recipe-group-code.enum.js";
 import { ClassCode } from "@/modules/classes/enums/class-code.enum.js";
 import { DialogueCode } from "@/modules/dialogues/enums/dialogue-code.enum.js";
 import { ItemCode } from "@/modules/items/enums/item-code.enum.js";
@@ -20,6 +22,8 @@ export const CATALOG_CODES = {
     monsters: MonsterCode,
     npcs: NpcCode,
     quests: QuestCode,
+    recipes: RecipeCode,
+    recipeGroups: RecipeGroupCode,
     skills: SkillCode,
     currencies: CurrencyCode,
     gates: GateCode,

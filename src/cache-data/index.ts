@@ -1,3 +1,4 @@
+import { recipeService } from "@/modules/crafting/services/recipe.service.js";
 import { classService } from "@/modules/classes/services/class.service.js";
 import { dialogueService } from "@/modules/dialogues/services/dialogue.service.js";
 import { npcService } from "@/modules/npcs/services/npc.service.js";
@@ -17,5 +18,6 @@ export const setCacheDataApp = () => {
         dialogueService.setCacheData(),
         npcService.setCacheData(),
         questService.setCacheData(),
+        recipeService.setCacheData(),
     ]);
 };

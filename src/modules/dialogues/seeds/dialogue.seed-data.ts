@@ -25,6 +25,11 @@ export const DIALOGUES: NewDialogue[] = [
                         hideIfFail: false,
                         actions: [{ type: "open_function", function: "enhance" }],
                     },
+                    {
+                        id: "craft",
+                        hideIfFail: false,
+                        actions: [{ type: "open_function", function: "craft" }],
+                    },
                     { id: "bye", hideIfFail: false },
                 ],
             },
@@ -153,6 +158,11 @@ export const DIALOGUES: NewDialogue[] = [
                         hideIfFail: true,
                         conditions: [{ type: "flag", key: "unlock.alchemy" }],
                         actions: [{ type: "open_function", function: "refine" }],
+                    },
+                    {
+                        id: "craft",
+                        hideIfFail: false,
+                        actions: [{ type: "open_function", function: "craft" }],
                     },
                     { id: "bye", hideIfFail: false },
                 ],

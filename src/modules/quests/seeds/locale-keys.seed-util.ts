@@ -14,6 +14,8 @@ export const collectLocaleKeys = (data: {
     npcs: readonly Pick<Npc, "code">[];
     dialogues: readonly Pick<Dialogue, "code" | "nodes">[];
     quests: readonly Pick<Quest, "code" | "objectives">[];
+    recipes?: readonly { code: string }[];
+    recipeGroups?: readonly { code: string }[];
 }): string[] => {
     const keys = new Set<string>();
     for (const map of data.maps) {
@@ -37,6 +39,8 @@ export const collectLocaleKeys = (data: {
         keys.add(`quest.${code}.desc`);
         keys.add(`quest.${code}.obj.${objectiveId}`);
     }
+    for (const recipe of data.recipes ?? []) keys.add(`recipe.${recipe.code}.name`);
+    for (const group of data.recipeGroups ?? []) keys.add(`recipe_group.${group.code}.name`);
     for (const dialogue of data.dialogues) {
         for (const node of dialogue.nodes) {
             keys.add(dialogueGraphService.nodeTextKey(dialogue.code, node));

@@ -73,6 +73,7 @@ export class NpcFunctionWorldService {
             slotId: slot.id,
             functionId: fn.id,
             type: fn.type,
+            config: fn.config,
             x: slot.x,
             y: slot.y,
             radius: npcService.radiusOf(slot),

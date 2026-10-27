@@ -323,6 +323,78 @@ if (content.npcs.some((npc: { npcCode: string }) => npc.npcCode === "village_chi
         "teleportTo passes the pad check once the pad is open"
     );
     console.info("✅ teleport pad opened by interactNpc: teleportList sent, teleportTo unlocked");
+
+    // Chế tạo: chưa mở chức năng thì từ chối; mở `craft` ở thợ rèn (thoại → open_function) rồi chế đá cường hoá.
+    expectCode(
+        await request(global1, "craft", { recipeCode: "craft_enhance_stone_2" }),
+        "NPC_FUNCTION_NOT_OPEN",
+        "craft before opening the crafting function"
+    );
+    const smith = content.npcs.find((npc: { id: string }) => npc.id === "npc_blacksmith");
+    if (!smith) throw new Error("npc_blacksmith must be placed in greenfield_village");
+    await walkTo({ x: smith.x, y: smith.y - 1 });
+    const functionOpens = inbox<{ type: string; functionId: string }>(room, "npcFunctionOpen");
+    expectOk(
+        await request(room, "interactNpc", { id: "npc_blacksmith" }),
+        "interactNpc blacksmith"
+    );
+    expectOk(await request(room, "dialogueChoose", { optionId: "craft" }), "choose craft");
+    await until(
+        () => functionOpens.some((m) => m.data.type === "crafting"),
+        "npcFunctionOpen crafting"
+    );
+    // Thợ rèn chỉ giữ nhóm "smithing": công thức bình thuốc (chỉ nhóm "alchemy") bị từ chối.
+    expectCode(
+        await request(global1, "craft", { recipeCode: "craft_hp_potion_small" }),
+        "RECIPE_NOT_AVAILABLE",
+        "recipe of another group"
+    );
+    expectCode(
+        await request(global1, "craft", { recipeCode: "no_such_recipe" }),
+        "RECIPE_NOT_FOUND",
+        "unknown recipe"
+    );
+    // Chưa có nguyên liệu → thiếu; gửi quà (3 đá cấp 1 + vàng) qua thư rồi nhận, sau đó chế được.
+    expectCode(
+        await request(global1, "craft", { recipeCode: "craft_enhance_stone_2" }),
+        "ITEM_NOT_ENOUGH",
+        "no ingredients yet"
+    );
+    const craftName = (await api("GET", "/user/players/me", undefined, auth.playerToken))
+        .name as string;
+    execSync(`yarn -s mail:tool gift ${craftName} --gold 300 --item enhance_stone_1 --qty 3`, {
+        cwd: process.cwd(),
+        stdio: "pipe",
+    });
+    const craftMails = expectOk(
+        await request<{ mails: { id: string; reward?: { items: { code?: string }[] } }[] }>(
+            global1,
+            "mailList",
+            {}
+        ),
+        "mailList for the crafting materials"
+    );
+    const gift = craftMails.mails.find((mail) =>
+        mail.reward?.items.some((item) => item.code === "enhance_stone_1")
+    );
+    if (!gift) throw new Error("the crafting materials mail must arrive");
+    expectOk(await request(global1, "mailClaim", { mailId: gift.id }), "claim crafting materials");
+    const crafted = expectOk(
+        await request<{ recipeCode: string; items: { code: string; quantity: number }[] }>(
+            global1,
+            "craft",
+            {
+                recipeCode: "craft_enhance_stone_2",
+            }
+        ),
+        "craft enhance stone"
+    );
+    if (crafted.items[0]?.code !== "enhance_stone_2" || crafted.items[0].quantity !== 1) {
+        throw new Error(`unexpected craft result ${JSON.stringify(crafted)}`);
+    }
+    console.info(
+        "✅ crafting: gated by the NPC function + its recipe groups, ingredients and gold spent, item crafted"
+    );
 }
 
 // ---- Người chơi thứ hai: tài khoản + nhân vật + world + global cùng server ---------------------------

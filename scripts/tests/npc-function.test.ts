@@ -30,10 +30,12 @@ const open = (room: WorldRoom, type: NpcFunctionType) =>
         slotId: "npc_blacksmith",
         functionId: "fn",
         type,
+        config: {},
         ...NPC,
     });
 
-const errorCode = (response: Response) => (Response.isError(response) ? response.errorCode : null);
+const errorCode = (response: Response<unknown>) =>
+    Response.isError(response) ? response.errorCode : null;
 
 test("npc function: chưa mở chức năng → NPC_FUNCTION_NOT_OPEN", async () => {
     const { room } = fakeRoom({ x: 10, y: 10 });
@@ -107,5 +109,24 @@ test("npc function: mở chức năng khác thì thay cái cũ", async () => {
         errorCode(room.npcFunctions.check(PLAYER, NpcFunctionType.ENHANCE, room.state.players)),
         NpcErrorCode.NPC_FUNCTION_NOT_OPEN,
         "old one replaced"
+    );
+});
+
+test("npc function: check trả config của chức năng đang mở (vd nhóm công thức của crafting)", async () => {
+    const { room } = fakeRoom({ x: 10, y: 10 });
+    room.npcFunctions.open(PLAYER, {
+        npcCode: "blacksmith",
+        slotId: "npc_blacksmith",
+        functionId: "craft",
+        type: NpcFunctionType.CRAFTING,
+        config: { recipeGroups: ["smithing"] },
+        ...NPC,
+    });
+    const checked = room.npcFunctions.check(PLAYER, NpcFunctionType.CRAFTING, room.state.players);
+    check(checked.success, "open and near");
+    checkEqual(
+        checked.data,
+        { functionId: "craft", config: { recipeGroups: ["smithing"] } },
+        "check carries the config the global command needs"
     );
 });

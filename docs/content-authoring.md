@@ -36,7 +36,7 @@ Thêm vào `modules/npcs/seeds/npc.seed-data.ts` (hoặc `POST /admin/npcs`), r�
 - `defaultDialogueCode`: thoại mặc định.
 - `dialogueRules`: `{ mapCode?, priority, conditions, dialogueCode }` — rule thoả điều kiện có `priority` cao nhất thắng,
   nhờ đó **cùng NPC nói khác nhau theo hoàn cảnh** (quest xong/chưa, level, class, map, flag...).
-- `functions`: UI chức năng (`shop`, `storage`, `enhance`, `refine`, `disassemble`, `quest_board`), mở bằng action `open_function`.
+- `functions`: UI chức năng (`shop`, `storage`, `enhance`, `refine`, `disassemble`, `quest_board`, `crafting`), mở bằng action `open_function`.
 - `colliderWidth/Height`: vùng chặn dưới chân NPC (hiện không dùng để chặn đường: người chơi đi xuyên qua NPC).
 
 ## Thêm thoại
@@ -98,12 +98,34 @@ Quy tắc chung: mọi tương tác với NPC đều phải kiểm tra tầm đ�
 
 **Chức năng chạy ở world hay global?** Chạy ở nơi giữ dữ liệu nó cần ghi. World giữ vị trí / map / state room; global giữ ví + túi (`transact` = một transaction DB; bản sao ở world chỉ `credit` / `debit` / `applyOps`, không rollback chung).
 
-| Chức năng                             | Chạy ở | Lý do                                                                                              |
-| ------------------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| `portal`, `teleport`, `gather`, thoại | World  | cần map, vị trí, `mapChange`, state room (`active`, hồi lại)                                       |
-| `quest_board`                         | World  | nhật ký quest do world giữ; chỉ mở danh sách                                                       |
-| `enhance`, `refine`, `disassemble`    | Global | trừ tiền + vật liệu + đổi trang bị phải cùng một transaction; world hỏi qua rpc `checkNpcFunction` |
-| `shop`, `storage` (chưa có logic)     | Global | mua / cất là nhiều bước nguyên tử (hết chỗ túi thì không trừ tiền) → cần `transact`                |
+| Chức năng                                      | Chạy ở | Lý do                                                                                            |
+| ---------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ |
+| `portal`, `teleport`, `gather`, thoại          | World  | cần map, vị trí, `mapChange`, state room (`active`, hồi lại)                                     |
+| `quest_board`                                  | World  | nhật ký quest do world giữ; chỉ mở danh sách                                                     |
+| `enhance`, `refine`, `disassemble`, `crafting` | Global | trừ tiền + nguyên liệu + đổi túi phải cùng một transaction; world hỏi qua rpc `checkNpcFunction` |
+| `shop`, `storage` (chưa có logic)              | Global | mua / cất là nhiều bước nguyên tử (hết chỗ túi thì không trừ tiền) → cần `transact`              |
+
+## Chế tạo (crafting)
+
+NPC chế tạo có chức năng `crafting` với `config: { recipeGroups: ["smithing", ...] }` (code nhóm). Mở bằng thoại như mọi chức năng UI (`open_function` với id chức năng, vd `craft`); world ghi phiên **kèm config**, lệnh `craft { recipeCode, quantity? }` ở global
+hỏi lại qua rpc `checkNpcFunction` (nhận về `config`) nên chỉ chế được công thức thuộc nhóm của NPC đang mở và còn đứng gần.
+
+Dữ liệu (bảng có tiền tố `crafting_`): `crafting_recipe_groups` (`code`, `sortOrder`) và `crafting_recipes` — seed ở `src/modules/crafting/seeds/` (`recipe-group.seed-data.ts`, `recipe.seed-data.ts`):
+
+| Trường                                       | Ý nghĩa                                                                                                          |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `groupCodes`                                 | Nhóm chứa công thức (một công thức thuộc nhiều nhóm được)                                                        |
+| `resultItemCode`, `resultQuantity`           | Item tạo ra; số lượng chỉ cho item xếp chồng                                                                     |
+| `resultMetadata`                             | Trang bị **chỉ số cố định** (`level`, `rarity`, `mainStats`, `subStats`, `rarityStats`), mỗi lần chế một bản sao |
+| `resultLevel` + `resultRarity`               | Trang bị không có `resultMetadata`: roll ngẫu nhiên như rơi đồ (loại trừ nhau với `resultMetadata`)              |
+| `ingredients[{ itemCode, quantity, order }]` | Nguyên liệu xếp chồng (không dùng trang bị); `order` là thứ tự hiển thị, không trùng trong một công thức         |
+| `cost[{ code, amount }]`, `requiredLevel`    | Tiền (nhiều loại) và level tối thiểu                                                                             |
+
+Chế `quantity` lần thì nguyên liệu và tiền nhân `quantity` (tối đa `crafting_config.maxQuantity`); trang bị ra `quantity` món riêng. Lỗi nào cũng không đổi gì (`ITEM_NOT_ENOUGH`, `CURRENCY_NOT_ENOUGH`, `INVENTORY_FULL`, `LEVEL_TOO_LOW`, `RECIPE_NOT_FOUND`,
+`RECIPE_NOT_AVAILABLE`, `CRAFT_QUANTITY_TOO_HIGH`). `ContentRefsCheck` bắt nhóm / item sai, nguyên liệu là trang bị, `resultMetadata` cho item không phải trang bị, trang bị thiếu cả metadata lẫn `resultLevel`/`resultRarity`.
+Locale key: `recipe.{code}.name`, `recipe_group.{code}.name`.
+
+**Thêm công thức:** thêm code vào `RecipeCode` (và `RecipeGroupCode` nếu nhóm mới), khai trong seed data, gắn nhóm vào `config.recipeGroups` của NPC, `yarn codes:generate`, `yarn seed`.
 
 Lệnh xem trước (`previewUpgrade`, `previewDisassemble`) chỉ đọc nên không bị chặn. Thêm chức năng NPC mới (shop, storage, quest_board): lệnh của nó gọi `npcFunctionGlobalService.require(player, NpcFunctionType.X)` trước khi làm việc
 (với lệnh túi đồ, `UpgradeGlobalCommand` đã làm sẵn qua `functionType`).

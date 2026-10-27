@@ -12,6 +12,8 @@ export enum NpcFunctionType {
     REFINE = "refine",
     DISASSEMBLE = "disassemble",
     QUEST_BOARD = "quest_board",
+    /** Chế tạo: NPC giữ danh sách nhóm công thức (`config.recipeGroups`), chế ở global room (cần phiên chức năng đang mở). */
+    CRAFTING = "crafting",
     /** Cổng dịch chuyển sang map khác (hoặc vào dungeon nếu đích là dungeon). */
     PORTAL = "portal",
     /** Bệ teleport: mở danh sách mọi map có bệ teleport. */
@@ -36,6 +38,12 @@ export const NpcFunctionSchema = z.discriminatedUnion("type", [
     z.object({ id: idSchema, type: z.literal(NpcFunctionType.REFINE), config: noConfig }),
     z.object({ id: idSchema, type: z.literal(NpcFunctionType.DISASSEMBLE), config: noConfig }),
     z.object({ id: idSchema, type: z.literal(NpcFunctionType.QUEST_BOARD), config: noConfig }),
+    z.object({
+        id: idSchema,
+        type: z.literal(NpcFunctionType.CRAFTING),
+        /** Code các nhóm công thức (`crafting_recipe_groups.code`) mà NPC này chế được. */
+        config: z.object({ recipeGroups: z.array(idSchema).min(1) }),
+    }),
     z.object({
         id: idSchema,
         type: z.literal(NpcFunctionType.PORTAL),

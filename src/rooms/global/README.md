@@ -13,6 +13,7 @@ global/
   modules/
     chat/                   # 4 kênh world / general / party / whisper, lịch sử DB
     party/                  # lệnh party, thông báo, lời mời hết hạn (dữ liệu + luật ở src/rooms/global/modules/party)
+    crafting/               # Chế tạo (request craft): công thức thuộc nhóm mà NPC đang mở giữ, trừ nguyên liệu + tiền, item vào túi
     gift-code/              # Nhập gift code → thư quà (request giftCodeRedeem)
     mail/                   # Hộp thư: thư hệ thống đa ngôn ngữ, thư người chơi (đính kèm, COD, thu hồi), broadcast, dọn hết hạn
     friend/                 # Bạn bè: lời mời, danh sách, presence, chặn (id bạn của người đang online ở src/rooms/global/modules/friend)
@@ -128,6 +129,14 @@ quái rớt / dungeon / quest / consumable vẫn cộng thẳng vào inventory, 
 
 - Xoá tay (`mailDelete`): thư đã đọc và (không đính kèm hoặc đã nhận); COD chưa nhận phải nhận hoặc trả lại.
 - Xoá tài khoản: `mails` có FK `onDelete: cascade` tới người nhận (người gửi bị xoá chỉ mất liên kết, `senderName` là bản chụp tên).
+
+## Crafting
+
+Dữ liệu ở DB (`modules/crafting`): `crafting_recipe_groups`, `crafting_recipes`; cấu hình master data `crafting_config` (`maxQuantity`). Request `craft { recipeCode, quantity? }` (`CraftGlobalCommand`, kế thừa `InventoryGlobalCommand`):
+
+1. `npcFunctionGlobalService.require(player, CRAFTING)` — hỏi world room (rpc `checkNpcFunction`) người chơi có đang mở chức năng chế tạo của NPC và còn đứng gần không; thành công trả `config` (`recipeGroups`) của chức năng đó;
+2. công thức tồn tại (`RECIPE_NOT_FOUND`) và thuộc ít nhất một nhóm trong `recipeGroups` (`RECIPE_NOT_AVAILABLE`), `quantity <= maxQuantity` (`CRAFT_QUANTITY_TOO_HIGH`);
+3. MỘT `transact` chạy `craftingService.craft`: kiểm level / nguyên liệu / tiền, trừ, tạo item (`ItemSource.CRAFT`; trang bị lấy `resultMetadata` cố định hoặc roll), kiểm chỗ túi. Lỗi nào cũng bỏ bản nháp. Chi tiết túi đến qua `inventoryChanged`.
 
 ## Gift code
 

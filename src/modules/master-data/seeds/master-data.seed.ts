@@ -193,6 +193,10 @@ const DEFAULTS: { [K in MasterDataKey]: { value: MasterDataValueMap[K]; note: st
         },
         note: "Gift code: rate limit nhập code của mỗi nhân vật (chống dò mã)",
     },
+    [MasterDataKey.CRAFTING_CONFIG]: {
+        value: { maxQuantity: 10 },
+        note: "Chế tạo: số cái tối đa mỗi lần chế",
+    },
 };
 
 export const MasterDataSeed = async () => {

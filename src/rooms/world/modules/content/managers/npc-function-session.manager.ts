@@ -1,6 +1,7 @@
 import { Response } from "@/core/response/response.js";
 import { NpcErrorCode } from "@/modules/npcs/enums/npc-error-code.enum.js";
 import type { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
+import type { OpenNpcFunction } from "@/modules/npcs/types/npc-function-check.type.js";
 import { PlayerErrorCode } from "@/modules/player/enums/player-error-code.enum.js";
 import {
     NpcFunctionSessionState,
@@ -40,7 +41,11 @@ export class NpcFunctionSessionManager {
      * Player có đang mở chức năng NPC loại `type` và còn đứng gần NPC không. Kiểm bằng vị trí hiện tại của player (không chờ tick):
      * chưa mở / mở chức năng khác → `NPC_FUNCTION_NOT_OPEN`; đã bước ra khỏi tầm → `TOO_FAR` (và đóng chức năng).
      */
-    check(playerId: string, type: NpcFunctionType, players: PlayersInRange): Response {
+    check(
+        playerId: string,
+        type: NpcFunctionType,
+        players: PlayersInRange
+    ): Response<OpenNpcFunction> {
         const session = this.sessions.get(playerId);
         const player = players.get(playerId);
         if (!session || !player || session.type !== type) {
@@ -50,7 +55,7 @@ export class NpcFunctionSessionManager {
             this.sessions.delete(playerId);
             return Response.error(PlayerErrorCode.TOO_FAR);
         }
-        return Response.success();
+        return Response.success({ functionId: session.functionId, config: session.config });
     }
 
     /** Mỗi tick: ai đã đi quá xa NPC hoặc đã rời room thì đóng chức năng (client không được báo, lần dùng kế tiếp mới nhận lỗi). */

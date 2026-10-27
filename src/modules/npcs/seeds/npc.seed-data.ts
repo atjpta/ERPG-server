@@ -1,3 +1,4 @@
+import { RecipeGroupCode } from "@/modules/crafting/enums/recipe-group-code.enum.js";
 import { NpcCode } from "@/modules/npcs/enums/npc-code.enum.js";
 import { NpcKind } from "@/modules/npcs/enums/npc-kind.enum.js";
 import type { NewNpc } from "@/modules/npcs/entities/npc.entity.js";
@@ -39,13 +40,27 @@ export const NPCS: NewNpc[] = [
     {
         code: NpcCode.BLACKSMITH,
         defaultDialogueCode: "blacksmith_default",
-        functions: [{ id: "enhance", type: NpcFunctionType.ENHANCE, config: {} }],
+        functions: [
+            { id: "enhance", type: NpcFunctionType.ENHANCE, config: {} },
+            {
+                id: "craft",
+                type: NpcFunctionType.CRAFTING,
+                config: { recipeGroups: [RecipeGroupCode.SMITHING] },
+            },
+        ],
     },
     // Giả kim: tinh hoá (mở khoá bởi quest `strange_mana`).
     {
         code: NpcCode.ALCHEMIST,
         defaultDialogueCode: "alchemist_default",
-        functions: [{ id: "refine", type: NpcFunctionType.REFINE, config: {} }],
+        functions: [
+            { id: "refine", type: NpcFunctionType.REFINE, config: {} },
+            {
+                id: "craft",
+                type: NpcFunctionType.CRAFTING,
+                config: { recipeGroups: [RecipeGroupCode.ALCHEMY] },
+            },
+        ],
     },
     {
         code: NpcCode.GENERAL_MERCHANT,

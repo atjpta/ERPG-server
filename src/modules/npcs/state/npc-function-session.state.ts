@@ -1,4 +1,4 @@
-import type { NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
+import type { NpcFunction, NpcFunctionType } from "@/modules/npcs/schemas/npc-function.schema.js";
 
 /** Đứng xa hơn bán kính của NPC cộng chừng này thì chức năng không còn dùng được. */
 export const NPC_FUNCTION_RANGE_MARGIN = 0.5;
@@ -9,6 +9,8 @@ export interface NpcFunctionSessionProps {
     slotId: string;
     functionId: string;
     type: NpcFunctionType;
+    /** `config` của chức năng đang mở (vd nhóm công thức của `crafting`) — lệnh ở global đọc lại để biết được phép làm gì. */
+    config: NpcFunction["config"];
     /** Vị trí NPC lúc mở và bán kính tương tác của NPC đó. */
     x: number;
     y: number;
@@ -21,6 +23,7 @@ export class NpcFunctionSessionState {
     readonly slotId: string;
     readonly functionId: string;
     readonly type: NpcFunctionType;
+    readonly config: NpcFunction["config"];
     readonly x: number;
     readonly y: number;
     readonly radius: number;
@@ -30,6 +33,7 @@ export class NpcFunctionSessionState {
         this.slotId = props.slotId;
         this.functionId = props.functionId;
         this.type = props.type;
+        this.config = props.config;
         this.x = props.x;
         this.y = props.y;
         this.radius = props.radius;
