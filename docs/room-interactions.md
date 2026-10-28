@@ -41,7 +41,7 @@ Mỗi player online có đúng một `PlayerState` (`room.players.get(playerId)`
   autosave mỗi `player_config.autosaveSeconds` (30 giây) cho từng player, lệch ngẫu nhiên giữa các player để không dồn vào cùng một nhịp, chỉ ghi nhóm đổi trong một câu UPDATE có khoá `revision`. Tắt server
   (`SIGTERM`) → `onBeforeShutdown` gọi `flushAll()`. Chết đột ngột: mất tối đa một chu kỳ autosave của dữ liệu không quan trọng.
 - **Thông báo cho client:** runtime phát sự kiện (`walletChanged`, `bagChanged`, `bagGranted`, `presenceChanged`,
-  `partyChanged`); mỗi room tự đăng ký và gửi push (global gửi `inventoryChanged` / `attributes`, world gửi `wallet`); trạng thái ban đầu do client tự xin (`getInventory`, `getAttributes`, `getWallet`, `getQuestList`...).
+  `partyChanged`); mỗi room tự đăng ký và gửi push (global gửi `inventoryChanged` / `attributes`, global gửi `wallet` khi đã áp xong); trạng thái ban đầu do client tự xin (`getInventory`, `getAttributes`, `getWallet`, `getQuestList`...).
 - **Vị trí:** `PlayerWorldState` (Schema, 40Hz) giữ x / y / hướng / hp / mp; world room đăng ký `capturePlace` để bản sao chụp
   khi lưu. Level / exp ghi thẳng vào runtime.
 
@@ -53,7 +53,7 @@ Giữa hai room: mọi giao tiếp đi qua `rooms/bus` (`callRoom` → `rpc` c�
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | World báo vị trí / rời world cho global           | `room.players.setPresence` / `clearPresence`; global đăng ký `presenceChanged` (báo bạn bè, rời party khi rời hẳn)            |
 | Global đổi party của player                       | `room.players.setParty`; world đăng ký `partyChanged` và cập nhật `PlayerWorldState`                                          |
-| Thưởng quái, quest, thoại, dùng bình              | World sửa runtime trực tiếp; global tự gửi `inventoryChanged` khi nhận `bagChanged`                                              |
+| Thưởng quái, quest, thoại, dùng bình              | World sửa runtime trực tiếp; global tự gửi `inventoryChanged` khi nhận `bagChanged`                                           |
 | Chủ party vào dungeon / "đi lại"                  | World gọi `launchDungeon(request)` → `callRoom(serverId, "launchDungeon")` (`rooms/bus`); global xử lý ở `rpc` của room       |
 | Global kiểm tra / đưa từng thành viên vào dungeon | `checkDungeonEntry` / `enterDungeon` theo `presence.worldRoomId` → `callRoom(worldRoomId, ...)`; world xử lý ở `rpc` của room |
 

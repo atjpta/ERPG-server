@@ -1,5 +1,4 @@
 import { Response } from "@/core/response/response.js";
-import { RoomResponse } from "@/core/response/room-response.js";
 import { DialogueSessionsState } from "@/modules/dialogues/state/dialogue-session.state.js";
 import type { NpcFunctionCheckRequest } from "@/modules/npcs/types/npc-function-check.type.js";
 import { NpcFunctionSessionManager } from "@/rooms/world/modules/content/managers/npc-function-session.manager.js";
@@ -14,7 +13,6 @@ import { SdkRoom } from "@/core/rooms/sdk-room.decorator.js";
 import { z } from "zod";
 import type { WorldRoomOptions } from "@/rooms/world/types/world-room.type.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
-import { WorldMessage } from "@/rooms/world/types/world-message.type.js";
 import { loadRoomMessages } from "@/core/utils/load-room-messages.util.js";
 import type { GameMap } from "@/modules/maps/entities/game-map.entity.js";
 import { MapType } from "@/modules/maps/enums/map.enum.js";
@@ -40,7 +38,6 @@ import { MoveWorldInput } from "@/modules/player/simulation/move.input.js";
 import { PlayerWorldState } from "@/modules/player/state/player-world.state.js";
 import { playerWorldService } from "@/rooms/world/modules/players/services/player.world.service.js";
 import { partyRewardWorldService } from "@/rooms/world/modules/rewards/services/party-reward.world.service.js";
-import type { WalletMessage } from "@/rooms/world/modules/rewards/interfaces/reward.world.message.js";
 import { WorldState } from "@/modules/world/state/world.state.js";
 import { worldEvents } from "@/rooms/world/utils/world-events.js";
 import { worldService } from "@/rooms/world/services/world.service.js";
@@ -256,13 +253,6 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
                 const player = this.state.players.get(playerState.playerId);
                 if (player) player.name = playerState.name;
             }),
-            // Ví đổi (thưởng, trả phí, thư...): gửi ví mới cho client đang ở room này.
-            this.playerStates.on(PlayerStateEvent.WALLET_CHANGED, (playerState) => {
-                const client = this.clientOf(playerState.playerId);
-                if (!client || !this.state.players.has(playerState.playerId)) return;
-                const wallet: WalletMessage = playerState.data.wallet;
-                RoomResponse.send(client, WorldMessage.WALLET, wallet);
-            }),
             // Túi / trang bị / điểm đổi (từ world hay global): tính lại HP tối đa..., quest "thu thập" cập nhật tiến độ.
             this.playerStates.on(PlayerStateEvent.BAG_CHANGED, (playerState) => {
                 const player = this.state.players.get(playerState.playerId);
@@ -334,7 +324,7 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
                 seenAt: this.clock.currentTime,
             });
             player.applyParty(player.playerState.party);
-            // Không đẩy snapshot: ví / quest / dấu NPC do client tự xin (`getWallet`, `getQuestList`...), push chỉ gửi khi đổi.
+            // Không đẩy snapshot: quest / dấu NPC do client tự xin (`getQuestList`...), push chỉ gửi khi đổi.
             // Quest hằng ngày giao trước để `getQuestList` đã thấy chúng.
             questWorldService.ensureDaily(this, playerId, player);
         }

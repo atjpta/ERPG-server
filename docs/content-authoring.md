@@ -79,7 +79,7 @@ trả quest cần còn chỗ túi cho thưởng (không thì báo lỗi, quest g
 
 **Party** (room riêng `party`, mỗi party một room): xem mục "Party" dưới. Thêm vào room `world`: client → `partyCreate`, `partyDecline {partyRoomId}`; server → `party {roomId}`, `partyInviteReceived {partyRoomId, fromName, expiresInSec}`; lỗi `interactResult` khi vào dungeon: `party_not_leader`, `party_denied`.
 
-Client → server: `interactNpc {id}` (id slot NPC / vật thể trong map), `dialogueChoose {optionId}` (rỗng = tiếp tục), `dialogueClose`, `getQuestList`, `getNpcMarkers`, `getQuestTargets`, `getFeatures`, `getWallet`, `questPreview {questCode}`, `questAbandon {questCode}`, `dungeonLeave`.
+Client → server: `interactNpc {id}` (id slot NPC / vật thể trong map), `dialogueChoose {optionId}` (rỗng = tiếp tục), `dialogueClose`, `getQuestList`, `getNpcMarkers`, `getQuestTargets`, `getFeatures`, `questPreview {questCode}`, `questAbandon {questCode}`, `dungeonLeave`.
 Server → client: `interactResult` (response của `interactNpc` / `teleportTo`; lỗi chuyển map: `level_too_low`, `map_not_open`, `exit_locked`), `dialogue` (kèm `offerQuestCodes`), `dialogueEnd`, `npcFunctionOpen`,
 `mapChange {mapCode, spawnId, roomName, instanceId?}` (`roomName = "dungeon"` thì join room `dungeon` với option `{mapCode, instanceId}`), `questList`, `questUpdate`, `questPreview`,
 `npcMarkers` (dấu `!`/`?` + `category` + minimap), `questTargets` (chữ Q), `features`, `dungeonChamberClear`, `dungeonClear`; state `dungeon` (HUD chamber/phase/bộ đếm quái).

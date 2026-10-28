@@ -103,6 +103,8 @@ export enum GlobalClientMessage {
     GET_INVENTORY = "getInventory",
     /** Không có payload — điểm còn lại, attribute và stat; response là `AttributesMessage`. Gọi lúc vào game; sau đó cập nhật theo push `attributes`. */
     GET_ATTRIBUTES = "getAttributes",
+    /** Không có payload — ví hiện tại; response là `WalletMessage`. Gọi lúc vào game; sau đó cập nhật theo push `wallet`. */
+    GET_WALLET = "getWallet",
     /** `{ strength?, dexterity?, intelligence?, vitality?, luck? }` — số điểm tiềm năng muốn cộng. */
     UPDATE_ATTRIBUTES = "updateAttributes",
     /** Giống `updateAttributes` nhưng chỉ tính thử — trả `attributesPreview`, không đổi gì trên player. */
@@ -166,8 +168,10 @@ export enum GlobalMessage {
 
     // ---- Player data ----
 
-    /** Điểm còn lại, attribute và stat sau khi tính lại — đẩy khi stat đổi mà không phải do `updateAttributes` (đổi trang bị, nâng cấp...). Trạng thái ban đầu lấy bằng `getAttributes`. */
+    /** Chi tiết attribute đổi (điểm còn lại, attribute, chỉ các stat đổi) — đẩy khi stat đổi mà không phải do `updateAttributes` (đổi trang bị, nâng cấp...); phần không có thì giữ số cũ. Trạng thái ban đầu lấy bằng `getAttributes`. `data` là `AttributesChangedMessage`. */
     ATTRIBUTES = "attributes",
+    /** Chi tiết ví đổi (`WalletChangedMessage`: chỉ loại tiền vừa đổi, loại không có thì giữ số cũ) — global áp thay đổi xong mới gửi (thưởng, trả phí, thư...; world ghi qua global). Số dư ban đầu lấy bằng `getWallet`. */
+    WALLET = "wallet",
     /** Chi tiết thay đổi của túi / đồ đang mặc (ô thêm / đổi, ô mất, slot đổi) — gửi sau mỗi thao tác hoặc khi nhận item. Trạng thái ban đầu lấy bằng `getInventory`. `data` là `InventoryChangedMessage`. */
     INVENTORY_CHANGED = "inventoryChanged",
     /** Túi còn ≤ `inventoryNearlyFullThreshold` ô trống sau khi nhận item. */

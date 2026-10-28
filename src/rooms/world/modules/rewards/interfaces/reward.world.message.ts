@@ -1,18 +1,6 @@
 import type { ItemRewardMessage } from "@/modules/rewards/interfaces/reward.message.js";
 import type { CurrencyCode } from "@/modules/player/enums/wallet.enum.js";
 
-export interface CurrencyBalanceMessage {
-    balance: number;
-    totalEarned: number;
-    totalSpent: number;
-}
-
-/** Ví theo CurrencyCode. */
-export interface WalletMessage {
-    gold: CurrencyBalanceMessage;
-    gem: CurrencyBalanceMessage;
-}
-
 export interface CurrencyRewardMessage {
     code: CurrencyCode;
     amount: number;

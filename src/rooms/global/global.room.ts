@@ -1,6 +1,5 @@
 import { GlobalMessage } from "@/rooms/global/types/global-message.type.js";
 import { RoomResponse } from "@/core/response/room-response.js";
-import type { AttributesMessage } from "@/rooms/global/modules/attributes/interfaces/attributes.global.message.js";
 import { FriendStateManager } from "@/rooms/global/modules/friend/managers/friend-state.manager.js";
 import { PartyStateManager } from "@/rooms/global/modules/party/managers/party-state.manager.js";
 import { PlayerStateManager } from "@/rooms/global/modules/player-data/managers/player-state.manager.js";
@@ -26,6 +25,7 @@ import { AuthenticatedPlayerRoom } from "@/rooms/authenticated-player.room.js";
 import { PartyNotice } from "@/rooms/global/modules/party/enums/party-notice.enum.js";
 import { dungeonLaunchGlobalService } from "@/rooms/global/modules/dungeon-launch/services/dungeon-launch.global.service.js";
 import { friendGlobalService } from "@/rooms/global/modules/friend/services/friend.global.service.js";
+import { walletDeltaGlobalService } from "@/rooms/global/modules/wallet/services/wallet-delta.global.service.js";
 import { inventoryDeltaGlobalService } from "@/rooms/global/modules/inventory/services/inventory-delta.global.service.js";
 import { inventoryGlobalService } from "@/rooms/global/modules/inventory/services/inventory.global.service.js";
 import { SweepMailsGlobalCommand } from "@/rooms/global/modules/mail/commands/sweep-mails.global.command.js";
@@ -127,6 +127,16 @@ export class GlobalRoom extends AuthenticatedPlayerRoom<{
                 }
                 friendGlobalService.announceRename(this, playerId, name);
             }),
+            // Ví đổi (thưởng, trả phí, thư...; world ghi qua global): đây là dữ liệu chính nên chỉ đẩy sau khi global đã áp, loại tiền vừa đổi.
+            this.players.on(PlayerStateEvent.WALLET_CHANGED, (playerState) => {
+                const client = this.clientOf(playerState.playerId);
+                if (!client) return;
+                const changed = walletDeltaGlobalService.diff(
+                    playerState.playerId,
+                    playerState.data.wallet
+                );
+                if (changed) RoomResponse.send(client, GlobalMessage.WALLET, changed);
+            }),
             // Túi / trang bị / điểm đổi (từ global hay từ world: nhặt đồ, thưởng quest...): gửi lại cho client.
             this.players.on(PlayerStateEvent.BAG_CHANGED, (playerState) =>
                 this.schedulePush(playerState.playerId)
@@ -184,6 +194,7 @@ export class GlobalRoom extends AuthenticatedPlayerRoom<{
         await this.registerOnlinePlayer(client, { kickDuplicateLogins: false });
         // Không đẩy snapshot: client tự xin túi / thuộc tính (`getInventory`, `getAttributes`); `push` chỉ gửi phần thay đổi.
         inventoryDeltaGlobalService.reset(playerState);
+        walletDeltaGlobalService.reset(playerId, playerState.data.wallet);
         await friendGlobalService.connect(this, playerId);
     }
 
@@ -196,6 +207,7 @@ export class GlobalRoom extends AuthenticatedPlayerRoom<{
             friendGlobalService.disconnect(this, playerId);
             this.lastPush.delete(playerId);
             inventoryDeltaGlobalService.forget(playerId);
+            walletDeltaGlobalService.forget(playerId);
             // Kết nối global kết thúc (sau thời gian chờ reconnect) = rời party.
             const party = this.parties.getPartyByPlayerId(playerId);
             if (party)
@@ -242,12 +254,9 @@ export class GlobalRoom extends AuthenticatedPlayerRoom<{
         const client = this.clientOf(playerId);
         if (!client) return;
         // Attributes trước: `diff` cập nhật cả bản "đã gửi" của túi nên phải so attributes khi bản đó còn cũ.
-        const attributesChanged = inventoryDeltaGlobalService.attributesChanged(playerState);
+        const attributes = inventoryDeltaGlobalService.attributesDiff(playerState);
         const delta = inventoryDeltaGlobalService.diff(playerState);
         if (delta) RoomResponse.send(client, GlobalMessage.INVENTORY_CHANGED, delta);
-        if (attributesChanged) {
-            const attributes: AttributesMessage = playerState.getAttributeSummary();
-            RoomResponse.send(client, GlobalMessage.ATTRIBUTES, attributes);
-        }
+        if (attributes) RoomResponse.send(client, GlobalMessage.ATTRIBUTES, attributes);
     }
 }

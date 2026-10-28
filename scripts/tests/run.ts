@@ -17,6 +17,7 @@ const suites: Record<string, () => Promise<unknown>> = {
     remote: () => import("./remote-player-state.test.js"),
     world: () => import("./world-state.test.js"),
     response: () => import("./response.test.js"),
+    wallet: () => import("./wallet-delta.test.js"),
     calc: async () => {
         await import("./calc.test.js");
         await import("./calc-formulas.test.js");

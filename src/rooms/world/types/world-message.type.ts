@@ -21,8 +21,6 @@ export enum WorldClientMessage {
     DIALOGUE_CHOOSE = "dialogueChoose",
     /** Đóng hội thoại đang mở. */
     DIALOGUE_CLOSE = "dialogueClose",
-    /** Không có payload — ví hiện tại; response là `WalletMessage`. Gọi lúc vào room; sau đó cập nhật theo push `wallet`. */
-    GET_WALLET = "getWallet",
     /** Không có payload — quest đang làm và tiến độ; response là `QuestListMessage`. Gọi lúc vào room; sau đó cập nhật theo push `questUpdate` / `questList`. */
     GET_QUEST_LIST = "getQuestList",
     /** Không có payload — dấu `!` / `?` trên đầu NPC của map này; response là `NpcMarkersMessage`. Gọi lúc vào room; sau đó cập nhật theo push `npcMarkers`. */
@@ -47,8 +45,6 @@ export enum WorldClientMessage {
 export enum WorldMessage {
     /** Gửi riêng cho người nhận thưởng — client hiện chữ nổi "+exp / +gold / level up". */
     REWARD = "reward",
-    /** Ví (`WalletMessage`) — gửi mỗi khi tiền đổi (thưởng, trả phí, thư...). Số dư ban đầu lấy bằng `getWallet`. */
-    WALLET = "wallet",
     /** 1 node thoại để hiện — gửi khi bắt đầu thoại và sau mỗi lần chọn. */
     DIALOGUE = "dialogue",
     /** Thoại kết thúc (hết node, đóng, đi quá xa) hoặc server chủ động đóng vì lỗi (vd teleport thất bại). */

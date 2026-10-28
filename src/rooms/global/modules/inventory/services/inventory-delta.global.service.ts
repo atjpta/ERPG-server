@@ -6,12 +6,16 @@ import type {
     InventoryEntryMessage,
 } from "@/rooms/global/modules/inventory/interfaces/inventory.global.message.js";
 import { inventoryGlobalService } from "@/rooms/global/modules/inventory/services/inventory.global.service.js";
+import type {
+    AttributesChangedMessage,
+    AttributesMessage,
+} from "@/rooms/global/modules/attributes/interfaces/attributes.global.message.js";
 
-/** Những gì client đã biết: JSON của từng ô túi (theo id), từng slot đồ mặc và bản tóm tắt attribute. */
+/** Những gì client đã biết: JSON của từng ô túi (theo id), từng slot đồ mặc và bản tóm tắt attribute (bản sao, không phải tham chiếu). */
 interface SentState {
     entries: Map<string, string>;
     equipped: Map<string, string>;
-    attributes: string;
+    attributes: AttributesMessage;
 }
 
 /**
@@ -85,13 +89,40 @@ export class InventoryDeltaGlobalService {
         return { upserted, removed, equipments, emptiedSlots };
     }
 
-    /** Attribute / stats khác lần gửi trước không (và coi như đã gửi). */
-    attributesChanged(playerState: PlayerState): boolean {
+    /** Phần attribute / stats khác lần gửi trước (và coi như đã gửi); `null` nếu không đổi. */
+    attributesDiff(playerState: PlayerState): AttributesChangedMessage | null {
         const state = this.sent.get(playerState.playerId);
-        const attributes = JSON.stringify(playerState.getAttributeSummary());
-        if (!state || state.attributes === attributes) return false;
-        state.attributes = attributes;
-        return true;
+        if (!state) return null;
+        const before = state.attributes;
+        const now = this.captureAttributes(playerState);
+        state.attributes = now;
+
+        // `attributePoints` luôn đi kèm (client C# không phân biệt được "không có" với 0).
+        const changed: AttributesChangedMessage = { attributePoints: now.attributePoints };
+        let dirty = before.attributePoints !== now.attributePoints;
+        if (
+            JSON.stringify(before.allocatedAttributes) !== JSON.stringify(now.allocatedAttributes)
+        ) {
+            changed.allocatedAttributes = now.allocatedAttributes;
+            dirty = true;
+        }
+        if (JSON.stringify(before.attributes) !== JSON.stringify(now.attributes)) {
+            changed.attributes = now.attributes;
+            dirty = true;
+        }
+        const stats: Record<string, number> = {};
+        for (const [key, value] of Object.entries(now.stats)) {
+            if (before.stats[key] !== value) stats[key] = value;
+        }
+        if (Object.keys(stats).length > 0) {
+            changed.stats = stats;
+            dirty = true;
+        }
+        return dirty ? changed : null;
+    }
+
+    private captureAttributes(playerState: PlayerState): AttributesMessage {
+        return JSON.parse(JSON.stringify(playerState.getAttributeSummary())) as AttributesMessage;
     }
 
     private capture(playerState: PlayerState): SentState {
@@ -106,7 +137,7 @@ export class InventoryDeltaGlobalService {
         return {
             entries,
             equipped,
-            attributes: JSON.stringify(playerState.getAttributeSummary()),
+            attributes: this.captureAttributes(playerState),
         };
     }
 }
