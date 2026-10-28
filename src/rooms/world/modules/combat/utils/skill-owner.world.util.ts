@@ -1,6 +1,5 @@
 import { CrowdControlType, SkillEffectType } from "@/modules/skills/enums/skill.enum.js";
 import { calculateDamage } from "@/modules/combat/chains/damage.chain.js";
-import type { HitboxColliderState } from "@/modules/combat/state/hitbox-collider.state.js";
 import { combatSeed } from "@/modules/combat/utils/combat-roll.util.js";
 import type { PendingSkillHitState } from "@/modules/combat/state/pending-skill-hit.state.js";
 import type { SkillOwner } from "@/modules/combat/types/skill-owner.type.js";

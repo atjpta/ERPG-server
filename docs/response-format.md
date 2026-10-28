@@ -117,7 +117,7 @@ Có hai kiểu, cùng một envelope:
   `partyNotice`), không dùng `code`.
 - Lỗi giao thức (message không có handler: `no_handler`, quá thời gian chờ) không phải `Result`: SDK client đổi thành
   `Result` thất bại phía client (`REQUEST_FAILED` / `REQUEST_TIMEOUT`, xem [client SDK](client-sdk.md)).
-- Một thao tác có thể vừa trả response vừa đẩy push (vd `equipItem`: response thành công rỗng, push `inventory` + `attributes`); khai push đi kèm trong
+- Một thao tác có thể vừa trả response vừa đẩy push (vd `equipItem`: response thành công rỗng, push `inventoryChanged` + `attributes`); khai push đi kèm trong
   `@SdkMessage.replies`. Thất bại không kèm snapshot trạng thái: client giữ state cũ cho tới khi nhận push cập nhật bình thường.
 
 ## Giữa các room

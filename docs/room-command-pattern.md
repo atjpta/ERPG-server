@@ -39,7 +39,7 @@ từng room: `PlayerWorldCommand` (`this.player` là `PlayerWorldState`) hoặc 
    chia nhỏ hành động trong cùng command.
 
 Command túi đồ (room `global`, `global/modules/inventory`) dùng chung abstract `InventoryGlobalCommand` lo validate, chạy trên bản
-làm việc của PlayerData, lưu DB, đẩy sang world và gửi `inventory`/`attributes`; từng command con chỉ viết thao tác của mình trong `run()`.
+làm việc của PlayerData, lưu DB, đẩy sang world và gửi `inventoryChanged`/`attributes`; từng command con chỉ viết thao tác của mình trong `run()`.
 
 ## Đăng ký message
 

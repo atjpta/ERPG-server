@@ -182,10 +182,7 @@ export class GlobalRoom extends AuthenticatedPlayerRoom<{
             this.clients.get(previous)?.leave(KICK_CLOSE_CODES[KickReason.DUPLICATE_LOGIN]);
         }
         await this.registerOnlinePlayer(client, { kickDuplicateLogins: false });
-        // Gửi toàn bộ túi + thuộc tính MỘT lần lúc vào room; các thay đổi sau đó đến qua `push`.
-        inventoryGlobalService.send(client, playerState);
-        const attributes: AttributesMessage = playerState.getAttributeSummary();
-        RoomResponse.send(client, GlobalMessage.ATTRIBUTES, attributes);
+        // Không đẩy snapshot: client tự xin túi / thuộc tính (`getInventory`, `getAttributes`); `push` chỉ gửi phần thay đổi.
         inventoryDeltaGlobalService.reset(playerState);
         await friendGlobalService.connect(this, playerId);
     }

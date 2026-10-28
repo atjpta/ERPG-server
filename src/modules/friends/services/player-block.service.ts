@@ -1,7 +1,6 @@
 import { Response } from "@/core/response/response.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
-import { PlayerBlocks } from "@/modules/friends/entities/player-block.entity.js";
 import { FriendErrorCode } from "@/modules/friends/enums/friend-error-code.enum.js";
 import { FriendshipRepo } from "@/modules/friends/repositories/friendship.repository.js";
 import {

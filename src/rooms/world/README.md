@@ -54,7 +54,7 @@ Player data (wallet, bags, equipment, points, level/exp, quests, flags, position
 (`src/rooms/global/modules/player-data`), shared with the global room. `PlayerWorldState` exposes it through getters (no copy) and keeps only the
 tick-by-tick fields (position, hp/mp, cooldowns) in the Schema; the room registers `capturePlace` so the replica can back them up to global (autosave,
 leaving, map change). Wallet changes go through `room.players.credit/debit`, items and points through `PlayerWorldState.applyOps`
-(synchronous, atomic, saved within 500 ms); the global room resends `inventory` when the runtime emits `bagChanged`.
+(synchronous, atomic, saved within 500 ms); the global room pushes `inventoryChanged` when the runtime emits `bagChanged`.
 Colyseus schemas live in `src/modules/<feature>/state/`: player (`PlayerWorldState`, `MoveWorldInput`),
 owned skills in skills, monsters in monsters, NPCs and map objects (portals, teleport pads, gatherables) in npcs, dungeon state in maps,
 hitboxes / projectiles / areas / auras in combat, and the aggregate `WorldState` in world.

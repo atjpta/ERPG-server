@@ -93,7 +93,7 @@ Mỗi thư mục room có đúng một cặp enum (cùng file `<room>/types/<roo
     ```ts
     @SdkMessage({
         response: "AttributesMessage", // DTO của data; "string" cho chuỗi; bỏ trống = không có data (C# Task<Result>)
-        replies: [GlobalMessage.INVENTORY, GlobalMessage.ATTRIBUTES], // push đẩy thêm như hiệu ứng phụ
+        replies: [GlobalMessage.INVENTORY_CHANGED, GlobalMessage.ATTRIBUTES], // push đẩy thêm như hiệu ứng phụ
         errors: [ItemErrorCode.ITEM_CLASS_MISMATCH, PlayerErrorCode.LEVEL_TOO_LOW], // mã lỗi nghiệp vụ
         note: "Thành công: túi mới đến qua push inventory.", // trường hợp đặc biệt
     })
@@ -169,11 +169,17 @@ catch (NetworkException ex) when (ex.Is(PlayerErrorCode.PLAYER_NAME_EXISTS))
 // Room: hai client (world + global), tạo một lần. Push đăng ký trước hay sau khi join đều được (tự gắn lại khi join lại).
 var world = new WorldRoomClient();
 var global = new GlobalRoomClient();
-global.OnInventory(inventory => Render(inventory));                                // push: chỉ gọi khi thành công
+global.OnInventoryChanged(changes => ApplyChanges(changes));                    // push: chi tiết thay đổi, chỉ gọi khi thành công
 global.OnChatReceived(chat => AddLine(chat), failure => ShowError(failure.code)); // + nhánh lỗi riêng
 await world.JoinWorld(new WorldJoinOptions { serverId = serverId, mapCode = "greenfield_village" }); // serverId bắt buộc
 await global.JoinGlobal(new GlobalJoinOptions { serverId = serverId });
 await world.WaitForFirstState();
+
+// Dữ liệu ban đầu: server không đẩy lúc join, client tự xin (mỗi loại một request). Đăng ký push trước; push đến trước response thì bỏ qua.
+Render((await global.GetInventory()).data);
+ShowStats((await global.GetAttributes()).data);
+// Party: GetParty() trả party hiện tại, không ở party nào thì ném NetworkException (PARTY_NOT_MEMBER).
+ShowWallet((await world.GetWallet()).data); // cùng nhóm: GetQuestList, GetNpcMarkers, GetQuestTargets, GetFeatures
 
 // Request/Response: await ra Result<T>; thất bại ném NetworkException (RoomClient.Failed đã bắn trước).
 try

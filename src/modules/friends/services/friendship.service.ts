@@ -3,7 +3,7 @@ import type { Queryable } from "@/configs/postgres.config.js";
 import { Response } from "@/core/response/response.js";
 import { withTransaction } from "@/core/repositories/base.repository.js";
 import { PlayerIdentityRepo } from "@/modules/auth/repositories/player-identity.repository.js";
-import { Friendships, type FriendshipRow } from "@/modules/friends/entities/friendship.entity.js";
+import type { FriendshipRow } from "@/modules/friends/entities/friendship.entity.js";
 import { FriendErrorCode } from "@/modules/friends/enums/friend-error-code.enum.js";
 import { FriendshipStatus } from "@/modules/friends/enums/friendship-status.enum.js";
 import {

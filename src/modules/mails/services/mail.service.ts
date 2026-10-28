@@ -9,7 +9,7 @@ import {
     MailBroadcasts,
     type MailBroadcastRow,
 } from "@/modules/mails/entities/mail-broadcast.entity.js";
-import { Mails, type MailRow } from "@/modules/mails/entities/mail.entity.js";
+import type { MailRow } from "@/modules/mails/entities/mail.entity.js";
 import { MailKind } from "@/modules/mails/enums/mail-kind.enum.js";
 import { MailBroadcastReceiptRepo } from "@/modules/mails/repositories/mail-broadcast-receipt.repository.js";
 import { MailBroadcastRepo } from "@/modules/mails/repositories/mail-broadcast.repository.js";

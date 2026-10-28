@@ -32,10 +32,10 @@ export class InventoryGlobalService {
         return InventoryState.sizeOf(type);
     }
 
-    /** Gửi `inventory` (túi + sức chứa + đồ đang mặc) cho client. */
-    send(client: PlayerClient, player: PlayerState) {
+    /** Dựng `InventoryMessage` (túi + sức chứa + đồ đang mặc) — response của request `getInventory`. */
+    toMessage(player: PlayerState): InventoryMessage {
         const inventories = player.inventories;
-        const message: InventoryMessage = {
+        return {
             inventories: {
                 equipment: inventories[ItemType.EQUIPMENT].map((entry) =>
                     this.toEntryMessage(entry)
@@ -53,7 +53,6 @@ export class InventoryGlobalService {
             equipments: equipmentMessageService.toEquipmentsMessage(player.data.equipments),
             usableClassCodes: classService.getUsableItemClassCodes(player.classCode),
         };
-        RoomResponse.send(client, GlobalMessage.INVENTORY, message);
     }
 
     /** Báo client túi sắp đầy / đã đầy sau khi cộng item (gửi sau khi đã lưu). */

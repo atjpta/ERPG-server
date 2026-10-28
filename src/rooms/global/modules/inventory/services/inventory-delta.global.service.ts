@@ -16,14 +16,31 @@ interface SentState {
 
 /**
  * Tính **chi tiết thay đổi** của túi / đồ đang mặc giữa hai lần gửi để client chỉ nhận phần đổi (`inventoryChanged`) thay vì cả túi. Mỗi
- * player một bản "đã gửi", đặt lúc gửi `inventory` đầy đủ (vào room); mọi nơi đổi túi (global hay world) không cần biết gì về việc này.
+ * player một bản "đã gửi", đặt lúc vào room và mỗi khi client xin snapshot (`getInventory` / `getAttributes`); mọi nơi đổi túi (global hay
+ * world) không cần biết gì về việc này.
  */
 export class InventoryDeltaGlobalService {
     private readonly sent = new Map<string, SentState>();
 
-    /** Ghi nhận client vừa nhận trạng thái đầy đủ hiện tại. */
+    /** Mốc ban đầu lúc vào room (client chưa xin snapshot thì delta tính từ mốc này). */
     reset(playerState: PlayerState): void {
         this.sent.set(playerState.playerId, this.capture(playerState));
+    }
+
+    /** Client vừa nhận snapshot túi + đồ mặc hiện tại (`getInventory`). */
+    resetInventory(playerState: PlayerState): void {
+        const state = this.sent.get(playerState.playerId);
+        if (!state) return this.reset(playerState);
+        const { entries, equipped } = this.capture(playerState);
+        state.entries = entries;
+        state.equipped = equipped;
+    }
+
+    /** Client vừa nhận snapshot attributes hiện tại (`getAttributes`). */
+    resetAttributes(playerState: PlayerState): void {
+        const state = this.sent.get(playerState.playerId);
+        if (!state) return this.reset(playerState);
+        state.attributes = this.capture(playerState).attributes;
     }
 
     forget(playerId: string): void {

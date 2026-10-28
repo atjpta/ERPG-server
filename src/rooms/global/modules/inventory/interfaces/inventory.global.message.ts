@@ -48,7 +48,7 @@ export interface InventoryMessage {
 }
 
 /**
- * Chi tiết thay đổi của túi so với lần gửi trước (`inventory` lúc vào room hoặc `inventoryChanged` trước đó). Client áp dụng:
+ * Chi tiết thay đổi của túi so với lần gửi trước (response `getInventory` hoặc `inventoryChanged` trước đó). Client áp dụng:
  * ô trong `upserted` thay / thêm theo `id`, `removed` xoá theo `id`, `equipments` đặt lại các slot có mặt, `emptiedSlots` bỏ đồ ở slot.
  */
 export interface InventoryChangedMessage {

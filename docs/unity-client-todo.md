@@ -84,7 +84,7 @@ Server: join room `dungeon` (khác `world`), instance riêng mỗi lượt; chi 
 
 ### 3.5 Hero quest (đỏ) & mở khoá chức năng
 
-- [ ] Message `features {features[]}` (lúc vào room và khi mở thêm): bật/tắt menu theo mã `guild`, `quest_board`, `daily_quest`, `dungeon`, `alchemy`, `next_phase`.
+- [ ] Message `features {features[]}` (lấy bằng request `getFeatures` lúc vào room; push khi mở thêm): bật/tắt menu theo mã `guild`, `quest_board`, `daily_quest`, `dungeon`, `alchemy`, `next_phase`.
 - [ ] Chuỗi 8 quest: Adventurer Registration (→ guild, quest board, daily) → First Hunt (→ dungeon) → Strange Mana (→ alchemy) → Shadows of the Forest → Werewolf Den (clear dungeon 02) → Into the Evergrowth → Sanctuary of Life (clear dungeon 03) → Road to the City (→ next_phase). Cần locale `quest.<code>.name|desc|obj.<id>` + thoại.
 - [ ] Mục tiêu `clear_dungeon`: text mục tiêu + chỉ hướng tới cổng dungeon (`questTargets.dungeonMapCodes`).
 

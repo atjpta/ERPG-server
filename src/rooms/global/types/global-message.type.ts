@@ -28,6 +28,8 @@ export enum GlobalClientMessage {
 
     // ---- Party ----
 
+    /** Không có payload — party hiện tại của mình; response là `PartyStateMessage`, không ở party nào thì `PARTY_NOT_MEMBER`. Gọi lúc vào game; sau đó cập nhật theo push `partyState` / `partyLeft`. */
+    GET_PARTY = "getParty",
     /** Tạo party (chưa có thì server tạo mới, có rồi thì trả lại party hiện tại). Response là `PartyStateMessage`. */
     PARTY_CREATE = "partyCreate",
     /** `{ playerName, request? }` — chủ mời người chơi online theo tên. Response là `PartyNoticeMessage` (`invite_sent`). */
@@ -97,6 +99,10 @@ export enum GlobalClientMessage {
 
     // ---- Player data (túi đồ, trang bị, điểm tiềm năng) ----
 
+    /** Không có payload — toàn bộ túi + sức chứa + đồ đang mặc; response là `InventoryMessage`. Gọi lúc vào game; sau đó áp push `inventoryChanged` (push đến trước response thì bỏ qua, snapshot đã gồm chúng). */
+    GET_INVENTORY = "getInventory",
+    /** Không có payload — điểm còn lại, attribute và stat; response là `AttributesMessage`. Gọi lúc vào game; sau đó cập nhật theo push `attributes`. */
+    GET_ATTRIBUTES = "getAttributes",
     /** `{ strength?, dexterity?, intelligence?, vitality?, luck? }` — số điểm tiềm năng muốn cộng. */
     UPDATE_ATTRIBUTES = "updateAttributes",
     /** Giống `updateAttributes` nhưng chỉ tính thử — trả `attributesPreview`, không đổi gì trên player. */
@@ -160,11 +166,9 @@ export enum GlobalMessage {
 
     // ---- Player data ----
 
-    /** Điểm còn lại, attribute và stat sau khi tính lại — đẩy khi stat đổi mà không phải do `updateAttributes` (đổi trang bị, nâng cấp...). */
+    /** Điểm còn lại, attribute và stat sau khi tính lại — đẩy khi stat đổi mà không phải do `updateAttributes` (đổi trang bị, nâng cấp...). Trạng thái ban đầu lấy bằng `getAttributes`. */
     ATTRIBUTES = "attributes",
-    /** Toàn bộ túi + đồ đang mặc — chỉ gửi MỘT lần lúc vào room. Mọi thay đổi sau đó đến qua `inventoryChanged`. */
-    INVENTORY = "inventory",
-    /** Chi tiết thay đổi của túi / đồ đang mặc (ô thêm / đổi, ô mất, slot đổi) — gửi sau mỗi thao tác hoặc khi nhận item. `data` là `InventoryChangedMessage`. */
+    /** Chi tiết thay đổi của túi / đồ đang mặc (ô thêm / đổi, ô mất, slot đổi) — gửi sau mỗi thao tác hoặc khi nhận item. Trạng thái ban đầu lấy bằng `getInventory`. `data` là `InventoryChangedMessage`. */
     INVENTORY_CHANGED = "inventoryChanged",
     /** Túi còn ≤ `inventoryNearlyFullThreshold` ô trống sau khi nhận item. */
     INVENTORY_NEARLY_FULL = "inventoryNearlyFull",

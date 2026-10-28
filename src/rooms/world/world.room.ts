@@ -334,10 +334,9 @@ export class WorldRoom extends AuthenticatedPlayerRoom<{
                 seenAt: this.clock.currentTime,
             });
             player.applyParty(player.playerState.party);
-            // Túi / thuộc tính do global gửi lúc vào global; ví gửi ở đây.
-            const wallet: WalletMessage = player.wallet;
-            RoomResponse.send(client, WorldMessage.WALLET, wallet);
-            questWorldService.sendInitial(this, client, player);
+            // Không đẩy snapshot: ví / quest / dấu NPC do client tự xin (`getWallet`, `getQuestList`...), push chỉ gửi khi đổi.
+            // Quest hằng ngày giao trước để `getQuestList` đã thấy chúng.
+            questWorldService.ensureDaily(this, playerId, player);
         }
     }
 

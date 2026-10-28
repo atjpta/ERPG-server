@@ -80,13 +80,17 @@ export class QuestWorldService {
         };
     }
 
-    sendList(client: PlayerClient, player: PlayerWorldState) {
+    /** Quest đang làm + tiến độ — response của `getQuestList`. */
+    listMessage(player: PlayerWorldState): QuestListMessage {
         const quests = Object.entries(player.quests).flatMap(([code, entry]) => {
             const quest = questOf(player, code);
             return quest && entry.status === "active" ? [this.toMessage(player, quest)] : [];
         });
-        const message: QuestListMessage = { quests };
-        RoomResponse.send(client, WorldMessage.QUEST_LIST, message);
+        return { quests };
+    }
+
+    sendList(client: PlayerClient, player: PlayerWorldState) {
+        RoomResponse.send(client, WorldMessage.QUEST_LIST, this.listMessage(player));
     }
 
     sendUpdate(client: PlayerClient, player: PlayerWorldState, quest: Quest) {
@@ -96,6 +100,10 @@ export class QuestWorldService {
 
     /** Dấu trên đầu NPC của riêng player này (màu theo loại quest) — cũng dùng cho minimap. */
     sendMarkers(room: WorldRoom, client: PlayerClient, player: PlayerWorldState) {
+        RoomResponse.send(client, WorldMessage.NPC_MARKERS, this.markersMessage(room, player));
+    }
+
+    markersMessage(room: WorldRoom, player: PlayerWorldState): NpcMarkersMessage {
         const ctx = player.conditionContext(room.map.code);
         const now = DateTime.now();
         const quests = questsOf(player).map((quest) => {
@@ -135,13 +143,16 @@ export class QuestWorldService {
                 const { marker, category } = npcMarkerFor(npc.code, quests);
                 return { npcCode: npc.code, marker, ...(category ? { category } : {}) };
             });
-        const message: NpcMarkersMessage = { markers };
-        RoomResponse.send(client, WorldMessage.NPC_MARKERS, message);
+        return { markers };
     }
 
     /** Quái / item / vật thể liên quan quest đang làm — client đánh chữ Q. */
     sendTargets(client: PlayerClient, player: PlayerWorldState) {
-        const targets: QuestTargetsMessage = collectQuestTargets(
+        RoomResponse.send(client, WorldMessage.QUEST_TARGETS, this.targetsMessage(player));
+    }
+
+    targetsMessage(player: PlayerWorldState): QuestTargetsMessage {
+        return collectQuestTargets(
             questsOf(player).flatMap((quest) => {
                 const entry = player.quests[quest.code];
                 if (!entry) return [];
@@ -160,7 +171,6 @@ export class QuestWorldService {
                 ];
             })
         );
-        RoomResponse.send(client, WorldMessage.QUEST_TARGETS, targets);
     }
 
     /**
@@ -188,17 +198,11 @@ export class QuestWorldService {
 
     /** Chức năng đã mở khoá (từ quest hero) — client bật/tắt menu tương ứng. */
     sendFeatures(client: PlayerClient, player: PlayerWorldState) {
-        const message: FeaturesMessage = { features: player.playerState.unlockedFeatures() };
-        RoomResponse.send(client, WorldMessage.FEATURES, message);
+        RoomResponse.send(client, WorldMessage.FEATURES, this.featuresMessage(player));
     }
 
-    /** Vào room: gửi quest đang làm + dấu NPC. */
-    sendInitial(room: WorldRoom, client: PlayerClient, player: PlayerWorldState) {
-        this.ensureDaily(room, client.auth.playerId, player);
-        this.sendFeatures(client, player);
-        this.sendList(client, player);
-        this.sendMarkers(room, client, player);
-        this.sendTargets(client, player);
+    featuresMessage(player: PlayerWorldState): FeaturesMessage {
+        return { features: player.playerState.unlockedFeatures() };
     }
 
     /** Nhận quest (từ action của dialogue) — kiểm điều kiện ở server. */

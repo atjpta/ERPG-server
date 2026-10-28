@@ -21,8 +21,16 @@ export enum WorldClientMessage {
     DIALOGUE_CHOOSE = "dialogueChoose",
     /** Đóng hội thoại đang mở. */
     DIALOGUE_CLOSE = "dialogueClose",
-    /** Xin danh sách quest đang làm (trả `questList`). */
-    QUEST_LIST = "questList",
+    /** Không có payload — ví hiện tại; response là `WalletMessage`. Gọi lúc vào room; sau đó cập nhật theo push `wallet`. */
+    GET_WALLET = "getWallet",
+    /** Không có payload — quest đang làm và tiến độ; response là `QuestListMessage`. Gọi lúc vào room; sau đó cập nhật theo push `questUpdate` / `questList`. */
+    GET_QUEST_LIST = "getQuestList",
+    /** Không có payload — dấu `!` / `?` trên đầu NPC của map này; response là `NpcMarkersMessage`. Gọi lúc vào room; sau đó cập nhật theo push `npcMarkers`. */
+    GET_NPC_MARKERS = "getNpcMarkers",
+    /** Không có payload — quái / item / vật thể liên quan quest đang làm; response là `QuestTargetsMessage`. Gọi lúc vào room; sau đó cập nhật theo push `questTargets`. */
+    GET_QUEST_TARGETS = "getQuestTargets",
+    /** Không có payload — chức năng đã mở khoá; response là `FeaturesMessage`. Gọi lúc vào room; sau đó cập nhật theo push `features`. */
+    GET_FEATURES = "getFeatures",
     /** `{ questCode }` — bỏ quest đang làm. */
     QUEST_ABANDON = "questAbandon",
     /** `{ questCode }` — xem trước quest (mục tiêu, thưởng) trước khi nhận; trả `questPreview`. */
@@ -39,7 +47,7 @@ export enum WorldClientMessage {
 export enum WorldMessage {
     /** Gửi riêng cho người nhận thưởng — client hiện chữ nổi "+exp / +gold / level up". */
     REWARD = "reward",
-    /** Ví (`WalletMessage`) — gửi riêng khi tiền đổi mà không kèm `inventoryChanged` (vd nhận tiền khi giết quái). */
+    /** Ví (`WalletMessage`) — gửi mỗi khi tiền đổi (thưởng, trả phí, thư...). Số dư ban đầu lấy bằng `getWallet`. */
     WALLET = "wallet",
     /** 1 node thoại để hiện — gửi khi bắt đầu thoại và sau mỗi lần chọn. */
     DIALOGUE = "dialogue",
@@ -49,17 +57,17 @@ export enum WorldMessage {
     NPC_FUNCTION_OPEN = "npcFunctionOpen",
     /** Player đã được chuyển sang map khác — client rời room này và vào room của `mapCode`. */
     MAP_CHANGE = "mapChange",
-    /** Danh sách quest đang làm và tiến độ. */
+    /** Thay cả danh sách quest đang làm — chỉ gửi khi cả danh sách đổi (giao quest hằng ngày mới). Danh sách ban đầu lấy bằng `getQuestList`. */
     QUEST_LIST = "questList",
     /** 1 quest vừa đổi (nhận, tiến độ, hoàn thành, bỏ). */
     QUEST_UPDATE = "questUpdate",
-    /** Dấu `!` / `?` trên đầu NPC của riêng player này — cũng dùng cho minimap. */
+    /** Dấu `!` / `?` trên đầu NPC của riêng player này — cũng dùng cho minimap. Gửi lại khi quest đổi; bản ban đầu lấy bằng `getNpcMarkers`. */
     NPC_MARKERS = "npcMarkers",
-    /** Quái / item / vật thể / NPC / hầm ngục liên quan quest đang làm — client đánh chữ Q. */
+    /** Quái / item / vật thể / NPC / hầm ngục liên quan quest đang làm — client đánh chữ Q. Gửi lại khi quest đổi; bản ban đầu lấy bằng `getQuestTargets`. */
     QUEST_TARGETS = "questTargets",
     /** Danh sách map có thể teleport tới — gửi khi dùng bệ teleport (`interact`). */
     TELEPORT_LIST = "teleportList",
-    /** Chức năng đã mở khoá (quest hero) — gửi lúc vào room và khi mở thêm. */
+    /** Chức năng đã mở khoá (quest hero) — gửi khi mở thêm. Danh sách ban đầu lấy bằng `getFeatures`. */
     FEATURES = "features",
     /** Chamber vừa dọn xong — cổng exit mở. */
     DUNGEON_CHAMBER_CLEAR = "dungeonChamberClear",
