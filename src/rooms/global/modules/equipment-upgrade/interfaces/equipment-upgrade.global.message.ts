@@ -9,6 +9,8 @@ import type {
 export interface MaterialAmountMessage {
     itemId: string;
     code: string;
+    /** Độ hiếm của nguyên liệu — client tô màu tên theo đó. */
+    rarity: ItemRarity;
     quantity: number;
 }
 

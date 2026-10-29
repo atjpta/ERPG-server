@@ -204,7 +204,7 @@ export class EquipmentUpgradeService {
     ): Response<{
         ids: string[];
         materials: InventoryItem[];
-        received: { itemId: string; code: string; quantity: number }[];
+        received: { itemId: string; code: string; rarity: ItemRarity; quantity: number }[];
     }> {
         const ids = [...new Set(instanceIds)];
         const bag = inventories[ItemType.EQUIPMENT];
@@ -228,7 +228,10 @@ export class EquipmentUpgradeService {
             ...inventories,
             [ItemType.MATERIAL]: structuredClone(inventories[ItemType.MATERIAL]),
         });
-        const received = new Map<string, { itemId: string; code: string; quantity: number }>();
+        const received = new Map<
+            string,
+            { itemId: string; code: string; rarity: ItemRarity; quantity: number }
+        >();
         for (const { code, quantity } of costs) {
             const item = itemService.getByCode(code);
             if (!item) return Response.error(ItemErrorCode.ITEM_NOT_ENOUGH, { code });
@@ -236,7 +239,12 @@ export class EquipmentUpgradeService {
                 source: ItemSource.CRAFT,
             });
             if (overflow > 0) return Response.error(ItemErrorCode.INVENTORY_FULL);
-            const current = received.get(code) ?? { itemId: item.id, code, quantity: 0 };
+            const current = received.get(code) ?? {
+                itemId: item.id,
+                code,
+                rarity: item.rarity,
+                quantity: 0,
+            };
             current.quantity += quantity;
             received.set(code, current);
         }
