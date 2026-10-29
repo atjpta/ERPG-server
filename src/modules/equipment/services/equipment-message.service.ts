@@ -39,6 +39,7 @@ export class EquipmentMessageService {
             code: item?.code ?? "",
             type: item?.type ?? ItemType.EQUIPMENT,
             rarity: item?.rarity ?? ItemRarity.COMMON,
+            sellPrice: item?.sellPrice ?? 0,
             metadata: this.toInstanceMessage(entry.metadata),
         };
     }

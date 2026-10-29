@@ -14,6 +14,8 @@ export interface InventoryEntryMessage {
     type: ItemType;
     /** Rarity gốc của item; trang bị lấy rarity của món trong `metadata`. */
     rarity: ItemRarity;
+    /** Giá bán cho NPC của 1 món (GOLD). */
+    sellPrice: number;
     slotIndex: number;
     quantity: number;
     source: ItemSource;

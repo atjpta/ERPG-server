@@ -1,6 +1,6 @@
 import { Response } from "@/core/response/response.js";
 import { ItemErrorCode } from "@/modules/items/enums/item-error-code.enum.js";
-import { ItemSource, type ItemType } from "@/modules/items/enums/item.enum.js";
+import { ItemRarity, ItemSource, type ItemType } from "@/modules/items/enums/item.enum.js";
 import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 import { itemService } from "@/modules/items/services/item.service.js";
 import { MasterDataKey } from "@/modules/master-data/enums/master-data.enum.js";
@@ -16,6 +16,8 @@ import type {
     StackInfo,
 } from "@/modules/player/types/inventory.type.js";
 import type { ItemReward } from "@/modules/rewards/types/reward.type.js";
+
+const RARITY_ORDER = Object.values(ItemRarity);
 
 /**
  * Ba túi của một player (equipment / consumable / material): bọc `Inventories` đã lưu (không đổi dạng lưu) và sửa thẳng trên đó.
@@ -185,6 +187,53 @@ export class InventoryState {
         const index = bag.findIndex((entry) => entry.id === instanceId);
         if (index < 0) return undefined;
         return bag.splice(index, 1)[0];
+    }
+
+    /**
+     * Sắp xếp túi `type`: gộp các stack cùng item cho đầy tới `maxStack`, rồi xếp liền từ ô 0 theo rarity giảm dần
+     * (trang bị lấy rarity của từng món), code item, số lượng giảm dần, id (để kết quả ổn định).
+     */
+    sortBag(type: ItemType): void {
+        const bag = this.bags[type];
+        const byItem = new Map<string, InventoryItem[]>();
+        for (const entry of [...bag].sort((a, b) => a.slotIndex - b.slotIndex)) {
+            const group = byItem.get(entry.itemId) ?? [];
+            group.push(entry);
+            byItem.set(entry.itemId, group);
+        }
+        const kept: InventoryItem[] = [];
+        for (const [itemId, entries] of byItem) {
+            const item = itemService.getById(itemId);
+            if (item?.stackable) {
+                // Gộp vào các stack đầu; món khoá chỉ gộp với món khoá, tránh mất trạng thái khoá.
+                for (const locked of [true, false]) {
+                    const group = entries.filter((entry) => entry.isLocked === locked);
+                    let total = group.reduce((sum, entry) => sum + entry.quantity, 0);
+                    for (const entry of group) {
+                        entry.quantity = Math.min(total, Math.max(1, item.maxStack));
+                        total -= entry.quantity;
+                        if (entry.quantity > 0) kept.push(entry);
+                    }
+                }
+            } else {
+                kept.push(...entries);
+            }
+        }
+        const rarityRank = (entry: InventoryItem): number => {
+            const metadata = entry.metadata as { rarity?: ItemRarity } | undefined;
+            const rarity = metadata?.rarity ?? itemService.getById(entry.itemId)?.rarity;
+            return rarity ? RARITY_ORDER.indexOf(rarity) : -1;
+        };
+        const code = (entry: InventoryItem) => itemService.getById(entry.itemId)?.code ?? "";
+        kept.sort(
+            (a, b) =>
+                rarityRank(b) - rarityRank(a) ||
+                code(a).localeCompare(code(b)) ||
+                b.quantity - a.quantity ||
+                a.id.localeCompare(b.id)
+        );
+        kept.forEach((entry, index) => (entry.slotIndex = index));
+        bag.splice(0, bag.length, ...kept);
     }
 
     /** Đổi chỗ / chuyển ô trong cùng túi; lỗi trả về mã lỗi. */

@@ -27,6 +27,8 @@ export interface EquippedItemMessage {
     code: string;
     type: ItemType;
     rarity: ItemRarity;
+    /** Giá bán cho NPC (GOLD). */
+    sellPrice: number;
     source: ItemSource;
     isLocked: boolean;
     metadata: EquipmentInstanceMessage;

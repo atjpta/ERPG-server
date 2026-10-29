@@ -7,6 +7,8 @@ export interface ItemRewardMessage {
     /** Catalog display data so newly dropped items can be shown before the inventory update. */
     code?: string;
     rarity?: ItemRarity;
+    /** Giá bán cho NPC của 1 món (GOLD). */
+    sellPrice?: number;
     quantity: number;
     /** Trang bị: chỉ số đã roll (quantity = 1). */
     metadata?: EquipmentInstanceMessage;

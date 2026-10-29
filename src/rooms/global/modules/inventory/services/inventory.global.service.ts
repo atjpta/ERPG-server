@@ -81,6 +81,7 @@ export class InventoryGlobalService {
             ...reward,
             code: item?.code,
             rarity: reward.metadata?.rarity ?? item?.rarity,
+            sellPrice: item?.sellPrice ?? 0,
         };
     }
 
@@ -103,6 +104,7 @@ export class InventoryGlobalService {
             code: item?.code ?? "",
             type: item?.type ?? ItemType.MATERIAL,
             rarity: item?.rarity ?? ItemRarity.COMMON,
+            sellPrice: item?.sellPrice ?? 0,
             slotIndex: entry.slotIndex,
             quantity: entry.quantity,
             source: entry.source,

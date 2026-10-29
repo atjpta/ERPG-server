@@ -15,6 +15,8 @@ export const MoveItemSchema = z
     .object({ type: z.enum(ItemType), fromSlot: slotIndex, toSlot: slotIndex })
     .strict();
 
+export const SortInventorySchema = z.object({ type: z.enum(ItemType) }).strict();
+
 export const LockItemSchema = z.object({ instanceId: z.uuid(), locked: z.boolean() }).strict();
 
 /** Cường hoá / tinh hoá 1 món. */

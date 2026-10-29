@@ -115,6 +115,8 @@ export enum GlobalClientMessage {
     UNEQUIP_ITEM = "unequipItem",
     /** `{ type, fromSlot, toSlot }` — chuyển / đổi chỗ 2 ô trong cùng túi. */
     MOVE_ITEM = "moveItem",
+    /** `{ type }` — sắp xếp túi loại `type`: gộp stack, xếp liền từ ô 0 theo rarity giảm dần, rồi code item. */
+    SORT_INVENTORY = "sortInventory",
     /** `{ instanceId, locked }` — khoá món (không phân rã được). */
     LOCK_ITEM = "lockItem",
     /** `{ instanceId }` — cường hoá (trong túi hoặc đang mặc). */
