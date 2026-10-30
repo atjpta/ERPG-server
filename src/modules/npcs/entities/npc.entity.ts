@@ -18,9 +18,6 @@ export const Npcs = pgTable("npcs", {
     kind: npcKind("kind").notNull().default(NpcKind.NPC),
     /** Bấm vào là chạy luôn chức năng đầu tiên (của slot, hoặc của NPC), không mở thoại — dùng cho vật thể. */
     autoOpen: boolean("auto_open").notNull().default(false),
-    /** Kích thước vùng chặn dưới chân NPC (tile) — cộng vào collider của map. */
-    colliderWidth: real("collider_width").notNull().default(0.8),
-    colliderHeight: real("collider_height").notNull().default(0.4),
     /** Khoảng cách tối đa (tile) để player nói chuyện. */
     interactRadius: real("interact_radius").notNull().default(2),
     /** Thoại khi không rule nào khớp. */

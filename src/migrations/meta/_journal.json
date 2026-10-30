@@ -1,34 +1,41 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1792845934891,
-      "tag": "0000_futuristic_random",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1793024183461,
-      "tag": "0001_flippant_hairball",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1793032797119,
-      "tag": "0002_happy_prima",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1793034821967,
-      "tag": "0003_skinny_doctor_octopus",
-      "breakpoints": true
-    }
-  ]
+    "version": "7",
+    "dialect": "postgresql",
+    "entries": [
+        {
+            "idx": 0,
+            "version": "7",
+            "when": 1792845934891,
+            "tag": "0000_futuristic_random",
+            "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1793024183461,
+            "tag": "0001_flippant_hairball",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1793032797119,
+            "tag": "0002_happy_prima",
+            "breakpoints": true
+        },
+        {
+            "idx": 3,
+            "version": "7",
+            "when": 1793034821967,
+            "tag": "0003_skinny_doctor_octopus",
+            "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "7",
+            "when": 1793361006288,
+            "tag": "0004_worried_gamma_corps",
+            "breakpoints": true
+        }
+    ]
 }

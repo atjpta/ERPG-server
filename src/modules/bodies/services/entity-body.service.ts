@@ -29,14 +29,6 @@ export class EntityBodyService {
         const { classes } = this.loadEntityBodies();
         return classes[classCode] ?? (baseClassCode ? classes[baseClassCode] : undefined);
     }
-
-    /** Foot collider of an NPC prefab (tiles); throws when Unity did not export it. */
-    npcCollider(code: string): EntityBody["collider"] {
-        const body = this.loadEntityBodies().npcs[code];
-        if (!body)
-            throw new Error(`[EntityBodies] No collider for npc "${code}": sync it from Unity`);
-        return body.collider;
-    }
 }
 
 export const entityBodyService = new EntityBodyService();

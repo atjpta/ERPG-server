@@ -66,8 +66,6 @@ export const UserMapContentResponse = z.object({
             y: z.number(),
             /** NPC nhìn trái / phải; cổng chỉ hướng mũi tên. */
             direction: z.enum(["up", "down", "left", "right"]),
-            colliderWidth: z.number(),
-            colliderHeight: z.number(),
             interactRadius: z.number(),
             /** Chỉ cổng (chức năng `portal`). */
             targetMapCode: z.string().optional(),

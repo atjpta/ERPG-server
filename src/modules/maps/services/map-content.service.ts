@@ -41,8 +41,6 @@ export class MapContentService {
                     x: placement.x,
                     y: placement.y,
                     direction: placement.direction,
-                    colliderWidth: npc?.colliderWidth ?? 0,
-                    colliderHeight: npc?.colliderHeight ?? 0,
                     interactRadius: npcService.radiusOf(placement),
                     ...(portal ? portal.config : {}),
                 };

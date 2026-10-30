@@ -37,7 +37,6 @@ Thêm vào `modules/npcs/seeds/npc.seed-data.ts` (hoặc `POST /admin/npcs`), r�
 - `dialogueRules`: `{ mapCode?, priority, conditions, dialogueCode }` — rule thoả điều kiện có `priority` cao nhất thắng,
   nhờ đó **cùng NPC nói khác nhau theo hoàn cảnh** (quest xong/chưa, level, class, map, flag...).
 - `functions`: UI chức năng (`shop`, `storage`, `enhance`, `refine`, `disassemble`, `quest_board`, `crafting`), mở bằng action `open_function`.
-- `colliderWidth/Height`: vùng chặn dưới chân NPC (hiện không dùng để chặn đường: người chơi đi xuyên qua NPC).
 
 ## Thêm thoại
 
