@@ -105,12 +105,12 @@ export function applyMove(
     const extent = mapExtent(bounds.width, bounds.height);
     state.x = clamp(state.x + moveX * step, extent.minX, extent.maxX);
     state.y = clamp(state.y + moveY * step, extent.minY, extent.maxY);
-    // if (footprint && bounds.colliders?.length) {
-    //     const wantX = state.x;
-    //     const wantY = state.y;
-    //     resolveTerrain(state, prevX, prevY, bounds.colliders, footprint);
-    //     slideAroundCorner(state, { wantX, wantY, moveX, moveY, step }, bounds, footprint);
-    // }
+    if (footprint && bounds.colliders?.length) {
+        const wantX = state.x;
+        const wantY = state.y;
+        resolveTerrain(state, prevX, prevY, bounds.colliders, footprint);
+        slideAroundCorner(state, { wantX, wantY, moveX, moveY, step }, bounds, footprint);
+    }
     if (moveX < 0) state.direction = Direction.LEFT;
     else if (moveX > 0) state.direction = Direction.RIGHT;
 }

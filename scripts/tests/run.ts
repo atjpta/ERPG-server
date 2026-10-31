@@ -13,6 +13,7 @@ const suites: Record<string, () => Promise<unknown>> = {
     npcfunction: () => import("./npc-function.test.js"),
     npcobjects: () => import("./npc-objects.test.js"),
     crafting: () => import("./crafting.test.js"),
+    movement: () => import("./movement-collision.test.js"),
     state: () => import("./player-state.test.js"),
     remote: () => import("./remote-player-state.test.js"),
     world: () => import("./world-state.test.js"),

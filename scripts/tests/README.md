@@ -4,7 +4,7 @@ Chạy trên DB dev (đã `yarn db:migrate && yarn seed`), **không cần server
 
 ```bash
 yarn test:integration                 # tất cả
-yarn test:integration friend          # một bộ: friend | mail | giftcode | npcfunction | npcobjects | crafting | runtime
+yarn test:integration friend          # một bộ: friend | mail | giftcode | npcfunction | npcobjects | crafting | movement | runtime
 yarn test:integration mail inbox      # lọc theo tên bài
 ```
 
@@ -19,6 +19,7 @@ Mỗi bài tự tạo user / player tạm (`fixtures.ts`, `createStates` thêm `
 | `npc-function.test.ts`       | chức năng NPC (cường hoá / tinh hoá / phân rã): chưa mở → `NPC_FUNCTION_NOT_OPEN`, sai loại bị từ chối, ra ngoài tầm → `TOO_FAR` rồi đóng, tick đóng người đi xa / rời room, mở chức năng khác thay cái cũ                                        |
 | `npc-objects.test.ts`        | vật thể là NPC (`kind = object`): config chức năng đúng kiểu, slot ghi đè chức năng / bán kính của template, bệ teleport tìm theo chức năng, id slot trùng + đích cổng sai + `autoOpen` thiếu chức năng bị bắt khi seed, ghép định nghĩa + layout |
 | `crafting.test.ts`           | chế tạo: item xếp chồng nhân `quantity`, thiếu nguyên liệu / tiền / level không đổi gì, trang bị chỉ số cố định (bản sao riêng) vs roll theo level + rarity, túi đầy, công thức thuộc nhiều nhóm, schema bắt `order`/item trùng                   |
+| `movement-collision.test.ts` | va chạm địa hình của bước di chuyển (đi vào tường, trượt dọc tường / quanh góc, đứng sẵn trong khối): số kỳ vọng là hợp đồng với client `WorldCollisionTests.cs`                                                                                  |
 | `mail-transfer.test.ts`      | gửi / nhận / COD / thu hồi trong MỘT transaction cùng ví người chơi: không mất, không nhân đôi tiền; thu hồi đua với nhận chỉ một bên thắng; hộp thư không vượt `maxInbox` khi gửi đồng thời; dọn thư và lời mời hết hạn theo lô                  |
 
 "Crash" được mô phỏng bằng `dropAllWithoutSaving()` (bỏ mọi object trong bộ nhớ, không lưu) rồi `attach` lại từ DB.
