@@ -5,7 +5,7 @@ import type { SkillOwner } from "@/modules/combat/types/skill-owner.type.js";
 
 /**
  * Vùng buff của skill AURA (hit event `AURA`): bám theo người dùng, tồn tại `ticksLeft` tick rồi bị xoá khỏi
- * `WorldState.auras`. Client vẽ prefab tại chân nhân vật `playerId`, phóng theo `radiusX` so với bán kính gốc trong
+ * `WorldState.auras`. Client vẽ prefab tại vị trí (tâm hình) nhân vật `playerId`, phóng theo `radiusX` so với bán kính gốc trong
  * `skills.json`. Toạ độ server: ô, gốc ở giữa map, y hướng lên. Mỗi `tickEvery` tick hồi đồng đội / gây damage quái trong vùng.
  */
 export class AuraWorldState extends Schema {

@@ -1,6 +1,6 @@
 import type { CollisionBounds } from "@/core/types/collision-bounds.type.js";
 
-/** Phóng to/thu nhỏ quanh chân nhân vật (kích thước + offset cùng nhân `scale`). */
+/** Phóng to/thu nhỏ quanh vị trí nhân vật = tâm hình (kích thước + offset cùng nhân `scale`). */
 export const scaleCollisionBounds = (bounds: CollisionBounds, scale: number): CollisionBounds => ({
     width: bounds.width * scale,
     height: bounds.height * scale,

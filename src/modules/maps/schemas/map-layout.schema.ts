@@ -36,6 +36,8 @@ export const MapLayoutSchema = z
         monsters: z.array(PositionedSchema).default([]),
         /** Vị trí và hướng của slot NPC / vật thể (id = id slot trong định nghĩa). */
         npcs: z.array(NpcPlacementSchema).default([]),
+        /** Vật trang trí đặt trong map (cây, nhà, hàng rào...): `id` là loại prop nên được lặp; vùng chặn nằm trong `colliders`. */
+        props: z.array(z.object({ id: idSchema, ...point })).default([]),
         /** Dungeon: hình học từng chamber. */
         chambers: z
             .array(
@@ -83,6 +85,11 @@ export const MapLayoutSchema = z
         check("spawnPoints", map.spawnPoints);
         check("monsters", map.monsters);
         check("npcs", map.npcs);
+        map.props.forEach((prop, i) => {
+            if (outside(prop.x, prop.y)) {
+                ctx.addIssue({ code: "custom", path: ["props", i], message: "outside map" });
+            }
+        });
         map.colliders.forEach((c, i) => {
             if (rectOutside(c)) {
                 ctx.addIssue({ code: "custom", path: ["colliders", i], message: "outside map" });

@@ -1,0 +1,2 @@
+ALTER TABLE "player_datas" ALTER COLUMN "hitbox" SET DEFAULT '{"width":0.4,"height":0.6,"offsetX":0,"offsetY":0.0375}'::jsonb;--> statement-breakpoint
+ALTER TABLE "player_datas" ALTER COLUMN "collider" SET DEFAULT '{"width":0.3,"height":0.1,"offsetX":0,"offsetY":-0.2125}'::jsonb;

@@ -136,7 +136,8 @@ marker NPC theo quest của riêng player đến qua message `npcMarkers`.
 
 ## Phía Unity cần làm theo
 
-- Port `applyMove` mới ([movement.step.ts](../src/modules/player/simulation/movement.step.ts)) — va chạm theo `colliders` của map (NPC không chặn) + hình chân `collider` của entity.
+- Port `applyMove` mới ([movement.step.ts](../src/modules/player/simulation/movement.step.ts)) — va chạm theo `colliders` của map (NPC không chặn) + hình chân `collider` của entity (offset tính từ vị trí entity).
+- **Quy ước toạ độ**: (x, y) của mọi entity (player, monster, NPC) và marker của map là **tâm của hình**, không phải chân. Unity đặt chân thấp hơn nửa chiều cao hình (`EntityView.FeetAt`) và khi sync `entity-bodies.json` ghi `offsetY` của hitbox/collider tính từ tâm (đo từ chân trên prefab rồi trừ khoảng cách chân → tâm). Hai phía dùng cùng số và cùng cách tính; đổi hình idle hoặc pivot của prefab thì sync lại body.
 - Khớp `contentHash` của `.map.json` trong build với hash server trả.
 - UI thoại / quest / marker; bảng locale theo `locale-keys.json`.
 

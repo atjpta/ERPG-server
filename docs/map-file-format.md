@@ -35,6 +35,7 @@ Server dùng nguyên giá trị Unity (vị trí của transform, đơn vị = t
         { "id": "npc_blacksmith", "x": 4.5, "y": 24.1, "direction": "left" },
         { "id": "to_village", "x": -11.5, "y": 30, "direction": "up" }
     ],
+    "props": [{ "id": "tree_maple_03", "x": -14.5, "y": 20 }],
     "chambers": [
         {
             "id": "c1",
@@ -48,6 +49,7 @@ Server dùng nguyên giá trị Unity (vị trí của transform, đơn vị = t
 
 - `spawnPoints` / `monsters` / `npcs`: `{id, x, y}` theo id server liệt kê (`npcs` gồm cả vật thể; `direction` NPC nhìn `left`/`right`, cổng chỉ `up`/`down`/`left`/`right`). `kind` của spawn (`default`/`respawn`/`arrival`) là config của server.
 - `colliders`: rect `{x,y,w,h}` chặn đường. Server chặn trong `applyMove` bằng `collider` của entity; client phải dùng **cùng** danh sách này để dự đoán.
+- `props`: vật trang trí đặt trong map (cây, nhà, hàng rào), `{id, x, y}` với `id` là **loại prop** (prefab `MapProp` của Unity) nên được lặp; `x, y` là vị trí gốc của prop. Vùng chặn đường của prop đã nằm trong `colliders` (Unity gộp `BoxCollider2D` của prop vào đó), server không cần xử lý thêm.
 - `chambers` (chỉ dungeon): hình học từng chamber — `bounds`, `entry` (chỗ đặt player khi vào chamber; **chamber đầu bỏ trống** — người chơi vào ở spawn `default` của dungeon), `exit` (cổng sang chamber kế; chamber nào `hasExit = false` thì không cần).
 - `contentHash` (sha1 của layout đã chuẩn hoá) lưu ở `game_maps.content_hash` — client so với hash của file trong build.
 - Tên hiển thị không nằm trong file: client tra locale theo `map.{code}.name`.

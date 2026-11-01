@@ -6,7 +6,7 @@ export interface SkillDeliveryParams {
     owner: SkillOwner;
     skill: Skill;
     hit: PendingSkillHitState;
-    /** Vị trí bên đánh lúc hit nổ (chân nhân vật, toạ độ server). */
+    /** Vị trí bên đánh lúc hit nổ (vị trí nhân vật = tâm hình, toạ độ server). */
     originX: number;
     originY: number;
     /** Mục tiêu để ngắm (PROJECTILE) / đặt vùng (AREA); không có → theo hướng mặt. */

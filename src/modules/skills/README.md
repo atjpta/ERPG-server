@@ -6,11 +6,11 @@ Mỗi skill có `castRange`; `skillHitEvents` mô tả nhiều lần đánh, m�
 
 Hiện dữ liệu được quản lý bằng seed. `SkillSeed` tạo đòn đánh thường (`basicAttack`) của 3 class khởi đầu, canh theo anim `Assets/ERPG/Animation/PackCharacters/<Class>`:
 
-| Class     | Skill                                                             | Cách gây damage                                                                 |
-| --------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Swordsman | `swordsman_basic_attack` (MELEE)                                  | HITBOX: 1 nhát chém ở frame 3, `animationMs` 300                                |
-| Archer    | `archer_basic_attack` (PROJECTILE)                                | Mũi tên rời cung ở 500 ms, bay 12 ô/s, tối đa 6 ô, trúng con đầu tiên (DESTROY) |
-| Cleric    | `cleric_basic_attack` (GROUND, sát thương phép theo MAGIC_ATTACK) | Vùng tròn bán kính 0.6 đặt ở chân mục tiêu lúc 350 ms, nổ sau 150 ms            |
+| Class     | Skill                                                             | Cách gây damage                                                                       |
+| --------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Swordsman | `swordsman_basic_attack` (MELEE)                                  | HITBOX: 1 nhát chém ở frame 3, `animationMs` 300                                      |
+| Archer    | `archer_basic_attack` (PROJECTILE)                                | Mũi tên rời cung ở 500 ms, bay 12 ô/s, tối đa 6 ô, trúng con đầu tiên (DESTROY)       |
+| Cleric    | `cleric_basic_attack` (GROUND, sát thương phép theo MAGIC_ATTACK) | Vùng tròn bán kính 0.6 đặt ở vị trí (tâm hình) của mục tiêu lúc 350 ms, nổ sau 150 ms |
 
 Cùng với `{monster}_attack` của monster. Mỗi class chỉ có 1 đòn đánh thường (clip anim tên `basic_attack`); đòn thêm sẽ bổ sung sau. Skill cũ (`swordsman_slash_*`, `swordsman_attack_*`, `swordman_slash`, `archer_attack`, `cleric_attack`) bị xoá khi seed chạy.
 

@@ -11,7 +11,7 @@ const BodySchema = z.object({ hitbox: BoundsSchema, collider: BoundsSchema });
 
 /**
  * `entity-bodies.json`, exported from the Unity prefabs (Sync Server in the Authoring Hub): the HitBox / Collider
- * BoxCollider2D of each monster and each class, in tiles, offset from the feet with positive Y up. NPCs have no body.
+ * BoxCollider2D of each monster and each class, in tiles, offset from the position of the entity (the centre of its picture; Unity converts from the feet when it syncs) with positive Y up. NPCs have no body.
  */
 export const EntityBodiesSchema = z.object({
     monsters: z.record(z.string(), BodySchema),

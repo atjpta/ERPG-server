@@ -49,14 +49,15 @@ export const PlayerDatas = pgTable("player_datas", {
     direction: directionEnum("direction").notNull().default(Direction.DOWN),
     hp: integer("hp").notNull(),
     mp: integer("mp").notNull(),
+    // Offsets from the position of the player (the centre of its picture), like `entity-bodies.json`: the values of a class prefab, used only when a class has no body.
     hitbox: jsonb("hitbox")
         .$type<CollisionBounds>()
         .notNull()
-        .default({ width: 0.44, height: 0.63, offsetX: 0, offsetY: -0.34 }),
+        .default({ width: 0.4, height: 0.6, offsetX: 0, offsetY: 0.0375 }),
     collider: jsonb("collider")
         .$type<CollisionBounds>()
         .notNull()
-        .default({ width: 0.34, height: 0.12, offsetX: 0, offsetY: -0.08 }),
+        .default({ width: 0.3, height: 0.1, offsetX: 0, offsetY: -0.2125 }),
     /** Skill của player theo thứ tự; các skill MELEE (theo thứ tự này) là combo đánh thường. */
     skills: jsonb("skills").$type<OwnedSkill[]>().notNull().default([]),
     wallet: jsonb("wallet").$type<Wallet>().notNull().default(createWallet()),

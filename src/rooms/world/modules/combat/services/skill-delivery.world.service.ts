@@ -160,7 +160,7 @@ export class SkillDeliveryWorldService {
 
     /**
      * Một chu kỳ: hồi `healScaling × MAGIC_ATTACK` cho bản thân và đồng đội cùng party đang đứng trong vùng, gây
-     * `damageScaling × MAGIC_ATTACK` (phép) cho quái trong vùng. Vùng là elip tâm tại chân người dùng.
+     * `damageScaling × MAGIC_ATTACK` (phép) cho quái trong vùng. Vùng là elip tâm tại vị trí người dùng (tâm hình).
      */
     private pulseAura(room: WorldRoom, aura: AuraWorldState, player: PlayerWorldState): void {
         const config = aura.aura;
@@ -365,7 +365,7 @@ export class SkillDeliveryWorldService {
             return;
         }
 
-        // Tâm vùng = chân mục tiêu, kéo về trong castRange; không có mục tiêu → trước mặt.
+        // Tâm vùng = vị trí mục tiêu (tâm hình), kéo về trong castRange; không có mục tiêu → trước mặt.
         let x = originX + (hit.direction === "left" ? -1 : 1) * area.untargetedDistance;
         let y = originY;
         if (aim) {
