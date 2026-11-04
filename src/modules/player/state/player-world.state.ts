@@ -35,11 +35,10 @@ import { mapExtent } from "@/modules/player/simulation/movement.step.js";
 import type { DamageCombatant } from "@/modules/combat/chains/damage.chain.js";
 import { HitboxColliderState } from "@/modules/combat/state/hitbox-collider.state.js";
 import { OwnedSkillState, toOwnedSkillStates } from "@/modules/skills/state/owned-skill.state.js";
+import { POTION_COOLDOWN_MS } from "@/modules/items/constants/potion.constant.js";
 import { millisecondsToTicks } from "@/modules/world/utils/tick.util.js";
 import { PlayerStatService } from "@/modules/player/services/player-stat.service.js";
 
-/** Hồi chiêu giữa hai lần dùng bình cùng loại (HP / MP). */
-const POTION_COOLDOWN_MS = 10_000;
 
 /** Trần của `dashTicks` / `dashCooldownTicks` (uint8). */
 const MAX_DASH_TICKS = 0xff;

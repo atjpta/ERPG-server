@@ -2,6 +2,7 @@ import { equipmentMessageService } from "@/modules/equipment/services/equipment-
 import { RoomResponse } from "@/core/response/room-response.js";
 import type { PlayerClient } from "@/core/rooms/base-player.room.js";
 import { classService } from "@/modules/classes/services/class.service.js";
+import { POTION_COOLDOWN_MS } from "@/modules/items/constants/potion.constant.js";
 import { ItemRarity, ItemType } from "@/modules/items/enums/item.enum.js";
 import type { ItemEquipmentInstanceMetadata } from "@/modules/items/schemas/item-metadata.schema.js";
 import { itemService } from "@/modules/items/services/item.service.js";
@@ -85,12 +86,16 @@ export class InventoryGlobalService {
         };
     }
 
-    /** Lượng hồi của bình (`metadata.heal` / `metadata.mana`) — chỉ gồm vế nào > 0. */
-    private potionAmounts(metadata: unknown): { heal?: number; mana?: number } {
+    /** Lượng hồi của bình (`metadata.heal` / `metadata.mana`) — chỉ gồm vế nào > 0; bình có thêm hồi chiêu giữa hai lần dùng. */
+    private potionAmounts(metadata: unknown): { heal?: number; mana?: number; cooldownMs?: number } {
         const { heal, mana } = (metadata ?? {}) as { heal?: unknown; mana?: unknown };
+        const healAmount = typeof heal === "number" && heal > 0 ? { heal } : {};
+        const manaAmount = typeof mana === "number" && mana > 0 ? { mana } : {};
+        const isPotion = "heal" in healAmount || "mana" in manaAmount;
         return {
-            ...(typeof heal === "number" && heal > 0 ? { heal } : {}),
-            ...(typeof mana === "number" && mana > 0 ? { mana } : {}),
+            ...healAmount,
+            ...manaAmount,
+            ...(isPotion ? { cooldownMs: POTION_COOLDOWN_MS } : {}),
         };
     }
 

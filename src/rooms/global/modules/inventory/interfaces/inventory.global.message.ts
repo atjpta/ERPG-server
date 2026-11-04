@@ -24,6 +24,8 @@ export interface InventoryEntryMessage {
     /** Bình hồi máu / mana: lượng hồi mỗi lần dùng (để mô tả item cho đúng). */
     heal?: number;
     mana?: number;
+    /** Bình: hồi chiêu giữa hai lần dùng bình cùng loại (ms) — client vẽ vòng hồi chiêu của ô dùng nhanh. */
+    cooldownMs?: number;
 }
 
 /** 3 túi theo ItemType. */
